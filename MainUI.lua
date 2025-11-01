@@ -1642,7 +1642,7 @@ local aa = {
         -- ปุ่มตั้งค่า (Settings) — อยู่ทางซ้ายของปุ่มพับ (Min)
         o.SettingsButton =
             q(
-            i.Settings,                          -- ถ้า asset ใน assets มี key นี้ จะใช้; ถ้าไม่มีก็จะเป็นภาพว่าง
+            "rbxassetid://140026929150963",                          -- ถ้า asset ใน assets มี key นี้ จะใช้; ถ้าไม่มีก็จะเป็นภาพว่าง
             UDim2.new(1, -116, 0, 4),            -- ตำแหน่ง: ขยับไปทางซ้ายอีกช่อง
             o.Frame,
             function()
