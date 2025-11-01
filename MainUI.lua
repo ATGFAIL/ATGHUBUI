@@ -1605,6 +1605,8 @@ local aa = {
                 )
             }
         )
+
+        -- Close: now does a full cleanup + destroy related UI
         o.CloseButton =
             q(
             i.Close,
@@ -1614,12 +1616,48 @@ local aa = {
                 p.Window:Dialog {
                     Title = "Close",
                     Content = "Are you sure you want to unload the interface?",
-                    Buttons = {{Title = "Yes", Callback = function()
-                                p:Destroy()
-                            end}, {Title = "No"}}
+                    Buttons = {
+                        {
+                            Title = "Yes",
+                            Callback = function()
+                                -- 1) Destroy the primary window/object (p)
+                                pcall(function() if p and type(p.Destroy) == "function" then p:Destroy() end end)
+
+                                -- 2) Try to destroy global Window if present
+                                pcall(function() if Window and type(Window.Destroy) == "function" then Window:Destroy() end end)
+                                pcall(function() Window = nil end)
+
+                                -- 3) Remove any toggle UI or helper GUIs we created (search CoreGui and PlayerGui)
+                                local function destroyMarked(parent)
+                                    for _, gui in ipairs(parent:GetChildren()) do
+                                        if gui:IsA("ScreenGui") then
+                                            local name = (gui.Name or ""):lower()
+                                            if name:find("fluent") or name:find("atg") or name:find("fluenttoggle") or name:find("fluenttogglegui") then
+                                                pcall(function() gui:Destroy() end)
+                                            end
+                                        end
+                                    end
+                                end
+                                pcall(function() destroyMarked(game:GetService("CoreGui")) end)
+                                pcall(function() destroyMarked(playerGui) end)
+
+                                -- 4) Clear getgenv config / flags that might keep loops running
+                                if getgenv then
+                                    pcall(function() getgenv().ATGButtonUI = nil end)
+                                    pcall(function() getgenv().FluentToggleGui = nil end)
+                                    pcall(function() getgenv().ATGButtonUI_Running = false end)
+                                end
+
+                                -- 5) Try to force-garbage collect some global resources (best-effort)
+                                pcall(function() collectgarbage("collect") end)
+                            end
+                        },
+                        {Title = "No"}
+                    }
                 }
             end
         )
+
         o.MaxButton =
             q(
             i.Max,
@@ -1642,11 +1680,10 @@ local aa = {
         -- ปุ่มตั้งค่า (Settings) — อยู่ทางซ้ายของปุ่มพับ (Min)
         o.SettingsButton =
             q(
-            "rbxassetid://140026929150963",                          -- ถ้า asset ใน assets มี key นี้ จะใช้; ถ้าไม่มีก็จะเป็นภาพว่าง
-            UDim2.new(1, -116, 0, 4),            -- ตำแหน่ง: ขยับไปทางซ้ายอีกช่อง
+            "rbxassetid://140026929150963",
+            UDim2.new(1, -116, 0, 4),
             o.Frame,
             function()
-                -- ถ้ามีเมธอด OpenSettings ให้เรียก ถ้าไม่มีก็แสดง Dialog แจ้งยังไม่มีการตั้งค่า
                 if p and p.Window and type(p.Window.OpenSettings) == "function" then
                     p.Window:OpenSettings()
                 else
@@ -1662,6 +1699,7 @@ local aa = {
         return o
     end
 end,
+
 
     [17] = function()
         local c, d, e, f, g = b(17)
