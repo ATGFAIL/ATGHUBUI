@@ -1452,52 +1452,128 @@ local aa = {
     local h, i = d.Parent.Parent, e(d.Parent.Assets)
     local j, k = e(h.Creator), e(h.Packages.Flipper)
     local l, m = j.New, j.AddSignal
-    
+
+    -- 🌍 Translation System
+    local translations = {
+        English = {
+            settings_title = "⚙️ Settings",
+            interface_config = "Interface Configuration",
+            window_width = "📐 Window Width",
+            window_width_desc = "Adjust the horizontal size (400-2048px)",
+            window_height = "📏 Window Height",
+            window_height_desc = "Adjust the vertical size (360-2048px)",
+            language = "🌍 Language",
+            language_desc = "Select your preferred language",
+            enter_width = "Enter width...",
+            enter_height = "Enter height...",
+            reset_btn = "🔄 Reset",
+            apply_btn = "💾 Apply",
+            cancel_btn = "Cancel",
+            settings_reset = "✅ Settings Reset",
+            reset_msg = "All settings restored to default",
+            settings_saved = "✅ Settings Saved",
+            invalid_input = "❌ Invalid Input",
+            invalid_msg = "Please enter valid numbers"
+        },
+        ["中文 (Chinese)"] = {
+            settings_title = "⚙️ 设置",
+            interface_config = "界面配置",
+            window_width = "📐 窗口宽度",
+            window_width_desc = "调整水平尺寸 (400-2048像素)",
+            window_height = "📏 窗口高度",
+            window_height_desc = "调整垂直尺寸 (360-2048像素)",
+            language = "🌍 语言",
+            language_desc = "选择您的首选语言",
+            enter_width = "输入宽度...",
+            enter_height = "输入高度...",
+            reset_btn = "🔄 重置",
+            apply_btn = "💾 应用",
+            cancel_btn = "取消",
+            settings_reset = "✅ 设置已重置",
+            reset_msg = "所有设置已恢复默认值",
+            settings_saved = "✅ 设置已保存",
+            invalid_input = "❌ 输入无效",
+            invalid_msg = "请输入有效的数字"
+        },
+        ["ไทย (Thai)"] = {
+            settings_title = "⚙️ การตั้งค่า",
+            interface_config = "การกำหนดค่าอินเตอร์เฟซ",
+            window_width = "📐 ความกว้างหน้าต่าง",
+            window_width_desc = "ปรับขนาดแนวนอน (400-2048px)",
+            window_height = "📏 ความสูงหน้าต่าง",
+            window_height_desc = "ปรับขนาดแนวตั้ง (360-2048px)",
+            language = "🌍 ภาษา",
+            language_desc = "เลือกภาษาที่คุณต้องการ",
+            enter_width = "กรอกความกว้าง...",
+            enter_height = "กรอกความสูง...",
+            reset_btn = "🔄 รีเซ็ต",
+            apply_btn = "💾 ยืนยัน",
+            cancel_btn = "ยกเลิก",
+            settings_reset = "✅ รีเซ็ตสำเร็จ",
+            reset_msg = "คืนค่าเป็นค่าเริ่มต้นแล้ว",
+            settings_saved = "✅ บันทึกสำเร็จ",
+            invalid_input = "❌ ข้อมูลไม่ถูกต้อง",
+            invalid_msg = "กรุณากรอกตัวเลขที่ถูกต้อง"
+        }
+    }
+
     -- Storage for settings
     local settingsStorage = {
         Width = 580,
         Height = 460,
         Language = "English"
     }
-    
-    -- Load settings from datastore
+
+    -- Global translation getter
+    getgenv().ATG_GetTranslation = function(key)
+        local lang = settingsStorage.Language or "English"
+        local trans = translations[lang]
+        if trans and trans[key] then
+            return trans[key]
+        end
+        return translations.English[key] or key
+    end
+
+    getgenv().ATG_CurrentLanguage = function()
+        return settingsStorage.Language or "English"
+    end
+
+    -- Load settings
     local function loadSettings()
         local success, data = pcall(function()
-            if game:GetService("HttpService") then
+            if readfile then
                 local saved = game:GetService("HttpService"):JSONDecode(
-                    readfile and readfile("fluent_settings.json") or "{}"
+                    readfile("atg_settings.json")
                 )
                 return saved
             end
         end)
-        
+
         if success and data then
             settingsStorage.Width = data.Width or 580
             settingsStorage.Height = data.Height or 460
             settingsStorage.Language = data.Language or "English"
         end
     end
-    
-    -- Save settings to datastore
+
+    -- Save settings
     local function saveSettings()
         pcall(function()
-            if writefile and game:GetService("HttpService") then
+            if writefile then
                 local json = game:GetService("HttpService"):JSONEncode(settingsStorage)
-                writefile("fluent_settings.json", json)
+                writefile("atg_settings.json", json)
             end
         end)
     end
-    
-    -- Initialize settings
+
     loadSettings()
-    
+
     return function(n)
         local o, p, q =
             {},
             e(h),
             function(o, p, q, r)
-                local s = {Callback = r or function()
-                        end}
+                local s = {Callback = r or function() end}
                 s.Frame =
                     l(
                     "TextButton",
@@ -1557,7 +1633,7 @@ local aa = {
                 end
                 return s
             end
-            
+
         o.Frame =
             l(
             "Frame",
@@ -1661,7 +1737,7 @@ local aa = {
                                     for _, gui in ipairs(parent:GetChildren()) do
                                         if gui:IsA("ScreenGui") then
                                             local name = (gui.Name or ""):lower()
-                                            if name:find("fluent") or name:find("atg") or name:find("fluenttoggle") or name:find("fluenttogglegui") then
+                                            if name:find("atg") or name:find("fluent") then
                                                 pcall(function() gui:Destroy() end)
                                             end
                                         end
@@ -1671,8 +1747,8 @@ local aa = {
                                 pcall(function() destroyMarked(game:GetService("Players").LocalPlayer.PlayerGui) end)
                                 if getgenv then
                                     pcall(function() getgenv().ATGButtonUI = nil end)
-                                    pcall(function() getgenv().FluentToggleGui = nil end)
-                                    pcall(function() getgenv().ATGButtonUI_Running = false end)
+                                    pcall(function() getgenv().ATG_GetTranslation = nil end)
+                                    pcall(function() getgenv().ATG_CurrentLanguage = nil end)
                                 end
                                 pcall(function() collectgarbage("collect") end)
                             end
@@ -1692,7 +1768,7 @@ local aa = {
                 n.Window.Maximize(not n.Window.Maximized)
             end
         )
-        
+
         o.MinButton =
             q(
             i.Min,
@@ -1703,24 +1779,66 @@ local aa = {
             end
         )
 
-        -- Settings Button with enhanced UI
+        -- Settings Button
         o.SettingsButton =
             q(
             "rbxassetid://140026929150963",
             UDim2.new(1, -116, 0, 4),
             o.Frame,
             function()
+                local trans = translations[settingsStorage.Language] or translations.English
+
                 -- Create Settings Dialog
                 local settingsDialog = e(d.Parent.Dialog):Create()
-                settingsDialog.Title.Text = "⚙️ Settings"
-                settingsDialog.Root.Size = UDim2.fromOffset(520, 450)
-                
+                settingsDialog.Title.Text = trans.settings_title
+                settingsDialog.Root.Size = UDim2.fromOffset(480, 420)
+
+                -- Make dialog draggable
+                local dragging, dragInput, dragStart, startPos
+                local UserInputService = game:GetService("UserInputService")
+
+                local function update(input)
+                    local delta = input.Position - dragStart
+                    settingsDialog.Root.Position = UDim2.new(
+                        startPos.X.Scale,
+                        startPos.X.Offset + delta.X,
+                        startPos.Y.Scale,
+                        startPos.Y.Offset + delta.Y
+                    )
+                end
+
+                settingsDialog.Title.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = true
+                        dragStart = input.Position
+                        startPos = settingsDialog.Root.Position
+
+                        input.Changed:Connect(function()
+                            if input.UserInputState == Enum.UserInputState.End then
+                                dragging = false
+                            end
+                        end)
+                    end
+                end)
+
+                settingsDialog.Title.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                        dragInput = input
+                    end
+                end)
+
+                UserInputService.InputChanged:Connect(function(input)
+                    if input == dragInput and dragging then
+                        update(input)
+                    end
+                end)
+
                 -- Languages list
                 local languages = {
-                    "English", "中文 (Chinese)", "Español (Spanish)", "हिन्दी (Hindi)", 
-                    "العربية (Arabic)", "Português (Portuguese)", "বাংলা (Bengali)", 
+                    "English", "中文 (Chinese)", "Español (Spanish)", "हिन्दी (Hindi)",
+                    "العربية (Arabic)", "Português (Portuguese)", "বাংলা (Bengali)",
                     "Русский (Russian)", "日本語 (Japanese)", "ਪੰਜਾਬੀ (Punjabi)",
-                    "Deutsch (German)", "한국어 (Korean)", "Français (French)", 
+                    "Deutsch (German)", "한국어 (Korean)", "Français (French)",
                     "Türkçe (Turkish)", "Italiano (Italian)", "ไทย (Thai)",
                     "Polski (Polish)", "Українська (Ukrainian)", "Română (Romanian)",
                     "Nederlands (Dutch)", "ελληνικά (Greek)", "Čeština (Czech)",
@@ -1731,10 +1849,10 @@ local aa = {
                     "Български (Bulgarian)", "Српски (Serbian)", "Lietuvių (Lithuanian)",
                     "Latviešu (Latvian)", "Eesti (Estonian)", "Slovenščina (Slovenian)"
                 }
-                
-                -- Header with icon
+
+                -- Header
                 local headerFrame = l("Frame", {
-                    Size = UDim2.new(1, -40, 0, 50),
+                    Size = UDim2.new(1, -40, 0, 45),
                     Position = UDim2.fromOffset(20, 55),
                     BackgroundTransparency = 0.95,
                     Parent = settingsDialog.Root,
@@ -1749,18 +1867,18 @@ local aa = {
                     }),
                     l("ImageLabel", {
                         Image = "rbxassetid://140026929150963",
-                        Size = UDim2.fromOffset(24, 24),
-                        Position = UDim2.fromOffset(15, 13),
+                        Size = UDim2.fromOffset(22, 22),
+                        Position = UDim2.fromOffset(12, 11.5),
                         BackgroundTransparency = 1,
                         ThemeTag = {ImageColor3 = "Accent"}
                     }),
                     l("TextLabel", {
-                        Text = "Interface Configuration",
+                        Text = trans.interface_config,
                         TextColor3 = Color3.fromRGB(240, 240, 240),
-                        TextSize = 16,
+                        TextSize = 15,
                         TextXAlignment = Enum.TextXAlignment.Left,
-                        Position = UDim2.fromOffset(48, 0),
-                        Size = UDim2.new(1, -48, 1, 0),
+                        Position = UDim2.fromOffset(42, 0),
+                        Size = UDim2.new(1, -42, 1, 0),
                         BackgroundTransparency = 1,
                         FontFace = Font.new(
                             "rbxasset://fonts/families/GothamSSm.json",
@@ -1770,27 +1888,27 @@ local aa = {
                         ThemeTag = {TextColor3 = "Text"}
                     })
                 })
-                
-                -- Content container with better spacing
+
+                -- Content container
                 local contentFrame = l("ScrollingFrame", {
-                    Size = UDim2.new(1, -40, 1, -220),
-                    Position = UDim2.fromOffset(20, 115),
+                    Size = UDim2.new(1, -40, 1, -205),
+                    Position = UDim2.fromOffset(20, 110),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
-                    ScrollBarThickness = 4,
-                    ScrollBarImageTransparency = 0.9,
+                    ScrollBarThickness = 3,
+                    ScrollBarImageTransparency = 0.92,
                     Parent = settingsDialog.Root,
                     CanvasSize = UDim2.fromOffset(0, 0),
                     ThemeTag = {ScrollBarImageColor3 = "Accent"}
                 }, {
                     l("UIListLayout", {
-                        Padding = UDim.new(0, 18),
+                        Padding = UDim.new(0, 16),
                         SortOrder = Enum.SortOrder.LayoutOrder,
                         HorizontalAlignment = Enum.HorizontalAlignment.Left
                     })
                 })
-                
-                -- Helper function to create setting sections
+
+                -- Helper function
                 local function createSection(title, description, layoutOrder)
                     local section = l("Frame", {
                         Size = UDim2.new(1, 0, 0, 0),
@@ -1800,17 +1918,17 @@ local aa = {
                         LayoutOrder = layoutOrder
                     }, {
                         l("UIListLayout", {
-                            Padding = UDim.new(0, 8),
+                            Padding = UDim.new(0, 6),
                             SortOrder = Enum.SortOrder.LayoutOrder
                         })
                     })
-                    
+
                     l("TextLabel", {
                         Text = title,
                         TextColor3 = Color3.fromRGB(240, 240, 240),
-                        TextSize = 14,
+                        TextSize = 13,
                         TextXAlignment = Enum.TextXAlignment.Left,
-                        Size = UDim2.new(1, 0, 0, 20),
+                        Size = UDim2.new(1, 0, 0, 18),
                         BackgroundTransparency = 1,
                         FontFace = Font.new(
                             "rbxasset://fonts/families/GothamSSm.json",
@@ -1821,12 +1939,12 @@ local aa = {
                         LayoutOrder = 1,
                         ThemeTag = {TextColor3 = "Text"}
                     })
-                    
+
                     if description then
                         l("TextLabel", {
                             Text = description,
                             TextColor3 = Color3.fromRGB(180, 180, 180),
-                            TextSize = 12,
+                            TextSize = 11,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextWrapped = true,
                             AutomaticSize = Enum.AutomaticSize.Y,
@@ -1838,48 +1956,48 @@ local aa = {
                             ThemeTag = {TextColor3 = "SubText"}
                         })
                     end
-                    
+
                     return section
                 end
-                
+
                 -- Width Section
                 local widthSection = createSection(
-                    "📐 Window Width",
-                    "Adjust the horizontal size of the interface (400-2048 pixels)",
+                    trans.window_width,
+                    trans.window_width_desc,
                     1
                 )
-                
+
                 local widthInput = e(d.Parent.Textbox)(widthSection, true)
-                widthInput.Frame.Size = UDim2.new(1, 0, 0, 38)
+                widthInput.Frame.Size = UDim2.new(1, 0, 0, 34)
                 widthInput.Frame.LayoutOrder = 3
-                widthInput.Input.PlaceholderText = "Enter width..."
+                widthInput.Input.PlaceholderText = trans.enter_width
                 widthInput.Input.Text = tostring(settingsStorage.Width)
-                
+
                 -- Height Section
                 local heightSection = createSection(
-                    "📏 Window Height",
-                    "Adjust the vertical size of the interface (360-2048 pixels)",
+                    trans.window_height,
+                    trans.window_height_desc,
                     2
                 )
-                
+
                 local heightInput = e(d.Parent.Textbox)(heightSection, true)
-                heightInput.Frame.Size = UDim2.new(1, 0, 0, 38)
+                heightInput.Frame.Size = UDim2.new(1, 0, 0, 34)
                 heightInput.Frame.LayoutOrder = 3
-                heightInput.Input.PlaceholderText = "Enter height..."
+                heightInput.Input.PlaceholderText = trans.enter_height
                 heightInput.Input.Text = tostring(settingsStorage.Height)
-                
+
                 -- Language Section
                 local langSection = createSection(
-                    "🌍 Language",
-                    "Select your preferred interface language",
+                    trans.language,
+                    trans.language_desc,
                     3
                 )
-                
+
                 local selectedLang = settingsStorage.Language
                 local langButtonLabel = nil
-                
+
                 local langButton = l("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 38),
+                    Size = UDim2.new(1, 0, 0, 34),
                     BackgroundTransparency = 0.92,
                     Text = "",
                     Parent = langSection,
@@ -1896,196 +2014,208 @@ local aa = {
                     l("TextLabel", {
                         Text = selectedLang,
                         TextColor3 = Color3.fromRGB(240, 240, 240),
-                        TextSize = 13,
+                        TextSize = 12,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Size = UDim2.new(1, -35, 1, 0),
-                        Position = UDim2.fromOffset(12, 0),
+                        Position = UDim2.fromOffset(10, 0),
                         BackgroundTransparency = 1,
                         FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
                         ThemeTag = {TextColor3 = "Text"}
                     }),
                     l("ImageLabel", {
                         Image = "rbxassetid://10709790948",
-                        Size = UDim2.fromOffset(16, 16),
+                        Size = UDim2.fromOffset(14, 14),
                         AnchorPoint = Vector2.new(1, 0.5),
                         Position = UDim2.new(1, -10, 0.5, 0),
                         BackgroundTransparency = 1,
                         ThemeTag = {ImageColor3 = "SubText"}
                     })
                 })
-                
+
                 langButtonLabel = langButton:FindFirstChildOfClass("TextLabel")
-                
-                -- Language Dropdown (improved positioning)
+
+                -- Language Dropdown (iPhone style)
                 local langDropdownOpen = false
                 local langDropdown = l("CanvasGroup", {
                     Size = UDim2.fromOffset(langButton.AbsoluteSize.X, 0),
-                    Position = UDim2.new(0, 0, 0, 0),
+                    Position = UDim2.fromOffset(0, 0),
                     Visible = false,
                     GroupTransparency = 1,
                     Parent = p.GUI,
                     ZIndex = 1000,
                     ThemeTag = {BackgroundColor3 = "DropdownHolder"}
                 }, {
-                    l("UICorner", {CornerRadius = UDim.new(0, 8)}),
+                    l("UICorner", {CornerRadius = UDim.new(0, 10)}),
                     l("UIStroke", {
-                        Transparency = 0.4,
+                        Transparency = 0.35,
                         Thickness = 1.5,
                         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                         ThemeTag = {Color = "DropdownBorder"}
                     }),
                     l("ScrollingFrame", {
-                        Size = UDim2.new(1, -12, 1, -12),
-                        Position = UDim2.fromOffset(6, 6),
+                        Size = UDim2.new(1, -14, 1, -14),
+                        Position = UDim2.fromOffset(7, 7),
                         BackgroundTransparency = 1,
                         BorderSizePixel = 0,
-                        ScrollBarThickness = 3,
-                        ScrollBarImageTransparency = 0.9,
-                        CanvasSize = UDim2.fromOffset(0, #languages * 34),
+                        ScrollBarThickness = 2.5,
+                        ScrollBarImageTransparency = 0.88,
+                        CanvasSize = UDim2.fromOffset(0, #languages * 32),
                         ThemeTag = {ScrollBarImageColor3 = "Accent"}
                     }, {
-                        l("UIListLayout", {Padding = UDim.new(0, 4)})
+                        l("UIListLayout", {Padding = UDim.new(0, 3)})
                     })
                 })
-                
-                local dropScale = k.SingleMotor.new(0.9)
+
+                -- iPhone-style smooth animation
+                local dropScale = k.SingleMotor.new(0.88)
                 local dropTrans = k.SingleMotor.new(1)
-                
+                local dropBlur = k.SingleMotor.new(0)
+
                 dropScale:onStep(function(value)
-                    langDropdown.Size = UDim2.fromOffset(langButton.AbsoluteSize.X, 250 * value)
+                    langDropdown.Size = UDim2.fromOffset(langButton.AbsoluteSize.X, 220 * value)
                 end)
-                
+
                 dropTrans:onStep(function(value)
                     langDropdown.GroupTransparency = value
                 end)
-                
+
                 local function updateDropdownPosition()
                     local btnPos = langButton.AbsolutePosition
                     local btnSize = langButton.AbsoluteSize
-                    langDropdown.Position = UDim2.fromOffset(btnPos.X, btnPos.Y + btnSize.Y + 8)
+                    langDropdown.Position = UDim2.fromOffset(btnPos.X, btnPos.Y + btnSize.Y + 6)
                 end
-                
+
                 local langScroll = langDropdown:FindFirstChildOfClass("ScrollingFrame")
                 for i, lang in ipairs(languages) do
+                    local isSelected = lang == selectedLang
                     local option = l("TextButton", {
-                        Size = UDim2.new(1, -6, 0, 30),
+                        Size = UDim2.new(1, -4, 0, 28),
                         Text = "",
-                        BackgroundTransparency = 1,
+                        BackgroundTransparency = isSelected and 0.88 or 1,
                         Parent = langScroll,
                         ThemeTag = {BackgroundColor3 = "DropdownOption"}
                     }, {
                         l("UICorner", {CornerRadius = UDim.new(0, 6)}),
                         l("UIStroke", {
-                            Transparency = 0.7,
-                            Thickness = 1,
+                            Transparency = 0.75,
+                            Thickness = 0.8,
                             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                             ThemeTag = {Color = "InElementBorder"}
                         }),
                         l("TextLabel", {
                             Text = lang,
-                            TextColor3 = Color3.fromRGB(240, 240, 240),
+                            TextColor3 = isSelected and Color3.fromRGB(76, 194, 255) or Color3.fromRGB(240, 240, 240),
                             TextSize = 12,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Size = UDim2.new(1, -12, 1, 0),
-                            Position = UDim2.fromOffset(12, 0),
+                            Position = UDim2.fromOffset(10, 0),
                             BackgroundTransparency = 1,
-                            FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
-                            ThemeTag = {TextColor3 = "Text"}
+                            FontFace = Font.new(
+                                "rbxasset://fonts/families/GothamSSm.json",
+                                isSelected and Enum.FontWeight.SemiBold or Enum.FontWeight.Regular,
+                                Enum.FontStyle.Normal
+                            ),
+                            ThemeTag = isSelected and {TextColor3 = "Accent"} or {TextColor3 = "Text"}
                         })
                     })
-                    
-                    local optMotor, optSet = j.SpringMotor(1, option, "BackgroundTransparency")
-                    option.MouseEnter:Connect(function() optSet(0.88) end)
-                    option.MouseLeave:Connect(function() optSet(1) end)
-                    
+
+                    local optMotor, optSet = j.SpringMotor(isSelected and 0.88 or 1, option, "BackgroundTransparency")
+                    option.MouseEnter:Connect(function() optSet(0.86) end)
+                    option.MouseLeave:Connect(function() optSet(isSelected and 0.88 or 1) end)
+
                     option.MouseButton1Click:Connect(function()
                         selectedLang = lang
                         langButtonLabel.Text = lang
                         langDropdownOpen = false
-                        dropScale:setGoal(k.Spring.new(0.9, {frequency = 4, dampingRatio = 0.9}))
-                        dropTrans:setGoal(k.Spring.new(1, {frequency = 5, dampingRatio = 1}))
-                        task.wait(0.15)
+
+                        -- Smooth close animation
+                        dropScale:setGoal(k.Spring.new(0.88, {frequency = 4.5, dampingRatio = 0.95}))
+                        dropTrans:setGoal(k.Spring.new(1, {frequency = 5.5, dampingRatio = 1}))
+
+                        task.wait(0.12)
                         langDropdown.Visible = false
                     end)
                 end
-                
+
                 langButton.MouseButton1Click:Connect(function()
                     langDropdownOpen = not langDropdownOpen
                     updateDropdownPosition()
-                    
+
                     if langDropdownOpen then
                         langDropdown.Visible = true
-                        dropScale:setGoal(k.Spring.new(1, {frequency = 3.5, dampingRatio = 0.75}))
-                        dropTrans:setGoal(k.Spring.new(0, {frequency = 4.5, dampingRatio = 0.85}))
+                        -- Smooth open animation (iPhone style)
+                        dropScale:setGoal(k.Spring.new(1, {frequency = 3.2, dampingRatio = 0.68}))
+                        dropTrans:setGoal(k.Spring.new(0, {frequency = 4.2, dampingRatio = 0.78}))
                     else
-                        dropScale:setGoal(k.Spring.new(0.9, {frequency = 4, dampingRatio = 0.9}))
-                        dropTrans:setGoal(k.Spring.new(1, {frequency = 5, dampingRatio = 1}))
-                        task.wait(0.15)
+                        dropScale:setGoal(k.Spring.new(0.88, {frequency = 4.5, dampingRatio = 0.95}))
+                        dropTrans:setGoal(k.Spring.new(1, {frequency = 5.5, dampingRatio = 1}))
+                        task.wait(0.12)
                         langDropdown.Visible = false
                     end
                 end)
-                
+
                 -- Update canvas size
                 local layout = contentFrame:FindFirstChildOfClass("UIListLayout")
                 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    contentFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 15)
+                    contentFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12)
                 end)
-                
-                -- Reset Button (styled)
-                settingsDialog:Button("🔄 Reset", function()
+
+                -- Reset Button
+                settingsDialog:Button(trans.reset_btn, function()
                     settingsStorage.Width = 580
                     settingsStorage.Height = 460
                     settingsStorage.Language = "English"
-                    
+
                     widthInput.Input.Text = "580"
                     heightInput.Input.Text = "460"
                     selectedLang = "English"
                     langButtonLabel.Text = "English"
-                    
+
                     saveSettings()
-                    
+
                     p:Notify({
-                        Title = "✅ Settings Reset",
-                        Content = "All settings have been restored to default values",
+                        Title = translations.English.settings_reset,
+                        Content = translations.English.reset_msg,
                         Duration = 3
                     })
                 end)
-                
+
                 -- Apply Button
-                settingsDialog:Button("💾 Apply", function()
+                settingsDialog:Button(trans.apply_btn, function()
                     local newWidth = tonumber(widthInput.Input.Text)
                     local newHeight = tonumber(heightInput.Input.Text)
-                    
+
                     if newWidth and newHeight then
                         newWidth = math.clamp(newWidth, 400, 2048)
                         newHeight = math.clamp(newHeight, 360, 2048)
-                        
+
                         settingsStorage.Width = newWidth
                         settingsStorage.Height = newHeight
                         settingsStorage.Language = selectedLang
-                        
+
                         saveSettings()
-                        
+
                         if p.Window and p.Window.Root then
                             p.Window.Root.Size = UDim2.fromOffset(newWidth, newHeight)
                             p.Window.Size = UDim2.fromOffset(newWidth, newHeight)
                         end
-                        
+
+                        local newTrans = translations[selectedLang] or translations.English
                         p:Notify({
-                            Title = "✅ Settings Saved",
+                            Title = newTrans.settings_saved,
                             Content = string.format("Window: %dx%d\nLanguage: %s", newWidth, newHeight, selectedLang),
                             Duration = 4
                         })
                     else
                         p:Notify({
-                            Title = "❌ Invalid Input",
-                            Content = "Please enter valid numbers for width and height",
+                            Title = trans.invalid_input,
+                            Content = trans.invalid_msg,
                             Duration = 3
                         })
                     end
                 end)
-                
-                settingsDialog:Button("Cancel")
+
+                settingsDialog:Button(trans.cancel_btn)
                 settingsDialog:Open()
             end
         )
@@ -2093,6 +2223,7 @@ local aa = {
         return o
     end
 end,
+
     [17] = function()
         local c, d, e, f, g = b(17)
         local h, i, j, k =
