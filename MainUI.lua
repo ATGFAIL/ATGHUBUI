@@ -2719,7 +2719,7 @@ local aa = {
                 }
             )
         
-        -- Search Box (ลดความกว้างเพื่อให้ห่างจากปุ่ม X)
+        -- Search Box (ลดขนาดความกว้างเพื่อให้ปุ่ม X ห่างออกไป)
         local searchBox = e(
             "TextBox",
             {
@@ -2753,8 +2753,8 @@ local aa = {
         local clearButton = e(
             "TextButton",
             {
-                Size = UDim2.fromOffset(30, 30),
-                Position = UDim2.new(1, -10, 0, 5),
+                Size = UDim2.fromOffset(35, 30),
+                Position = UDim2.new(1, -5, 0, 5),
                 AnchorPoint = Vector2.new(1, 0),
                 BackgroundTransparency = 0.9,
                 Text = "✕",
@@ -3002,7 +3002,6 @@ local aa = {
                                 ThemeTag = {TextColor3 = "Text"}
                             }
                         )
-                    -- เพิ่ม Stroke ให้แต่ละตัวเลือก
                     local M, N =
                         (e(
                         "TextButton",
@@ -3021,7 +3020,7 @@ local aa = {
                             e(
                                 "UIStroke",
                                 {
-                                    Transparency = 0.7,
+                                    Transparency = 0.6,
                                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                                     ThemeTag = {Color = "InElementBorder"}
                                 }
