@@ -1522,26 +1522,27 @@ local aa = {
             {
                 l(
                     "Frame",
-                    {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.new(0, 16, 0, 0), BackgroundTransparency = 1},
+                    -- ขยับซ้ายเล็กน้อย: Position 16 -> 8, ลด margin ขวาให้สมดุล
+                    {Size = UDim2.new(1, -8, 1, 0), Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1},
                     {
-                        -- ใช้ UIListLayout จัดเป็นแนวนอนและจัดกึ่งกลางแนวตั้ง
+                        -- UIListLayout: แนวนอนและจัดกึ่งกลางแนวตั้ง
                         l(
                             "UIListLayout",
                             {
-                                Padding = UDim.new(0, 8),
+                                Padding = UDim.new(0, 6),
                                 FillDirection = Enum.FillDirection.Horizontal,
                                 SortOrder = Enum.SortOrder.LayoutOrder,
                                 VerticalAlignment = Enum.VerticalAlignment.Center
                             }
                         ),
 
-                        -- ไอคอน (ขยายขนาดให้เห็นชัดขึ้น, ไม่กำหนด Position เพราะ layout จะจัดให้)
+                        -- ไอคอนขนาดใหญ่ขึ้นและจัดด้วย layout
                         l(
                             "ImageLabel",
                             {
                                 Name = "WindowIcon",
                                 Image = n.Icon or "rbxassetid://130967366683860",
-                                Size = UDim2.fromOffset(24, 24),
+                                Size = UDim2.fromOffset(32, 32), -- ขยายเป็น 32x32
                                 BackgroundTransparency = 1,
                                 LayoutOrder = 1,
                                 ScaleType = Enum.ScaleType.Fit,
@@ -1549,7 +1550,7 @@ local aa = {
                             }
                         ),
 
-                        -- Title
+                        -- Title (ขนาดฟอนต์เพิ่มเล็กน้อย)
                         l(
                             "TextLabel",
                             {
@@ -1560,7 +1561,7 @@ local aa = {
                                     Enum.FontWeight.Regular,
                                     Enum.FontStyle.Normal
                                 ),
-                                TextSize = 13,
+                                TextSize = 14,
                                 TextXAlignment = "Left",
                                 TextYAlignment = "Center",
                                 AutomaticSize = Enum.AutomaticSize.X,
@@ -1582,7 +1583,7 @@ local aa = {
                                     Enum.FontWeight.Regular,
                                     Enum.FontStyle.Normal
                                 ),
-                                TextSize = 12,
+                                TextSize = 13,
                                 TextXAlignment = "Left",
                                 TextYAlignment = "Center",
                                 AutomaticSize = Enum.AutomaticSize.X,
