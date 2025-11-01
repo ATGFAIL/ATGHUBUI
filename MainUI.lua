@@ -2643,83 +2643,92 @@ local aa = {
     g.__index = g
     g.__type = "Dropdown"
 
-    -- สร้าง Dropdown element
     function g.New(h, i, j)
-        local lib = h.Library
-        local self =
+        local k = h.Library
+        local l = {
+            Values = j.Values,
+            Value = j.Default,
+            Multi = j.Multi,
+            Buttons = {},
+            Opened = false,
+            Type = "Dropdown",
+            Callback = j.Callback or function() end
+        }
+        local m = ac(f.Element)(j.Title, j.Description, h.Container, false)
+        -- ปรับขนาดของคำอธิบายให้เหลือพื้นที่; เหมือนของเดิม
+        m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+        h.SetTitle = m.SetTitle
+        h.SetDesc = m.SetDesc
+
+        -- label แสดงค่า ปุ่ม dropdown
+        local displayLabel = e(
+            "TextLabel",
             {
-                Values = j.Values,
-                Value = j.Default,
-                Multi = j.Multi,
-                Buttons = {},
-                Opened = false,
-                Type = "Dropdown",
-                Callback = j.Callback or function() end,
-                _FilterText = ""
+                FontFace = Font.new(
+                    "rbxasset://fonts/families/GothamSSm.json",
+                    Enum.FontWeight.Regular,
+                    Enum.FontStyle.Normal
+                ),
+                Text = "Value",
+                TextColor3 = Color3.fromRGB(240, 240, 240),
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, -30, 0, 14),
+                Position = UDim2.new(0, 8, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundTransparency = 1,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ThemeTag = {TextColor3 = "Text"}
             }
-        local elem = ac(f.Element)(j.Title, j.Description, h.Container, false)
-        elem.DescLabel.Size = UDim2.new(1, -170, 0, 14)
-        -- expose functions back to container (เหมือนของเดิม)
-        h.SetTitle = elem.SetTitle
-        h.SetDesc = elem.SetDesc
+        )
 
-        -- label แสดงค่า
-        local currentValueLabel =
-            e(
-                "TextLabel",
-                {
-                    FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-                    Text = "Value",
-                    TextColor3 = Color3.fromRGB(240, 240, 240),
-                    TextSize = 13,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Size = UDim2.new(1, -30, 0, 14),
-                    Position = UDim2.new(0, 8, 0.5, 0),
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    BackgroundTransparency = 1,
-                    TextTruncate = Enum.TextTruncate.AtEnd,
-                    ThemeTag = {TextColor3 = "Text"}
-                }
-            )
-
-        local chevronIcon =
-            e(
-                "ImageLabel",
-                {
-                    Image = "rbxassetid://10709790948",
-                    Size = UDim2.fromOffset(16, 16),
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -8, 0.5, 0),
-                    BackgroundTransparency = 1,
-                    ThemeTag = {ImageColor3 = "SubText"}
-                }
-            )
-
-        local dropdownButton, listLayout = e(
-            "TextButton",
+        local chevron = e(
+            "ImageLabel",
             {
-                Size = UDim2.fromOffset(160, 30),
-                Position = UDim2.new(1, -10, 0.5, 0),
+                Image = "rbxassetid://10709790948",
+                Size = UDim2.fromOffset(16, 16),
                 AnchorPoint = Vector2.new(1, 0.5),
-                BackgroundTransparency = 0.9,
-                Parent = elem.Frame,
-                ThemeTag = {BackgroundColor3 = "DropdownFrame"}
-            },
-            {
-                e("UICorner", {CornerRadius = UDim.new(0, 5)}),
-                e("UIStroke", {Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
-                chevronIcon,
-                currentValueLabel
+                Position = UDim2.new(1, -8, 0.5, 0),
+                BackgroundTransparency = 1,
+                ThemeTag = {ImageColor3 = "SubText"}
             }
-        ), e("UIListLayout", {Padding = UDim.new(0, 3)})
+        )
 
-        -- Scrolling list (ภายใน popup)
-        local listScrolling =
+        -- ปุ่มที่ผู้ใช้กดเพื่อเปิด dropdown
+        local p, listLayout =
+            e(
+                "TextButton",
+                {
+                    Size = UDim2.fromOffset(160, 30),
+                    Position = UDim2.new(1, -10, 0.5, 0),
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    BackgroundTransparency = 0.9,
+                    Parent = m.Frame,
+                    ThemeTag = {BackgroundColor3 = "DropdownFrame"}
+                },
+                {
+                    e("UICorner", {CornerRadius = UDim.new(0, 5)}),
+                    e(
+                        "UIStroke",
+                        {
+                            Transparency = 0.5,
+                            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                            ThemeTag = {Color = "InElementBorder"}
+                        }
+                    ),
+                    chevron,
+                    displayLabel
+                }
+            ),
+            e("UIListLayout", {Padding = UDim.new(0, 3)})
+
+        -- Scrolling frame ที่จะใส่รายการ
+        local t =
             e(
                 "ScrollingFrame",
                 {
-                    Size = UDim2.new(1, -10, 1, -46),
-                    Position = UDim2.fromOffset(6, 40),
+                    Size = UDim2.new(1, -8, 1, -12),
+                    Position = UDim2.fromOffset(4, 34), -- จะย้ายลงเมื่อใส่ search
                     BackgroundTransparency = 1,
                     BottomImage = "rbxassetid://6889812791",
                     MidImage = "rbxassetid://6889812721",
@@ -2733,15 +2742,19 @@ local aa = {
                 {listLayout}
             )
 
-        -- holder ของ dropdown popup (รวม search + list)
-        local dropdownHolderBackground =
+        -- Holder ของ dropdown (รวม search + clear + list)
+        local u =
             e(
                 "Frame",
-                {Size = UDim2.fromScale(1, 0.6), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
+                {Size = UDim2.fromScale(1, 0.15), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
                 {
-                    listScrolling,
+                    -- t จะถูกปรับตำแหน่งด้านล่างของ SearchBox ต่อไป
+                    t,
                     e("UICorner", {CornerRadius = UDim.new(0, 7)}),
-                    e("UIStroke", {ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}),
+                    e(
+                        "UIStroke",
+                        {ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}
+                    ),
                     e(
                         "ImageLabel",
                         {
@@ -2758,421 +2771,464 @@ local aa = {
                 }
             )
 
-        -- popup หลัก (แยกออกมาเพื่อให้แสดงด้านขวาของปุ่ม)
-        local popup =
+        -- ภาพ root popup ใน GUI หลัก (มองเห็นได้เมื่อเปิด)
+        local v =
             e(
                 "Frame",
-                {BackgroundTransparency = 1, Size = UDim2.fromOffset(220, 300), Parent = h.Library.GUI, Visible = false},
-                {dropdownHolderBackground, e("UISizeConstraint", {MinSize = Vector2.new(170, 0)})}
+                {BackgroundTransparency = 1, Size = UDim2.fromOffset(200, 120), Parent = h.Library.GUI, Visible = false},
+                {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0)})}
             )
 
-        -- ช่องค้นหา (อยู่ด้านบนของ dropdown)
-        local searchBox =
+        -- ขยาย popup ให้แสดงด้านขวาของปุ่ม p (ไม่ทับ UI หลัก)
+        table.insert(k.OpenFrames, v)
+
+        -- สร้าง SearchBox และ ClearButton (X) ด้านบน
+        local SearchBox =
             e(
                 "TextBox",
                 {
+                    Name = "DropdownSearch",
+                    FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
                     PlaceholderText = "🔍 Search...",
                     Text = "",
-                    FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
                     TextColor3 = Color3.fromRGB(230, 230, 230),
                     TextSize = 14,
-                    Size = UDim2.new(1, -44, 0, 28),
+                    Size = UDim2.new(1, -40, 0, 26),
                     Position = UDim2.fromOffset(6, 6),
-                    BackgroundTransparency = 0.95,
+                    BackgroundTransparency = 0.9,
                     BackgroundColor3 = Color3.fromRGB(30, 30, 30),
                     ClearTextOnFocus = false,
-                    Parent = popup,
-                    ThemeTag = {TextColor3 = "Text", PlaceholderColor3 = "SubText", BackgroundColor3 = "DialogInput"}
+                    Parent = u,
+                    ThemeTag = {TextColor3 = "Text", PlaceholderColor3 = "SubText"}
                 },
-                {e("UICorner", {CornerRadius = UDim.new(0, 6)})}
+                {e("UICorner", {CornerRadius = UDim.new(0, 4)})}
             )
 
-        -- ปุ่มลบ (X) สีแดง เพื่อเคลียร์การเลือกทั้งหมด
-        local clearBtn =
+        local ClearButton =
             e(
                 "TextButton",
                 {
+                    Name = "DropdownClear",
                     Text = "✖",
-                    FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                    Font = Enum.Font.SourceSansBold,
                     TextSize = 18,
-                    TextColor3 = Color3.fromRGB(230, 80, 80),
+                    Size = UDim2.fromOffset(26, 26),
+                    Position = UDim2.fromOffset(u.AbsoluteSize.X - 32, 6),
+                    AnchorPoint = Vector2.new(1, 0),
                     BackgroundTransparency = 1,
-                    Size = UDim2.fromOffset(28, 28),
-                    Position = UDim2.new(1, -36, 0, 6),
-                    Parent = popup
-                }
+                    Parent = u
+                },
+                {}
             )
+        -- Style ปุ่ม X ให้แดง (ใช้ ThemeTag ไม่สะดวกกับตัวหนังสือ จึงกำหนดตรงนี้)
+        ClearButton.TextColor3 = Color3.fromRGB(255, 80, 80)
 
-        -- ปรับโครงสร้าง: ย้าย holder ลงใต้ search
-        dropdownHolderBackground.Position = UDim2.fromOffset(0, 40)
-        dropdownHolderBackground.Size = UDim2.new(1, 0, 0, 260)
+        -- ปรับตำแหน่ง ScrollingFrame ให้ชิดด้านล่างของ SearchBox
+        t.Position = UDim2.fromOffset(6, 38)
+        t.Size = UDim2.new(1, -12, 1, -44)
 
-        table.insert(lib.OpenFrames, popup)
+        -- ฟังก์ชันช่วย: คำนวณตำแหน่ง v ให้แสดงทางขวาของ p (และเลื่อนถ้าจะแสดงเลยหน้าจอ)
+        local function positionPopup()
+            -- ความกว้างเริ่มต้นหาโดยใช้ขนาดปุ่ม p หรือคำนวณอัตโนมัติ
+            local popupWidth = math.max(170, p.AbsoluteSize.X)
+            local popupHeight = v.AbsoluteSize.Y
+            -- ตั้งให้แสดงที่ด้านขวาของปุ่ม p + offset
+            local desiredX = p.AbsolutePosition.X + p.AbsoluteSize.X + 10
+            local desiredY = p.AbsolutePosition.Y - 5
 
-        -- ฟังก์ชันตำแหน่งให้แสดงทางขวาของปุ่ม ถ้าเกินขอบจอให้เลื่อนไปทางซ้ายแทน
-        local updatePosition = function()
-            local xOffset = pcall(function() end) and 0 or 0
-            local px = dropdownButton.AbsolutePosition.X
-            local py = dropdownButton.AbsolutePosition.Y
-            local pw = dropdownButton.AbsoluteSize.X
-            local ph = dropdownButton.AbsoluteSize.Y
-
-            local targetX = px + pw + 8
-            local targetY = py - 5
-            -- ถ้าจะเลยขอบขวา ให้แสดงด้านซ้ายแทน
-            if targetX + popup.AbsoluteSize.X > ai.ViewportSize.X - 8 then
-                targetX = px - popup.AbsoluteSize.X - 8
-                if targetX < 8 then
-                    targetX = math.max(8, ai.ViewportSize.X - popup.AbsoluteSize.X - 8)
+            -- ถ้าแสดงด้านขวาเลยขอบหน้าจอ ให้วางด้านซ้ายแทน (fallback)
+            if desiredX + popupWidth > ai.ViewportSize.X - 8 then
+                -- พยายามวางทางซ้ายของ p แทน
+                desiredX = p.AbsolutePosition.X - popupWidth - 10
+                if desiredX < 8 then
+                    desiredX = math.max(8, ai.ViewportSize.X - popupWidth - 8)
                 end
             end
-            -- ถ้าล่างเกิน ให้เลื่อนขึ้น
-            if targetY + popup.AbsoluteSize.Y > ai.ViewportSize.Y - 8 then
-                targetY = math.max(8, ai.ViewportSize.Y - popup.AbsoluteSize.Y - 8)
+
+            -- ถ้สูงเกินหน้าจอ ให้เลื่อนขึ้น
+            if desiredY + popupHeight > ai.ViewportSize.Y - 8 then
+                desiredY = math.max(8, ai.ViewportSize.Y - popupHeight - 8)
             end
-            popup.Position = UDim2.fromOffset(targetX, targetY)
+
+            v.Position = UDim2.fromOffset(desiredX, desiredY)
         end
 
-        -- ฟังก์ชันปรับขนาดความสูงไม่ให้ยาวเกิน
-        local adjustSize = function()
-            local contentHeight = listLayout.AbsoluteContentSize.Y
-            local maxHeight = 300 -- สูงสุดของ popup
-            local desiredHeight = math.clamp(contentHeight + 56, 80, maxHeight) -- + ช่องค้นหา + padding
-            popup.Size = UDim2.fromOffset(220, desiredHeight)
-            dropdownHolderBackground.Size = UDim2.fromOffset(popup.AbsoluteSize.X, popup.AbsoluteSize.Y - 44)
-            -- ปรับให้ scrolling ขึ้น
-            listScrolling.Size = UDim2.new(1, -10, 1, -46)
-            listScrolling.CanvasSize = UDim2.fromOffset(0, contentHeight)
+        -- ฟังก์ชันปรับขนาด popup ตามจำนวนรายการ (จำกัดความสูง)
+        local function adjustPopupSize(maxHeight)
+            maxHeight = maxHeight or 392
+            -- ขนาดความกว้างตามขนาดเนื้อหา (หากมีป้ายกว้างๆ เพิ่ม padding)
+            local contentWidth = 170
+            -- ถ้ามีรายการยาว ให้ขยาย width ให้พอ
+            v.Size = UDim2.fromOffset(contentWidth, math.min(maxHeight, 20 + t.AbsoluteCanvasSize.Y + 44)) -- 44 คือพื้นที่ search + padding
+            positionPopup()
         end
 
-        -- อีเวนต์สำหรับปิดเมื่อคลิกนอก
+        -- อัพเดต CanvasSize ของ ScrollingFrame
+        local function updateCanvas()
+            t.CanvasSize = UDim2.fromOffset(0, listLayout.AbsoluteContentSize.Y + 6)
+            -- ปรับ popup ตามขนาดรายการ (ถ้ามากกว่า 10 ให้จำกัดความสูง)
+            if #l.Values > 10 then
+                adjustPopupSize(392)
+            else
+                adjustPopupSize(20 + t.CanvasSize.Y.Offset + 44)
+            end
+        end
+
+        -- เก็บข้อมูลปุ่ม/widget ของตัวเลือกเพื่อใช้ filter และอัพเดต
+        local OptionWidgets = {}
+
+        -- ฟังก์ชันสร้างรายการใหม่ (เรียกเมื่อ BuildDropdownList)
+        function l.BuildDropdownList()
+            -- เคลียร์ของเดิม
+            for _, child in next, t:GetChildren() do
+                if not child:IsA("UIListLayout") then
+                    child:Destroy()
+                end
+            end
+            OptionWidgets = {}
+            local index = 0
+
+            for _, optionText in next, l.Values do
+                index = index + 1
+                local marker =
+                    e(
+                        "Frame",
+                        {
+                            Size = UDim2.fromOffset(4, 14),
+                            BackgroundColor3 = Color3.fromRGB(76, 194, 255),
+                            Position = UDim2.fromOffset(-1, 16),
+                            AnchorPoint = Vector2.new(0, 0.5),
+                            ThemeTag = {BackgroundColor3 = "Accent"}
+                        },
+                        {e("UICorner", {CornerRadius = UDim.new(0, 2)})}
+                    )
+
+                local label =
+                    e(
+                        "TextLabel",
+                        {
+                            FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+                            Text = optionText,
+                            TextColor3 = Color3.fromRGB(200, 200, 200),
+                            TextSize = 13,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            BackgroundTransparency = 1,
+                            AutomaticSize = Enum.AutomaticSize.Y,
+                            Size = UDim2.fromScale(1, 1),
+                            Position = UDim2.fromOffset(10, 0),
+                            Name = "ButtonLabel",
+                            ThemeTag = {TextColor3 = "Text"}
+                        }
+                    )
+
+                local optionBtn =
+                    e(
+                        "TextButton",
+                        {
+                            Size = UDim2.new(1, -8, 0, 32),
+                            BackgroundTransparency = 1,
+                            ZIndex = 23,
+                            Text = "",
+                            Parent = t,
+                            ThemeTag = {BackgroundColor3 = "DropdownOption"}
+                        },
+                        {marker, label, e("UICorner", {CornerRadius = UDim.new(0, 6)})}
+                    )
+
+                -- สถานะถูกเลือกหรือไม่
+                local selectedState
+                if l.Multi then
+                    selectedState = (l.Value and l.Value[optionText]) and true or false
+                else
+                    selectedState = (l.Value == optionText)
+                end
+
+                -- Animation / motor สำหรับ marker และ background transparency
+                local bgMotor, markMotor = c.SpringMotor(1, optionBtn, "BackgroundTransparency"), c.SpringMotor(1, marker, "BackgroundTransparency")
+                local sizeMotor = d.SingleMotor.new(6)
+                sizeMotor:onStep(function(tStep)
+                    marker.Size = UDim2.new(0, 4, 0, tStep)
+                end)
+
+                -- update function สำหรับแต่ละปุ่ม
+                local widget = {}
+                function widget.UpdateButton()
+                    if l.Multi then
+                        selectedState = (l.Value and l.Value[optionText]) and true or false
+                    else
+                        selectedState = (l.Value == optionText)
+                    end
+                    bgMotor(selectedState and 0.89 or 1)
+                    sizeMotor:setGoal(d.Spring.new(selectedState and 14 or 6, {frequency = 6}))
+                    markMotor(selectedState and 0 or 1)
+                end
+
+                -- Click handler
+                label.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        local willSelect = not selectedState
+                        -- ถ้าไม่อนุญาตให้ไม่มีการเลือก (AllowNull) และกำลังจะเป็น deselect ตัวเดียวสุดท้าย ให้ข้าม
+                        if not j.AllowNull and not l.Multi and not willSelect and l:GetActiveValues() == 1 then
+                            -- ไม่อนุญาตให้ลบจนว่าง
+                            return
+                        end
+
+                        if l.Multi then
+                            selectedState = willSelect
+                            l.Value = l.Value or {}
+                            if selectedState then
+                                l.Value[optionText] = true
+                            else
+                                l.Value[optionText] = nil
+                            end
+                        else
+                            if willSelect then
+                                l.Value = optionText
+                                -- deselect อื่นๆ จะถูกอัพเดตต่อไป
+                            else
+                                l.Value = nil
+                            end
+                        end
+
+                        -- อัพเดตรายการทั้งหมด (ถ้เป็น single จะต้องอัพเดตปุ่มอื่นๆ)
+                        for _, w in next, OptionWidgets do
+                            w.UpdateButton()
+                        end
+
+                        widget.UpdateButton()
+                        l:Display()
+                        k:SafeCallback(l.Callback, l.Value)
+                        k:SafeCallback(l.Changed, l.Value)
+                    end
+                end)
+
+                -- เรียกครั้งแรกเพื่อแสดงสถานะ
+                widget.UpdateButton()
+                table.insert(OptionWidgets, widget)
+            end
+
+            -- ปรับ canvas / popup เมื่อสร้างเสร็จ
+            updateCanvas()
+        end
+
+        function l.Display()
+            local C, D = l.Values, ""
+            if j.Multi then
+                local parts = {}
+                for E, F in next, l.Value or {} do
+                    if F then
+                        table.insert(parts, E)
+                    end
+                end
+                D = table.concat(parts, ", ")
+            else
+                D = l.Value or ""
+            end
+            displayLabel.Text = (D == "" and "--" or D)
+            -- ปรับ visibility ของปุ่ม Clear (ถ้าไม่มีการเลือกก็ซ่อน)
+            local hasSelection = false
+            if j.Multi then
+                for _, vSel in next, (l.Value or {}) do
+                    if vSel then
+                        hasSelection = true
+                        break
+                    end
+                end
+            else
+                hasSelection = (l.Value ~= nil and l.Value ~= "")
+            end
+            ClearButton.Visible = hasSelection
+        end
+
+        function l.GetActiveValues()
+            if j.Multi then
+                local count = 0
+                for _ in pairs(l.Value or {}) do
+                    count = count + 1
+                end
+                return count
+            else
+                return (l.Value ~= nil) and 1 or 0
+            end
+        end
+
+        function l.SetValues(_, newValues)
+            if newValues then
+                l.Values = newValues
+            end
+            l:BuildDropdownList()
+        end
+
+        function l.OnChanged(_, callback)
+            l.Changed = callback
+            if callback then
+                callback(l.Value)
+            end
+        end
+
+        function l.SetValue(_, newValue)
+            if l.Multi then
+                local D = {}
+                if type(newValue) == "table" then
+                    for _, v in next, newValue do
+                        if table.find(l.Values, v) then
+                            D[v] = true
+                        end
+                    end
+                end
+                l.Value = D
+            else
+                if not newValue then
+                    l.Value = nil
+                elseif table.find(l.Values, newValue) then
+                    l.Value = newValue
+                end
+            end
+            l:BuildDropdownList()
+            k:SafeCallback(l.Callback, l.Value)
+            k:SafeCallback(l.Changed, l.Value)
+        end
+
+        function l.Destroy()
+            m:Destroy()
+            k.Options[i] = nil
+        end
+
+        -- ฟังก์ชันเปิด/ปิด (เชื่อมกับปุ่ม p)
+        local ScrollParent = h.ScrollFrame
+        function l.Open()
+            l.Opened = true
+            ScrollParent.ScrollingEnabled = false
+            v.Visible = true
+            -- Tween ขยาย
+            af:Create(
+                u,
+                TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                {Size = UDim2.fromScale(1, 1)}
+            ):Play()
+            positionPopup()
+        end
+
+        function l.Close()
+            l.Opened = false
+            ScrollParent.ScrollingEnabled = true
+            -- ย่อกลับ (ไม่ทำให้หายทันที เพื่อให้ animation ดูเนียน)
+            u.Size = UDim2.fromScale(1, 0.15)
+            v.Visible = false
+        end
+
+        -- Build initial list และแสดงค่า
+        l:BuildDropdownList()
+        l:Display()
+
+        -- ถ้ามี default ให้ตั้งค่าเริ่มต้น (รองรับ string, table, number)
+        local initialIndexList = {}
+        if type(j.Default) == "string" then
+            local idx = table.find(l.Values, j.Default)
+            if idx then table.insert(initialIndexList, idx) end
+        elseif type(j.Default) == "table" then
+            for _, val in next, j.Default do
+                local idx = table.find(l.Values, val)
+                if idx then table.insert(initialIndexList, idx) end
+            end
+        elseif type(j.Default) == "number" and l.Values[j.Default] ~= nil then
+            table.insert(initialIndexList, j.Default)
+        end
+
+        if next(initialIndexList) then
+            for C = 1, #initialIndexList do
+                local D = initialIndexList[C]
+                if j.Multi then
+                    l.Value = l.Value or {}
+                    l.Value[l.Values[D]] = true
+                else
+                    l.Value = l.Values[D]
+                end
+                if not j.Multi then break end
+            end
+            l:BuildDropdownList()
+            l:Display()
+        end
+
+        -- เก็บไว้ใน options ของ library
+        k.Options[i] = l
+
+        -- เชื่อมต่อปุ่มเปิด/ปิด และการคลิกข้างนอกเพื่อลบ
+        c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", positionPopup)
+        c.AddSignal(p:GetPropertyChangedSignal "AbsoluteSize", positionPopup)
+        c.AddSignal(p.MouseButton1Click, function() l:Open() end)
+
+        -- ปิดเมื่อคลิกข้างนอก
         c.AddSignal(
             ag.InputBegan,
             function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    local Bpos, Bsize = popup.AbsolutePosition, popup.AbsoluteSize
+                    -- mouse pos (จาก ah ที่เป็น mouse)
                     local mx, my = ah.X, ah.Y
-                    -- ถ้า click นอก popup และนอกปุ่ม dropdown ให้ปิด
-                    local insidePopup = not (mx < Bpos.X or mx > Bpos.X + Bsize.X or my < Bpos.Y or my > Bpos.Y + Bsize.Y)
-                    local insideButton = false
-                    local bx, by = dropdownButton.AbsolutePosition, dropdownButton.AbsoluteSize
-                    if not (mx < bx.X or mx > bx.X + bx.X or my < bx.Y or my > bx.Y + bx.Y) then
-                        insideButton = false
-                    end
-                    if not insidePopup then
-                        self:Close()
+                    local Bpos = v.AbsolutePosition
+                    local Bsize = v.AbsoluteSize
+                    -- ถ้า mouse อยู่นอกขอบทั้ง v และ p (ถ้านอกทั้งคู่) ให้ปิด
+                    local insidePopup =
+                        not (mx < Bpos.X or mx > Bpos.X + Bsize.X or my < Bpos.Y or my > Bpos.Y + Bsize.Y)
+                    local Ppos, Psize = p.AbsolutePosition, p.AbsoluteSize
+                    local insideButton =
+                        not (mx < Ppos.X or mx > Ppos.X + Psize.X or my < Ppos.Y or my > Ppos.Y + Psize.Y)
+                    if not insidePopup and not insideButton then
+                        l:Close()
                     end
                 end
             end
         )
 
-        local A = h.ScrollFrame -- เอา scrolling ของหน้าไว้ปิดตอนเปิด popup
-
-        function self:Open()
-            self.Opened = true
-            A.ScrollingEnabled = false
-            popup.Visible = true
-            updatePosition()
-            af:Create(dropdownHolderBackground, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = dropdownHolderBackground.Size}):Play()
-            adjustSize()
-        end
-
-        function self:Close()
-            self.Opened = false
-            A.ScrollingEnabled = true
-            dropdownHolderBackground.Size = UDim2.fromScale(1, 0.6)
-            popup.Visible = false
-        end
-
-        -- แสดงค่าที่เลือกบน label
-        function self:Display()
-            local vals, txt = self.Values, ""
-            if j.Multi then
-                for k, v in next, self.Value do
-                    txt = txt .. k .. ", "
-                end
-                txt = #txt > 2 and txt:sub(1, #txt - 2) or txt
-            else
-                txt = self.Value or ""
-            end
-            currentValueLabel.Text = (txt == "" and "--" or txt)
-        end
-
-        function self.GetActiveValues()
-            if j.Multi then
-                local t = {}
-                for k, v in next, self.Value do
-                    table.insert(t, k)
-                end
-                return t
-            else
-                return self.Value and 1 or 0
-            end
-        end
-
-        -- สร้างรายการ dropdown โดยคำนึงถึงการกรอง (search)
-        function self:BuildDropdownList()
-            local values = self.Values or {}
-            -- ทำความสะอาด children เก่า
-            for _, child in next, listScrolling:GetChildren() do
-                if not child:IsA("UIListLayout") then
-                    child:Destroy()
-                end
+        -- ฟังก์ชันค้นหา: กรอง OptionWidgets ตาม SearchBox.Text
+        local function applyFilter()
+            local q = string.lower(SearchBox.Text or "")
+            for idx, widget in next, OptionWidgets do
+                -- เรไม่เก็บ reference ของ element UI ภายนอก widget object ดังนั้นหา child ตาม index
+                -- แต่เพื่อความเรียบง่าย ให้วนตรวจ child ของ t ตามลำดับ
             end
 
-            local contentHeight = 0
-            local maxTextWidth = 0
-            local items = {}
-
-            for _, value in next, values do
-                -- ถ้ามี filter แล้วให้ข้ามรายการที่ไม่ตรง
-                if self._FilterText == "" or string.find(string.lower(value), string.lower(self._FilterText)) then
-                    contentHeight = contentHeight + 36
-                    local optFrame =
-                        e(
-                            "TextButton",
-                            {
-                                Size = UDim2.new(1, -5, 0, 32),
-                                BackgroundTransparency = 1,
-                                ZIndex = 23,
-                                Text = "",
-                                Parent = listScrolling,
-                                ThemeTag = {BackgroundColor3 = "DropdownOption"}
-                            },
-                            {
-                                e("UICorner", {CornerRadius = UDim.new(0, 6)})
-                            }
-                        )
-
-                    local accentBar =
-                        e(
-                            "Frame",
-                            {
-                                Size = UDim2.fromOffset(4, 14),
-                                BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-                                Position = UDim2.fromOffset(-1, 16),
-                                AnchorPoint = Vector2.new(0, 0.5),
-                                ThemeTag = {BackgroundColor3 = "Accent"}
-                            },
-                            {e("UICorner", {CornerRadius = UDim.new(0, 2)})}
-                        )
-
-                    local label =
-                        e(
-                            "TextLabel",
-                            {
-                                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
-                                Text = value,
-                                TextColor3 = Color3.fromRGB(200, 200, 200),
-                                TextSize = 13,
-                                TextXAlignment = Enum.TextXAlignment.Left,
-                                BackgroundTransparency = 1,
-                                AutomaticSize = Enum.AutomaticSize.Y,
-                                Size = UDim2.fromScale(1, 1),
-                                Position = UDim2.fromOffset(10, 0),
-                                Name = "ButtonLabel",
-                                ThemeTag = {TextColor3 = "Text"}
-                            }
-                        )
-
-                    -- checkbox / active flag
-                    local isActive
-                    if j.Multi then
-                        isActive = self.Value[value] ~= nil
-                    else
-                        isActive = self.Value == value
-                    end
-
-                    -- springs / animations
-                    local bgSpring, accentSpring = c.SpringMotor(1, optFrame, "BackgroundTransparency"), c.SpringMotor(1, accentBar, "BackgroundTransparency")
-                    local sizeMotor = d.SingleMotor.new(6)
-                    sizeMotor:onStep(function(vv)
-                        accentBar.Size = UDim2.new(0, 4, 0, vv)
-                    end)
-
-                    c.AddSignal(optFrame.MouseEnter, function()
-                        bgSpring(isActive and 0.85 or 0.89)
-                    end)
-                    c.AddSignal(optFrame.MouseLeave, function()
-                        bgSpring(isActive and 0.89 or 1)
-                    end)
-                    c.AddSignal(optFrame.MouseButton1Down, function()
-                        bgSpring(0.92)
-                    end)
-                    c.AddSignal(optFrame.MouseButton1Up, function()
-                        bgSpring(isActive and 0.85 or 0.89)
-                    end)
-
-                    local item = {}
-                    function item.UpdateButton()
-                        if j.Multi then
-                            isActive = self.Value[value] ~= nil
-                        else
-                            isActive = self.Value == value
-                        end
-                        sizeMotor:setGoal(d.Spring.new(isActive and 14 or 6, {frequency = 6}))
-                        accentSpring(isActive and 0 or 1)
-                        bgSpring(isActive and 0.89 or 1)
-                    end
-
-                    label.InputBegan:Connect(function(inp)
-                        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-                            local toggled = not isActive
-                            if self:GetActiveValues() == 1 and not toggled and not j.AllowNull then
-                                -- ถ้าไม่ยอมให้ null และเป็น single แล้วจะไม่ยกเลิก
-                            else
-                                if j.Multi then
-                                    isActive = toggled
-                                    if isActive then
-                                        self.Value[value] = true
-                                    else
-                                        self.Value[value] = nil
-                                    end
-                                else
-                                    isActive = toggled
-                                    self.Value = isActive and value or nil
-                                    -- อัพเดตรายการอื่นๆ
-                                    for _, it in next, items do
-                                        if it.UpdateButton then
-                                            it.UpdateButton()
-                                        end
-                                    end
-                                end
-                                item.UpdateButton()
-                                self:Display()
-                                k:SafeCallback(self.Callback, self.Value)
-                                k:SafeCallback(self.Changed, self.Value)
-                            end
-                        end
-                    end)
-
-                    item.Frame = optFrame
-                    items[#items + 1] = item
-                    item.UpdateButton()
-                end
-            end
-
-            -- คำนวณขนาดความกว้างขั้นต่ำตามความยาวตัวหนังสือ
-            local maxW = 0
-            for _, child in next, listScrolling:GetChildren() do
+            -- เราจะวน child ของ t (ที่เป็น TextButton) เพื่อเช็ค label.Text
+            for _, child in next, t:GetChildren() do
                 if child:IsA("TextButton") then
-                    local lbl = child:FindFirstChild("ButtonLabel")
-                    if lbl then
-                        if lbl.TextBounds.X > maxW then
-                            maxW = lbl.TextBounds.X
-                        end
+                    local label = child:FindFirstChild("ButtonLabel")
+                    if label then
+                        local txt = string.lower(label.Text or "")
+                        child.Visible = (q == "" or string.find(txt, q, 1, true) ~= nil)
                     end
                 end
             end
-            local newWidth = math.max(170, math.clamp(maxW + 60, 170, 420))
-            popup.Size = UDim2.fromOffset(newWidth, math.clamp(#items * 36 + 56, 80, 300))
-            dropdownHolderBackground.Size = UDim2.fromOffset(popup.AbsoluteSize.X, popup.AbsoluteSize.Y - 44)
-            listScrolling.CanvasSize = UDim2.fromOffset(0, listLayout.AbsoluteContentSize.Y)
+
+            -- อัพเดต canvas
+            updateCanvas()
         end
 
-        function self.SetValues(_, newVals)
-            if newVals then
-                self.Values = newVals
-            end
-            self:BuildDropdownList()
-        end
-
-        function self.OnChanged(_, cb)
-            self.Changed = cb
-            if cb then
-                cb(self.Value)
-            end
-        end
-
-        function self.SetValue(_, newValue)
-            if self.Multi then
-                local t = {}
-                for k, v in next, newValue or {} do
-                    if table.find(self.Values, k) then
-                        t[k] = true
-                    end
-                end
-                self.Value = t
-            else
-                if not newValue then
-                    self.Value = nil
-                elseif table.find(self.Values, newValue) then
-                    self.Value = newValue
-                end
-            end
-            self:BuildDropdownList()
-            k:SafeCallback(self.Callback, self.Value)
-            k:SafeCallback(self.Changed, self.Value)
-        end
-
-        function self.Destroy()
-            elem:Destroy()
-            k.Options[i] = nil
-        end
-
-        -- เมื่อกดปุ่ม dropdown ให้เปิด/ปิด
-        c.AddSignal(dropdownButton:GetPropertyChangedSignal("AbsolutePosition"), updatePosition)
-        c.AddSignal(dropdownButton.MouseButton1Click, function()
-            if self.Opened then
-                self:Close()
-            else
-                self:Open()
-            end
+        -- เชื่อม signal ของกล่องค้นหา
+        SearchBox:GetPropertyChangedSignal("Text"):Connect(applyFilter)
+        SearchBox.Focused:Connect(function() -- ปรับ style ขณะโฟกัส ถ้าต้องการ
+            -- placeholder/indicator handled by ThemeTag
         end)
 
-        -- ทำงานเมื่อพิมพ์ค้นหา (filter)
-        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-            self._FilterText = searchBox.Text or ""
-            self:BuildDropdownList()
-        end)
-
-        -- ปุ่ม X เพื่อเคลียร์รายการที่เลือกทั้งหมด
-        clearBtn.MouseButton1Click:Connect(function()
-            if self.Multi then
-                self.Value = {}
+        -- ปุ่ม Clear (ล้างการเลือกทั้งหมด)
+        ClearButton.MouseButton1Click:Connect(function()
+            if l.Multi then
+                l.Value = {}
             else
-                self.Value = nil
+                l.Value = nil
             end
-            self:BuildDropdownList()
-            self:Display()
-            k:SafeCallback(self.Callback, self.Value)
-            k:SafeCallback(self.Changed, self.Value)
+            -- รี-สร้างปุ่มเพื่ออัพเดตสถานะ
+            l:BuildDropdownList()
+            l:Display()
+            k:SafeCallback(l.Callback, l.Value)
+            k:SafeCallback(l.Changed, l.Value)
         end)
 
-        -- ปรับตำแหน่ง initial และ สร้างรายการเริ่มต้น
-        self:BuildDropdownList()
-        self:Display()
+        -- เมื่อขนาดเนื้อหาเปลี่ยน ปรับ canvas/popup
+        c.AddSignal(listLayout:GetPropertyChangedSignal "AbsoluteContentSize", updateCanvas)
+        -- เรียกครั้งแรกเพื่อตำแหน่งให้ถูก
+        positionPopup()
 
-        -- ส่วนสับเปลี่ยนค่า default ที่เป็น index / string / table (ของเดิม)
-        local initIndexes = {}
-        if type(j.Default) == "string" then
-            local idx = table.find(self.Values, j.Default)
-            if idx then table.insert(initIndexes, idx) end
-        elseif type(j.Default) == "table" then
-            for _, v in next, j.Default do
-                local idx = table.find(self.Values, v)
-                if idx then table.insert(initIndexes, idx) end
-            end
-        elseif type(j.Default) == "number" and self.Values[j.Default] ~= nil then
-            table.insert(initIndexes, j.Default)
-        end
-
-        if next(initIndexes) then
-            for c = 1, #initIndexes do
-                local D = initIndexes[c]
-                if j.Multi then
-                    self.Value[self.Values[D]] = true
-                else
-                    self.Value = self.Values[D]
-                end
-                if not j.Multi then break end
-            end
-            self:BuildDropdownList()
-            self:Display()
-        end
-
-        k.Options[i] = self
-        return self
+        return l
     end
 
     return g
