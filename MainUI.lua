@@ -3522,7 +3522,7 @@ end,
                 }
             )
 
-            -- แก้ตรงนี้: เปลี่ยนจาก TextLabel -> TextBox เพื่อให้พิมพ์ค่าได้
+            -- เปลี่ยนเป็น TextBox ที่มี placeholder, ขอบ และมุมมน
             local l, m, n =
                 ai(
                     "Frame",
@@ -3539,19 +3539,22 @@ end,
                     {
                         FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
                         Text = "Value",
+                        PlaceholderText = "Type value",         -- ให้ผู้ใช้รู้ว่าสามารถพิมพ์ได้
                         TextSize = 12,
                         ClearTextOnFocus = false,
                         TextWrapped = true,
                         TextXAlignment = Enum.TextXAlignment.Right,
                         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                        BackgroundTransparency = 1,
-                        Size = UDim2.new(0, 100, 0, 14),
-                        Position = UDim2.new(0, -4, 0.5, 0),
+                        BackgroundTransparency = 0.85,         -- ทำให้เห็นกรอบเล็กน้อย
+                        Size = UDim2.new(0, 80, 0, 18),        -- ขนาดปรับให้เหมาะสม
+                        Position = UDim2.new(1, -20, 0.5, 0), -- ขยับออกจาก slider (มากขึ้น)
                         AnchorPoint = Vector2.new(1, 0.5),
-                        ThemeTag = {TextColor3 = "SubText"},
-                        -- Allow numbers input; keyboard will show on mobile
-                        ClearTextOnFocus = false,
-                        TextEditable = true
+                        ThemeTag = {TextColor3 = "Text", PlaceholderColor3 = "SubText"}
+                    },
+                    {
+                        -- เพิ่มมุมมนและเส้นขอบบางๆ เพื่อบอกว่าเป็น input
+                        ai("UICorner", {CornerRadius = UDim.new(0, 4)}),
+                        ai("UIStroke", {Color = Color3.fromRGB(200, 200, 200), Transparency = 0.7, Thickness = 1})
                     }
                 )
 
@@ -3578,7 +3581,7 @@ end,
             -- ถ้ามีการพิมพ์อยู่ หยุดการ drag ไว้
             local editingNumber = false
 
-            -- ถ้าคลิกที่ไอคอน จะเริ่ม drag (เหมือนเดิม)
+            -- กดไอคอนเริ่ม drag (เหมือนเดิม)
             ah.AddSignal(
                 k.InputBegan,
                 function(p)
@@ -3596,25 +3599,25 @@ end,
                 end
             )
 
-            -- ขณะพิมพ์ หยุดตอบสนองการลาก
+            -- เมื่อ TextBox ถูกโฟกัส ให้ป้องกันการลาก และแสดงว่ากำลังพิมพ์
             n.Focused:Connect(function()
                 editingNumber = true
-                -- ป้องกันค่า i (drag) ขณะพิมพ์
-                i = false
+                i = false -- ปิดการ drag ขณะพิมพ์
+                -- ถ้าต้องการให้ข้อความทั้งหมดถูกเลือกเมื่อโฟกัส:
+                pcall(function() n.SelectionStart = 1 end)
             end)
 
+            -- เมื่อพิมพ์เสร็จ (กด Enter หรือคลิกออก) -> validate และอัปเดต slider
             n.FocusLost:Connect(function(enterPressed)
                 editingNumber = false
-                -- ถ้ากด Enter หรือคลิกออก ให้อ่านค่าและอัปเดต slider
                 local text = n.Text
-                -- support comma เป็นจุดทศนิยมด้วย (เช่น "1,5")
-                text = tostring(text):gsub(",", ".")
+                text = tostring(text):gsub(",", ".") -- รองรับ comma เป็นจุดทศนิยม
                 local num = tonumber(text)
                 if num then
                     local newVal = g:Round(math.clamp(num, h.Min, h.Max), h.Rounding)
                     h:SetValue(newVal)
                 else
-                    -- revert to current value
+                    -- คืนค่าเดิมหากไม่ใช่ตัวเลข
                     if h.Value ~= nil then
                         n.Text = tostring(h.Value)
                     else
