@@ -1445,192 +1445,201 @@ local aa = {
         end
     end,
     [16] = function()
-        local c, d, e, f, g = b(16)
-        local h, i = d.Parent.Parent, e(d.Parent.Assets)
-        local j, k = e(h.Creator), e(h.Packages.Flipper)
-        local l, m = j.New, j.AddSignal
-        return function(n)
-            local o, p, q =
-                {},
-                e(h),
-                function(o, p, q, r)
-                    local s = {Callback = r or function()
-                            end}
-                    s.Frame =
+    local c, d, e, f, g = b(16)
+    local h, i = d.Parent.Parent, e(d.Parent.Assets)
+    local j, k = e(h.Creator), e(h.Packages.Flipper)
+    local l, m = j.New, j.AddSignal
+    return function(n)
+        local o, p, q =
+            {},
+            e(h),
+            function(o, p, q, r)
+                local s = {Callback = r or function()
+                        end}
+                s.Frame =
+                    l(
+                    "TextButton",
+                    {
+                        Size = UDim2.new(0, 34, 1, -8),
+                        AnchorPoint = Vector2.new(1, 0),
+                        BackgroundTransparency = 1,
+                        Parent = q,
+                        Position = p,
+                        Text = "",
+                        ThemeTag = {BackgroundColor3 = "Text"}
+                    },
+                    {
+                        l("UICorner", {CornerRadius = UDim.new(0, 7)}),
                         l(
-                        "TextButton",
-                        {
-                            Size = UDim2.new(0, 34, 1, -8),
-                            AnchorPoint = Vector2.new(1, 0),
-                            BackgroundTransparency = 1,
-                            Parent = q,
-                            Position = p,
-                            Text = "",
-                            ThemeTag = {BackgroundColor3 = "Text"}
-                        },
-                        {
-                            l("UICorner", {CornerRadius = UDim.new(0, 7)}),
-                            l(
-                                "ImageLabel",
-                                {
-                                    Image = o,
-                                    Size = UDim2.fromOffset(16, 16),
-                                    Position = UDim2.fromScale(0.5, 0.5),
-                                    AnchorPoint = Vector2.new(0.5, 0.5),
-                                    BackgroundTransparency = 1,
-                                    Name = "Icon",
-                                    ThemeTag = {ImageColor3 = "Text"}
-                                }
-                            )
-                        }
-                    )
-                    local t, u = j.SpringMotor(1, s.Frame, "BackgroundTransparency")
-                    m(
-                        s.Frame.MouseEnter,
-                        function()
-                            u(0.94)
-                        end
-                    )
-                    m(
-                        s.Frame.MouseLeave,
-                        function()
-                            u(1, true)
-                        end
-                    )
-                    m(
-                        s.Frame.MouseButton1Down,
-                        function()
-                            u(0.96)
-                        end
-                    )
-                    m(
-                        s.Frame.MouseButton1Up,
-                        function()
-                            u(0.94)
-                        end
-                    )
-                    m(s.Frame.MouseButton1Click, s.Callback)
-                    s.SetCallback = function(v)
-                        s.Callback = v
-                    end
-                    return s
-                end
-            o.Frame =
-                l(
-                "Frame",
-                {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = n.Parent},
-                {
-                    l(
-                        "Frame",
-                        {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.new(0, 16, 0, 0), BackgroundTransparency = 1},
-                        {
-                            l(
-                                "UIListLayout",
-                                {
-                                    Padding = UDim.new(0, 5),
-                                    FillDirection = Enum.FillDirection.Horizontal,
-                                    SortOrder = Enum.SortOrder.LayoutOrder
-                                }
-                            ),
-                            l(
-                                "ImageLabel",
-                                {
-                                    Image = n.Icon or "rbxassetid://130967366683860", -- ใส่ id รูป icon ของคุณ
-                                    Size = UDim2.fromOffset(18, 18),
-                                    Position = UDim2.fromOffset(0, 0),
-                                    BackgroundTransparency = 1,
-                                    ThemeTag = {ImageColor3 = "Text"}
-                                }
-                            ),
-                            l(
-                                "TextLabel",
-                                {
-                                    RichText = true,
-                                    Text = n.Title,
-                                    FontFace = Font.new(
-                                        "rbxasset://fonts/families/GothamSSm.json",
-                                        Enum.FontWeight.Regular,
-                                        Enum.FontStyle.Normal
-                                    ),
-                                    TextSize = 12,
-                                    TextXAlignment = "Left",
-                                    TextYAlignment = "Center",
-                                    Size = UDim2.fromScale(0, 1),
-                                    AutomaticSize = Enum.AutomaticSize.X,
-                                    BackgroundTransparency = 1,
-                                    Position = UDim2.fromOffset(22, 0), -- ขยับไปขวาเพื่อไม่ชน icon
-                                    ThemeTag = {TextColor3 = "Text"}
-                                }
-                            ),
-                            l(
-                                "TextLabel",
-                                {
-                                    RichText = true,
-                                    Text = n.SubTitle,
-                                    TextTransparency = 0.4,
-                                    FontFace = Font.new(
-                                        "rbxasset://fonts/families/GothamSSm.json",
-                                        Enum.FontWeight.Regular,
-                                        Enum.FontStyle.Normal
-                                    ),
-                                    TextSize = 12,
-                                    TextXAlignment = "Left",
-                                    TextYAlignment = "Center",
-                                    Size = UDim2.fromScale(0, 1),
-                                    AutomaticSize = Enum.AutomaticSize.X,
-                                    BackgroundTransparency = 1,
-                                    ThemeTag = {TextColor3 = "Text"}
-                                }
-                            )
-                        }
-                    ),
-                    l(
-                        "Frame",
-                        {
-                            BackgroundTransparency = 0.5,
-                            Size = UDim2.new(1, 0, 0, 1),
-                            Position = UDim2.new(0, 0, 1, 0),
-                            ThemeTag = {BackgroundColor3 = "TitleBarLine"}
-                        }
-                    )
-                }
-            )
-            o.CloseButton =
-                q(
-                i.Close,
-                UDim2.new(1, -4, 0, 4),
-                o.Frame,
-                function()
-                    p.Window:Dialog {
-                        Title = "Close",
-                        Content = "Are you sure you want to unload the interface?",
-                        Buttons = {{Title = "Yes", Callback = function()
-                                    p:Destroy()
-                                end}, {Title = "No"}}
+                            "ImageLabel",
+                            {
+                                Image = o,
+                                Size = UDim2.fromOffset(16, 16),
+                                Position = UDim2.fromScale(0.5, 0.5),
+                                AnchorPoint = Vector2.new(0.5, 0.5),
+                                BackgroundTransparency = 1,
+                                Name = "Icon",
+                                ThemeTag = {ImageColor3 = "Text"}
+                            }
+                        )
                     }
+                )
+                local t, u = j.SpringMotor(1, s.Frame, "BackgroundTransparency")
+                m(
+                    s.Frame.MouseEnter,
+                    function()
+                        u(0.94)
+                    end
+                )
+                m(
+                    s.Frame.MouseLeave,
+                    function()
+                        u(1, true)
+                    end
+                )
+                m(
+                    s.Frame.MouseButton1Down,
+                    function()
+                        u(0.96)
+                    end
+                )
+                m(
+                    s.Frame.MouseButton1Up,
+                    function()
+                        u(0.94)
+                    end
+                )
+                m(s.Frame.MouseButton1Click, s.Callback)
+                s.SetCallback = function(v)
+                    s.Callback = v
                 end
-            )
-            o.MaxButton =
-                q(
-                i.Max,
-                UDim2.new(1, -40, 0, 4),
-                o.Frame,
-                function()
-                    n.Window.Maximize(not n.Window.Maximized)
-                end
-            )
-            o.MinButton =
-                q(
-                i.Min,
-                UDim2.new(1, -80, 0, 4),
-                o.Frame,
-                function()
-                    p.Window:Minimize()
-                end
-            )
-            return o
-        end
-    end,
+                return s
+            end
+        o.Frame =
+            l(
+            "Frame",
+            {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = n.Parent},
+            {
+                l(
+                    "Frame",
+                    {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.new(0, 16, 0, 0), BackgroundTransparency = 1},
+                    {
+                        -- ใช้ UIListLayout จัดเป็นแนวนอนและจัดกึ่งกลางแนวตั้ง
+                        l(
+                            "UIListLayout",
+                            {
+                                Padding = UDim.new(0, 8),
+                                FillDirection = Enum.FillDirection.Horizontal,
+                                SortOrder = Enum.SortOrder.LayoutOrder,
+                                VerticalAlignment = Enum.VerticalAlignment.Center
+                            }
+                        ),
+
+                        -- ไอคอน (ขยายขนาดให้เห็นชัดขึ้น, ไม่กำหนด Position เพราะ layout จะจัดให้)
+                        l(
+                            "ImageLabel",
+                            {
+                                Name = "WindowIcon",
+                                Image = n.Icon or "rbxassetid://130967366683860",
+                                Size = UDim2.fromOffset(24, 24),
+                                BackgroundTransparency = 1,
+                                LayoutOrder = 1,
+                                ScaleType = Enum.ScaleType.Fit,
+                                ThemeTag = {ImageColor3 = "Text"}
+                            }
+                        ),
+
+                        -- Title
+                        l(
+                            "TextLabel",
+                            {
+                                RichText = true,
+                                Text = n.Title or "",
+                                FontFace = Font.new(
+                                    "rbxasset://fonts/families/GothamSSm.json",
+                                    Enum.FontWeight.Regular,
+                                    Enum.FontStyle.Normal
+                                ),
+                                TextSize = 13,
+                                TextXAlignment = "Left",
+                                TextYAlignment = "Center",
+                                AutomaticSize = Enum.AutomaticSize.X,
+                                BackgroundTransparency = 1,
+                                LayoutOrder = 2,
+                                ThemeTag = {TextColor3 = "Text"}
+                            }
+                        ),
+
+                        -- SubTitle (ถ้ามี)
+                        l(
+                            "TextLabel",
+                            {
+                                RichText = true,
+                                Text = n.SubTitle or "",
+                                TextTransparency = 0.4,
+                                FontFace = Font.new(
+                                    "rbxasset://fonts/families/GothamSSm.json",
+                                    Enum.FontWeight.Regular,
+                                    Enum.FontStyle.Normal
+                                ),
+                                TextSize = 12,
+                                TextXAlignment = "Left",
+                                TextYAlignment = "Center",
+                                AutomaticSize = Enum.AutomaticSize.X,
+                                BackgroundTransparency = 1,
+                                LayoutOrder = 3,
+                                ThemeTag = {TextColor3 = "Text"}
+                            }
+                        )
+                    }
+                ),
+                l(
+                    "Frame",
+                    {
+                        BackgroundTransparency = 0.5,
+                        Size = UDim2.new(1, 0, 0, 1),
+                        Position = UDim2.new(0, 0, 1, 0),
+                        ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+                    }
+                )
+            }
+        )
+        o.CloseButton =
+            q(
+            i.Close,
+            UDim2.new(1, -4, 0, 4),
+            o.Frame,
+            function()
+                p.Window:Dialog {
+                    Title = "Close",
+                    Content = "Are you sure you want to unload the interface?",
+                    Buttons = {{Title = "Yes", Callback = function()
+                                p:Destroy()
+                            end}, {Title = "No"}}
+                }
+            end
+        )
+        o.MaxButton =
+            q(
+            i.Max,
+            UDim2.new(1, -40, 0, 4),
+            o.Frame,
+            function()
+                n.Window.Maximize(not n.Window.Maximized)
+            end
+        )
+        o.MinButton =
+            q(
+            i.Min,
+            UDim2.new(1, -80, 0, 4),
+            o.Frame,
+            function()
+                p.Window:Minimize()
+            end
+        )
+        return o
+    end
+end,
     [17] = function()
         local c, d, e, f, g = b(17)
         local h, i, j, k =
