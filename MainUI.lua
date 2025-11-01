@@ -1779,6 +1779,9 @@ local aa = {
             end
         )
 
+        -- Cache so we only build settings UI once (reduces hitch)
+        local cachedSettings = nil
+
         -- Settings Button
         o.SettingsButton =
             q(
@@ -1786,9 +1789,22 @@ local aa = {
             UDim2.new(1, -116, 0, 4),
             o.Frame,
             function()
+                -- If we already created the settings dialog, reuse it (fast)
+                if cachedSettings and cachedSettings.Dialog then
+                    -- update fields from storage (in case external changes)
+                    local trans = translations[settingsStorage.Language] or translations.English
+                    cachedSettings.Dialog.Title.Text = trans.settings_title
+                    cachedSettings.widthInput.Input.Text = tostring(settingsStorage.Width)
+                    cachedSettings.heightInput.Input.Text = tostring(settingsStorage.Height)
+                    cachedSettings.selectedLang = settingsStorage.Language
+                    cachedSettings.langButtonLabel.Text = cachedSettings.selectedLang
+                    cachedSettings.Dialog:Open()
+                    return
+                end
+
                 local trans = translations[settingsStorage.Language] or translations.English
 
-                -- Create Settings Dialog
+                -- Create Settings Dialog (first time only)
                 local settingsDialog = e(d.Parent.Dialog):Create()
                 settingsDialog.Title.Text = trans.settings_title
                 settingsDialog.Root.Size = UDim2.fromOffset(480, 420)
@@ -1960,7 +1976,7 @@ local aa = {
                     return section
                 end
 
-                -- Width Section
+                -- Width Section (reduced width to 40%)
                 local widthSection = createSection(
                     trans.window_width,
                     trans.window_width_desc,
@@ -1968,12 +1984,13 @@ local aa = {
                 )
 
                 local widthInput = e(d.Parent.Textbox)(widthSection, true)
-                widthInput.Frame.Size = UDim2.new(1, 0, 0, 34)
+                -- make width shorter (40% of parent width)
+                widthInput.Frame.Size = UDim2.new(0.4, 0, 0, 34)
                 widthInput.Frame.LayoutOrder = 3
                 widthInput.Input.PlaceholderText = trans.enter_width
                 widthInput.Input.Text = tostring(settingsStorage.Width)
 
-                -- Height Section
+                -- Height Section (reduced width to 40%)
                 local heightSection = createSection(
                     trans.window_height,
                     trans.window_height_desc,
@@ -1981,7 +1998,7 @@ local aa = {
                 )
 
                 local heightInput = e(d.Parent.Textbox)(heightSection, true)
-                heightInput.Frame.Size = UDim2.new(1, 0, 0, 34)
+                heightInput.Frame.Size = UDim2.new(0.4, 0, 0, 34)
                 heightInput.Frame.LayoutOrder = 3
                 heightInput.Input.PlaceholderText = trans.enter_height
                 heightInput.Input.Text = tostring(settingsStorage.Height)
@@ -1996,8 +2013,9 @@ local aa = {
                 local selectedLang = settingsStorage.Language
                 local langButtonLabel = nil
 
+                -- Language button (reduced width to 40%)
                 local langButton = l("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 34),
+                    Size = UDim2.new(0.4, 0, 0, 34),
                     BackgroundTransparency = 0.92,
                     Text = "",
                     Parent = langSection,
@@ -2034,127 +2052,142 @@ local aa = {
 
                 langButtonLabel = langButton:FindFirstChildOfClass("TextLabel")
 
-                -- Language Dropdown (iPhone style)
+                -- Language Dropdown (created once, reused) - position updated dynamically
                 local langDropdownOpen = false
-                local langDropdown = l("CanvasGroup", {
-                    Size = UDim2.fromOffset(langButton.AbsoluteSize.X, 0),
-                    Position = UDim2.fromOffset(0, 0),
-                    Visible = false,
-                    GroupTransparency = 1,
-                    Parent = p.GUI,
-                    ZIndex = 1000,
-                    ThemeTag = {BackgroundColor3 = "DropdownHolder"}
-                }, {
-                    l("UICorner", {CornerRadius = UDim.new(0, 10)}),
-                    l("UIStroke", {
-                        Transparency = 0.35,
-                        Thickness = 1.5,
-                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-                        ThemeTag = {Color = "DropdownBorder"}
-                    }),
-                    l("ScrollingFrame", {
-                        Size = UDim2.new(1, -14, 1, -14),
-                        Position = UDim2.fromOffset(7, 7),
-                        BackgroundTransparency = 1,
-                        BorderSizePixel = 0,
-                        ScrollBarThickness = 2.5,
-                        ScrollBarImageTransparency = 0.88,
-                        CanvasSize = UDim2.fromOffset(0, #languages * 32),
-                        ThemeTag = {ScrollBarImageColor3 = "Accent"}
+                local langDropdown, langScroll
+                local dropScale = nil
+                local dropTrans = nil
+
+                local function createLangDropdown()
+                    -- initial width uses current AbsoluteSize (may be 0 until render), we'll update on size change
+                    langDropdown = l("CanvasGroup", {
+                        Size = UDim2.fromOffset(langButton.AbsoluteSize.X > 0 and langButton.AbsoluteSize.X or 200, 0),
+                        Position = UDim2.fromOffset(0, 0),
+                        Visible = false,
+                        GroupTransparency = 1,
+                        Parent = p.GUI,
+                        ZIndex = 1000,
+                        ThemeTag = {BackgroundColor3 = "DropdownHolder"}
                     }, {
-                        l("UIListLayout", {Padding = UDim.new(0, 3)})
-                    })
-                })
-
-                -- iPhone-style smooth animation
-                local dropScale = k.SingleMotor.new(0.88)
-                local dropTrans = k.SingleMotor.new(1)
-                local dropBlur = k.SingleMotor.new(0)
-
-                dropScale:onStep(function(value)
-                    langDropdown.Size = UDim2.fromOffset(langButton.AbsoluteSize.X, 220 * value)
-                end)
-
-                dropTrans:onStep(function(value)
-                    langDropdown.GroupTransparency = value
-                end)
-
-                local function updateDropdownPosition()
-                    local btnPos = langButton.AbsolutePosition
-                    local btnSize = langButton.AbsoluteSize
-                    langDropdown.Position = UDim2.fromOffset(btnPos.X, btnPos.Y + btnSize.Y + 6)
-                end
-
-                local langScroll = langDropdown:FindFirstChildOfClass("ScrollingFrame")
-                for i, lang in ipairs(languages) do
-                    local isSelected = lang == selectedLang
-                    local option = l("TextButton", {
-                        Size = UDim2.new(1, -4, 0, 28),
-                        Text = "",
-                        BackgroundTransparency = isSelected and 0.88 or 1,
-                        Parent = langScroll,
-                        ThemeTag = {BackgroundColor3 = "DropdownOption"}
-                    }, {
-                        l("UICorner", {CornerRadius = UDim.new(0, 6)}),
+                        l("UICorner", {CornerRadius = UDim.new(0, 10)}),
                         l("UIStroke", {
-                            Transparency = 0.75,
-                            Thickness = 0.8,
+                            Transparency = 0.35,
+                            Thickness = 1.5,
                             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-                            ThemeTag = {Color = "InElementBorder"}
+                            ThemeTag = {Color = "DropdownBorder"}
                         }),
-                        l("TextLabel", {
-                            Text = lang,
-                            TextColor3 = isSelected and Color3.fromRGB(76, 194, 255) or Color3.fromRGB(240, 240, 240),
-                            TextSize = 12,
-                            TextXAlignment = Enum.TextXAlignment.Left,
-                            Size = UDim2.new(1, -12, 1, 0),
-                            Position = UDim2.fromOffset(10, 0),
+                        l("ScrollingFrame", {
+                            Size = UDim2.new(1, -14, 1, -14),
+                            Position = UDim2.fromOffset(7, 7),
                             BackgroundTransparency = 1,
-                            FontFace = Font.new(
-                                "rbxasset://fonts/families/GothamSSm.json",
-                                isSelected and Enum.FontWeight.SemiBold or Enum.FontWeight.Regular,
-                                Enum.FontStyle.Normal
-                            ),
-                            ThemeTag = isSelected and {TextColor3 = "Accent"} or {TextColor3 = "Text"}
+                            BorderSizePixel = 0,
+                            ScrollBarThickness = 2.5,
+                            ScrollBarImageTransparency = 0.88,
+                            CanvasSize = UDim2.fromOffset(0, #languages * 28),
+                            ThemeTag = {ScrollBarImageColor3 = "Accent"}
+                        }, {
+                            l("UIListLayout", {Padding = UDim.new(0, 3)})
                         })
                     })
 
-                    local optMotor, optSet = j.SpringMotor(isSelected and 0.88 or 1, option, "BackgroundTransparency")
-                    option.MouseEnter:Connect(function() optSet(0.86) end)
-                    option.MouseLeave:Connect(function() optSet(isSelected and 0.88 or 1) end)
+                    langScroll = langDropdown:FindFirstChildOfClass("ScrollingFrame")
 
-                    option.MouseButton1Click:Connect(function()
-                        selectedLang = lang
-                        langButtonLabel.Text = lang
-                        langDropdownOpen = false
+                    -- iPhone-style smooth animation motors
+                    dropScale = k.SingleMotor.new(0.88)
+                    dropTrans = k.SingleMotor.new(1)
 
-                        -- Smooth close animation
-                        dropScale:setGoal(k.Spring.new(0.88, {frequency = 4.5, dampingRatio = 0.95}))
-                        dropTrans:setGoal(k.Spring.new(1, {frequency = 5.5, dampingRatio = 1}))
-
-                        task.wait(0.12)
-                        langDropdown.Visible = false
+                    dropScale:onStep(function(value)
+                        -- height only; width remains tied to langButton
+                        local w = langButton.AbsoluteSize.X > 0 and langButton.AbsoluteSize.X or 200
+                        langDropdown.Size = UDim2.fromOffset(w, 220 * value)
                     end)
+
+                    dropTrans:onStep(function(value)
+                        langDropdown.GroupTransparency = value
+                    end)
+
+                    -- create options once (lighter on subsequent opens)
+                    for i, lang in ipairs(languages) do
+                        local isSelected = lang == selectedLang
+                        local option = l("TextButton", {
+                            Size = UDim2.new(1, -4, 0, 28),
+                            Text = "",
+                            BackgroundTransparency = isSelected and 0.88 or 1,
+                            Parent = langScroll,
+                            ThemeTag = {BackgroundColor3 = "DropdownOption"}
+                        }, {
+                            l("UICorner", {CornerRadius = UDim.new(0, 6)}),
+                            l("UIStroke", {
+                                Transparency = 0.75,
+                                Thickness = 0.8,
+                                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                                ThemeTag = {Color = "InElementBorder"}
+                            }),
+                            l("TextLabel", {
+                                Text = lang,
+                                TextColor3 = isSelected and Color3.fromRGB(76, 194, 255) or Color3.fromRGB(240, 240, 240),
+                                TextSize = 12,
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                Size = UDim2.new(1, -12, 1, 0),
+                                Position = UDim2.fromOffset(10, 0),
+                                BackgroundTransparency = 1,
+                                FontFace = Font.new(
+                                    "rbxasset://fonts/families/GothamSSm.json",
+                                    isSelected and Enum.FontWeight.SemiBold or Enum.FontWeight.Regular,
+                                    Enum.FontStyle.Normal
+                                ),
+                                ThemeTag = isSelected and {TextColor3 = "Accent"} or {TextColor3 = "Text"}
+                            })
+                        })
+
+                        local optMotor, optSet = j.SpringMotor(isSelected and 0.88 or 1, option, "BackgroundTransparency")
+                        option.MouseEnter:Connect(function() optSet(0.86) end)
+                        option.MouseLeave:Connect(function() optSet(isSelected and 0.88 or 1) end)
+
+                        option.MouseButton1Click:Connect(function()
+                            selectedLang = lang
+                            langButtonLabel.Text = lang
+                            langDropdownOpen = false
+
+                            -- close animation
+                            dropScale:setGoal(k.Spring.new(0.88, {frequency = 4.5, dampingRatio = 0.95}))
+                            dropTrans:setGoal(k.Spring.new(1, {frequency = 5.5, dampingRatio = 1}))
+
+                            -- hide after animation quickly (no long wait)
+                            task.delay(0.08, function()
+                                if langDropdown then langDropdown.Visible = false end
+                            end)
+                        end)
+                    end
+
+                    -- update position when button absolute position/size settled
+                    local function updateDropdownPosition()
+                        local btnPos = langButton.AbsolutePosition
+                        local btnSize = langButton.AbsoluteSize
+                        langDropdown.Position = UDim2.fromOffset(btnPos.X, btnPos.Y + btnSize.Y + 6)
+                        -- ensure width matches button
+                        langDropdown.Size = UDim2.fromOffset(btnSize.X > 0 and btnSize.X or 200, langDropdown.Size.Y.Offset)
+                    end
+
+                    -- update when button size available
+                    langButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateDropdownPosition)
+                    langButton:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateDropdownPosition)
                 end
 
-                langButton.MouseButton1Click:Connect(function()
-                    langDropdownOpen = not langDropdownOpen
-                    updateDropdownPosition()
+                -- create the dropdown once (avoids repeated heavy creation)
+                createLangDropdown()
 
-                    if langDropdownOpen then
-                        langDropdown.Visible = true
-                        -- Smooth open animation (iPhone style)
-                        dropScale:setGoal(k.Spring.new(1, {frequency = 3.2, dampingRatio = 0.68}))
-                        dropTrans:setGoal(k.Spring.new(0, {frequency = 4.2, dampingRatio = 0.78}))
-                    else
-                        dropScale:setGoal(k.Spring.new(0.88, {frequency = 4.5, dampingRatio = 0.95}))
-                        dropTrans:setGoal(k.Spring.new(1, {frequency = 5.5, dampingRatio = 1}))
-                        task.wait(0.12)
-                        langDropdown.Visible = false
+                -- update dropdown position helper
+                local function updateDropdownPosition()
+                    if langDropdown then
+                        local btnPos = langButton.AbsolutePosition
+                        local btnSize = langButton.AbsoluteSize
+                        langDropdown.Position = UDim2.fromOffset(btnPos.X, btnPos.Y + btnSize.Y + 6)
+                        langDropdown.Size = UDim2.fromOffset(btnSize.X > 0 and btnSize.X or 200, langDropdown.Size.Y.Offset)
                     end
-                end)
+                end
 
-                -- Update canvas size
+                -- Update canvas size (auto resize)
                 local layout = contentFrame:FindFirstChildOfClass("UIListLayout")
                 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
                     contentFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12)
@@ -2217,6 +2250,17 @@ local aa = {
 
                 settingsDialog:Button(trans.cancel_btn)
                 settingsDialog:Open()
+
+                -- cache references for fast reuse next time (reduces creating cost -> less hitch)
+                cachedSettings = {
+                    Dialog = settingsDialog,
+                    widthInput = widthInput,
+                    heightInput = heightInput,
+                    langButton = langButton,
+                    langButtonLabel = langButtonLabel,
+                    selectedLang = selectedLang,
+                    langDropdown = langDropdown
+                }
             end
         )
 
