@@ -2647,7 +2647,7 @@ local aa = {
             h.Library,
             {
                 Values = j.Values,
-                Value = j.Value,
+                Value = j.Default,
                 Multi = j.Multi,
                 Buttons = {},
                 Opened = false,
@@ -2719,7 +2719,7 @@ local aa = {
                 }
             )
         
-        -- Search Box (ลดขนาดความกว้างเพื่อให้ปุ่ม X ห่างออกไป)
+        -- Search Box (ลดความกว้างเพื่อให้ปุ่ม X ห่างออกไป)
         local searchBox = e(
             "TextBox",
             {
@@ -2749,12 +2749,12 @@ local aa = {
             }
         )
         
-        -- Clear Button (X) - ปรับตำแหน่งให้ห่างจาก Search Box
+        -- Clear Button (X) - ปรับตำแหน่งให้ห่างจาก search box
         local clearButton = e(
             "TextButton",
             {
-                Size = UDim2.fromOffset(35, 30),
-                Position = UDim2.new(1, -5, 0, 5),
+                Size = UDim2.fromOffset(30, 30),
+                Position = UDim2.new(1, -10, 0, 5),
                 AnchorPoint = Vector2.new(1, 0),
                 BackgroundTransparency = 0.9,
                 Text = "✕",
@@ -2832,11 +2832,11 @@ local aa = {
                 Parent = h.Library.GUI, 
                 Visible = false
             },
-            {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 350)})}
+            {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 300)})}
         )
         table.insert(k.OpenFrames, v)
         
-        -- Position dropdown ให้ออกขวามากขึ้น
+        -- Position dropdown ไปทางขวามากขึ้น
         local w = function()
             local mainFrame = p.AbsolutePosition
             local mainSize = p.AbsoluteSize
@@ -2854,7 +2854,7 @@ local aa = {
         
         local x = 170
         local y = function()
-            local maxHeight = 350
+            local maxHeight = 300
             local contentHeight = s.AbsoluteContentSize.Y + 50
             local finalHeight = math.min(contentHeight, maxHeight)
             v.Size = UDim2.fromOffset(x, finalHeight)
@@ -3020,7 +3020,7 @@ local aa = {
                             e(
                                 "UIStroke",
                                 {
-                                    Transparency = 0.6,
+                                    Transparency = 0.7,
                                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                                     ThemeTag = {Color = "InElementBorder"}
                                 }
