@@ -2643,7 +2643,6 @@ local aa = {
     g.__index = g
     g.__type = "Dropdown"
 
-    -- New dropdown that opens to the right, has limited height (scroll), search box, and a red clear (X) button.
     function g.New(h, i, j)
         local k, l, m =
             h.Library,
@@ -2658,48 +2657,48 @@ local aa = {
             },
             ac(f.Element)(j.Title, j.Description, h.Container, false)
 
-        -- Adjust description width so primary UI stays tidy
+        -- adjust description width
         m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
-        -- expose methods from the base element
         l.SetTitle = m.SetTitle
         l.SetDesc = m.SetDesc
 
-        -- value display label and icon (visible on the dropdown button)
-        local valueLabel, chevronIcon =
+        -- label that displays current selection(s)
+        local displayLabel =
             e(
-                "TextLabel",
-                {
-                    FontFace = Font.new(
-                        "rbxasset://fonts/families/GothamSSm.json",
-                        Enum.FontWeight.Regular,
-                        Enum.FontStyle.Normal
-                    ),
-                    Text = "Value",
-                    TextColor3 = Color3.fromRGB(240, 240, 240),
-                    TextSize = 13,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Size = UDim2.new(1, -30, 0, 14),
-                    Position = UDim2.new(0, 8, 0.5, 0),
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    BackgroundTransparency = 1,
-                    TextTruncate = Enum.TextTruncate.AtEnd,
-                    ThemeTag = {TextColor3 = "Text"}
-                }
-            ),
-            e(
-                "ImageLabel",
-                {
-                    Image = "rbxassetid://10709790948",
-                    Size = UDim2.fromOffset(16, 16),
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -8, 0.5, 0),
-                    BackgroundTransparency = 1,
-                    ThemeTag = {ImageColor3 = "SubText"}
-                }
-            )
+            "TextLabel",
+            {
+                FontFace = Font.new(
+                    "rbxasset://fonts/families/GothamSSm.json",
+                    Enum.FontWeight.Regular,
+                    Enum.FontStyle.Normal
+                ),
+                Text = "Value",
+                TextColor3 = Color3.fromRGB(240, 240, 240),
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, -30, 0, 14),
+                Position = UDim2.new(0, 8, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundTransparency = 1,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ThemeTag = {TextColor3 = "Text"}
+            }
+        )
 
-        -- Main clickable button shown inside the element
-        local buttonFrame, listLayout =
+        local dropdownIcon =
+            e(
+            "ImageLabel",
+            {
+                Image = "rbxassetid://10709790948",
+                Size = UDim2.fromOffset(16, 16),
+                AnchorPoint = Vector2.new(1, 0.5),
+                Position = UDim2.new(1, -8, 0.5, 0),
+                BackgroundTransparency = 1,
+                ThemeTag = {ImageColor3 = "SubText"}
+            }
+        )
+
+        local p, s =
             e(
                 "TextButton",
                 {
@@ -2720,302 +2719,345 @@ local aa = {
                             ThemeTag = {Color = "InElementBorder"}
                         }
                     ),
-                    chevronIcon,
-                    valueLabel
+                    dropdownIcon,
+                    displayLabel
                 }
             ),
             e("UIListLayout", {Padding = UDim.new(0, 3)})
 
-        -- Scrolling area (options list) - this will be placed below a search bar inside the popup
-        local optionsScrolling =
+        -- scrolling container for options
+        local t =
             e(
-                "ScrollingFrame",
-                {
-                    Size = UDim2.new(1, -5, 1, -10),
-                    Position = UDim2.fromOffset(5, 5),
-                    BackgroundTransparency = 1,
-                    BottomImage = "rbxassetid://6889812791",
-                    MidImage = "rbxassetid://6889812721",
-                    TopImage = "rbxassetid://6276641225",
-                    ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
-                    ScrollBarImageTransparency = 0.95,
-                    ScrollBarThickness = 4,
-                    BorderSizePixel = 0,
-                    CanvasSize = UDim2.fromScale(0, 0)
-                },
-                {listLayout}
-            )
-
-        -- Build the visual holder for popup content; we'll add a SearchBar at the top of this holder
-        local popupHolderInner =
-            e(
-                "Frame",
-                {Size = UDim2.fromScale(1, 1), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
-                {
-                    optionsScrolling,
-                    e("UICorner", {CornerRadius = UDim.new(0, 7)}),
-                    e(
-                        "UIStroke",
-                        {ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}
-                    ),
-                    e(
-                        "ImageLabel",
-                        {
-                            BackgroundTransparency = 1,
-                            Image = "http://www.roblox.com/asset/?id=5554236805",
-                            ScaleType = Enum.ScaleType.Slice,
-                            SliceCenter = Rect.new(23, 23, 277, 277),
-                            Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30),
-                            Position = UDim2.fromOffset(-15, -15),
-                            ImageColor3 = Color3.fromRGB(0, 0, 0),
-                            ImageTransparency = 0.1
-                        }
-                    )
-                }
-            )
-
-        -- Outer popup (anchored to GUI root so it can appear outside the main element)
-        local popupFrame =
-            e(
-                "Frame",
-                {BackgroundTransparency = 1, Size = UDim2.fromOffset(170, 300), Parent = h.Library.GUI, Visible = false},
-                {popupHolderInner, e("UISizeConstraint", {MinSize = Vector2.new(170, 0)})}
-            )
-
-        -- We'll insert popupFrame into open-frames registry (for cleanup/minimization behavior)
-        table.insert(k.OpenFrames, popupFrame)
-
-        -- position helper: put popup to the right of the button, but keep visible on-screen
-        local function updatePopupPosition()
-            local yOffset = 0
-            -- ensure popup doesn't overflow bottom of screen; if it would, shift up
-            if ai.ViewportSize.Y - buttonFrame.AbsolutePosition.Y < popupFrame.AbsoluteSize.Y - 5 then
-                yOffset = popupFrame.AbsoluteSize.Y - 5 - (ai.ViewportSize.Y - buttonFrame.AbsolutePosition.Y) + 40
-            end
-            -- anchor to the right of the origin button (slightly overlap)
-            popupFrame.Position = UDim2.fromOffset(buttonFrame.AbsolutePosition.X - 1, buttonFrame.AbsolutePosition.Y - 5 - yOffset)
-        end
-
-        -- store widest label width to adjust popup width
-        local widestLabel = 0
-
-        -- functions to update sizes & canvas
-        local function updatePopupSize()
-            -- measure content (options) plus search area
-            local searchHeight = 36 -- height of search row
-            local contentHeight = optionsScrolling.UIListLayout and optionsScrolling.UIListLayout.AbsoluteContentSize.Y or 0
-            local totalHeight = contentHeight + searchHeight + 12 -- padding
-            local maxHeight = 392
-            local finalHeight = math.clamp(totalHeight, 48, maxHeight)
-            popupFrame.Size = UDim2.fromOffset(math.max(170, widestLabel + 60), finalHeight)
-            -- adjust inner holder so optionsScrolling area gets proper size (search area reserved)
-            popupHolderInner.Size = UDim2.fromScale(1, 1)
-        end
-
-        local function updateCanvas()
-            -- optionsScrolling should reflect content height only
-            local contentH = optionsScrolling.UIListLayout and optionsScrolling.UIListLayout.AbsoluteContentSize.Y or 0
-            optionsScrolling.CanvasSize = UDim2.fromOffset(0, contentH)
-        end
-
-        -- initial set
-        updatePopupPosition()
-        updatePopupSize()
-        updateCanvas()
-
-        -- Reposition popup when button moves (e.g. window drag)
-        c.AddSignal(buttonFrame:GetPropertyChangedSignal "AbsolutePosition", updatePopupPosition)
-
-        -- click to open
-        c.AddSignal(
-            buttonFrame.MouseButton1Click,
-            function()
-                l:Open()
-            end
+            "ScrollingFrame",
+            {
+                Size = UDim2.new(1, -5, 1, -10),
+                Position = UDim2.fromOffset(5, 5),
+                BackgroundTransparency = 1,
+                BottomImage = "rbxassetid://6889812791",
+                MidImage = "rbxassetid://6889812721",
+                TopImage = "rbxassetid://6276641225",
+                ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
+                ScrollBarImageTransparency = 0.95,
+                ScrollBarThickness = 4,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.fromScale(0, 0)
+            },
+            {s}
         )
 
-        -- close when clicking outside
+        -- holder frame for popup content (we will add search + clear + list)
+        local u =
+            e(
+            "Frame",
+            {Size = UDim2.fromScale(1, 0.6), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
+            {
+                t,
+                e("UICorner", {CornerRadius = UDim.new(0, 7)}),
+                e(
+                    "UIStroke",
+                    {ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}
+                ),
+                e(
+                    "ImageLabel",
+                    {
+                        BackgroundTransparency = 1,
+                        Image = "http://www.roblox.com/asset/?id=5554236805",
+                        ScaleType = Enum.ScaleType.Slice,
+                        SliceCenter = Rect.new(23, 23, 277, 277),
+                        Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30),
+                        Position = UDim2.fromOffset(-15, -15),
+                        ImageColor3 = Color3.fromRGB(0, 0, 0),
+                        ImageTransparency = 0.1
+                    }
+                )
+            }
+        )
+
+        -- popup frame attached to CoreGui so it floats outside main UI
+        local v =
+            e(
+            "Frame",
+            {BackgroundTransparency = 1, Size = UDim2.fromOffset(170, 300), Parent = h.Library.GUI, Visible = false},
+            {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0)})}
+        )
+        table.insert(k.OpenFrames, v)
+
+        -- SEARCH & CLEAR UI (inserted inside popup u)
+        -- container for top controls
+        local topControls =
+            e(
+            "Frame",
+            {
+                Size = UDim2.new(1, 0, 0, 36),
+                Position = UDim2.new(0, 0, 0, 0),
+                BackgroundTransparency = 1,
+                Parent = u
+            },
+            {e("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8)})}
+        )
+
+        -- Search box
+        local SearchBox =
+            e(
+            "TextBox",
+            {
+                PlaceholderText = "Search...",
+                Text = "",
+                Size = UDim2.new(1, -44, 0, 26),
+                Position = UDim2.fromOffset(8, 5),
+                BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+                BorderSizePixel = 0,
+                TextColor3 = Color3.fromRGB(230, 230, 230),
+                TextSize = 14,
+                Parent = topControls,
+                ClearTextOnFocus = false
+            },
+            {e("UICorner", {CornerRadius = UDim.new(0, 6)})}
+        )
+        -- Clear (X) button
+        local ClearButton =
+            e(
+            "TextButton",
+            {
+                Text = "✖",
+                Font = Enum.Font.SourceSansBold,
+                TextSize = 18,
+                TextColor3 = Color3.fromRGB(255, 90, 90),
+                Size = UDim2.fromOffset(28, 28),
+                BackgroundTransparency = 1,
+                Parent = topControls
+            }
+        )
+
+        -- re-parent scrolling frame to sit below topControls, adjust positions
+        t.Position = UDim2.fromOffset(5, 44)
+        t.Size = UDim2.new(1, -10, 1, -54)
+
+        -- helper: limit popup height and compute size from content
+        local function recomputeSize()
+            -- measure content height (list) and clamp to max
+            local contentH = s.AbsoluteContentSize.Y
+            local topH = 44
+            local desired = math.max(72, contentH + topH + 10)
+            local maxH = math.min(420, math.floor(ai.ViewportSize.Y * 0.7)) -- don't exceed 70% of viewport
+            local finalH = math.min(desired, maxH)
+            v.Size = UDim2.fromOffset(math.max(170, math.min(520, s.AbsoluteContentSize.X + 60)), finalH)
+            -- scrolling frame canvas
+            t.CanvasSize = UDim2.fromOffset(0, s.AbsoluteContentSize.Y)
+        end
+
+        -- position popup to the RIGHT of the button p; if offscreen, flip to left
+        local function positionPopup()
+            -- default place to the right
+            local btnPos = p.AbsolutePosition
+            local btnSize = p.AbsoluteSize
+            local offsetX = 8
+            local rightX = btnPos.X + btnSize.X + offsetX
+            local topY = btnPos.Y
+            local popupW = v.AbsoluteSize.X
+            local popupH = v.AbsoluteSize.Y
+            -- if it would go off right edge, place to left of button
+            if rightX + popupW > ai.ViewportSize.X - 8 then
+                local leftX = btnPos.X - popupW - offsetX
+                if leftX < 8 then
+                    -- fallback: keep inside viewport
+                    leftX = math.max(8, ai.ViewportSize.X - popupW - 8)
+                end
+                v.Position = UDim2.fromOffset(leftX, math.clamp(topY, 8, ai.ViewportSize.Y - popupH - 8))
+            else
+                v.Position = UDim2.fromOffset(rightX, math.clamp(topY, 8, ai.ViewportSize.Y - popupH - 8))
+            end
+        end
+
+        -- initial compute & position
+        local function refreshPopupLayout()
+            recomputeSize()
+            positionPopup()
+        end
+
+        -- listen to button pos changes to update popup
+        c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", function() positionPopup() end)
+        c.AddSignal(p:GetPropertyChangedSignal "AbsoluteSize", function() positionPopup() end)
+        c.AddSignal(ai:GetPropertyChangedSignal "ViewportSize", function() refreshPopupLayout() end)
+
+        -- close logic when clicking outside
         c.AddSignal(
             ag.InputBegan,
             function(A)
                 if A.UserInputType == Enum.UserInputType.MouseButton1 or A.UserInputType == Enum.UserInputType.Touch then
-                    local B, C = popupHolderInner.AbsolutePosition, popupHolderInner.AbsoluteSize
-                    if ah.X < B.X or ah.X > B.X + C.X or ah.Y < (B.Y - 20 - 1) or ah.Y > B.Y + C.Y then
+                    local B, C = v.AbsolutePosition, v.AbsoluteSize
+                    local mx, my = ah.X, ah.Y
+                    if mx < B.X or mx > B.X + C.X or my < B.Y or my > B.Y + C.Y then
                         l:Close()
                     end
                 end
             end
         )
 
-        -- disable main scroll while dropdown open (keeps main UI from scrolling behind)
-        local mainScroll = h.ScrollFrame
-
+        -- open/close
+        local A = h.ScrollFrame
         function l.Open(B)
             l.Opened = true
-            mainScroll.ScrollingEnabled = false
-            popupFrame.Visible = true
-            af:Create(
-                popupHolderInner,
-                TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-                {Size = UDim2.fromScale(1, 1)}
-            ):Play()
+            A.ScrollingEnabled = false
+            v.Visible = true
+            af:Create(u, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromScale(1, 1)}):Play()
+            refreshPopupLayout()
         end
-
         function l.Close(B)
             l.Opened = false
-            mainScroll.ScrollingEnabled = true
-            popupHolderInner.Size = UDim2.fromScale(1, 0.6)
-            popupFrame.Visible = false
+            A.ScrollingEnabled = true
+            u.Size = UDim2.fromScale(1, 0.6)
+            v.Visible = false
         end
 
-        -- Display selected values on the button label
+        -- display selected values on the compact button
         function l.Display(B)
-            local values, displayText = l.Values, ""
+            local C, D = l.Values, ""
             if j.Multi then
-                for name, _ in next, l.Value or {} do
-                    displayText = displayText .. name .. ", "
+                for E, F in next, C do
+                    if l.Value and l.Value[F] then
+                        D = D .. F .. ", "
+                    end
                 end
-                displayText = displayText:sub(1, #displayText - 2)
+                if #D > 2 then
+                    D = D:sub(1, #D - 2)
+                end
             else
-                displayText = l.Value or ""
+                D = l.Value or ""
             end
-            valueLabel.Text = (displayText == "" and "--" or displayText)
+            displayLabel.Text = (D == "" and "--" or D)
         end
 
         function l.GetActiveValues(B)
             if j.Multi then
-                local t = {}
+                local C = {}
                 for D, E in next, l.Value or {} do
-                    table.insert(t, D)
+                    table.insert(C, D)
                 end
-                return t
+                return C
             else
                 return l.Value and 1 or 0
             end
         end
 
-        -- Build dropdown list entries (now supports search/filtering)
+        -- build/refresh list
         function l.BuildDropdownList(B)
-            local C, entries = l.Values, {}
-            -- remove old entries
-            for _, child in next, optionsScrolling:GetChildren() do
-                if not child:IsA "UIListLayout" then
-                    child:Destroy()
+            local C, D = l.Values, {}
+            -- clear previous options
+            for E, F in next, t:GetChildren() do
+                if not F:IsA "UIListLayout" then
+                    F:Destroy()
                 end
             end
-
-            widestLabel = 0
-            local index = 0
-            for _, optionText in next, C do
-                index = index + 1
-                -- accent bar (left)
-                local accentBar =
+            local G = 0
+            for H, I in next, C do
+                local J = {}
+                G = G + 1
+                local indicator =
                     e(
-                        "Frame",
-                        {
-                            Size = UDim2.fromOffset(4, 14),
-                            BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-                            Position = UDim2.fromOffset(-1, 16),
-                            AnchorPoint = Vector2.new(0, 0.5),
-                            ThemeTag = {BackgroundColor3 = "Accent"}
-                        },
-                        {e("UICorner", {CornerRadius = UDim.new(0, 2)})}
-                    )
+                    "Frame",
+                    {
+                        Size = UDim2.fromOffset(4, 14),
+                        BackgroundColor3 = Color3.fromRGB(76, 194, 255),
+                        Position = UDim2.fromOffset(-1, 16),
+                        AnchorPoint = Vector2.new(0, 0.5),
+                        ThemeTag = {BackgroundColor3 = "Accent"}
+                    },
+                    {e("UICorner", {CornerRadius = UDim.new(0, 2)})}
+                )
 
-                -- label
                 local label =
                     e(
-                        "TextLabel",
-                        {
-                            FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-                            Text = optionText,
-                            TextColor3 = Color3.fromRGB(200, 200, 200),
-                            TextSize = 13,
-                            TextXAlignment = Enum.TextXAlignment.Left,
-                            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                            AutomaticSize = Enum.AutomaticSize.Y,
-                            BackgroundTransparency = 1,
-                            Size = UDim2.fromScale(1, 1),
-                            Position = UDim2.fromOffset(10, 0),
-                            Name = "ButtonLabel",
-                            ThemeTag = {TextColor3 = "Text"}
-                        }
-                    )
+                    "TextLabel",
+                    {
+                        FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+                        Text = I,
+                        TextColor3 = Color3.fromRGB(200, 200, 200),
+                        TextSize = 13,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        BackgroundTransparency = 1,
+                        Size = UDim2.fromScale(1, 1),
+                        Position = UDim2.fromOffset(10, 0),
+                        Name = "ButtonLabel",
+                        ThemeTag = {TextColor3 = "Text"}
+                    }
+                )
 
-                local btn =
+                local optionButton =
                     e(
-                        "TextButton",
-                        {
-                            Size = UDim2.new(1, -5, 0, 32),
-                            BackgroundTransparency = 1,
-                            ZIndex = 23,
-                            Text = "",
-                            Parent = optionsScrolling,
-                            ThemeTag = {BackgroundColor3 = "DropdownOption"}
-                        },
-                        {accentBar, label, e("UICorner", {CornerRadius = UDim.new(0, 6)})}
-                    )
+                    "TextButton",
+                    {
+                        Size = UDim2.new(1, -5, 0, 32),
+                        BackgroundTransparency = 1,
+                        ZIndex = 23,
+                        Text = "",
+                        Parent = t,
+                        ThemeTag = {BackgroundColor3 = "DropdownOption"}
+                    },
+                    {indicator, label, e("UICorner", {CornerRadius = UDim.new(0, 6)})}
+                )
 
-                -- determine current selected state
-                local selected
+                local selectedState
                 if j.Multi then
-                    selected = (l.Value and l.Value[optionText]) or nil
+                    selectedState = (l.Value and l.Value[I]) and true or false
                 else
-                    selected = (l.Value == optionText)
+                    selectedState = (l.Value == I)
                 end
 
-                local bgMotor, accentMotor = c.SpringMotor(1, btn, "BackgroundTransparency"), c.SpringMotor(1, accentBar, "BackgroundTransparency")
+                local bgMotor, indMotor = c.SpringMotor(1, optionButton, "BackgroundTransparency"), c.SpringMotor(1, indicator, "BackgroundTransparency")
                 local sizeMotor = d.SingleMotor.new(6)
-                sizeMotor:onStep(function(t)
-                    accentBar.Size = UDim2.new(0, 4, 0, t)
+                sizeMotor:onStep(function(T)
+                    indicator.Size = UDim2.new(0, 4, 0, T)
                 end)
 
-                c.AddSignal(btn.MouseEnter, function() bgMotor(selected and 0.85 or 0.89) end)
-                c.AddSignal(btn.MouseLeave, function() bgMotor(selected and 0.89 or 1) end)
-                c.AddSignal(btn.MouseButton1Down, function() bgMotor(0.92) end)
-                c.AddSignal(btn.MouseButton1Up, function() bgMotor(selected and 0.85 or 0.89) end)
+                -- mouse interactions
+                c.AddSignal(optionButton.MouseEnter, function() bgMotor(selectedState and 0.85 or 0.89) end)
+                c.AddSignal(optionButton.MouseLeave, function() bgMotor(selectedState and 0.89 or 1) end)
+                c.AddSignal(optionButton.MouseButton1Down, function() bgMotor(0.92) end)
+                c.AddSignal(optionButton.MouseButton1Up, function() bgMotor(selectedState and 0.85 or 0.89) end)
 
-                local entry = {}
-                function entry.UpdateButton()
+                function J.UpdateButton()
                     if j.Multi then
-                        selected = (l.Value and l.Value[optionText]) or nil
-                        if selected then
+                        selectedState = (l.Value and l.Value[I]) and true or false
+                        if selectedState then
                             bgMotor(0.89)
+                        else
+                            bgMotor(1)
                         end
                     else
-                        selected = (l.Value == optionText)
-                        bgMotor(selected and 0.89 or 1)
+                        selectedState = l.Value == I
+                        bgMotor(selectedState and 0.89 or 1)
                     end
-                    sizeMotor:setGoal(d.Spring.new(selected and 14 or 6, {frequency = 6}))
-                    accentMotor(selected and 0 or 1)
+                    sizeMotor:setGoal(d.Spring.new(selectedState and 14 or 6, {frequency = 6}))
+                    indMotor(selectedState and 0 or 1)
                 end
 
-                -- selection handling
-                label.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        local toggled = not selected
-                        if l:GetActiveValues() == 1 and not toggled and not j.AllowNull then
-                            -- can't deselect the last one if not allowed
+                label.InputBegan:Connect(function(T)
+                    if T.UserInputType == Enum.UserInputType.MouseButton1 or T.UserInputType == Enum.UserInputType.Touch then
+                        local willSelect = not selectedState
+                        -- if single-select and trying to deselect when AllowNull is false => ignore
+                        if l:GetActiveValues() == 1 and not willSelect and not j.AllowNull then
+                            -- do nothing
                         else
                             if j.Multi then
-                                selected = toggled
+                                selectedState = willSelect
                                 l.Value = l.Value or {}
-                                if selected then
-                                    l.Value[optionText] = true
+                                if willSelect then
+                                    l.Value[I] = true
                                 else
-                                    l.Value[optionText] = nil
+                                    l.Value[I] = nil
                                 end
                             else
-                                selected = toggled
-                                l.Value = selected and optionText or nil
-                                -- reset other entries' visuals after change
-                                for _, eEntry in next, entries do
-                                    if eEntry.UpdateButton then
-                                        eEntry.UpdateButton()
-                                    end
+                                selectedState = willSelect
+                                l.Value = selectedState and I or nil
+                                -- refresh all others after change
+                                for _, W in next, D do
+                                    W:UpdateButton()
                                 end
                             end
-                            entry:UpdateButton()
+                            J:UpdateButton()
                             l:Display()
                             k:SafeCallback(l.Callback, l.Value)
                             k:SafeCallback(l.Changed, l.Value)
@@ -3023,22 +3065,27 @@ local aa = {
                     end
                 end)
 
-                entry.UpdateButton()
+                -- init state & store
+                J:UpdateButton()
                 l:Display()
-                entries[btn] = entry
+                D[#D + 1] = J
+            end
 
-                -- find widest label
-                if label.TextBounds.X > widestLabel then
-                    widestLabel = label.TextBounds.X
+            -- compute widest label to adjust width
+            local widest = 0
+            for _, child in next, t:GetChildren() do
+                if child:IsA("TextButton") then
+                    local lbl = child:FindFirstChild("ButtonLabel")
+                    if lbl then
+                        widest = math.max(widest, lbl.TextBounds.X)
+                    end
                 end
             end
 
-            -- after building entries, update sizes and canvas
-            updateCanvas()
-            updatePopupSize()
+            -- adjust and finalize
+            recomputeSize()
         end
 
-        -- allow changing values programmatically
         function l.SetValues(B, C)
             if C then
                 l.Values = C
@@ -3048,7 +3095,9 @@ local aa = {
 
         function l.OnChanged(B, C)
             l.Changed = C
-            C(l.Value)
+            if C then
+                C(l.Value)
+            end
         end
 
         function l.SetValue(B, C)
@@ -3077,144 +3126,102 @@ local aa = {
             k.Options[i] = nil
         end
 
-        -- ========== NEW: Search box + Clear (X) button UI ==========
-        -- Create a top search row inside the popupHolderInner, above the optionsScrolling.
-        local searchRow =
-            e(
-                "Frame",
-                {
-                    Size = UDim2.new(1, 0, 0, 36),
-                    Position = UDim2.new(0, 0, 0, 0),
-                    BackgroundTransparency = 1,
-                    Parent = popupHolderInner
-                },
-                {e("UICorner", {CornerRadius = UDim.new(0, 4)})}
-            )
-
-        -- Search TextBox
-        local searchBox =
-            e(
-                "TextBox",
-                {
-                    PlaceholderText = "🔍 ค้นหารายการ...",
-                    Text = "",
-                    Size = UDim2.new(1, -46, 0, 26),
-                    Position = UDim2.fromOffset(8, 6),
-                    BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-                    BorderSizePixel = 0,
-                    TextColor3 = Color3.fromRGB(230, 230, 230),
-                    TextSize = 14,
-                    ClearTextOnFocus = false,
-                    Parent = searchRow,
-                    ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text", PlaceholderColor3 = "SubText"}
-                },
-                {e("UICorner", {CornerRadius = UDim.new(0, 4)}), e("UIStroke", {Transparency = 0.6, ThemeTag = {Color = "InElementBorder"}})}
-            )
-
-        -- Clear button (red X) — clears all selected items when clicked
-        local clearButton =
-            e(
-                "TextButton",
-                {
-                    Text = "✖",
-                    Font = Enum.Font.SourceSansBold,
-                    TextSize = 16,
-                    TextColor3 = Color3.fromRGB(255, 80, 80),
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromOffset(30, 30),
-                    Position = UDim2.new(1, -36, 0, 3),
-                    Parent = searchRow
-                }
-            )
-
-        -- Reparent the optionsScrolling so it sits below the searchRow (we already added it to popupHolderInner initially;
-        -- adjust anchors/positions so scrolling is below search)
-        optionsScrolling.Position = UDim2.fromOffset(5, 44)
-        optionsScrolling.Size = UDim2.new(1, -10, 1, -52)
-
-        -- search filtering: show/hide option buttons based on query
-        local function applySearchFilter()
-            local q = string.lower(searchBox.Text or "")
-            for _, child in pairs(optionsScrolling:GetChildren()) do
-                if child:IsA("TextButton") then
-                    local lbl = child:FindFirstChild("ButtonLabel")
-                    if lbl then
-                        local txt = string.lower(tostring(lbl.Text or ""))
-                        child.Visible = (q == "" or string.find(txt, q, 1, true) ~= nil)
-                    end
-                end
-            end
-            -- after filtering, update canvas and popup size to reflect visible items only
-            updateCanvas()
-            updatePopupSize()
-            updatePopupPosition()
-        end
-
-        -- connect search input changes
-        c.AddSignal(searchBox:GetPropertyChangedSignal "Text", applySearchFilter)
-        c.AddSignal(searchBox.Focused, function()
-            -- optional: visual changes on focus can be added here
-        end)
-        c.AddSignal(searchBox.FocusLost, function()
-            -- no-op for now
-        end)
-
-        -- clear selected items when clearButton clicked
-        clearButton.MouseButton1Click:Connect(function()
-            if j.Multi then
-                l.Value = {}
-            else
-                l.Value = nil
-            end
-            l:BuildDropdownList()
-            l:Display()
-            k:SafeCallback(l.Callback, l.Value)
-            k:SafeCallback(l.Changed, l.Value)
-            -- also clear the search text (optional)
-            searchBox.Text = ""
-            applySearchFilter()
-        end)
-
-        -- Build initial list and display selected default
+        -- initial build
         l:BuildDropdownList()
         l:Display()
 
-        -- handle default selections (support string/table/number indexes like original)
-        local preselected = {}
+        -- apply default selections if provided
+        local B = {}
         if type(j.Default) == "string" then
-            local idx = table.find(l.Values, j.Default)
-            if idx then
-                table.insert(preselected, idx)
+            local C = table.find(l.Values, j.Default)
+            if C then
+                table.insert(B, C)
             end
         elseif type(j.Default) == "table" then
-            for _, val in next, j.Default do
-                local idx = table.find(l.Values, val)
-                if idx then
-                    table.insert(preselected, idx)
+            for C, D in next, j.Default do
+                local E = table.find(l.Values, D)
+                if E then
+                    table.insert(B, E)
                 end
             end
         elseif type(j.Default) == "number" and l.Values[j.Default] ~= nil then
-            table.insert(preselected, j.Default)
+            table.insert(B, j.Default)
         end
-        if next(preselected) then
-            for cidx = 1, #preselected do
-                local D = preselected[cidx]
+
+        if next(B) then
+            for C = 1, #B do
+                local D = B[C]
                 if j.Multi then
                     l.Value = l.Value or {}
                     l.Value[l.Values[D]] = true
                 else
                     l.Value = l.Values[D]
                 end
-                if not j.Multi then break end
+                if not j.Multi then
+                    break
+                end
             end
             l:BuildDropdownList()
             l:Display()
         end
 
-        -- register in library options for external access
         k.Options[i] = l
 
-        -- return constructed dropdown instance
+        -- toggle from compact button
+        c.AddSignal(p.MouseButton1Click, function()
+            if l.Opened then
+                l:Close()
+            else
+                l:Open()
+            end
+        end)
+
+        -- SEARCH behavior: filter visible options by text in SearchBox
+        local function applySearchFilter()
+            local query = string.lower(SearchBox.Text or "")
+            for _, child in pairs(t:GetChildren()) do
+                if child:IsA("TextButton") then
+                    local lbl = child:FindFirstChild("ButtonLabel")
+                    if lbl then
+                        local visible = (query == "" or string.find(string.lower(lbl.Text), query))
+                        child.Visible = visible
+                    end
+                end
+            end
+            -- update canvas size & popup size after filtering
+            -- wait a frame for TextLabels to update TextBounds
+            task.spawn(function()
+                task.wait()
+                recomputeSize()
+            end)
+        end
+
+        c.AddSignal(SearchBox:GetPropertyChangedSignal("Text"), applySearchFilter)
+
+        -- CLEAR button resets selection(s)
+        c.AddSignal(ClearButton.MouseButton1Click, function()
+            if j.Multi then
+                l.Value = {}
+            else
+                l.Value = nil
+            end
+            -- rebuild list to update visuals
+            l:BuildDropdownList()
+            l:Display()
+            k:SafeCallback(l.Callback, l.Value)
+            k:SafeCallback(l.Changed, l.Value)
+            -- clear search text as well
+            SearchBox.Text = ""
+            applySearchFilter()
+        end)
+
+        -- also refresh layout when contents change
+        c.AddSignal(s:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+            recomputeSize()
+            positionPopup()
+        end)
+
+        -- return the dropdown object
         return l
     end
 
