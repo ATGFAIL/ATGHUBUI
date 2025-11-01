@@ -1638,9 +1638,31 @@ local aa = {
                 p.Window:Minimize()
             end
         )
+
+        -- ปุ่มตั้งค่า (Settings) — อยู่ทางซ้ายของปุ่มพับ (Min)
+        o.SettingsButton =
+            q(
+            i.Settings,                          -- ถ้า asset ใน assets มี key นี้ จะใช้; ถ้าไม่มีก็จะเป็นภาพว่าง
+            UDim2.new(1, -116, 0, 4),            -- ตำแหน่ง: ขยับไปทางซ้ายอีกช่อง
+            o.Frame,
+            function()
+                -- ถ้ามีเมธอด OpenSettings ให้เรียก ถ้าไม่มีก็แสดง Dialog แจ้งยังไม่มีการตั้งค่า
+                if p and p.Window and type(p.Window.OpenSettings) == "function" then
+                    p.Window:OpenSettings()
+                else
+                    p.Window:Dialog {
+                        Title = "Settings",
+                        Content = "No additional settings are implemented yet.",
+                        Buttons = {{Title = "OK"}}
+                    }
+                end
+            end
+        )
+
         return o
     end
 end,
+
     [17] = function()
         local c, d, e, f, g = b(17)
         local h, i, j, k =
