@@ -2647,7 +2647,7 @@ local aa = {
             h.Library,
             {
                 Values = j.Values,
-                Value = j.Default,
+                Value = j.Value,
                 Multi = j.Multi,
                 Buttons = {},
                 Opened = false,
@@ -2719,13 +2719,13 @@ local aa = {
                 }
             )
         
-        -- Search Box
+        -- Search Box (ลดความกว้างเพื่อให้ห่างจากปุ่ม X)
         local searchBox = e(
             "TextBox",
             {
-                Size = UDim2.new(1, -50, 0, 32),
-                Position = UDim2.fromOffset(8, 8),
-                BackgroundTransparency = 0.92,
+                Size = UDim2.new(1, -50, 0, 30),
+                Position = UDim2.fromOffset(5, 5),
+                BackgroundTransparency = 0.9,
                 PlaceholderText = "Search...",
                 Text = "",
                 TextColor3 = Color3.fromRGB(240, 240, 240),
@@ -2736,12 +2736,12 @@ local aa = {
                 ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text"}
             },
             {
-                e("UICorner", {CornerRadius = UDim.new(0, 6)}),
-                e("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}),
+                e("UICorner", {CornerRadius = UDim.new(0, 5)}),
+                e("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
                 e(
                     "UIStroke",
                     {
-                        Transparency = 0.6,
+                        Transparency = 0.5,
                         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                         ThemeTag = {Color = "InElementBorder"}
                     }
@@ -2749,68 +2749,47 @@ local aa = {
             }
         )
         
-        -- Clear Button (X)
+        -- Clear Button (X) - ปรับตำแหน่งให้ห่างจาก Search Box
         local clearButton = e(
             "TextButton",
             {
-                Size = UDim2.fromOffset(32, 32),
-                Position = UDim2.new(1, -8, 0, 8),
+                Size = UDim2.fromOffset(30, 30),
+                Position = UDim2.new(1, -10, 0, 5),
                 AnchorPoint = Vector2.new(1, 0),
-                BackgroundTransparency = 0.88,
+                BackgroundTransparency = 0.9,
                 Text = "✕",
-                TextColor3 = Color3.fromRGB(255, 90, 90),
-                TextSize = 18,
-                FontFace = Font.new(
-                    "rbxasset://fonts/families/GothamSSm.json",
-                    Enum.FontWeight.Medium,
-                    Enum.FontStyle.Normal
-                ),
+                TextColor3 = Color3.fromRGB(255, 80, 80),
+                TextSize = 16,
                 Visible = false,
                 ThemeTag = {BackgroundColor3 = "DialogButton"}
             },
             {
-                e("UICorner", {CornerRadius = UDim.new(0, 6)}),
+                e("UICorner", {CornerRadius = UDim.new(0, 5)}),
                 e(
                     "UIStroke",
                     {
                         Transparency = 0.5,
-                        Thickness = 1.5,
-                        Color = Color3.fromRGB(255, 90, 90),
+                        Color = Color3.fromRGB(255, 80, 80),
                         ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                     }
                 )
             }
         )
         
-        -- Add hover effect for clear button
-        local clearButtonMotor, clearButtonSetTrans = c.SpringMotor(0.88, clearButton, "BackgroundTransparency")
-        c.AddSignal(
-            clearButton.MouseEnter,
-            function()
-                clearButtonSetTrans(0.75)
-            end
-        )
-        c.AddSignal(
-            clearButton.MouseLeave,
-            function()
-                clearButtonSetTrans(0.88)
-            end
-        )
-        
-        local s = e("UIListLayout", {Padding = UDim.new(0, 4)})
+        local s = e("UIListLayout", {Padding = UDim.new(0, 3)})
         local t =
             e(
             "ScrollingFrame",
             {
-                Size = UDim2.new(1, -16, 1, -52),
-                Position = UDim2.fromOffset(8, 48),
+                Size = UDim2.new(1, -10, 1, -45),
+                Position = UDim2.fromOffset(5, 40),
                 BackgroundTransparency = 1,
                 BottomImage = "rbxassetid://6889812791",
                 MidImage = "rbxassetid://6889812721",
                 TopImage = "rbxassetid://6276641225",
                 ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
                 ScrollBarImageTransparency = 0.95,
-                ScrollBarThickness = 3,
+                ScrollBarThickness = 4,
                 BorderSizePixel = 0,
                 CanvasSize = UDim2.fromScale(0, 0)
             },
@@ -2818,25 +2797,16 @@ local aa = {
         )
         local u =
             e(
-            "CanvasGroup",
-            {
-                Size = UDim2.fromScale(1, 0), 
-                GroupTransparency = 1,
-                ThemeTag = {BackgroundColor3 = "DropdownHolder"}
-            },
+            "Frame",
+            {Size = UDim2.fromScale(1, 0.5), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
             {
                 searchBox,
                 clearButton,
                 t,
-                e("UICorner", {CornerRadius = UDim.new(0, 8)}),
+                e("UICorner", {CornerRadius = UDim.new(0, 7)}),
                 e(
                     "UIStroke",
-                    {
-                        Transparency = 0.4,
-                        Thickness = 1.5,
-                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border, 
-                        ThemeTag = {Color = "DropdownBorder"}
-                    }
+                    {ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}
                 ),
                 e(
                     "ImageLabel",
@@ -2848,7 +2818,7 @@ local aa = {
                         Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30),
                         Position = UDim2.fromOffset(-15, -15),
                         ImageColor3 = Color3.fromRGB(0, 0, 0),
-                        ImageTransparency = 0.5
+                        ImageTransparency = 0.1
                     }
                 )
             }
@@ -2858,46 +2828,34 @@ local aa = {
             "Frame",
             {
                 BackgroundTransparency = 1, 
-                Size = UDim2.fromOffset(180, 280), 
+                Size = UDim2.fromOffset(170, 250), 
                 Parent = h.Library.GUI, 
                 Visible = false
             },
-            {u, e("UISizeConstraint", {MinSize = Vector2.new(180, 0), MaxSize = Vector2.new(220, 320)})}
+            {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 350)})}
         )
         table.insert(k.OpenFrames, v)
         
-        -- iOS-style animation motors
-        local dropdownScale = d.SingleMotor.new(0.85)
-        local dropdownTransparency = d.SingleMotor.new(1)
-        
-        dropdownScale:onStep(function(value)
-            u.Size = UDim2.fromScale(value, value)
-        end)
-        
-        dropdownTransparency:onStep(function(value)
-            u.GroupTransparency = value
-        end)
-        
-        -- Position dropdown to the right with more spacing
+        -- Position dropdown ให้ออกขวามากขึ้น
         local w = function()
             local mainFrame = p.AbsolutePosition
             local mainSize = p.AbsoluteSize
-            local dropdownWidth = 180
-            local xPos = mainFrame.X + mainSize.X + 20  -- เพิ่มระยะห่าง
+            local dropdownWidth = 170
+            local xPos = mainFrame.X + mainSize.X + 20
             local yPos = mainFrame.Y - 5
             
             -- Check if dropdown goes off screen
-            if xPos + dropdownWidth > ai.ViewportSize.X - 10 then
+            if xPos + dropdownWidth > ai.ViewportSize.X then
                 xPos = mainFrame.X - dropdownWidth - 20
             end
             
             v.Position = UDim2.fromOffset(xPos, yPos)
         end
         
-        local x = 180
+        local x = 170
         local y = function()
-            local maxHeight = 280  -- ลดความสูง
-            local contentHeight = s.AbsoluteContentSize.Y + 60
+            local maxHeight = 350
+            local contentHeight = s.AbsoluteContentSize.Y + 50
             local finalHeight = math.min(contentHeight, maxHeight)
             v.Size = UDim2.fromOffset(x, finalHeight)
         end
@@ -2961,24 +2919,18 @@ local aa = {
             l.SearchText = ""
             w()
             y()
-            
-            -- iOS-style spring animation
-            dropdownScale:setGoal(d.Spring.new(1, {frequency = 3, dampingRatio = 0.7}))
-            dropdownTransparency:setGoal(d.Spring.new(0, {frequency = 4, dampingRatio = 0.8}))
+            af:Create(
+                u,
+                TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                {Size = UDim2.fromScale(1, 1)}
+            ):Play()
         end
-        
         function l.Close(B)
             l.Opened = false
             A.ScrollingEnabled = true
-            
-            -- iOS-style close animation
-            dropdownScale:setGoal(d.Spring.new(0.85, {frequency = 4, dampingRatio = 0.85}))
-            dropdownTransparency:setGoal(d.Spring.new(1, {frequency = 5, dampingRatio = 1}))
-            
-            task.wait(0.15)
+            u.Size = UDim2.fromScale(1, 0.5)
             v.Visible = false
         end
-        
         function l.Display(B)
             local C, D = l.Values, ""
             local hasSelection = false
@@ -2997,7 +2949,6 @@ local aa = {
             n.Text = (D == "" and "--" or D)
             clearButton.Visible = hasSelection
         end
-        
         function l.GetActiveValues(B)
             if j.Multi then
                 local C = {}
@@ -3009,7 +2960,6 @@ local aa = {
                 return l.Value and 1 or 0
             end
         end
-        
         function l.BuildDropdownList(B)
             local C, D = l.Values, {}
             for E, F in next, t:GetChildren() do
@@ -3029,7 +2979,7 @@ local aa = {
                             {
                                 Size = UDim2.fromOffset(4, 14),
                                 BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-                                Position = UDim2.fromOffset(-1, 15),
+                                Position = UDim2.fromOffset(-1, 16),
                                 AnchorPoint = Vector2.new(0, 0.5),
                                 ThemeTag = {BackgroundColor3 = "Accent"}
                             },
@@ -3047,16 +2997,17 @@ local aa = {
                                 AutomaticSize = Enum.AutomaticSize.Y,
                                 BackgroundTransparency = 1,
                                 Size = UDim2.fromScale(1, 1),
-                                Position = UDim2.fromOffset(12, 0),
+                                Position = UDim2.fromOffset(10, 0),
                                 Name = "ButtonLabel",
                                 ThemeTag = {TextColor3 = "Text"}
                             }
                         )
+                    -- เพิ่ม Stroke ให้แต่ละตัวเลือก
                     local M, N =
                         (e(
                         "TextButton",
                         {
-                            Size = UDim2.new(1, -8, 0, 30),
+                            Size = UDim2.new(1, -10, 0, 32),
                             BackgroundTransparency = 1,
                             ZIndex = 23,
                             Text = "",
@@ -3071,7 +3022,6 @@ local aa = {
                                 "UIStroke",
                                 {
                                     Transparency = 0.7,
-                                    Thickness = 1,
                                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                                     ThemeTag = {Color = "InElementBorder"}
                                 }
@@ -3094,13 +3044,13 @@ local aa = {
                     c.AddSignal(
                         M.MouseEnter,
                         function()
-                            P(N and 0.84 or 0.88)
+                            P(N and 0.85 or 0.89)
                         end
                     )
                     c.AddSignal(
                         M.MouseLeave,
                         function()
-                            P(N and 0.88 or 1)
+                            P(N and 0.89 or 1)
                         end
                     )
                     c.AddSignal(
@@ -3112,18 +3062,18 @@ local aa = {
                     c.AddSignal(
                         M.MouseButton1Up,
                         function()
-                            P(N and 0.84 or 0.88)
+                            P(N and 0.85 or 0.89)
                         end
                     )
                     function J.UpdateButton(T)
                         if j.Multi then
                             N = l.Value[I]
                             if N then
-                                P(0.88)
+                                P(0.89)
                             end
                         else
                             N = l.Value == I
-                            P(N and 0.88 or 1)
+                            P(N and 0.89 or 1)
                         end
                         S:setGoal(d.Spring.new(N and 14 or 6, {frequency = 6}))
                         R(N and 0 or 1)
@@ -3163,7 +3113,6 @@ local aa = {
             z()
             y()
         end
-        
         function l.SetValues(B, C)
             if C then
                 l.Values = C
