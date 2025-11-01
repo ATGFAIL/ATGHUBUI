@@ -2798,7 +2798,7 @@ local aa = {
         local u =
             e(
             "Frame",
-            {Size = UDim2.fromScale(1, 0.4), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
+            {Size = UDim2.fromScale(1, 0.5), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
             {
                 searchBox,
                 clearButton,
@@ -2854,7 +2854,7 @@ local aa = {
         
         local x = 170
         local y = function()
-            local maxHeight = 200
+            local maxHeight = 230
             local contentHeight = s.AbsoluteContentSize.Y + 50
             local finalHeight = math.min(contentHeight, maxHeight)
             v.Size = UDim2.fromOffset(x, finalHeight)
