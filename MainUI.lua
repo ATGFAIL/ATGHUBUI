@@ -3521,6 +3521,8 @@ end,
                     ThemeTag = {ImageColor3 = "Accent"}
                 }
             )
+
+            -- แก้ตรงนี้: เปลี่ยนจาก TextLabel -> TextBox เพื่อให้พิมพ์ค่าได้
             local l, m, n =
                 ai(
                     "Frame",
@@ -3533,11 +3535,12 @@ end,
                     {ai("UICorner", {CornerRadius = UDim.new(1, 0)})}
                 ),
                 ai(
-                    "TextLabel",
+                    "TextBox",
                     {
                         FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
                         Text = "Value",
                         TextSize = 12,
+                        ClearTextOnFocus = false,
                         TextWrapped = true,
                         TextXAlignment = Enum.TextXAlignment.Right,
                         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -3545,9 +3548,13 @@ end,
                         Size = UDim2.new(0, 100, 0, 14),
                         Position = UDim2.new(0, -4, 0.5, 0),
                         AnchorPoint = Vector2.new(1, 0.5),
-                        ThemeTag = {TextColor3 = "SubText"}
+                        ThemeTag = {TextColor3 = "SubText"},
+                        -- Allow numbers input; keyboard will show on mobile
+                        ClearTextOnFocus = false,
+                        TextEditable = true
                     }
                 )
+
             local o =
                 ai(
                 "Frame",
@@ -3567,6 +3574,11 @@ end,
                     l
                 }
             )
+
+            -- ถ้ามีการพิมพ์อยู่ หยุดการ drag ไว้
+            local editingNumber = false
+
+            -- ถ้าคลิกที่ไอคอน จะเริ่ม drag (เหมือนเดิม)
             ah.AddSignal(
                 k.InputBegan,
                 function(p)
@@ -3583,9 +3595,40 @@ end,
                     end
                 end
             )
+
+            -- ขณะพิมพ์ หยุดตอบสนองการลาก
+            n.Focused:Connect(function()
+                editingNumber = true
+                -- ป้องกันค่า i (drag) ขณะพิมพ์
+                i = false
+            end)
+
+            n.FocusLost:Connect(function(enterPressed)
+                editingNumber = false
+                -- ถ้ากด Enter หรือคลิกออก ให้อ่านค่าและอัปเดต slider
+                local text = n.Text
+                -- support comma เป็นจุดทศนิยมด้วย (เช่น "1,5")
+                text = tostring(text):gsub(",", ".")
+                local num = tonumber(text)
+                if num then
+                    local newVal = g:Round(math.clamp(num, h.Min, h.Max), h.Rounding)
+                    h:SetValue(newVal)
+                else
+                    -- revert to current value
+                    if h.Value ~= nil then
+                        n.Text = tostring(h.Value)
+                    else
+                        n.Text = tostring(f.Default)
+                    end
+                end
+            end)
+
             ah.AddSignal(
                 af.InputChanged,
                 function(p)
+                    if editingNumber then
+                        return
+                    end
                     if
                         i and
                             (p.UserInputType == Enum.UserInputType.MouseMovement or
@@ -3604,6 +3647,7 @@ end,
                 p.Value = g:Round(math.clamp(s, h.Min, h.Max), h.Rounding)
                 k.Position = UDim2.new((p.Value - h.Min) / (h.Max - h.Min), -7, 0.5, 0)
                 m.Size = UDim2.fromScale((p.Value - h.Min) / (h.Max - h.Min), 1)
+                -- อัปเดตข้อความใน TextBox ให้ตรงค่า
                 n.Text = tostring(p.Value)
                 g:SafeCallback(h.Callback, p.Value)
                 g:SafeCallback(h.Changed, p.Value)
