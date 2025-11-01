@@ -2652,13 +2652,14 @@ local aa = {
                     Buttons = {},
                     Opened = false,
                     Type = "Dropdown",
-                    Callback = j.Callback or function()
-                        end
+                    Callback = j.Callback or function() end
                 },
                 ac(f.Element)(j.Title, j.Description, h.Container, false)
             m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
             l.SetTitle = m.SetTitle
             l.SetDesc = m.SetDesc
+
+            -- Title / current value label + icon
             local n, o =
                 e(
                     "TextLabel",
@@ -2723,7 +2724,7 @@ local aa = {
                 "ScrollingFrame",
                 {
                     Size = UDim2.new(1, -5, 1, -10),
-                    Position = UDim2.fromOffset(5, 5),
+                    Position = UDim2.fromOffset(5, 36), -- moved down to allow search box above
                     BackgroundTransparency = 1,
                     BottomImage = "rbxassetid://6889812791",
                     MidImage = "rbxassetid://6889812721",
@@ -2741,6 +2742,7 @@ local aa = {
                 "Frame",
                 {Size = UDim2.fromScale(1, 0.6), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
                 {
+                    -- t is now below search box
                     t,
                     e("UICorner", {CornerRadius = UDim.new(0, 7)}),
                     e(
@@ -2762,6 +2764,8 @@ local aa = {
                     )
                 }
             )
+
+            -- Create container popup (parented to GUI so it can sit outside main frame)
             local v =
                 e(
                 "Frame",
@@ -2769,52 +2773,88 @@ local aa = {
                 {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0)})}
             )
             table.insert(k.OpenFrames, v)
-            local w, x = function()
-                    local w = 0
-                    if ai.ViewportSize.Y - p.AbsolutePosition.Y < v.AbsoluteSize.Y - 5 then
-                        w = v.AbsoluteSize.Y - 5 - (ai.ViewportSize.Y - p.AbsolutePosition.Y) + 40
-                    end
-                    v.Position = UDim2.fromOffset(p.AbsolutePosition.X - 1, p.AbsolutePosition.Y - 5 - w)
-                end, 0
-            local y, z = function()
-                    if #l.Values > 10 then
-                        v.Size = UDim2.fromOffset(x, 392)
-                    else
-                        v.Size = UDim2.fromOffset(x, s.AbsoluteContentSize.Y + 10)
-                    end
-                end, function()
-                    t.CanvasSize = UDim2.fromOffset(0, s.AbsoluteContentSize.Y)
+
+            -- SEARCH BOX + CLEAR (X) BUTTON
+            local SearchBox = e("TextBox", {
+                PlaceholderText = "Search...",
+                Text = "",
+                Size = UDim2.new(1, -42, 0, 28),
+                Position = UDim2.fromOffset(6, 6),
+                BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+                BorderSizePixel = 0,
+                TextColor3 = Color3.fromRGB(230, 230, 230),
+                TextSize = 14,
+                Parent = u,
+                ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text"},
+            }, { e("UICorner", {CornerRadius = UDim.new(0,4)}) })
+
+            local ClearButton = e("TextButton", {
+                Text = "✖",
+                Font = Enum.Font.SourceSansBold,
+                TextSize = 18,
+                TextColor3 = Color3.fromRGB(230, 80, 80),
+                Size = UDim2.fromOffset(28, 28),
+                Position = UDim2.new(1, -36, 0, 6),
+                AnchorPoint = Vector2.new(0,0),
+                BackgroundTransparency = 1,
+                Parent = u
+            })
+
+            -- internal helper: update scroll canvas size
+            local function updateCanvas()
+                t.CanvasSize = UDim2.fromOffset(0, s.AbsoluteContentSize.Y)
+            end
+
+            -- limit height (px)
+            local MAX_HEIGHT = 300
+
+            -- positioning function (show to the right of the button if space, otherwise left)
+            local function positionPopup()
+                -- compute vertical overflow compensation
+                local overflow = 0
+                if ai.ViewportSize.Y - p.AbsolutePosition.Y < v.AbsoluteSize.Y - 5 then
+                    overflow = v.AbsoluteSize.Y - 5 - (ai.ViewportSize.Y - p.AbsolutePosition.Y) + 40
                 end
-            w()
-            y()
-            c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", w)
-            c.AddSignal(
-                p.MouseButton1Click,
-                function()
-                    l:Open()
+                -- try to place to the right of the button
+                local tryRightX = p.AbsolutePosition.X + p.AbsoluteSize.X + 8
+                local tryLeftX = p.AbsolutePosition.X - v.AbsoluteSize.X - 8
+                local posX = tryRightX
+                -- if right spills out of viewport, fallback to left
+                if (tryRightX + v.AbsoluteSize.X) > ai.ViewportSize.X then
+                    posX = math.max(0, tryLeftX)
                 end
-            )
-            c.AddSignal(
-                ag.InputBegan,
-                function(A)
-                    if A.UserInputType == Enum.UserInputType.MouseButton1 or A.UserInputType == Enum.UserInputType.Touch then
-                        local B, C = u.AbsolutePosition, u.AbsoluteSize
-                        if ah.X < B.X or ah.X > B.X + C.X or ah.Y < (B.Y - 20 - 1) or ah.Y > B.Y + C.Y then
-                            l:Close()
-                        end
-                    end
-                end
-            )
+                v.Position = UDim2.fromOffset(posX, p.AbsolutePosition.Y - 5 - overflow)
+            end
+
+            -- compute size according to content but cap height
+            local function recalcPopupSize()
+                local contentHeight = s.AbsoluteContentSize.Y + 46 -- include search box and paddings
+                local width = math.max(170, math.min(420, v.AbsoluteSize.X))
+                local height = math.min(contentHeight, MAX_HEIGHT)
+                v.Size = UDim2.fromOffset(width, height)
+            end
+
+            -- apply initial layout/size
+            positionPopup()
+            recalcPopupSize()
+            updateCanvas()
+
+            -- reposition when the button moves
+            c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", positionPopup)
+
+            -- open/close handlers
             local A = h.ScrollFrame
             function l.Open(B)
                 l.Opened = true
                 A.ScrollingEnabled = false
                 v.Visible = true
-                af:Create(
-                    u,
-                    TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-                    {Size = UDim2.fromScale(1, 1)}
-                ):Play()
+                af:Create(u, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromScale(1, 1)}):Play()
+                -- ensure positioned after visible (AbsoluteSize available)
+                task.spawn(function()
+                    task.wait()
+                    recalcPopupSize()
+                    positionPopup()
+                end)
             end
             function l.Close(B)
                 l.Opened = false
@@ -2822,33 +2862,27 @@ local aa = {
                 u.Size = UDim2.fromScale(1, 0.6)
                 v.Visible = false
             end
-            function l.Display(B)
-                local C, D = l.Values, ""
-                if j.Multi then
-                    for E, F in next, C do
-                        if l.Value[F] then
-                            D = D .. F .. ", "
+
+            -- click outside to close
+            c.AddSignal(
+                ag.InputBegan,
+                function(inp)
+                    if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                        local Bpos, Bsize = v.AbsolutePosition, v.AbsoluteSize
+                        if ah.X < Bpos.X or ah.X > Bpos.X + Bsize.X or ah.Y < (Bpos.Y - 20 - 1) or ah.Y > Bpos.Y + Bsize.Y then
+                            l:Close()
                         end
                     end
-                    D = D:sub(1, #D - 2)
-                else
-                    D = l.Value or ""
                 end
-                n.Text = (D == "" and "--" or D)
-            end
-            function l.GetActiveValues(B)
-                if j.Multi then
-                    local C = {}
-                    for D, E in next, l.Value do
-                        table.insert(C, D)
-                    end
-                    return C
-                else
-                    return l.Value and 1 or 0
-                end
-            end
+            )
+
+            -- clicking on the display button toggles
+            c.AddSignal(p.MouseButton1Click, function() l:Open() end)
+
+            -- build list, with support for search filtering
             function l.BuildDropdownList(B)
                 local C, D = l.Values, {}
+                -- clear existing options
                 for E, F in next, t:GetChildren() do
                     if not F:IsA "UIListLayout" then
                         F:Destroy()
@@ -2908,35 +2942,11 @@ local aa = {
                     local O, P = c.SpringMotor(1, M, "BackgroundTransparency")
                     local Q, R = c.SpringMotor(1, K, "BackgroundTransparency")
                     local S = d.SingleMotor.new(6)
-                    S:onStep(
-                        function(T)
-                            K.Size = UDim2.new(0, 4, 0, T)
-                        end
-                    )
-                    c.AddSignal(
-                        M.MouseEnter,
-                        function()
-                            P(N and 0.85 or 0.89)
-                        end
-                    )
-                    c.AddSignal(
-                        M.MouseLeave,
-                        function()
-                            P(N and 0.89 or 1)
-                        end
-                    )
-                    c.AddSignal(
-                        M.MouseButton1Down,
-                        function()
-                            P(0.92)
-                        end
-                    )
-                    c.AddSignal(
-                        M.MouseButton1Up,
-                        function()
-                            P(N and 0.85 or 0.89)
-                        end
-                    )
+                    S:onStep(function(T) K.Size = UDim2.new(0, 4, 0, T) end)
+                    c.AddSignal(M.MouseEnter, function() P(N and 0.85 or 0.89) end)
+                    c.AddSignal(M.MouseLeave, function() P(N and 0.89 or 1) end)
+                    c.AddSignal(M.MouseButton1Down, function() P(0.92) end)
+                    c.AddSignal(M.MouseButton1Up, function() P(N and 0.85 or 0.89) end)
                     function J.UpdateButton(T)
                         if j.Multi then
                             N = l.Value[I]
@@ -2950,49 +2960,48 @@ local aa = {
                         S:setGoal(d.Spring.new(N and 14 or 6, {frequency = 6}))
                         R(N and 0 or 1)
                     end
-                    L.InputBegan:Connect(
-                        function(T)
-                            if
-                                T.UserInputType == Enum.UserInputType.MouseButton1 or
-                                    T.UserInputType == Enum.UserInputType.Touch
-                             then
-                                local U = not N
-                                if l:GetActiveValues() == 1 and not U and not j.AllowNull then
+                    L.InputBegan:Connect(function(T)
+                        if T.UserInputType == Enum.UserInputType.MouseButton1 or T.UserInputType == Enum.UserInputType.Touch then
+                            local U = not N
+                            if l:GetActiveValues() == 1 and not U and not j.AllowNull then
+                                -- do nothing
+                            else
+                                if j.Multi then
+                                    N = U
+                                    l.Value[I] = N and true or nil
                                 else
-                                    if j.Multi then
-                                        N = U
-                                        l.Value[I] = N and true or nil
-                                    else
-                                        N = U
-                                        l.Value = N and I or nil
-                                        for V, W in next, D do
-                                            W:UpdateButton()
-                                        end
+                                    N = U
+                                    l.Value = N and I or nil
+                                    for V, W in next, D do
+                                        W:UpdateButton()
                                     end
-                                    J:UpdateButton()
-                                    l:Display()
-                                    k:SafeCallback(l.Callback, l.Value)
-                                    k:SafeCallback(l.Changed, l.Value)
                                 end
+                                J:UpdateButton()
+                                l:Display()
+                                k:SafeCallback(l.Callback, l.Value)
+                                k:SafeCallback(l.Changed, l.Value)
                             end
                         end
-                    )
+                    end)
                     J:UpdateButton()
                     l:Display()
                     D[M] = J
                 end
-                x = 0
+                -- measure widest label for width
+                local widest = 0
                 for J, K in next, D do
                     if J.ButtonLabel then
-                        if J.ButtonLabel.TextBounds.X > x then
-                            x = J.ButtonLabel.TextBounds.X
+                        if J.ButtonLabel.TextBounds.X > widest then
+                            widest = J.ButtonLabel.TextBounds.X
                         end
                     end
                 end
-                x = x + 30
-                z()
-                y()
+                widest = widest + 30
+                updateCanvas()
+                recalcPopupSize()
             end
+
+            -- Set values / refresh list
             function l.SetValues(B, C)
                 if C then
                     l.Values = C
@@ -3027,8 +3036,28 @@ local aa = {
                 m:Destroy()
                 k.Options[i] = nil
             end
+
+            -- display current selection on top label
+            function l.Display(B)
+                local C, D = l.Values, ""
+                if j.Multi then
+                    for E, F in next, C do
+                        if l.Value[F] then
+                            D = D .. F .. ", "
+                        end
+                    end
+                    D = D:sub(1, #D - 2)
+                else
+                    D = l.Value or ""
+                end
+                n.Text = (D == "" and "--" or D)
+            end
+
+            -- initial build
             l:BuildDropdownList()
             l:Display()
+
+            -- initial default selection handling (same as original)
             local B = {}
             if type(j.Default) == "string" then
                 local C = table.find(l.Values, j.Default)
@@ -3053,14 +3082,56 @@ local aa = {
                     else
                         l.Value = l.Values[D]
                     end
-                    if not j.Multi then
-                        break
-                    end
+                    if not j.Multi then break end
                 end
                 l:BuildDropdownList()
                 l:Display()
             end
+
             k.Options[i] = l
+
+            -- SEARCH behaviour: filter items in t by ButtonLabel text
+            local function applySearch()
+                local q = string.lower(SearchBox.Text or "")
+                for _, child in ipairs(t:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        local lbl = child:FindFirstChild("ButtonLabel")
+                        if lbl then
+                            local ok = (q == "" or string.find(string.lower(lbl.Text), q))
+                            child.Visible = ok
+                        end
+                    end
+                end
+                -- update sizes after hiding/showing
+                updateCanvas()
+                recalcPopupSize()
+                positionPopup()
+            end
+            -- hook Text change
+            c.AddSignal(SearchBox:GetPropertyChangedSignal("Text"), applySearch)
+
+            -- CLEAR button: clear selected entries and call callbacks
+            c.AddSignal(ClearButton.MouseButton1Click, function()
+                if j.Multi then
+                    l.Value = {}
+                else
+                    l.Value = nil
+                end
+                l:BuildDropdownList()
+                l:Display()
+                k:SafeCallback(l.Callback, l.Value)
+                if l.Changed then
+                    k:SafeCallback(l.Changed, l.Value)
+                end
+            end)
+
+            -- update canvas on list size change
+            c.AddSignal(s:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+                updateCanvas()
+                recalcPopupSize()
+                positionPopup()
+            end)
+
             return l
         end
         return g
