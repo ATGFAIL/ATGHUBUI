@@ -2854,7 +2854,7 @@ local aa = {
         
         local x = 170
         local y = function()
-            local maxHeight = 230
+            local maxHeight = 260
             local contentHeight = s.AbsoluteContentSize.Y + 50
             local finalHeight = math.min(contentHeight, maxHeight)
             v.Size = UDim2.fromOffset(x, finalHeight)
