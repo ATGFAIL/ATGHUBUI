@@ -128,7 +128,7 @@ local aa = {
         v(w)
         t:Init(w)
         local x = {
-            Version = "1.1.0",
+            Version = "1.5.0",
             OpenFrames = {},
             Options = {},
             Themes = e(o.Themes).Names,
@@ -1533,6 +1533,16 @@ local aa = {
                                 }
                             ),
                             l(
+                                "ImageLabel",
+                                {
+                                    Image = n.Icon or "rbxassetid://130967366683860", -- ใส่ id รูป icon ของคุณ
+                                    Size = UDim2.fromOffset(18, 18),
+                                    Position = UDim2.fromOffset(0, 0),
+                                    BackgroundTransparency = 1,
+                                    ThemeTag = {ImageColor3 = "Text"}
+                                }
+                            ),
+                            l(
                                 "TextLabel",
                                 {
                                     RichText = true,
@@ -1548,6 +1558,7 @@ local aa = {
                                     Size = UDim2.fromScale(0, 1),
                                     AutomaticSize = Enum.AutomaticSize.X,
                                     BackgroundTransparency = 1,
+                                    Position = UDim2.fromOffset(22, 0), -- ขยับไปขวาเพื่อไม่ชน icon
                                     ThemeTag = {TextColor3 = "Text"}
                                 }
                             ),
