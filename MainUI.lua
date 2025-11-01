@@ -2642,7 +2642,6 @@ local aa = {
     local e, f, g = c.New, aj.Components, {}
     g.__index = g
     g.__type = "Dropdown"
-
     function g.New(h, i, j)
         local k, l, m =
             h.Library,
@@ -2653,52 +2652,48 @@ local aa = {
                 Buttons = {},
                 Opened = false,
                 Type = "Dropdown",
-                Callback = j.Callback or function() end
+                SearchText = "",
+                Callback = j.Callback or function()
+                    end
             },
             ac(f.Element)(j.Title, j.Description, h.Container, false)
-
-        -- adjust description width
         m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
         l.SetTitle = m.SetTitle
         l.SetDesc = m.SetDesc
-
-        -- label that displays current selection(s)
-        local displayLabel =
+        local n, o =
             e(
-            "TextLabel",
-            {
-                FontFace = Font.new(
-                    "rbxasset://fonts/families/GothamSSm.json",
-                    Enum.FontWeight.Regular,
-                    Enum.FontStyle.Normal
-                ),
-                Text = "Value",
-                TextColor3 = Color3.fromRGB(240, 240, 240),
-                TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Size = UDim2.new(1, -30, 0, 14),
-                Position = UDim2.new(0, 8, 0.5, 0),
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundTransparency = 1,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ThemeTag = {TextColor3 = "Text"}
-            }
-        )
-
-        local dropdownIcon =
+                "TextLabel",
+                {
+                    FontFace = Font.new(
+                        "rbxasset://fonts/families/GothamSSm.json",
+                        Enum.FontWeight.Regular,
+                        Enum.FontStyle.Normal
+                    ),
+                    Text = "Value",
+                    TextColor3 = Color3.fromRGB(240, 240, 240),
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Size = UDim2.new(1, -30, 0, 14),
+                    Position = UDim2.new(0, 8, 0.5, 0),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                    BackgroundTransparency = 1,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ThemeTag = {TextColor3 = "Text"}
+                }
+            ),
             e(
-            "ImageLabel",
-            {
-                Image = "rbxassetid://10709790948",
-                Size = UDim2.fromOffset(16, 16),
-                AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, -8, 0.5, 0),
-                BackgroundTransparency = 1,
-                ThemeTag = {ImageColor3 = "SubText"}
-            }
-        )
-
-        local p, s =
+                "ImageLabel",
+                {
+                    Image = "rbxassetid://10709790948",
+                    Size = UDim2.fromOffset(16, 16),
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, -8, 0.5, 0),
+                    BackgroundTransparency = 1,
+                    ThemeTag = {ImageColor3 = "SubText"}
+                }
+            )
+        local p =
             e(
                 "TextButton",
                 {
@@ -2719,19 +2714,75 @@ local aa = {
                             ThemeTag = {Color = "InElementBorder"}
                         }
                     ),
-                    dropdownIcon,
-                    displayLabel
+                    o,
+                    n
                 }
-            ),
-            e("UIListLayout", {Padding = UDim.new(0, 3)})
-
-        -- scrolling container for options
+            )
+        
+        -- Search Box
+        local searchBox = e(
+            "TextBox",
+            {
+                Size = UDim2.new(1, -40, 0, 30),
+                Position = UDim2.fromOffset(5, 5),
+                BackgroundTransparency = 0.9,
+                PlaceholderText = "Search...",
+                Text = "",
+                TextColor3 = Color3.fromRGB(240, 240, 240),
+                PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text"}
+            },
+            {
+                e("UICorner", {CornerRadius = UDim.new(0, 5)}),
+                e("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+                e(
+                    "UIStroke",
+                    {
+                        Transparency = 0.5,
+                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                        ThemeTag = {Color = "InElementBorder"}
+                    }
+                )
+            }
+        )
+        
+        -- Clear Button (X)
+        local clearButton = e(
+            "TextButton",
+            {
+                Size = UDim2.fromOffset(30, 30),
+                Position = UDim2.new(1, -5, 0, 5),
+                AnchorPoint = Vector2.new(1, 0),
+                BackgroundTransparency = 0.9,
+                Text = "✕",
+                TextColor3 = Color3.fromRGB(255, 80, 80),
+                TextSize = 16,
+                Visible = false,
+                ThemeTag = {BackgroundColor3 = "DialogButton"}
+            },
+            {
+                e("UICorner", {CornerRadius = UDim.new(0, 5)}),
+                e(
+                    "UIStroke",
+                    {
+                        Transparency = 0.5,
+                        Color = Color3.fromRGB(255, 80, 80),
+                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                    }
+                )
+            }
+        )
+        
+        local s = e("UIListLayout", {Padding = UDim.new(0, 3)})
         local t =
             e(
             "ScrollingFrame",
             {
-                Size = UDim2.new(1, -5, 1, -10),
-                Position = UDim2.fromOffset(5, 5),
+                Size = UDim2.new(1, -10, 1, -45),
+                Position = UDim2.fromOffset(5, 40),
                 BackgroundTransparency = 1,
                 BottomImage = "rbxassetid://6889812791",
                 MidImage = "rbxassetid://6889812721",
@@ -2744,13 +2795,13 @@ local aa = {
             },
             {s}
         )
-
-        -- holder frame for popup content (we will add search + clear + list)
         local u =
             e(
             "Frame",
             {Size = UDim2.fromScale(1, 0.6), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
             {
+                searchBox,
+                clearButton,
                 t,
                 e("UICorner", {CornerRadius = UDim.new(0, 7)}),
                 e(
@@ -2772,136 +2823,107 @@ local aa = {
                 )
             }
         )
-
-        -- popup frame attached to CoreGui so it floats outside main UI
         local v =
             e(
             "Frame",
-            {BackgroundTransparency = 1, Size = UDim2.fromOffset(170, 300), Parent = h.Library.GUI, Visible = false},
-            {u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0)})}
+            {
+                BackgroundTransparency = 1, 
+                Size = UDim2.fromOffset(200, 300), 
+                Parent = h.Library.GUI, 
+                Visible = false
+            },
+            {u, e("UISizeConstraint", {MinSize = Vector2.new(200, 0), MaxSize = Vector2.new(300, 400)})}
         )
         table.insert(k.OpenFrames, v)
-
-        -- SEARCH & CLEAR UI (inserted inside popup u)
-        -- container for top controls
-        local topControls =
-            e(
-            "Frame",
-            {
-                Size = UDim2.new(1, 0, 0, 36),
-                Position = UDim2.new(0, 0, 0, 0),
-                BackgroundTransparency = 1,
-                Parent = u
-            },
-            {e("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8)})}
-        )
-
-        -- Search box
-        local SearchBox =
-            e(
-            "TextBox",
-            {
-                PlaceholderText = "Search...",
-                Text = "",
-                Size = UDim2.new(1, -44, 0, 26),
-                Position = UDim2.fromOffset(8, 5),
-                BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-                BorderSizePixel = 0,
-                TextColor3 = Color3.fromRGB(230, 230, 230),
-                TextSize = 14,
-                Parent = topControls,
-                ClearTextOnFocus = false
-            },
-            {e("UICorner", {CornerRadius = UDim.new(0, 6)})}
-        )
-        -- Clear (X) button
-        local ClearButton =
-            e(
-            "TextButton",
-            {
-                Text = "✖",
-                Font = Enum.Font.SourceSansBold,
-                TextSize = 18,
-                TextColor3 = Color3.fromRGB(255, 90, 90),
-                Size = UDim2.fromOffset(28, 28),
-                BackgroundTransparency = 1,
-                Parent = topControls
-            }
-        )
-
-        -- re-parent scrolling frame to sit below topControls, adjust positions
-        t.Position = UDim2.fromOffset(5, 44)
-        t.Size = UDim2.new(1, -10, 1, -54)
-
-        -- helper: limit popup height and compute size from content
-        local function recomputeSize()
-            -- measure content height (list) and clamp to max
-            local contentH = s.AbsoluteContentSize.Y
-            local topH = 44
-            local desired = math.max(72, contentH + topH + 10)
-            local maxH = math.min(420, math.floor(ai.ViewportSize.Y * 0.7)) -- don't exceed 70% of viewport
-            local finalH = math.min(desired, maxH)
-            v.Size = UDim2.fromOffset(math.max(170, math.min(520, s.AbsoluteContentSize.X + 60)), finalH)
-            -- scrolling frame canvas
+        
+        -- Position dropdown to the right of main UI
+        local w = function()
+            local mainFrame = p.AbsolutePosition
+            local mainSize = p.AbsoluteSize
+            local dropdownWidth = 200
+            local xPos = mainFrame.X + mainSize.X + 10
+            local yPos = mainFrame.Y - 5
+            
+            -- Check if dropdown goes off screen
+            if xPos + dropdownWidth > ai.ViewportSize.X then
+                xPos = mainFrame.X - dropdownWidth - 10
+            end
+            
+            v.Position = UDim2.fromOffset(xPos, yPos)
+        end
+        
+        local x = 200
+        local y = function()
+            local maxHeight = 400
+            local contentHeight = s.AbsoluteContentSize.Y + 50
+            local finalHeight = math.min(contentHeight, maxHeight)
+            v.Size = UDim2.fromOffset(x, finalHeight)
+        end
+        
+        local z = function()
             t.CanvasSize = UDim2.fromOffset(0, s.AbsoluteContentSize.Y)
         end
-
-        -- position popup to the RIGHT of the button p; if offscreen, flip to left
-        local function positionPopup()
-            -- default place to the right
-            local btnPos = p.AbsolutePosition
-            local btnSize = p.AbsoluteSize
-            local offsetX = 8
-            local rightX = btnPos.X + btnSize.X + offsetX
-            local topY = btnPos.Y
-            local popupW = v.AbsoluteSize.X
-            local popupH = v.AbsoluteSize.Y
-            -- if it would go off right edge, place to left of button
-            if rightX + popupW > ai.ViewportSize.X - 8 then
-                local leftX = btnPos.X - popupW - offsetX
-                if leftX < 8 then
-                    -- fallback: keep inside viewport
-                    leftX = math.max(8, ai.ViewportSize.X - popupW - 8)
-                end
-                v.Position = UDim2.fromOffset(leftX, math.clamp(topY, 8, ai.ViewportSize.Y - popupH - 8))
-            else
-                v.Position = UDim2.fromOffset(rightX, math.clamp(topY, 8, ai.ViewportSize.Y - popupH - 8))
+        
+        w()
+        y()
+        c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", w)
+        c.AddSignal(
+            p.MouseButton1Click,
+            function()
+                l:Open()
             end
-        end
-
-        -- initial compute & position
-        local function refreshPopupLayout()
-            recomputeSize()
-            positionPopup()
-        end
-
-        -- listen to button pos changes to update popup
-        c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", function() positionPopup() end)
-        c.AddSignal(p:GetPropertyChangedSignal "AbsoluteSize", function() positionPopup() end)
-        c.AddSignal(ai:GetPropertyChangedSignal "ViewportSize", function() refreshPopupLayout() end)
-
-        -- close logic when clicking outside
+        )
         c.AddSignal(
             ag.InputBegan,
             function(A)
                 if A.UserInputType == Enum.UserInputType.MouseButton1 or A.UserInputType == Enum.UserInputType.Touch then
-                    local B, C = v.AbsolutePosition, v.AbsoluteSize
-                    local mx, my = ah.X, ah.Y
-                    if mx < B.X or mx > B.X + C.X or my < B.Y or my > B.Y + C.Y then
+                    local B, C = u.AbsolutePosition, u.AbsoluteSize
+                    if ah.X < B.X or ah.X > B.X + C.X or ah.Y < B.Y or ah.Y > B.Y + C.Y then
                         l:Close()
                     end
                 end
             end
         )
-
-        -- open/close
+        
+        -- Search functionality
+        c.AddSignal(
+            searchBox:GetPropertyChangedSignal("Text"),
+            function()
+                l.SearchText = searchBox.Text:lower()
+                l:BuildDropdownList()
+            end
+        )
+        
+        -- Clear button functionality
+        c.AddSignal(
+            clearButton.MouseButton1Click,
+            function()
+                if j.Multi then
+                    l.Value = {}
+                else
+                    l.Value = nil
+                end
+                l:Display()
+                l:BuildDropdownList()
+                k:SafeCallback(l.Callback, l.Value)
+                k:SafeCallback(l.Changed, l.Value)
+            end
+        )
+        
         local A = h.ScrollFrame
         function l.Open(B)
             l.Opened = true
             A.ScrollingEnabled = false
             v.Visible = true
-            af:Create(u, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromScale(1, 1)}):Play()
-            refreshPopupLayout()
+            searchBox.Text = ""
+            l.SearchText = ""
+            w()
+            y()
+            af:Create(
+                u,
+                TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                {Size = UDim2.fromScale(1, 1)}
+            ):Play()
         end
         function l.Close(B)
             l.Opened = false
@@ -2909,29 +2931,28 @@ local aa = {
             u.Size = UDim2.fromScale(1, 0.6)
             v.Visible = false
         end
-
-        -- display selected values on the compact button
         function l.Display(B)
             local C, D = l.Values, ""
+            local hasSelection = false
             if j.Multi then
                 for E, F in next, C do
-                    if l.Value and l.Value[F] then
+                    if l.Value[F] then
                         D = D .. F .. ", "
+                        hasSelection = true
                     end
                 end
-                if #D > 2 then
-                    D = D:sub(1, #D - 2)
-                end
+                D = D:sub(1, #D - 2)
             else
                 D = l.Value or ""
+                hasSelection = l.Value ~= nil and l.Value ~= ""
             end
-            displayLabel.Text = (D == "" and "--" or D)
+            n.Text = (D == "" and "--" or D)
+            clearButton.Visible = hasSelection
         end
-
         function l.GetActiveValues(B)
             if j.Multi then
                 local C = {}
-                for D, E in next, l.Value or {} do
+                for D, E in next, l.Value do
                     table.insert(C, D)
                 end
                 return C
@@ -2939,11 +2960,8 @@ local aa = {
                 return l.Value and 1 or 0
             end
         end
-
-        -- build/refresh list
         function l.BuildDropdownList(B)
             local C, D = l.Values, {}
-            -- clear previous options
             for E, F in next, t:GetChildren() do
                 if not F:IsA "UIListLayout" then
                     F:Destroy()
@@ -2951,155 +2969,147 @@ local aa = {
             end
             local G = 0
             for H, I in next, C do
-                local J = {}
-                G = G + 1
-                local indicator =
-                    e(
-                    "Frame",
-                    {
-                        Size = UDim2.fromOffset(4, 14),
-                        BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-                        Position = UDim2.fromOffset(-1, 16),
-                        AnchorPoint = Vector2.new(0, 0.5),
-                        ThemeTag = {BackgroundColor3 = "Accent"}
-                    },
-                    {e("UICorner", {CornerRadius = UDim.new(0, 2)})}
-                )
-
-                local label =
-                    e(
-                    "TextLabel",
-                    {
-                        FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-                        Text = I,
-                        TextColor3 = Color3.fromRGB(200, 200, 200),
-                        TextSize = 13,
-                        TextXAlignment = Enum.TextXAlignment.Left,
-                        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                        AutomaticSize = Enum.AutomaticSize.Y,
-                        BackgroundTransparency = 1,
-                        Size = UDim2.fromScale(1, 1),
-                        Position = UDim2.fromOffset(10, 0),
-                        Name = "ButtonLabel",
-                        ThemeTag = {TextColor3 = "Text"}
-                    }
-                )
-
-                local optionButton =
-                    e(
-                    "TextButton",
-                    {
-                        Size = UDim2.new(1, -5, 0, 32),
-                        BackgroundTransparency = 1,
-                        ZIndex = 23,
-                        Text = "",
-                        Parent = t,
-                        ThemeTag = {BackgroundColor3 = "DropdownOption"}
-                    },
-                    {indicator, label, e("UICorner", {CornerRadius = UDim.new(0, 6)})}
-                )
-
-                local selectedState
-                if j.Multi then
-                    selectedState = (l.Value and l.Value[I]) and true or false
-                else
-                    selectedState = (l.Value == I)
-                end
-
-                local bgMotor, indMotor = c.SpringMotor(1, optionButton, "BackgroundTransparency"), c.SpringMotor(1, indicator, "BackgroundTransparency")
-                local sizeMotor = d.SingleMotor.new(6)
-                sizeMotor:onStep(function(T)
-                    indicator.Size = UDim2.new(0, 4, 0, T)
-                end)
-
-                -- mouse interactions
-                c.AddSignal(optionButton.MouseEnter, function() bgMotor(selectedState and 0.85 or 0.89) end)
-                c.AddSignal(optionButton.MouseLeave, function() bgMotor(selectedState and 0.89 or 1) end)
-                c.AddSignal(optionButton.MouseButton1Down, function() bgMotor(0.92) end)
-                c.AddSignal(optionButton.MouseButton1Up, function() bgMotor(selectedState and 0.85 or 0.89) end)
-
-                function J.UpdateButton()
+                -- Filter by search text
+                if l.SearchText == "" or I:lower():find(l.SearchText, 1, true) then
+                    local J = {}
+                    G = G + 1
+                    local K, L =
+                        e(
+                            "Frame",
+                            {
+                                Size = UDim2.fromOffset(4, 14),
+                                BackgroundColor3 = Color3.fromRGB(76, 194, 255),
+                                Position = UDim2.fromOffset(-1, 16),
+                                AnchorPoint = Vector2.new(0, 0.5),
+                                ThemeTag = {BackgroundColor3 = "Accent"}
+                            },
+                            {e("UICorner", {CornerRadius = UDim.new(0, 2)})}
+                        ),
+                        e(
+                            "TextLabel",
+                            {
+                                FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+                                Text = I,
+                                TextColor3 = Color3.fromRGB(200, 200, 200),
+                                TextSize = 13,
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                                AutomaticSize = Enum.AutomaticSize.Y,
+                                BackgroundTransparency = 1,
+                                Size = UDim2.fromScale(1, 1),
+                                Position = UDim2.fromOffset(10, 0),
+                                Name = "ButtonLabel",
+                                ThemeTag = {TextColor3 = "Text"}
+                            }
+                        )
+                    local M, N =
+                        (e(
+                        "TextButton",
+                        {
+                            Size = UDim2.new(1, -10, 0, 32),
+                            BackgroundTransparency = 1,
+                            ZIndex = 23,
+                            Text = "",
+                            Parent = t,
+                            ThemeTag = {BackgroundColor3 = "DropdownOption"}
+                        },
+                        {K, L, e("UICorner", {CornerRadius = UDim.new(0, 6)})}
+                    ))
                     if j.Multi then
-                        selectedState = (l.Value and l.Value[I]) and true or false
-                        if selectedState then
-                            bgMotor(0.89)
-                        else
-                            bgMotor(1)
-                        end
+                        N = l.Value[I]
                     else
-                        selectedState = l.Value == I
-                        bgMotor(selectedState and 0.89 or 1)
+                        N = l.Value == I
                     end
-                    sizeMotor:setGoal(d.Spring.new(selectedState and 14 or 6, {frequency = 6}))
-                    indMotor(selectedState and 0 or 1)
-                end
-
-                label.InputBegan:Connect(function(T)
-                    if T.UserInputType == Enum.UserInputType.MouseButton1 or T.UserInputType == Enum.UserInputType.Touch then
-                        local willSelect = not selectedState
-                        -- if single-select and trying to deselect when AllowNull is false => ignore
-                        if l:GetActiveValues() == 1 and not willSelect and not j.AllowNull then
-                            -- do nothing
+                    local O, P = c.SpringMotor(1, M, "BackgroundTransparency")
+                    local Q, R = c.SpringMotor(1, K, "BackgroundTransparency")
+                    local S = d.SingleMotor.new(6)
+                    S:onStep(
+                        function(T)
+                            K.Size = UDim2.new(0, 4, 0, T)
+                        end
+                    )
+                    c.AddSignal(
+                        M.MouseEnter,
+                        function()
+                            P(N and 0.85 or 0.89)
+                        end
+                    )
+                    c.AddSignal(
+                        M.MouseLeave,
+                        function()
+                            P(N and 0.89 or 1)
+                        end
+                    )
+                    c.AddSignal(
+                        M.MouseButton1Down,
+                        function()
+                            P(0.92)
+                        end
+                    )
+                    c.AddSignal(
+                        M.MouseButton1Up,
+                        function()
+                            P(N and 0.85 or 0.89)
+                        end
+                    )
+                    function J.UpdateButton(T)
+                        if j.Multi then
+                            N = l.Value[I]
+                            if N then
+                                P(0.89)
+                            end
                         else
-                            if j.Multi then
-                                selectedState = willSelect
-                                l.Value = l.Value or {}
-                                if willSelect then
-                                    l.Value[I] = true
+                            N = l.Value == I
+                            P(N and 0.89 or 1)
+                        end
+                        S:setGoal(d.Spring.new(N and 14 or 6, {frequency = 6}))
+                        R(N and 0 or 1)
+                    end
+                    L.InputBegan:Connect(
+                        function(T)
+                            if
+                                T.UserInputType == Enum.UserInputType.MouseButton1 or
+                                    T.UserInputType == Enum.UserInputType.Touch
+                             then
+                                local U = not N
+                                if l:GetActiveValues() == 1 and not U and not j.AllowNull then
                                 else
-                                    l.Value[I] = nil
-                                end
-                            else
-                                selectedState = willSelect
-                                l.Value = selectedState and I or nil
-                                -- refresh all others after change
-                                for _, W in next, D do
-                                    W:UpdateButton()
+                                    if j.Multi then
+                                        N = U
+                                        l.Value[I] = N and true or nil
+                                    else
+                                        N = U
+                                        l.Value = N and I or nil
+                                        for V, W in next, D do
+                                            W:UpdateButton()
+                                        end
+                                    end
+                                    J:UpdateButton()
+                                    l:Display()
+                                    k:SafeCallback(l.Callback, l.Value)
+                                    k:SafeCallback(l.Changed, l.Value)
                                 end
                             end
-                            J:UpdateButton()
-                            l:Display()
-                            k:SafeCallback(l.Callback, l.Value)
-                            k:SafeCallback(l.Changed, l.Value)
                         end
-                    end
-                end)
-
-                -- init state & store
-                J:UpdateButton()
-                l:Display()
-                D[#D + 1] = J
-            end
-
-            -- compute widest label to adjust width
-            local widest = 0
-            for _, child in next, t:GetChildren() do
-                if child:IsA("TextButton") then
-                    local lbl = child:FindFirstChild("ButtonLabel")
-                    if lbl then
-                        widest = math.max(widest, lbl.TextBounds.X)
-                    end
+                    )
+                    J:UpdateButton()
+                    D[M] = J
                 end
             end
-
-            -- adjust and finalize
-            recomputeSize()
+            l:Display()
+            z()
+            y()
         end
-
         function l.SetValues(B, C)
             if C then
                 l.Values = C
             end
             l:BuildDropdownList()
         end
-
         function l.OnChanged(B, C)
             l.Changed = C
-            if C then
-                C(l.Value)
-            end
+            C(l.Value)
         end
-
         function l.SetValue(B, C)
             if l.Multi then
                 local D = {}
@@ -3120,17 +3130,12 @@ local aa = {
             k:SafeCallback(l.Callback, l.Value)
             k:SafeCallback(l.Changed, l.Value)
         end
-
         function l.Destroy(B)
             m:Destroy()
             k.Options[i] = nil
         end
-
-        -- initial build
         l:BuildDropdownList()
         l:Display()
-
-        -- apply default selections if provided
         local B = {}
         if type(j.Default) == "string" then
             local C = table.find(l.Values, j.Default)
@@ -3147,12 +3152,10 @@ local aa = {
         elseif type(j.Default) == "number" and l.Values[j.Default] ~= nil then
             table.insert(B, j.Default)
         end
-
         if next(B) then
             for C = 1, #B do
                 local D = B[C]
                 if j.Multi then
-                    l.Value = l.Value or {}
                     l.Value[l.Values[D]] = true
                 else
                     l.Value = l.Values[D]
@@ -3164,70 +3167,11 @@ local aa = {
             l:BuildDropdownList()
             l:Display()
         end
-
         k.Options[i] = l
-
-        -- toggle from compact button
-        c.AddSignal(p.MouseButton1Click, function()
-            if l.Opened then
-                l:Close()
-            else
-                l:Open()
-            end
-        end)
-
-        -- SEARCH behavior: filter visible options by text in SearchBox
-        local function applySearchFilter()
-            local query = string.lower(SearchBox.Text or "")
-            for _, child in pairs(t:GetChildren()) do
-                if child:IsA("TextButton") then
-                    local lbl = child:FindFirstChild("ButtonLabel")
-                    if lbl then
-                        local visible = (query == "" or string.find(string.lower(lbl.Text), query))
-                        child.Visible = visible
-                    end
-                end
-            end
-            -- update canvas size & popup size after filtering
-            -- wait a frame for TextLabels to update TextBounds
-            task.spawn(function()
-                task.wait()
-                recomputeSize()
-            end)
-        end
-
-        c.AddSignal(SearchBox:GetPropertyChangedSignal("Text"), applySearchFilter)
-
-        -- CLEAR button resets selection(s)
-        c.AddSignal(ClearButton.MouseButton1Click, function()
-            if j.Multi then
-                l.Value = {}
-            else
-                l.Value = nil
-            end
-            -- rebuild list to update visuals
-            l:BuildDropdownList()
-            l:Display()
-            k:SafeCallback(l.Callback, l.Value)
-            k:SafeCallback(l.Changed, l.Value)
-            -- clear search text as well
-            SearchBox.Text = ""
-            applySearchFilter()
-        end)
-
-        -- also refresh layout when contents change
-        c.AddSignal(s:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-            recomputeSize()
-            positionPopup()
-        end)
-
-        -- return the dropdown object
         return l
     end
-
     return g
 end,
-
     [23] = function()
         local aa, ab, ac, ad, ae = b(23)
         local af = ab.Parent.Parent
