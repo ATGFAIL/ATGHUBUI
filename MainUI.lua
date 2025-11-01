@@ -3503,8 +3503,7 @@ end,
             assert(f.Max, "Slider - Missing maximum value.")
             assert(f.Rounding, "Slider - Missing rounding value.")
             local h, i, j =
-                {Value = nil, Min = f.Min, Max = f.Max, Rounding = f.Rounding, Callback = f.Callback or function(h)
-                        end, Type = "Slider"},
+                {Value = nil, Min = f.Min, Max = f.Max, Rounding = f.Rounding, Callback = f.Callback or function(h) end, Type = "Slider"},
                 false,
                 ac(aj.Element)(f.Title, f.Description, d.Container, false)
             j.DescLabel.Size = UDim2.new(1, -170, 0, 14)
@@ -3522,7 +3521,7 @@ end,
                 }
             )
 
-            -- เปลี่ยนเป็น TextBox ที่มี placeholder, ขอบ และมุมมน
+            -- แก้ตรงนี้: TextBox ที่พิมพ์ได้ และย้ายออกจาก slider ให้ห่างขึ้น + ทำให้เห็นว่าพิมพ์ได้
             local l, m, n =
                 ai(
                     "Frame",
@@ -3539,22 +3538,24 @@ end,
                     {
                         FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
                         Text = "Value",
-                        PlaceholderText = "Type value",         -- ให้ผู้ใช้รู้ว่าสามารถพิมพ์ได้
+                        PlaceholderText = "พิมพ์ค่า...", -- บอกผู้ใช้ว่าพิมพ์ได้
                         TextSize = 12,
                         ClearTextOnFocus = false,
-                        TextWrapped = true,
+                        TextWrapped = false,
                         TextXAlignment = Enum.TextXAlignment.Right,
-                        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                        BackgroundTransparency = 0.85,         -- ทำให้เห็นกรอบเล็กน้อย
-                        Size = UDim2.new(0, 80, 0, 18),        -- ขนาดปรับให้เหมาะสม
-                        Position = UDim2.new(1, -20, 0.5, 0), -- ขยับออกจาก slider (มากขึ้น)
+                        BackgroundColor3 = Color3.fromRGB(35, 35, 38), -- พื้นหลังเล็กน้อยเพื่อสื่อว่าพิมพ์ได้
+                        BackgroundTransparency = 0.88, -- พื้นหลังโปร่งเล็กน้อย
+                        Size = UDim2.fromOffset(68, 18), -- ย่อขนาดให้กระชับ
+                        Position = UDim2.new(1, -90, 0.5, 0), -- เลื่อนออกมาทางซ้ายจากขอบมากขึ้น
                         AnchorPoint = Vector2.new(1, 0.5),
-                        ThemeTag = {TextColor3 = "Text", PlaceholderColor3 = "SubText"}
+                        ThemeTag = {TextColor3 = "SubText"},
+                        BorderSizePixel = 0,
+                        TextWrapped = true
                     },
                     {
-                        -- เพิ่มมุมมนและเส้นขอบบางๆ เพื่อบอกว่าเป็น input
+                        -- ใส่มุมโค้งและเส้นขอบบาง ๆ เพื่อให้เด่นว่าเป็นอินพุต
                         ai("UICorner", {CornerRadius = UDim.new(0, 4)}),
-                        ai("UIStroke", {Color = Color3.fromRGB(200, 200, 200), Transparency = 0.7, Thickness = 1})
+                        ai("UIStroke", {Transparency = 0.6, Thickness = 1})
                     }
                 )
 
@@ -3581,7 +3582,7 @@ end,
             -- ถ้ามีการพิมพ์อยู่ หยุดการ drag ไว้
             local editingNumber = false
 
-            -- กดไอคอนเริ่ม drag (เหมือนเดิม)
+            -- ถ้าคลิกที่ไอคอน จะเริ่ม drag (เหมือนเดิม)
             ah.AddSignal(
                 k.InputBegan,
                 function(p)
@@ -3599,25 +3600,32 @@ end,
                 end
             )
 
-            -- เมื่อ TextBox ถูกโฟกัส ให้ป้องกันการลาก และแสดงว่ากำลังพิมพ์
+            -- เมื่อ TextBox ได้โฟกัส: ถือเป็นการเริ่มพิมพ์ -> เปลี่ยนสไตล์ให้ชัด และปิดการลากชั่วคราว
             n.Focused:Connect(function()
                 editingNumber = true
-                i = false -- ปิดการ drag ขณะพิมพ์
-                -- ถ้าต้องการให้ข้อความทั้งหมดถูกเลือกเมื่อโฟกัส:
-                pcall(function() n.SelectionStart = 1 end)
+                i = false
+                -- ทำให้พื้นหลังชัดขึ้นเมื่อกำลังพิมพ์
+                pcall(function()
+                    n.BackgroundTransparency = 0.4
+                end)
             end)
 
-            -- เมื่อพิมพ์เสร็จ (กด Enter หรือคลิกออก) -> validate และอัปเดต slider
+            -- เมื่อพิมพ์เสร็จ (กด Enter หรือคลิกออก): validate แล้วอัปเดต slider
             n.FocusLost:Connect(function(enterPressed)
                 editingNumber = false
+                -- คืนค่าสไตล์พื้นหลัง
+                pcall(function()
+                    n.BackgroundTransparency = 0.88
+                end)
+
                 local text = n.Text
-                text = tostring(text):gsub(",", ".") -- รองรับ comma เป็นจุดทศนิยม
+                text = tostring(text):gsub(",", ".") -- รองรับ comma -> dot
                 local num = tonumber(text)
                 if num then
                     local newVal = g:Round(math.clamp(num, h.Min, h.Max), h.Rounding)
                     h:SetValue(newVal)
                 else
-                    -- คืนค่าเดิมหากไม่ใช่ตัวเลข
+                    -- ถ้าไม่ใช่ตัวเลข ให้ย้อนกลับไปแสดงค่าเก่า
                     if h.Value ~= nil then
                         n.Text = tostring(h.Value)
                     else
@@ -3665,6 +3673,7 @@ end,
         end
         return c
     end,
+
     [27] = function()
         local aa, ab, ac, ad, ae = b(27)
         local af, ag = game:GetService "TweenService", ab.Parent.Parent
