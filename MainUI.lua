@@ -1447,7 +1447,10 @@ local aa = {
             return o
         end
     end,
-    [16] = function()
+    -- ==========================================
+-- [16] - TitleBar (ปรับปรุงแล้ว)
+-- ==========================================
+[16] = function()
     local c, d, e, f, g = b(16)
     local h, i = d.Parent.Parent, e(d.Parent.Assets)
     local j, k = e(h.Creator), e(h.Packages.Flipper)
@@ -1457,8 +1460,7 @@ local aa = {
             {},
             e(h),
             function(o, p, q, r)
-                local s = {Callback = r or function()
-                        end}
+                local s = {Callback = r or function() end}
                 s.Frame =
                     l(
                     "TextButton",
@@ -1488,36 +1490,15 @@ local aa = {
                     }
                 )
                 local t, u = j.SpringMotor(1, s.Frame, "BackgroundTransparency")
-                m(
-                    s.Frame.MouseEnter,
-                    function()
-                        u(0.94)
-                    end
-                )
-                m(
-                    s.Frame.MouseLeave,
-                    function()
-                        u(1, true)
-                    end
-                )
-                m(
-                    s.Frame.MouseButton1Down,
-                    function()
-                        u(0.96)
-                    end
-                )
-                m(
-                    s.Frame.MouseButton1Up,
-                    function()
-                        u(0.94)
-                    end
-                )
+                m(s.Frame.MouseEnter, function() u(0.94) end)
+                m(s.Frame.MouseLeave, function() u(1, true) end)
+                m(s.Frame.MouseButton1Down, function() u(0.96) end)
+                m(s.Frame.MouseButton1Up, function() u(0.94) end)
                 m(s.Frame.MouseButton1Click, s.Callback)
-                s.SetCallback = function(v)
-                    s.Callback = v
-                end
+                s.SetCallback = function(v) s.Callback = v end
                 return s
             end
+            
         o.Frame =
             l(
             "Frame",
@@ -1525,10 +1506,8 @@ local aa = {
             {
                 l(
                     "Frame",
-                    -- ขยับซ้ายเล็กน้อย: Position 16 -> 8, ลด margin ขวาให้สมดุล
                     {Size = UDim2.new(1, -8, 1, 0), Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1},
                     {
-                        -- UIListLayout: แนวนอนและจัดกึ่งกลางแนวตั้ง
                         l(
                             "UIListLayout",
                             {
@@ -1538,22 +1517,18 @@ local aa = {
                                 VerticalAlignment = Enum.VerticalAlignment.Center
                             }
                         ),
-
-                        -- ไอคอนขนาดใหญ่ขึ้นและจัดด้วย layout
                         l(
                             "ImageLabel",
                             {
                                 Name = "WindowIcon",
                                 Image = n.Icon or "rbxassetid://130967366683860",
-                                Size = UDim2.fromOffset(32, 32), -- ขยายเป็น 32x32
+                                Size = UDim2.fromOffset(32, 32),
                                 BackgroundTransparency = 1,
                                 LayoutOrder = 1,
                                 ScaleType = Enum.ScaleType.Fit,
                                 ThemeTag = {ImageColor3 = "Text"}
                             }
                         ),
-
-                        -- Title (ขนาดฟอนต์เพิ่มเล็กน้อย)
                         l(
                             "TextLabel",
                             {
@@ -1573,8 +1548,6 @@ local aa = {
                                 ThemeTag = {TextColor3 = "Text"}
                             }
                         ),
-
-                        -- SubTitle (ถ้ามี)
                         l(
                             "TextLabel",
                             {
@@ -1609,9 +1582,8 @@ local aa = {
             }
         )
 
-        -- Close: now does a full cleanup + destroy related UI
-        o.CloseButton =
-            q(
+        -- Close Button
+        o.CloseButton = q(
             i.Close,
             UDim2.new(1, -4, 0, 4),
             o.Frame,
@@ -1623,14 +1595,9 @@ local aa = {
                         {
                             Title = "Yes",
                             Callback = function()
-                                -- 1) Destroy the primary window/object (p)
                                 pcall(function() if p and type(p.Destroy) == "function" then p:Destroy() end end)
-
-                                -- 2) Try to destroy global Window if present
                                 pcall(function() if Window and type(Window.Destroy) == "function" then Window:Destroy() end end)
                                 pcall(function() Window = nil end)
-
-                                -- 3) Remove any toggle UI or helper GUIs we created (search CoreGui and PlayerGui)
                                 local function destroyMarked(parent)
                                     for _, gui in ipairs(parent:GetChildren()) do
                                         if gui:IsA("ScreenGui") then
@@ -1642,16 +1609,12 @@ local aa = {
                                     end
                                 end
                                 pcall(function() destroyMarked(game:GetService("CoreGui")) end)
-                                pcall(function() destroyMarked(playerGui) end)
-
-                                -- 4) Clear getgenv config / flags that might keep loops running
+                                pcall(function() destroyMarked(game:GetService("Players").LocalPlayer.PlayerGui) end)
                                 if getgenv then
                                     pcall(function() getgenv().ATGButtonUI = nil end)
                                     pcall(function() getgenv().FluentToggleGui = nil end)
                                     pcall(function() getgenv().ATGButtonUI_Running = false end)
                                 end
-
-                                -- 5) Try to force-garbage collect some global resources (best-effort)
                                 pcall(function() collectgarbage("collect") end)
                             end
                         },
@@ -1661,8 +1624,8 @@ local aa = {
             end
         )
 
-        o.MaxButton =
-            q(
+        -- Maximize Button
+        o.MaxButton = q(
             i.Max,
             UDim2.new(1, -40, 0, 4),
             o.Frame,
@@ -1670,8 +1633,9 @@ local aa = {
                 n.Window.Maximize(not n.Window.Maximized)
             end
         )
-        o.MinButton =
-            q(
+        
+        -- Minimize Button
+        o.MinButton = q(
             i.Min,
             UDim2.new(1, -80, 0, 4),
             o.Frame,
@@ -1680,21 +1644,14 @@ local aa = {
             end
         )
 
-        -- ปุ่มตั้งค่า (Settings) — อยู่ทางซ้ายของปุ่มพับ (Min)
-        o.SettingsButton =
-            q(
+        -- Settings Button (ใหม่!)
+        o.SettingsButton = q(
             "rbxassetid://140026929150963",
             UDim2.new(1, -116, 0, 4),
             o.Frame,
             function()
                 if p and p.Window and type(p.Window.OpenSettings) == "function" then
                     p.Window:OpenSettings()
-                else
-                    p.Window:Dialog {
-                        Title = "Settings",
-                        Content = "No additional settings are implemented yet.",
-                        Buttons = {{Title = "OK"}}
-                    }
                 end
             end
         )
@@ -1703,343 +1660,581 @@ local aa = {
     end
 end,
 
-
-    [17] = function()
-        local c, d, e, f, g = b(17)
-        local h, i, j, k =
-            game:GetService "UserInputService",
-            game:GetService "Players".LocalPlayer:GetMouse(),
-            game:GetService "Workspace".CurrentCamera,
-            d.Parent.Parent
-        local l, m, n, o, p = e(k.Packages.Flipper), e(k.Creator), e(k.Acrylic), e(d.Parent.Assets), d.Parent
-        local q, r, s = l.Spring.new, l.Instant.new, m.New
-        return function(t)
-            local u, v, w, x, y, z =
-                e(k),
-                {
-                    Minimized = false,
-                    Maximized = false,
-                    Size = t.Size,
-                    CurrentPos = 0,
-                    Position = UDim2.fromOffset(
-                        j.ViewportSize.X / 2 - t.Size.X.Offset / 2,
-                        j.ViewportSize.Y / 2 - t.Size.Y.Offset / 2
-                    )
-                },
-                false
-            local A, B = false
-            local C = false
-            v.AcrylicPaint = n.AcrylicPaint()
-            local D, E =
-                s(
-                    "Frame",
-                    {
-                        Size = UDim2.fromOffset(4, 0),
-                        BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-                        Position = UDim2.fromOffset(0, 17),
-                        AnchorPoint = Vector2.new(0, 0.5),
-                        ThemeTag = {BackgroundColor3 = "Accent"}
-                    },
-                    {s("UICorner", {CornerRadius = UDim.new(0, 2)})}
-                ),
-                s(
-                    "Frame",
-                    {Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Position = UDim2.new(1, -20, 1, -20)}
+-- ==========================================
+-- [17] - Window (ปรับปรุงแล้ว - เพิ่ม OpenSettings)
+-- ==========================================
+[17] = function()
+    local c, d, e, f, g = b(17)
+    local h, i, j, k =
+        game:GetService "UserInputService",
+        game:GetService "Players".LocalPlayer:GetMouse(),
+        game:GetService "Workspace".CurrentCamera,
+        d.Parent.Parent
+    local l, m, n, o, p = e(k.Packages.Flipper), e(k.Creator), e(k.Acrylic), e(d.Parent.Assets), d.Parent
+    local q, r, s = l.Spring.new, l.Instant.new, m.New
+    
+    return function(t)
+        local u, v, w, x, y, z =
+            e(k),
+            {
+                Minimized = false,
+                Maximized = false,
+                Size = t.Size,
+                CurrentPos = 0,
+                Position = UDim2.fromOffset(
+                    j.ViewportSize.X / 2 - t.Size.X.Offset / 2,
+                    j.ViewportSize.Y / 2 - t.Size.Y.Offset / 2
                 )
-            v.TabHolder =
-                s(
-                "ScrollingFrame",
-                {
-                    Size = UDim2.fromScale(1, 1),
-                    BackgroundTransparency = 1,
-                    ScrollBarImageTransparency = 1,
-                    ScrollBarThickness = 0,
-                    BorderSizePixel = 0,
-                    CanvasSize = UDim2.fromScale(0, 0),
-                    ScrollingDirection = Enum.ScrollingDirection.Y
-                },
-                {s("UIListLayout", {Padding = UDim.new(0, 4)})}
-            )
-            local F =
-                s(
+            },
+            false
+        local A, B = false
+        local C = false
+        v.AcrylicPaint = n.AcrylicPaint()
+        
+        local D, E =
+            s(
                 "Frame",
                 {
-                    Size = UDim2.new(0, t.TabWidth, 1, -66),
-                    Position = UDim2.new(0, 12, 0, 54),
-                    BackgroundTransparency = 1,
-                    ClipsDescendants = true
+                    Size = UDim2.fromOffset(4, 0),
+                    BackgroundColor3 = Color3.fromRGB(76, 194, 255),
+                    Position = UDim2.fromOffset(0, 17),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    ThemeTag = {BackgroundColor3 = "Accent"}
                 },
-                {v.TabHolder, D}
-            )
-            v.TabDisplay =
-                s(
+                {s("UICorner", {CornerRadius = UDim.new(0, 2)})}
+            ),
+            s("Frame", {Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Position = UDim2.new(1, -20, 1, -20)})
+            
+        v.TabHolder = s(
+            "ScrollingFrame",
+            {
+                Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1,
+                ScrollBarImageTransparency = 1,
+                ScrollBarThickness = 0,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.fromScale(0, 0),
+                ScrollingDirection = Enum.ScrollingDirection.Y
+            },
+            {s("UIListLayout", {Padding = UDim.new(0, 4)})}
+        )
+        
+        local F = s(
+            "Frame",
+            {
+                Size = UDim2.new(0, t.TabWidth, 1, -66),
+                Position = UDim2.new(0, 12, 0, 54),
+                BackgroundTransparency = 1,
+                ClipsDescendants = true
+            },
+            {v.TabHolder, D}
+        )
+        
+        v.TabDisplay = s(
+            "TextLabel",
+            {
+                RichText = true,
+                Text = "Tab",
+                TextTransparency = 0,
+                FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+                TextSize = 28,
+                TextXAlignment = "Left",
+                TextYAlignment = "Center",
+                Size = UDim2.new(1, -16, 0, 28),
+                Position = UDim2.fromOffset(t.TabWidth + 26, 56),
+                BackgroundTransparency = 1,
+                ThemeTag = {TextColor3 = "Text"}
+            }
+        )
+        
+        v.ContainerHolder = s(
+            "CanvasGroup",
+            {
+                Size = UDim2.new(1, -t.TabWidth - 32, 1, -102),
+                Position = UDim2.fromOffset(t.TabWidth + 26, 90),
+                BackgroundTransparency = 1
+            }
+        )
+        
+        v.Root = s(
+            "Frame",
+            {BackgroundTransparency = 1, Size = v.Size, Position = v.Position, Parent = t.Parent},
+            {v.AcrylicPaint.Frame, v.TabDisplay, v.ContainerHolder, F, E}
+        )
+        
+        v.TitleBar = e(d.Parent.TitleBar) {Title = t.Title, SubTitle = t.SubTitle, Parent = v.Root, Window = v}
+        
+        if e(k).UseAcrylic then
+            v.AcrylicPaint.AddParent(v.Root)
+        end
+        
+        local G, H =
+            l.GroupMotor.new {X = v.Size.X.Offset, Y = v.Size.Y.Offset},
+            l.GroupMotor.new {X = v.Position.X.Offset, Y = v.Position.Y.Offset}
+            
+        v.SelectorPosMotor = l.SingleMotor.new(17)
+        v.SelectorSizeMotor = l.SingleMotor.new(0)
+        v.ContainerBackMotor = l.SingleMotor.new(0)
+        v.ContainerPosMotor = l.SingleMotor.new(94)
+        
+        G:onStep(function(I)
+            v.Root.Size = UDim2.new(0, I.X, 0, I.Y)
+        end)
+        
+        H:onStep(function(I)
+            v.Root.Position = UDim2.new(0, I.X, 0, I.Y)
+        end)
+        
+        local I, J = 0, 0
+        v.SelectorPosMotor:onStep(function(K)
+            D.Position = UDim2.new(0, 0, 0, K + 17)
+            local L = tick()
+            local M = L - J
+            if I ~= nil then
+                v.SelectorSizeMotor:setGoal(q((math.abs(K - I) / (M * 60)) + 16))
+                I = K
+            end
+            J = L
+        end)
+        
+        v.SelectorSizeMotor:onStep(function(K)
+            D.Size = UDim2.new(0, 4, 0, K)
+        end)
+        
+        v.ContainerBackMotor:onStep(function(K)
+            v.ContainerHolder.GroupTransparency = K
+        end)
+        
+        v.ContainerPosMotor:onStep(function(K)
+            v.ContainerHolder.Position = UDim2.fromOffset(t.TabWidth + 26, K)
+        end)
+        
+        local K, L
+        v.Maximize = function(M, N, O)
+            v.Maximized = M
+            v.TitleBar.MaxButton.Frame.Icon.Image = M and o.Restore or o.Max
+            if M then
+                K = v.Size.X.Offset
+                L = v.Size.Y.Offset
+            end
+            local P, Q = M and j.ViewportSize.X or K, M and j.ViewportSize.Y or L
+            G:setGoal {
+                X = l[O and "Instant" or "Spring"].new(P, {frequency = 6}),
+                Y = l[O and "Instant" or "Spring"].new(Q, {frequency = 6})
+            }
+            v.Size = UDim2.fromOffset(P, Q)
+            if not N then
+                H:setGoal {
+                    X = q(M and 0 or v.Position.X.Offset, {frequency = 6}),
+                    Y = q(M and 0 or v.Position.Y.Offset, {frequency = 6})
+                }
+            end
+        end
+        
+        m.AddSignal(v.TitleBar.Frame.InputBegan, function(M)
+            if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
+                w = true
+                y = M.Position
+                z = v.Root.Position
+                if v.Maximized then
+                    z = UDim2.fromOffset(
+                        i.X - (i.X * ((K - 100) / v.Root.AbsoluteSize.X)),
+                        i.Y - (i.Y * (L / v.Root.AbsoluteSize.Y))
+                    )
+                end
+                M.Changed:Connect(function()
+                    if M.UserInputState == Enum.UserInputState.End then
+                        w = false
+                    end
+                end)
+            end
+        end)
+        
+        m.AddSignal(v.TitleBar.Frame.InputChanged, function(M)
+            if M.UserInputType == Enum.UserInputType.MouseMovement or M.UserInputType == Enum.UserInputType.Touch then
+                x = M
+            end
+        end)
+        
+        m.AddSignal(E.InputBegan, function(M)
+            if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
+                A = true
+                B = M.Position
+            end
+        end)
+        
+        m.AddSignal(h.InputChanged, function(M)
+            if M == x and w then
+                local N = M.Position - y
+                v.Position = UDim2.fromOffset(z.X.Offset + N.X, z.Y.Offset + N.Y)
+                H:setGoal {X = r(v.Position.X.Offset), Y = r(v.Position.Y.Offset)}
+                if v.Maximized then
+                    v.Maximize(false, true, true)
+                end
+            end
+            if (M.UserInputType == Enum.UserInputType.MouseMovement or M.UserInputType == Enum.UserInputType.Touch) and A then
+                local N, O = M.Position - B, v.Size
+                local P = Vector3.new(O.X.Offset, O.Y.Offset, 0) + Vector3.new(1, 1, 0) * N
+                local Q = Vector2.new(math.clamp(P.X, 470, 2048), math.clamp(P.Y, 380, 2048))
+                G:setGoal {X = l.Instant.new(Q.X), Y = l.Instant.new(Q.Y)}
+            end
+        end)
+        
+        m.AddSignal(h.InputEnded, function(M)
+            if A == true or M.UserInputType == Enum.UserInputType.Touch then
+                A = false
+                v.Size = UDim2.fromOffset(G:getValue().X, G:getValue().Y)
+            end
+        end)
+        
+        m.AddSignal(v.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize", function()
+            v.TabHolder.CanvasSize = UDim2.new(0, 0, 0, v.TabHolder.UIListLayout.AbsoluteContentSize.Y)
+        end)
+        
+        m.AddSignal(h.InputBegan, function(M)
+            if type(u.MinimizeKeybind) == "table" and u.MinimizeKeybind.Type == "Keybind" and not h:GetFocusedTextBox() then
+                if M.KeyCode.Name == u.MinimizeKeybind.Value then
+                    v:Minimize()
+                end
+            elseif M.KeyCode == u.MinimizeKey and not h:GetFocusedTextBox() then
+                v:Minimize()
+            end
+        end)
+        
+        function v.Minimize(M)
+            v.Minimized = not v.Minimized
+            v.Root.Visible = not v.Minimized
+            if not C then
+                C = true
+                local N = u.MinimizeKeybind and u.MinimizeKeybind.Value or u.MinimizeKey.Name
+                u:Notify {Title = "Interface", Content = "Press " .. N .. " to toggle the interface.", Duration = 6}
+            end
+        end
+        
+        function v.Destroy(M)
+            if e(k).UseAcrylic then
+                v.AcrylicPaint.Model:Destroy()
+            end
+            v.Root:Destroy()
+        end
+        
+        local M = e(p.Dialog):Init(v)
+        
+        function v.Dialog(N, O)
+            local P = M:Create()
+            P.Title.Text = O.Title
+            local Q = s(
                 "TextLabel",
                 {
-                    RichText = true,
-                    Text = "Tab",
-                    TextTransparency = 0,
-                    FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
-                    TextSize = 28,
-                    TextXAlignment = "Left",
-                    TextYAlignment = "Center",
-                    Size = UDim2.new(1, -16, 0, 28),
-                    Position = UDim2.fromOffset(t.TabWidth + 26, 56),
+                    FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+                    Text = O.Content,
+                    TextColor3 = Color3.fromRGB(240, 240, 240),
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextYAlignment = Enum.TextYAlignment.Top,
+                    Size = UDim2.new(1, -40, 1, 0),
+                    Position = UDim2.fromOffset(20, 60),
                     BackgroundTransparency = 1,
+                    Parent = P.Root,
+                    ClipsDescendants = false,
                     ThemeTag = {TextColor3 = "Text"}
                 }
             )
-            v.ContainerHolder =
-                s(
-                "CanvasGroup",
-                {
-                    Size = UDim2.new(1, -t.TabWidth - 32, 1, -102),
-                    Position = UDim2.fromOffset(t.TabWidth + 26, 90),
-                    BackgroundTransparency = 1
-                }
-            )
-            v.Root =
-                s(
-                "Frame",
-                {BackgroundTransparency = 1, Size = v.Size, Position = v.Position, Parent = t.Parent},
-                {v.AcrylicPaint.Frame, v.TabDisplay, v.ContainerHolder, F, E}
-            )
-            v.TitleBar = e(d.Parent.TitleBar) {Title = t.Title, SubTitle = t.SubTitle, Parent = v.Root, Window = v}
-            if e(k).UseAcrylic then
-                v.AcrylicPaint.AddParent(v.Root)
+            s("UISizeConstraint", {MinSize = Vector2.new(300, 165), MaxSize = Vector2.new(620, math.huge), Parent = P.Root})
+            P.Root.Size = UDim2.fromOffset(Q.TextBounds.X + 40, 165)
+            if Q.TextBounds.X + 40 > v.Size.X.Offset - 120 then
+                P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, 165)
+                Q.TextWrapped = true
+                P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, Q.TextBounds.Y + 150)
             end
-            local G, H =
-                l.GroupMotor.new {X = v.Size.X.Offset, Y = v.Size.Y.Offset},
-                l.GroupMotor.new {X = v.Position.X.Offset, Y = v.Position.Y.Offset}
-            v.SelectorPosMotor = l.SingleMotor.new(17)
-            v.SelectorSizeMotor = l.SingleMotor.new(0)
-            v.ContainerBackMotor = l.SingleMotor.new(0)
-            v.ContainerPosMotor = l.SingleMotor.new(94)
-            G:onStep(
-                function(I)
-                    v.Root.Size = UDim2.new(0, I.X, 0, I.Y)
-                end
-            )
-            H:onStep(
-                function(I)
-                    v.Root.Position = UDim2.new(0, I.X, 0, I.Y)
-                end
-            )
-            local I, J = 0, 0
-            v.SelectorPosMotor:onStep(
-                function(K)
-                    D.Position = UDim2.new(0, 0, 0, K + 17)
-                    local L = tick()
-                    local M = L - J
-                    if I ~= nil then
-                        v.SelectorSizeMotor:setGoal(q((math.abs(K - I) / (M * 60)) + 16))
-                        I = K
-                    end
-                    J = L
-                end
-            )
-            v.SelectorSizeMotor:onStep(
-                function(K)
-                    D.Size = UDim2.new(0, 4, 0, K)
-                end
-            )
-            v.ContainerBackMotor:onStep(
-                function(K)
-                    v.ContainerHolder.GroupTransparency = K
-                end
-            )
-            v.ContainerPosMotor:onStep(
-                function(K)
-                    v.ContainerHolder.Position = UDim2.fromOffset(t.TabWidth + 26, K)
-                end
-            )
-            local K, L
-            v.Maximize = function(M, N, O)
-                v.Maximized = M
-                v.TitleBar.MaxButton.Frame.Icon.Image = M and o.Restore or o.Max
-                if M then
-                    K = v.Size.X.Offset
-                    L = v.Size.Y.Offset
-                end
-                local P, Q = M and j.ViewportSize.X or K, M and j.ViewportSize.Y or L
-                G:setGoal {
-                    X = l[O and "Instant" or "Spring"].new(P, {frequency = 6}),
-                    Y = l[O and "Instant" or "Spring"].new(Q, {frequency = 6})
-                }
-                v.Size = UDim2.fromOffset(P, Q)
-                if not N then
-                    H:setGoal {
-                        X = q(M and 0 or v.Position.X.Offset, {frequency = 6}),
-                        Y = q(M and 0 or v.Position.Y.Offset, {frequency = 6})
-                    }
-                end
+            for R, S in next, O.Buttons do
+                P:Button(S.Title, S.Callback)
             end
-            m.AddSignal(
-                v.TitleBar.Frame.InputBegan,
-                function(M)
-                    if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
-                        w = true
-                        y = M.Position
-                        z = v.Root.Position
-                        if v.Maximized then
-                            z =
-                                UDim2.fromOffset(
-                                i.X - (i.X * ((K - 100) / v.Root.AbsoluteSize.X)),
-                                i.Y - (i.Y * (L / v.Root.AbsoluteSize.Y))
-                            )
-                        end
-                        M.Changed:Connect(
-                            function()
-                                if M.UserInputState == Enum.UserInputState.End then
-                                    w = false
-                                end
-                            end
-                        )
-                    end
-                end
-            )
-            m.AddSignal(
-                v.TitleBar.Frame.InputChanged,
-                function(M)
-                    if
-                        M.UserInputType == Enum.UserInputType.MouseMovement or
-                            M.UserInputType == Enum.UserInputType.Touch
-                     then
-                        x = M
-                    end
-                end
-            )
-            m.AddSignal(
-                E.InputBegan,
-                function(M)
-                    if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
-                        A = true
-                        B = M.Position
-                    end
-                end
-            )
-            m.AddSignal(
-                h.InputChanged,
-                function(M)
-                    if M == x and w then
-                        local N = M.Position - y
-                        v.Position = UDim2.fromOffset(z.X.Offset + N.X, z.Y.Offset + N.Y)
-                        H:setGoal {X = r(v.Position.X.Offset), Y = r(v.Position.Y.Offset)}
-                        if v.Maximized then
-                            v.Maximize(false, true, true)
-                        end
-                    end
-                    if
-                        (M.UserInputType == Enum.UserInputType.MouseMovement or
-                            M.UserInputType == Enum.UserInputType.Touch) and
-                            A
-                     then
-                        local N, O = M.Position - B, v.Size
-                        local P = Vector3.new(O.X.Offset, O.Y.Offset, 0) + Vector3.new(1, 1, 0) * N
-                        local Q = Vector2.new(math.clamp(P.X, 470, 2048), math.clamp(P.Y, 380, 2048))
-                        G:setGoal {X = l.Instant.new(Q.X), Y = l.Instant.new(Q.Y)}
-                    end
-                end
-            )
-            m.AddSignal(
-                h.InputEnded,
-                function(M)
-                    if A == true or M.UserInputType == Enum.UserInputType.Touch then
-                        A = false
-                        v.Size = UDim2.fromOffset(G:getValue().X, G:getValue().Y)
-                    end
-                end
-            )
-            m.AddSignal(
-                v.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize",
-                function()
-                    v.TabHolder.CanvasSize = UDim2.new(0, 0, 0, v.TabHolder.UIListLayout.AbsoluteContentSize.Y)
-                end
-            )
-            m.AddSignal(
-                h.InputBegan,
-                function(M)
-                    if
-                        type(u.MinimizeKeybind) == "table" and u.MinimizeKeybind.Type == "Keybind" and
-                            not h:GetFocusedTextBox()
-                     then
-                        if M.KeyCode.Name == u.MinimizeKeybind.Value then
-                            v:Minimize()
-                        end
-                    elseif M.KeyCode == u.MinimizeKey and not h:GetFocusedTextBox() then
-                        v:Minimize()
-                    end
-                end
-            )
-            function v.Minimize(M)
-                v.Minimized = not v.Minimized
-                v.Root.Visible = not v.Minimized
-                if not C then
-                    C = true
-                    local N = u.MinimizeKeybind and u.MinimizeKeybind.Value or u.MinimizeKey.Name
-                    u:Notify {Title = "Interface", Content = "Press " .. N .. " to toggle the inteface.", Duration = 6}
-                end
-            end
-            function v.Destroy(M)
-                if e(k).UseAcrylic then
-                    v.AcrylicPaint.Model:Destroy()
-                end
-                v.Root:Destroy()
-            end
-            local M = e(p.Dialog):Init(v)
-            function v.Dialog(N, O)
-                local P = M:Create()
-                P.Title.Text = O.Title
-                local Q =
-                    s(
-                    "TextLabel",
-                    {
-                        FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-                        Text = O.Content,
-                        TextColor3 = Color3.fromRGB(240, 240, 240),
-                        TextSize = 14,
-                        TextXAlignment = Enum.TextXAlignment.Left,
-                        TextYAlignment = Enum.TextYAlignment.Top,
-                        Size = UDim2.new(1, -40, 1, 0),
-                        Position = UDim2.fromOffset(20, 60),
-                        BackgroundTransparency = 1,
-                        Parent = P.Root,
-                        ClipsDescendants = false,
-                        ThemeTag = {TextColor3 = "Text"}
-                    }
-                )
-                s(
-                    "UISizeConstraint",
-                    {MinSize = Vector2.new(300, 165), MaxSize = Vector2.new(620, math.huge), Parent = P.Root}
-                )
-                P.Root.Size = UDim2.fromOffset(Q.TextBounds.X + 40, 165)
-                if Q.TextBounds.X + 40 > v.Size.X.Offset - 120 then
-                    P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, 165)
-                    Q.TextWrapped = true
-                    P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, Q.TextBounds.Y + 150)
-                end
-                for R, S in next, O.Buttons do
-                    P:Button(S.Title, S.Callback)
-                end
-                P:Open()
-            end
-            local N = e(p.Tab):Init(v)
-            function v.AddTab(O, P)
-                return N:New(P.Title, P.Icon, v.TabHolder)
-            end
-            function v.SelectTab(O, P)
-                N:SelectTab(1)
-            end
-            m.AddSignal(
-                v.TabHolder:GetPropertyChangedSignal "CanvasPosition",
-                function()
-                    I = N:GetCurrentTabPos() + 16
-                    J = 0
-                    v.SelectorPosMotor:setGoal(r(N:GetCurrentTabPos()))
-                end
-            )
-            return v
+            P:Open()
         end
-    end,
+        
+        -- ==========================================
+        -- ✨ OpenSettings Function (ใหม่!)
+        -- ==========================================
+        function v.OpenSettings()
+            local settingsDialog = M:Create()
+            settingsDialog.Title.Text = "⚙️ Settings"
+            settingsDialog.Root.Size = UDim2.fromOffset(450, 380)
+            
+            -- 40 Languages
+            local languages = {
+                "English", "ไทย (Thai)", "中文 (Chinese)", "日本語 (Japanese)", "한국어 (Korean)",
+                "Español (Spanish)", "Français (French)", "Deutsch (German)", "Italiano (Italian)", "Português (Portuguese)",
+                "Русский (Russian)", "العربية (Arabic)", "हिन्दी (Hindi)", "Bahasa Indonesia", "Tiếng Việt (Vietnamese)",
+                "Polski (Polish)", "Nederlands (Dutch)", "Türkçe (Turkish)", "Svenska (Swedish)", "Norsk (Norwegian)",
+                "Dansk (Danish)", "Suomi (Finnish)", "Ελληνικά (Greek)", "Čeština (Czech)", "Magyar (Hungarian)",
+                "Română (Romanian)", "Українська (Ukrainian)", "עברית (Hebrew)", "فارسی (Persian)", "اردو (Urdu)",
+                "বাংলা (Bengali)", "தமிழ் (Tamil)", "తెలుగు (Telugu)", "ગુજરાતી (Gujarati)", "ಕನ್ನಡ (Kannada)",
+                "മലയാളം (Malayalam)", "ภาษาลาว (Lao)", "ភាសាខ្មែរ (Khmer)", "မြန်မာ (Burmese)", "Tagalog (Filipino)"
+            }
+            
+            -- Load saved settings
+            local savedSettings = (getgenv and getgenv().FluentSettings) or {}
+            local currentLang = savedSettings.Language or "English"
+            
+            -- Window Size Section
+            s("TextLabel", {
+                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold),
+                Text = "Window Size",
+                TextColor3 = Color3.fromRGB(240, 240, 240),
+                TextSize = 16,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, -40, 0, 20),
+                Position = UDim2.fromOffset(20, 60),
+                BackgroundTransparency = 1,
+                Parent = settingsDialog.Root,
+                ThemeTag = {TextColor3 = "Text"}
+            })
+            
+            -- Width Label
+            s("TextLabel", {
+                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                Text = "Width:",
+                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(0, 60, 0, 30),
+                Position = UDim2.fromOffset(20, 90),
+                BackgroundTransparency = 1,
+                Parent = settingsDialog.Root,
+                ThemeTag = {TextColor3 = "SubText"}
+            })
+            
+            -- Width Input
+            local widthInput = e(p.Components.Textbox)(settingsDialog.Root, false)
+            widthInput.Frame.Position = UDim2.fromOffset(80, 90)
+            widthInput.Frame.Size = UDim2.fromOffset(140, 30)
+            widthInput.Input.Text = tostring(v.Size.X.Offset)
+            widthInput.Input.PlaceholderText = "Width (470-2048)"
+            
+            -- Height Label
+            s("TextLabel", {
+                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                Text = "Height:",
+                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(0, 60, 0, 30),
+                Position = UDim2.fromOffset(240, 90),
+                BackgroundTransparency = 1,
+                Parent = settingsDialog.Root,
+                ThemeTag = {TextColor3 = "SubText"}
+            })
+            
+            -- Height Input
+            local heightInput = e(p.Components.Textbox)(settingsDialog.Root, false)
+            heightInput.Frame.Position = UDim2.fromOffset(300, 90)
+            heightInput.Frame.Size = UDim2.fromOffset(140, 30)
+            heightInput.Input.Text = tostring(v.Size.Y.Offset)
+            heightInput.Input.PlaceholderText = "Height (380-2048)"
+            
+            -- Language Section
+            s("TextLabel", {
+                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold),
+                Text = "Language",
+                TextColor3 = Color3.fromRGB(240, 240, 240),
+                TextSize = 16,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, -40, 0, 20),
+                Position = UDim2.fromOffset(20, 140),
+                BackgroundTransparency = 1,
+                Parent = settingsDialog.Root,
+                ThemeTag = {TextColor3 = "Text"}
+            })
+            
+            -- Language Dropdown Button
+            local langButton = s("TextButton", {
+                Size = UDim2.new(1, -40, 0, 35),
+                Position = UDim2.fromOffset(20, 170),
+                BackgroundTransparency = 0.9,
+                Text = "",
+                Parent = settingsDialog.Root,
+                ThemeTag = {BackgroundColor3 = "DropdownFrame"}
+            }, {
+                s("UICorner", {CornerRadius = UDim.new(0, 5)}),
+                s("UIStroke", {
+                    Transparency = 0.5,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    ThemeTag = {Color = "InElementBorder"}
+                }),
+                s("TextLabel", {
+                    FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                    Text = currentLang,
+                    TextColor3 = Color3.fromRGB(240, 240, 240),
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Size = UDim2.new(1, -30, 1, 0),
+                    Position = UDim2.fromOffset(10, 0),
+                    BackgroundTransparency = 1,
+                    Name = "LangText",
+                    ThemeTag = {TextColor3 = "Text"}
+                }),
+                s("ImageLabel", {
+                    Image = "rbxassetid://10709790948",
+                    Size = UDim2.fromOffset(16, 16),
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, -8, 0.5, 0),
+                    BackgroundTransparency = 1,
+                    ThemeTag = {ImageColor3 = "SubText"}
+                })
+            })
+            
+            -- Language Dropdown List
+            local langListLayout = s("UIListLayout", {Padding = UDim.new(0, 2)})
+            local langList = s("ScrollingFrame", {
+                Size = UDim2.new(1, -40, 0, 0),
+                Position = UDim2.fromOffset(20, 210),
+                BackgroundTransparency = 0.9,
+                Visible = false,
+                BottomImage = "rbxassetid://6889812791",
+                MidImage = "rbxassetid://6889812721",
+                TopImage = "rbxassetid://6276641225",
+                ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
+                ScrollBarImageTransparency = 0.95,
+                ScrollBarThickness = 4,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.fromScale(0, 0),
+                Parent = settingsDialog.Root,
+                ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+            }, {
+                s("UICorner", {CornerRadius = UDim.new(0, 5)}),
+                s("UIStroke", {
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    ThemeTag = {Color = "DropdownBorder"}
+                }),
+                langListLayout
+            })
+            
+            -- Populate Language List
+            for idx, lang in ipairs(languages) do
+                local langOption = s("TextButton", {
+                    Size = UDim2.new(1, -5, 0, 28),
+                    BackgroundTransparency = 0.95,
+                    Text = "",
+                    Parent = langList,
+                    ThemeTag = {BackgroundColor3 = "DropdownOption"}
+                }, {
+                    s("UICorner", {CornerRadius = UDim.new(0, 4)}),
+                    s("TextLabel", {
+                        FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                        Text = lang,
+                        TextColor3 = Color3.fromRGB(240, 240, 240),
+                        TextSize = 12,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Size = UDim2.new(1, -10, 1, 0),
+                        Position = UDim2.fromOffset(10, 0),
+                        BackgroundTransparency = 1,
+                        ThemeTag = {TextColor3 = "Text"}
+                    })
+                })
+                
+                langOption.MouseButton1Click:Connect(function()
+                    currentLang = lang
+                    langButton:FindFirstChild("LangText").Text = lang
+                    langList.Visible = false
+                    settingsDialog.Root.Size = UDim2.fromOffset(450, 380)
+                end)
+            end
+            
+            langList.CanvasSize = UDim2.fromOffset(0, langListLayout.AbsoluteContentSize.Y)
+            
+            -- Toggle Language Dropdown
+            langButton.MouseButton1Click:Connect(function()
+                langList.Visible = not langList.Visible
+                if langList.Visible then
+                    local listHeight = math.min(150, langListLayout.AbsoluteContentSize.Y + 10)
+                    langList.Size = UDim2.new(1, -40, 0, listHeight)
+                    settingsDialog.Root.Size = UDim2.fromOffset(450, 380 + listHeight + 10)
+                else
+                    settingsDialog.Root.Size = UDim2.fromOffset(450, 380)
+                end
+            end)
+            
+            -- Info Text
+            s("TextLabel", {
+                FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
+                Text = "💡 Changes will apply immediately",
+                TextColor3 = Color3.fromRGB(180, 180, 180),
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                Size = UDim2.new(1, -40, 0, 20),
+                Position = UDim2.new(0, 20, 1, -60),
+                BackgroundTransparency = 1,
+                Parent = settingsDialog.Root,
+                ThemeTag = {TextColor3 = "SubText"}
+            })
+            
+            -- Apply Button
+            settingsDialog:Button("Apply", function()
+                local newWidth = tonumber(widthInput.Input.Text) or v.Size.X.Offset
+                local newHeight = tonumber(heightInput.Input.Text) or v.Size.Y.Offset
+                
+                newWidth = math.clamp(newWidth, 470, 2048)
+                newHeight = math.clamp(newHeight, 380, 2048)
+                
+                -- Save to storage
+                if getgenv then
+                    getgenv().FluentSettings = getgenv().FluentSettings or {}
+                    getgenv().FluentSettings.WindowSize = {Width = newWidth, Height = newHeight}
+                    getgenv().FluentSettings.Language = currentLang
+                end
+                
+                -- Apply size immediately
+                v.Size = UDim2.fromOffset(newWidth, newHeight)
+                G:setGoal {
+                    X = l.Spring.new(newWidth, {frequency = 6}),
+                    Y = l.Spring.new(newHeight, {frequency = 6})
+                }
+                
+                -- Update position to keep centered if not maximized
+                if not v.Maximized then
+                    local centerX = j.ViewportSize.X / 2 - newWidth / 2
+                    local centerY = j.ViewportSize.Y / 2 - newHeight / 2
+                    v.Position = UDim2.fromOffset(centerX, centerY)
+                    H:setGoal {
+                        X = l.Spring.new(centerX, {frequency = 6}),
+                        Y = l.Spring.new(centerY, {frequency = 6})
+                    }
+                end
+                
+                u:Notify {
+                    Title = "Settings Applied",
+                    Content = "Window settings updated successfully!",
+                    SubContent = "Size: " .. newWidth .. "×" .. newHeight .. " | Language: " .. currentLang,
+                    Duration = 3
+                }
+            end)
+            
+            -- Cancel Button
+            settingsDialog:Button("Cancel")
+            
+            settingsDialog:Open()
+        end
+        
+        local N = e(p.Tab):Init(v)
+        
+        function v.AddTab(O, P)
+            return N:New(P.Title, P.Icon, v.TabHolder)
+        end
+        
+        function v.SelectTab(O, P)
+            N:SelectTab(1)
+        end
+        
+        m.AddSignal(v.TabHolder:GetPropertyChangedSignal "CanvasPosition", function()
+            I = N:GetCurrentTabPos() + 16
+            J = 0
+            v.SelectorPosMotor:setGoal(r(N:GetCurrentTabPos()))
+        end)
+        
+        return v
+    end
+end,
     [18] = function()
         local c, d, e, f, g = b(18)
         local h = d.Parent
