@@ -2841,7 +2841,7 @@ local aa = {
             local mainFrame = p.AbsolutePosition
             local mainSize = p.AbsoluteSize
             local dropdownWidth = 170
-            local xPos = mainFrame.X + mainSize.X + 40
+            local xPos = mainFrame.X + mainSize.X + 35
             local yPos = mainFrame.Y - 5
             
             -- Check if dropdown goes off screen
