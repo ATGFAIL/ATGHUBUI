@@ -29,7 +29,7 @@ local DEFAULT_CONFIG = {
     },
 
     -- ลิงก์รับคีย์ (เปลี่ยนเป็นของคุณเอง)
-    KeyLink = "https://discord.gg/atghub",
+    KeyLink = "https://discord.gg/uyRxC66fw6",
 
     -- API สำหรับเช็คคีย์ (ถ้าใช้ API แทนคีย์ hardcode)
     UseAPI = false,
