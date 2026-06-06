@@ -4799,9 +4799,11 @@ local aa = {
 			function l.SetValue(B, C)
 				if l.Multi then
 					local D = {}
-					for E, F in next, C do
-						if table.find(l.Values, E) then
-							D[E] = true
+					if type(C) == "table" then
+						for E, F in next, C do
+							if F and table.find(l.Values, E) then
+								D[E] = true
+							end
 						end
 					end
 					l.Value = D
