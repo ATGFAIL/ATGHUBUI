@@ -4107,7 +4107,7 @@ local aa = {
 			local virtualRowHeight = 38
 			local virtualThreshold = 10
 			local virtualBuffer = 4
-			local virtualEnabled = true
+			local virtualEnabled = false
 			local function rebuildDropdown()
 				l:BuildDropdownList()
 				dropdownBuilt = true
