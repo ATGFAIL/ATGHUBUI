@@ -4492,11 +4492,11 @@ local aa = {
 								TextSize = 13,
 								TextXAlignment = Enum.TextXAlignment.Left,
 								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-								AutomaticSize = Enum.AutomaticSize.Y,
 								BackgroundTransparency = 1,
-								Size = UDim2.fromScale(1, 1),
+								Size = UDim2.new(1, -24, 1, 0),
 								Position = UDim2.fromOffset(12, 0),
 								Name = "ButtonLabel",
+								TextTruncate = Enum.TextTruncate.AtEnd,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextStrokeTransparency = 0.8,
 								TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
@@ -4510,6 +4510,7 @@ local aa = {
 									Size = UDim2.new(1, -10, 0, 34),
 									BackgroundColor3 = bgColor,
 									BackgroundTransparency = bgTransparency,
+									ClipsDescendants = true,
 									ZIndex = 23,
 									Text = "",
 									Parent = t,
@@ -4543,6 +4544,36 @@ local aa = {
 
 						local O, P = c.SpringMotor(defaultTransparency, M, "BackgroundTransparency")
 						local Q, R = c.SpringMotor(1, K, "BackgroundTransparency")
+						local labelDefaultPosition = UDim2.fromOffset(12, 0)
+						local labelDefaultSize = UDim2.new(1, -24, 1, 0)
+						local labelScrollTween = nil
+						local function stopLabelScroll()
+							if labelScrollTween then
+								labelScrollTween:Cancel()
+								labelScrollTween = nil
+							end
+							L.TextTruncate = Enum.TextTruncate.AtEnd
+							L.Size = labelDefaultSize
+							L.Position = labelDefaultPosition
+						end
+						local function startLabelScroll()
+							local visibleWidth = math.max(M.AbsoluteSize.X - 24, 0)
+							local textWidth = L.TextBounds.X + 6
+							if textWidth <= visibleWidth then
+								return
+							end
+							stopLabelScroll()
+							L.TextTruncate = Enum.TextTruncate.None
+							L.Size = UDim2.fromOffset(textWidth, M.AbsoluteSize.Y)
+							local travel = textWidth - visibleWidth
+							labelScrollTween =
+								af:Create(
+									L,
+									TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
+									{Position = UDim2.fromOffset(12 - travel, 0)}
+								)
+							labelScrollTween:Play()
+						end
 						local S = d.SingleMotor.new(6)
 						S:onStep(
 							function(T)
@@ -4553,12 +4584,14 @@ local aa = {
 							M.MouseEnter,
 							function()
 								P(N and selectedTransparency or hoverTransparency)
+								startLabelScroll()
 							end
 						)
 						c.AddSignal(
 							M.MouseLeave,
 							function()
 								P(N and selectedTransparency or defaultTransparency)
+								stopLabelScroll()
 							end
 						)
 						c.AddSignal(
