@@ -4423,6 +4423,7 @@ local aa = {
 				v.Visible = true
 				searchBox.Text = ""
 				l.SearchText = ""
+				t.CanvasPosition = Vector2.new(0, 0)
 				if not dropdownBuilt then
 					rebuildDropdown()
 				end
@@ -4601,8 +4602,8 @@ local aa = {
 								TextXAlignment = Enum.TextXAlignment.Left,
 								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 								BackgroundTransparency = 1,
-								Size = UDim2.new(1, -24, 1, 0),
-								Position = UDim2.fromOffset(12, 0),
+								Size = UDim2.fromScale(1, 1),
+								Position = UDim2.fromOffset(0, 0),
 								Name = "ButtonLabel",
 								TextTruncate = Enum.TextTruncate.AtEnd,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
@@ -4611,6 +4612,17 @@ local aa = {
 								ThemeTag = {TextColor3 = "Text"}
 							}
 						)
+						local labelClip =
+							e(
+								"Frame",
+								{
+									Size = UDim2.new(1, -24, 1, 0),
+									Position = UDim2.fromOffset(12, 0),
+									BackgroundTransparency = 1,
+									ClipsDescendants = true
+								},
+								{L}
+							)
 						local M, N =
 							(e(
 								"TextButton",
@@ -4626,7 +4638,7 @@ local aa = {
 								},
 								{
 									K,
-									L,
+									labelClip,
 									e("UICorner", {CornerRadius = UDim.new(0, 6)}),
 									e(
 										"UIStroke",
@@ -4652,8 +4664,8 @@ local aa = {
 
 						local O, P = c.SpringMotor(defaultTransparency, M, "BackgroundTransparency")
 						local Q, R = c.SpringMotor(1, K, "BackgroundTransparency")
-						local labelDefaultPosition = UDim2.fromOffset(12, 0)
-						local labelDefaultSize = UDim2.new(1, -24, 1, 0)
+						local labelDefaultPosition = UDim2.fromOffset(0, 0)
+						local labelDefaultSize = UDim2.fromScale(1, 1)
 						local labelScrollTween = nil
 						local function stopLabelScroll()
 							if labelScrollTween then
@@ -4665,7 +4677,7 @@ local aa = {
 							L.Position = labelDefaultPosition
 						end
 						local function startLabelScroll()
-							local visibleWidth = math.max(M.AbsoluteSize.X - 24, 0)
+							local visibleWidth = math.max(labelClip.AbsoluteSize.X, 0)
 							local textWidth = getTextWidth(L, cleanText) + 6
 							if textWidth <= visibleWidth then
 								return
@@ -4678,7 +4690,7 @@ local aa = {
 								af:Create(
 									L,
 									TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
-									{Position = UDim2.fromOffset(12 - travel, 0)}
+									{Position = UDim2.fromOffset(-travel, 0)}
 								)
 							labelScrollTween:Play()
 						end
