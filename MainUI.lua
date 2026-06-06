@@ -4143,7 +4143,7 @@ local aa = {
 			)
 
 			-- Clear button functionality with hover effects
-			local clearBgTransparency = c.SpringMotor(0.9, clearButton, "BackgroundTransparency")
+			local _, clearBgTransparency = c.SpringMotor(0.9, clearButton, "BackgroundTransparency")
 
 			c.AddSignal(
 				clearButton.MouseEnter,
@@ -4208,7 +4208,7 @@ local aa = {
 
 			-- Select All button functionality with hover effect
 			if j.Multi and selectAllButton then
-				local selectAllTransparency = c.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
+				local _, selectAllTransparency = c.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
 
 				c.AddSignal(
 					selectAllButton.MouseEnter,
