@@ -4103,6 +4103,11 @@ local aa = {
 			end
 			local searchDebounce = nil
 			local dropdownBuilt = false
+			local virtualScrollDebounce = nil
+			local virtualRowHeight = j.VirtualRowHeight or 38
+			local virtualThreshold = j.VirtualThreshold or 40
+			local virtualBuffer = j.VirtualBuffer or 4
+			local virtualEnabled = j.Virtualized == true
 			local function rebuildDropdown()
 				l:BuildDropdownList()
 				dropdownBuilt = true
@@ -4194,10 +4199,30 @@ local aa = {
 						end
 
 						l.SearchText = searchBox.Text:lower()
+						t.CanvasPosition = Vector2.new(0, 0)
 						dropdownBuilt = false
 						if l.Opened then
 							rebuildDropdown()
 						end
+					end)
+				end
+			)
+
+			c.AddSignal(
+				t:GetPropertyChangedSignal("CanvasPosition"),
+				function()
+					if not virtualEnabled or not l.Opened or not dropdownBuilt then
+						return
+					end
+					if virtualScrollDebounce then
+						virtualScrollDebounce:Disconnect()
+					end
+					virtualScrollDebounce = game:GetService("RunService").Heartbeat:Connect(function()
+						if virtualScrollDebounce then
+							virtualScrollDebounce:Disconnect()
+							virtualScrollDebounce = nil
+						end
+						rebuildDropdown()
 					end)
 				end
 			)
@@ -4492,13 +4517,35 @@ local aa = {
 					end
 				end
 				l.Buttons = {}
-				local G = 0
-				for H, I in next, C do
-					-- Parse color and clean text
-					local customColor, cleanText = parseColorCode(I)
+				local renderItems = {}
+				for _, value in next, C do
+					local customColor, cleanText = parseColorCode(value)
 					local searchTarget = cleanText:lower()
-
 					if l.SearchText == "" or searchTarget:find(l.SearchText, 1, true) then
+						table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
+					end
+				end
+
+				local totalItems = #renderItems
+				local useVirtual = virtualEnabled and totalItems > virtualThreshold
+				local startIndex, endIndex = 1, totalItems
+				if useVirtual then
+					startIndex = math.max(1, math.floor(t.CanvasPosition.Y / virtualRowHeight) + 1 - virtualBuffer)
+					startIndex = math.min(startIndex, math.max(totalItems, 1))
+					local visibleCount = math.ceil(math.max(t.AbsoluteSize.Y, 1) / virtualRowHeight) + (virtualBuffer * 2)
+					endIndex = math.min(totalItems, startIndex + visibleCount)
+					local topHeight = (startIndex - 1) * virtualRowHeight
+					if topHeight > 0 then
+						e("Frame", {Size = UDim2.new(1, -10, 0, topHeight), BackgroundTransparency = 1, Parent = t})
+					end
+				end
+
+				local G = 0
+				for H = startIndex, endIndex do
+					local item = renderItems[H]
+					if item then
+						local I = item.Value
+						local customColor, cleanText = item.CustomColor, item.CleanText
 						local J = {}
 						G = G + 1
 
@@ -4712,6 +4759,12 @@ local aa = {
 						l.Buttons[M] = J
 					end
 				end
+				if useVirtual then
+					local bottomHeight = (totalItems - endIndex) * virtualRowHeight
+					if bottomHeight > 0 then
+						e("Frame", {Size = UDim2.new(1, -10, 0, bottomHeight), BackgroundTransparency = 1, Parent = t})
+					end
+				end
 				l:Display()
 				z()
 				y()
@@ -4720,6 +4773,7 @@ local aa = {
 				if C then
 					l.Values = C
 				end
+				t.CanvasPosition = Vector2.new(0, 0)
 				dropdownBuilt = false
 				if l.Opened then
 					rebuildDropdown()
