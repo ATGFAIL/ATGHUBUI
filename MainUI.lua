@@ -4104,10 +4104,10 @@ local aa = {
 			local searchDebounce = nil
 			local dropdownBuilt = false
 			local virtualScrollDebounce = nil
-			local virtualRowHeight = j.VirtualRowHeight or 38
-			local virtualThreshold = j.VirtualThreshold or 40
-			local virtualBuffer = j.VirtualBuffer or 4
-			local virtualEnabled = j.Virtualized == true
+			local virtualRowHeight = 38
+			local virtualThreshold = 10
+			local virtualBuffer = 4
+			local virtualEnabled = true
 			local function rebuildDropdown()
 				l:BuildDropdownList()
 				dropdownBuilt = true
