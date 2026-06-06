@@ -3823,6 +3823,7 @@ local aa = {
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
 						BackgroundTransparency = 0.9,
+						ClipsDescendants = true,
 						Parent = m.Frame,
 						ThemeTag = {BackgroundColor3 = "DropdownFrame"}
 					},
@@ -3840,6 +3841,51 @@ local aa = {
 						n
 					}
 				)
+			local textService = game:GetService("TextService")
+			local function getTextWidth(label, text)
+				local ok, size =
+					pcall(
+						function()
+							return textService:GetTextSize(
+								text or label.Text,
+								label.TextSize,
+								Enum.Font.Gotham,
+								Vector2.new(10000, math.max(label.AbsoluteSize.Y, 34))
+							)
+						end
+					)
+				return ok and size.X or label.TextBounds.X
+			end
+			local selectedLabelDefaultPosition = UDim2.new(0, 8, 0.5, 0)
+			local selectedLabelDefaultSize = UDim2.new(1, -30, 0, 14)
+			local selectedLabelScrollTween = nil
+			local function stopSelectedLabelScroll()
+				if selectedLabelScrollTween then
+					selectedLabelScrollTween:Cancel()
+					selectedLabelScrollTween = nil
+				end
+				n.TextTruncate = Enum.TextTruncate.AtEnd
+				n.Size = selectedLabelDefaultSize
+				n.Position = selectedLabelDefaultPosition
+			end
+			local function startSelectedLabelScroll()
+				local visibleWidth = math.max(p.AbsoluteSize.X - 30, 0)
+				local textWidth = getTextWidth(n, n.Text) + 8
+				if textWidth <= visibleWidth then
+					return
+				end
+				stopSelectedLabelScroll()
+				n.TextTruncate = Enum.TextTruncate.None
+				n.Size = UDim2.fromOffset(textWidth, 14)
+				local travel = textWidth - visibleWidth
+				selectedLabelScrollTween =
+					af:Create(
+						n,
+						TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
+						{Position = UDim2.new(0, 8 - travel, 0.5, 0)}
+					)
+				selectedLabelScrollTween:Play()
+			end
 
 			-- Search Box
 			local searchBoxStroke = e(
@@ -4073,6 +4119,20 @@ local aa = {
 			end)
 
 			-- Toggle dropdown on click
+			c.AddSignal(
+				p.MouseEnter,
+				function()
+					startSelectedLabelScroll()
+				end
+			)
+
+			c.AddSignal(
+				p.MouseLeave,
+				function()
+					stopSelectedLabelScroll()
+				end
+			)
+
 			c.AddSignal(
 				p.MouseButton1Click,
 				function()
@@ -4403,6 +4463,7 @@ local aa = {
 					D = displayText
 					hasSelection = l.Value ~= nil and l.Value ~= ""
 				end
+				stopSelectedLabelScroll()
 				n.Text = (D == "" and "--" or D)
 
 				-- Animate clear button visibility
@@ -4558,7 +4619,7 @@ local aa = {
 						end
 						local function startLabelScroll()
 							local visibleWidth = math.max(M.AbsoluteSize.X - 24, 0)
-							local textWidth = L.TextBounds.X + 6
+							local textWidth = getTextWidth(L, cleanText) + 6
 							if textWidth <= visibleWidth then
 								return
 							end
