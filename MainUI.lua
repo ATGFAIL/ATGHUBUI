@@ -3181,7 +3181,11 @@ local aa = {
 			return m
 		end
 		function k.OverrideTag(m, n)
-			k.Registry[m].Properties = n
+			if k.Registry[m] then
+				k.Registry[m].Properties = n
+			else
+				k.AddThemeObject(m, n)
+			end
 			k.UpdateTheme()
 		end
 		function k.New(m, n, o)
