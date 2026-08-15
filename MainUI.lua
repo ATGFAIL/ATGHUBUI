@@ -3227,7 +3227,7 @@ local aa = {
 		v(w)
 		t:Init(w)
 		local x = {
-			Version = "1.5.0",
+			Version = "1.6.0",
 			OpenFrames = {},
 			Options = {},
 			Themes = e(o.Themes).Names,
@@ -3282,6 +3282,1111 @@ local aa = {
 				return y["lucide-" .. A]
 			end
 			return nil
+		end
+		--[[
+			Workspace is deliberately independent from InterfaceManager.  Old scripts
+			get the productivity surface automatically, while InterfaceManager only
+			provides persistence scope/customization settings.  It owns no script
+			callbacks and never scans CoreGui, so it remains inexpensive in long
+			sessions and safe on executors without a file system.
+		]]
+		local WorkspaceHttpService = game:GetService("HttpService")
+		local Workspace = {
+			Version = 1,
+			Library = x,
+			Scope = "shared",
+			Window = nil,
+			Tabs = {},
+			TabById = {},
+			Entries = {},
+			EntryById = {},
+			Notifications = {},
+			Connections = {},
+			State = {
+				Favorites = {},
+				Recent = {},
+				RecentProfiles = {},
+				TabOrder = {},
+				Profiles = {},
+				CompactMode = false,
+				FocusMode = false,
+				SmartConfirm = true
+			},
+			ArrangeMode = false,
+			SaveScheduled = false
+		}
+		x.Workspace = Workspace
+
+		local function workspaceSafeSegment(A, B)
+			A = tostring(A or B or "shared")
+			A = A:gsub("[^%w%-%._]", "_"):gsub("_+", "_"):sub(1, 80)
+			if A == "" or A == "." or A == ".." then
+				return B or "shared"
+			end
+			return A
+		end
+		local function workspaceTrim(A)
+			return type(A) == "string" and (A:match("^%s*(.-)%s*$") or "") or ""
+		end
+		local function workspaceIndex(A, B)
+			for C, D in ipairs(A or {}) do
+				if D == B then
+					return C
+				end
+				end
+			return nil
+		end
+		local function workspacePush(A, B, C)
+			local D = workspaceIndex(A, B)
+			if D then
+				table.remove(A, D)
+			end
+			table.insert(A, 1, B)
+			while #A > (C or 12) do
+				table.remove(A)
+			end
+		end
+		local function workspaceCopy(A)
+			if type(A) ~= "table" then
+				return A
+			end
+			local B = {}
+			for C, D in pairs(A) do
+				B[C] = workspaceCopy(D)
+			end
+			return B
+		end
+		local function workspaceEncodeValue(A)
+			local B = typeof(A)
+			if B == "Color3" then
+				return {__atg = "Color3", R = A.R, G = A.G, B = A.B}
+			end
+			if B == "EnumItem" then
+				local C, D, E = pcall(function()
+					return A.EnumType.Name, A.Name
+				end)
+				if C then
+					return {__atg = "Enum", Type = D, Name = E}
+				end
+				return tostring(A)
+			end
+			if type(A) == "table" then
+				local C = {}
+				for D, E in pairs(A) do
+					C[D] = workspaceEncodeValue(E)
+				end
+				return C
+			end
+			if type(A) == "string" or type(A) == "number" or type(A) == "boolean" then
+				return A
+			end
+			return nil
+		end
+		local function workspaceDecodeValue(A)
+			if type(A) ~= "table" then
+				return A
+			end
+			if A.__atg == "Color3" then
+				return Color3.new(tonumber(A.R) or 1, tonumber(A.G) or 1, tonumber(A.B) or 1)
+			end
+			if A.__atg == "Enum" and type(A.Type) == "string" and type(A.Name) == "string" then
+				local B = Enum[A.Type]
+				return B and B[A.Name] or A.Name
+			end
+			local B = {}
+			for C, D in pairs(A) do
+				if C ~= "__atg" then
+					B[C] = workspaceDecodeValue(D)
+				end
+			end
+			return B
+		end
+
+		function Workspace:Connect(A, B)
+			local C = A:Connect(B)
+			table.insert(self.Connections, C)
+			return C
+		end
+		-- Connections owned by a transient search/profile row are released when
+		-- that row is destroyed.  Do not retain them in the workspace registry.
+		function Workspace:Bind(A, B)
+			return A:Connect(B)
+		end
+		function Workspace:GetStorage()
+			local A = x.Customization and x.Customization.Storage
+			return type(A) == "table" and A or nil
+		end
+		function Workspace:GetPath()
+			local A = self:GetStorage()
+			local B = A and A.Root or "FluentSettings"
+			return tostring(B) .. "/productivity/" .. workspaceSafeSegment(self.Scope, "shared") .. "/workspace.json"
+		end
+		function Workspace:SaveSoon()
+			self.SaveRevision = (self.SaveRevision or 0) + 1
+			local revision = self.SaveRevision
+			if self.SaveScheduled then
+				return
+			end
+			self.SaveScheduled = true
+			local A = self.Scope
+			local B = self.State
+			task.delay(0.35, function()
+				self.SaveScheduled = false
+				if revision ~= self.SaveRevision then
+					self:SaveSoon()
+					return
+				end
+				if self.Scope ~= A or self.State ~= B then
+					return
+				end
+				local C = self:GetStorage()
+				if not C or type(C.CanUseFiles) ~= "function" or not C:CanUseFiles() then
+					return
+				end
+				local D, E = pcall(WorkspaceHttpService.JSONEncode, WorkspaceHttpService, self.State)
+				if D then
+					pcall(C.Write, C, self:GetPath(), E)
+				end
+			end)
+		end
+		function Workspace:Load()
+			local A = self:GetStorage()
+			if not A or type(A.CanUseFiles) ~= "function" or not A:CanUseFiles() then
+				return false
+			end
+			local B, C = A:Read(self:GetPath())
+			if type(B) ~= "string" then
+				return false, C
+			end
+			local D, E = pcall(WorkspaceHttpService.JSONDecode, WorkspaceHttpService, B)
+			if not D or type(E) ~= "table" then
+				return false, "Workspace file is not valid JSON."
+			end
+			local F = self.State
+			for G, H in pairs(F) do
+				if type(E[G]) == type(H) then
+					F[G] = E[G]
+				end
+			end
+			if type(F.SmartConfirm) ~= "boolean" then
+				F.SmartConfirm = true
+			end
+			return true
+		end
+		function Workspace:Configure(A)
+			A = type(A) == "table" and A or {}
+			local B = workspaceSafeSegment(A.ScriptId or (x.I18n and x.I18n.Scope) or self.Scope, "shared")
+			if B ~= self.Scope then
+				self.Scope = B
+				self.State = {
+					Favorites = {}, Recent = {}, RecentProfiles = {}, TabOrder = {}, Profiles = {},
+					CompactMode = false, FocusMode = false, SmartConfirm = true
+				}
+				self:Load()
+				self:ApplyTabOrder()
+				self:ApplyModes()
+				self:RefreshSurface()
+			end
+			return self
+		end
+		function Workspace:IsFavorite(A)
+			return workspaceIndex(self.State.Favorites, A) ~= nil
+		end
+		function Workspace:ToggleFavorite(A)
+			if type(A) ~= "string" then
+				return
+			end
+			local B = workspaceIndex(self.State.Favorites, A)
+			if B then
+				table.remove(self.State.Favorites, B)
+			else
+				workspacePush(self.State.Favorites, A, 24)
+			end
+			self:SaveSoon()
+			self:RefreshSurface()
+		end
+		function Workspace:TouchEntry(A)
+			local B = type(A) == "table" and A.Id or A
+			if type(B) == "string" then
+				workspacePush(self.State.Recent, B, 12)
+				self:SaveSoon()
+			end
+		end
+		function Workspace:TouchTab(A)
+			if type(A) ~= "table" then
+				return
+			end
+			self:TouchEntry(A.Id)
+			self:ApplyModes()
+		end
+		function Workspace:RegisterTab(A, B)
+			if type(A) ~= "table" or not A.Frame or self.TabById[A.Id] then
+				return A
+			end
+			A.OriginalName = A.OriginalName or A.Name
+			A.OriginalLabelText = A.Label and A.Label.Text or A.Name
+			self.TabById[A.Id] = A
+			table.insert(self.Tabs, A)
+			self:Connect(A.Frame.InputBegan, function(C)
+				if self.ArrangeMode and (C.UserInputType == Enum.UserInputType.MouseButton1 or C.UserInputType == Enum.UserInputType.Touch) then
+					self.Drag = {Tab = A, Start = C.Position, Input = C, Moved = false}
+				end
+			end)
+			self:ApplyTabOrder()
+			self:ApplyModes()
+			return A
+		end
+		function Workspace:RegisterElement(A, B, C, D, E)
+			if type(A) ~= "table" then
+				return nil
+			end
+			C = type(C) == "table" and C or {}
+			local F = type(E) == "string" and E or C.Id or C.Title or D or "element"
+			local G = "option:" .. workspaceSafeSegment(F, "element")
+			if self.EntryById[G] then
+				G = G .. "-" .. tostring(#self.Entries + 1)
+			end
+			local H = {
+				Id = G,
+				Title = tostring(C.Title or A.Title or F),
+				Description = tostring(C.Description or ""),
+				Type = tostring(D or A.Type or "Control"),
+				Object = A,
+				Frame = A.Frame or A.Root,
+				Tab = B and B.Tab or nil,
+				TabTitle = B and B.TabTitle or ""
+			}
+			self.EntryById[H.Id] = H
+			table.insert(self.Entries, H)
+			if type(A.SetValue) == "function" and not A._ATGWorkspaceValueWrapped then
+				A._ATGWorkspaceValueWrapped = true
+				local I = A.SetValue
+				A.SetValue = function(J, ...)
+					local K = {I(J, ...)}
+					self:TouchEntry(H)
+					return unpack(K)
+				end
+			end
+			return H
+		end
+		function Workspace:ApplyTabOrder()
+			if #self.Tabs == 0 then
+				return
+			end
+			local A, B = {}, {}
+			for _, C in ipairs(self.State.TabOrder or {}) do
+				local D = self.TabById[C]
+				if D then
+					table.insert(A, D)
+					B[D.Id] = true
+				end
+			end
+			for _, C in ipairs(self.Tabs) do
+				if not B[C.Id] then
+					table.insert(A, C)
+				end
+			end
+			self.State.TabOrder = {}
+			for C, D in ipairs(A) do
+				D.Frame.LayoutOrder = C * 10
+				table.insert(self.State.TabOrder, D.Id)
+			end
+		end
+		function Workspace:MoveTabTo(A, B)
+			local C = {}
+			for _, D in ipairs(self.Tabs) do
+				table.insert(C, D)
+			end
+			table.sort(C, function(D, E)
+				return D.Frame.LayoutOrder < E.Frame.LayoutOrder
+			end)
+			local D = workspaceIndex(C, A)
+			local E = workspaceIndex(C, B)
+			if not D or not E or D == E then
+				return
+			end
+			table.remove(C, D)
+			table.insert(C, E, A)
+			self.State.TabOrder = {}
+			for F, G in ipairs(C) do
+				G.Frame.LayoutOrder = F * 10
+				table.insert(self.State.TabOrder, G.Id)
+			end
+			self:SaveSoon()
+		end
+		function Workspace:MoveDraggingTab(A)
+			if not self.Drag or not self.Drag.Tab then
+				return
+			end
+			local B, C = self.Drag.Tab, nil
+			for _, D in ipairs(self.Tabs) do
+				if D ~= B and D.Frame.Visible and A < D.Frame.AbsolutePosition.Y + D.Frame.AbsoluteSize.Y * 0.5 then
+					C = D
+					break
+				end
+			end
+			if not C then
+				for D = #self.Tabs, 1, -1 do
+					if self.Tabs[D] ~= B and self.Tabs[D].Frame.Visible then
+						C = self.Tabs[D]
+						break
+					end
+				end
+			end
+			if C then
+				self:MoveTabTo(B, C)
+			end
+		end
+		function Workspace:ApplyModes()
+			local A = self.State.CompactMode == true
+			local B = self.State.FocusMode == true
+			for _, C in ipairs(self.Tabs) do
+				if C.Frame then
+					C.Frame.Visible = not B or C.Selected
+				end
+				if C.Label then
+					if A and C.IconObject and C.IconObject.Image ~= "" then
+						C.Label.Visible = false
+					elseif A then
+						C.Label.Visible = true
+						C.Label.Text = tostring(C.OriginalLabelText or C.Name):sub(1, 1)
+						C.Label.Position = UDim2.new(0, 0, 0.5, 0)
+						C.Label.Size = UDim2.new(1, 0, 1, 0)
+						C.Label.TextXAlignment = Enum.TextXAlignment.Center
+					else
+						C.Label.Visible = true
+						C.Label.Text = C.OriginalLabelText or C.Name
+						C.Label.Position = C.IconObject and C.IconObject.Image ~= "" and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0)
+						C.Label.Size = UDim2.new(1, -12, 1, 0)
+						C.Label.TextXAlignment = Enum.TextXAlignment.Left
+					end
+				end
+				if A and C.IconObject and C.IconObject.Image ~= "" then
+					C.IconObject.Position = UDim2.new(0.5, -8, 0.5, 0)
+				elseif C.IconObject then
+					C.IconObject.Position = UDim2.new(0, 8, 0.5, 0)
+				end
+			end
+		end
+		function Workspace:SetCompact(A)
+			A = A == true
+			self.State.CompactMode = A
+			if self.Window and type(self.Window.SetTabWidth) == "function" then
+				self.Window:SetTabWidth(A and 54 or self.OriginalTabWidth)
+			end
+			if self.Sidebar then
+				self.Sidebar.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 0, A and 140 or 62)
+				self.SidebarSearch.Visible = not A
+				self.SidebarToolbar.Position = UDim2.new(0, A and 15 or 0, 0, A and 3 or 31)
+				self.SidebarToolbar.Size = UDim2.new(1, A and -30 or 0, 0, A and 134 or 26)
+				if self.ToolbarLayout then
+					self.ToolbarLayout.FillDirection = A and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
+					self.ToolbarLayout.Padding = UDim.new(0, 4)
+				end
+			end
+			if self.Window and self.Window.TabArea then
+				self.Window.TabArea.Position = UDim2.new(0, 12, 0, A and 202 or 124)
+				self.Window.TabArea.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 1, A and -214 or -136)
+			end
+			if self.Panel then
+				self.Panel.Size = UDim2.new(0, A and 230 or self.OriginalTabWidth, 0, 260)
+			end
+			self:ApplyModes()
+			self:SaveSoon()
+		end
+		function Workspace:SetFocus(A)
+			A = A == true
+			if A then
+				local B = false
+				for _, C in ipairs(self.Tabs) do
+					B = B or C.Selected
+				end
+				if not B and self.Tabs[1] and type(self.Tabs[1].Select) == "function" then
+					self.Tabs[1]:Select()
+				end
+			end
+			self.State.FocusMode = A
+			self:ApplyModes()
+			self:SaveSoon()
+		end
+		function Workspace:SetArrangeMode(A)
+			self.ArrangeMode = A == true
+			for _, B in ipairs(self.Tabs) do
+				if B.Frame then
+					B.Frame.Active = self.ArrangeMode
+					B.Frame.BackgroundTransparency = self.ArrangeMode and 0.94 or (B.Selected and 0.89 or 1)
+				end
+			end
+			if x.Window then
+				x:Notify {
+					Title = "Tabs",
+					Content = self.ArrangeMode and "Drag tabs to rearrange. Click Arrange again when done." or "Tab order saved.",
+					Duration = 3
+				}
+			end
+		end
+		function Workspace:Navigate(A)
+			if type(A) ~= "table" then
+				return
+			end
+			if A.Tab and type(A.Tab.Select) == "function" then
+				A.Tab:Select()
+			end
+			self:TouchEntry(A)
+			if A.Frame and A.Tab and A.Tab.ScrollFrame then
+				task.delay(0.18, function()
+					if not A.Frame.Parent or not A.Tab.ScrollFrame.Parent then
+						return
+					end
+					local B = A.Tab.ScrollFrame
+					local C = math.max(0, A.Frame.AbsolutePosition.Y - B.AbsolutePosition.Y + B.CanvasPosition.Y - 12)
+					B.CanvasPosition = Vector2.new(0, C)
+					local D = Instance.new("UIStroke")
+					D.Name = "ATGWorkspaceHighlight"
+					D.Color = Color3.fromRGB(255, 82, 96)
+					D.Thickness = 1.5
+					D.Transparency = 1
+					D.Parent = A.Frame
+					l:Create(D, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.1}):Play()
+					task.delay(0.85, function()
+						if D.Parent then
+							local E = l:Create(D, TweenInfo.new(0.22), {Transparency = 1})
+							E:Play()
+							E.Completed:Connect(function()
+								if D.Parent then D:Destroy() end
+							end)
+						end
+					end)
+				end)
+			end
+		end
+		function Workspace:FindEntries(A)
+			A = workspaceTrim(A):lower()
+			local B = {}
+			if A == "" then
+				for _, C in ipairs(self.State.Recent) do
+					local D = self.EntryById[C] or self.TabById[C]
+					if D then
+						if D.Type == "Tab" then
+							table.insert(B, {Id = D.Id, Title = D.Name, Description = "Tab", Type = "Tab", Tab = D})
+						else
+							table.insert(B, D)
+						end
+					end
+				end
+				return B
+			end
+			for _, C in ipairs(self.Entries) do
+				local D = (C.Title .. " " .. C.Description .. " " .. C.TabTitle .. " " .. C.Type):lower()
+				if D:find(A, 1, true) then
+					table.insert(B, C)
+				end
+			end
+			for _, C in ipairs(self.Tabs) do
+				if C.Name:lower():find(A, 1, true) then
+					table.insert(B, {Id = C.Id, Title = C.Name, Description = "Tab", Type = "Tab", Tab = C})
+				end
+			end
+			return B
+		end
+		function Workspace:RecordNotification(A)
+			if type(A) ~= "table" then
+				return
+			end
+			table.insert(self.Notifications, 1, {
+				Title = tostring(A.Title or "Notification"),
+				Content = tostring(A.Content or A.SubContent or ""),
+				At = os.clock()
+			})
+			while #self.Notifications > 40 do
+				table.remove(self.Notifications)
+			end
+			if self.PanelKind == "history" then
+				self:RenderHistory()
+			end
+		end
+		function Workspace:CaptureProfile()
+			local A = {}
+			for B, C in pairs(x.Options) do
+				if type(C) == "table" and C.Type and C.Value ~= nil then
+					A[B] = {
+						Type = C.Type,
+						Value = workspaceEncodeValue(C.Value),
+						Transparency = C.Transparency
+					}
+				end
+			end
+			return A
+		end
+		function Workspace:SaveProfile(A)
+			A = workspaceTrim(A):sub(1, 36)
+			if A == "" then
+				return false, "Enter a profile name first."
+			end
+			self.State.Profiles[A] = self:CaptureProfile()
+			workspacePush(self.State.RecentProfiles, A, 5)
+			self:SaveSoon()
+			return true
+		end
+		function Workspace:ApplyProfile(A)
+			local B = self.State.Profiles[A]
+			if type(B) ~= "table" then
+				return false, "Profile was not found."
+			end
+			for C, D in pairs(B) do
+				local E = x.Options[C]
+				if type(E) == "table" then
+					local F = workspaceDecodeValue(D.Value)
+					pcall(function()
+						if D.Type == "Colorpicker" and type(E.SetValueRGB) == "function" and typeof(F) == "Color3" then
+							E:SetValueRGB(F, D.Transparency)
+						elseif type(E.SetValue) == "function" then
+							E:SetValue(F)
+						end
+					end)
+				end
+			end
+			workspacePush(self.State.RecentProfiles, A, 5)
+			self:SaveSoon()
+			return true
+		end
+		function Workspace:Confirm(A, B, ...)
+			local C, D = { ... }, select("#", ...)
+			if self.State.SmartConfirm == false or not self.Window or type(self.Window.Dialog) ~= "function" then
+				return x:SafeCallback(B, unpack(C, 1, D))
+			end
+			local E = type(A) == "table" and A or {}
+			self.Window:Dialog {
+				Title = tostring(E.Title or "Please confirm"),
+				Content = tostring(E.Content or (type(A) == "string" and A or "This action cannot be undone.")),
+				Buttons = {
+					{Title = tostring(E.ConfirmText or "Continue"), Callback = function() x:SafeCallback(B, unpack(C, 1, D)) end},
+					{Title = tostring(E.CancelText or "Cancel")}
+				}
+			}
+		end
+		function Workspace:Text(A, B, C, D)
+			D = D or {}
+			local E = D.ZIndex or ((A and A.ZIndex or 0) + 1)
+			return u("TextLabel", {
+				Name = D.Name or "ATGWorkspaceText",
+				Parent = A,
+				BackgroundTransparency = 1,
+				Text = tostring(B or ""),
+				I18nSkip = true,
+				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", D.Weight or Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+				TextColor3 = D.Color or Color3.fromRGB(239, 239, 244),
+				TextTransparency = D.Transparency or 0,
+				TextSize = C or 12,
+				TextXAlignment = D.Align or Enum.TextXAlignment.Left,
+				TextYAlignment = D.VerticalAlign or Enum.TextYAlignment.Center,
+				TextTruncate = D.Truncate or Enum.TextTruncate.AtEnd,
+				TextWrapped = D.Wrapped == true,
+				Size = D.Size or UDim2.fromScale(1, 1),
+				Position = D.Position or UDim2.fromScale(0, 0),
+				ZIndex = E
+			})
+		end
+		function Workspace:Button(A, B, C, D, E)
+			local F = E and E.ZIndex or ((A and A.ZIndex or 0) + 1)
+			local G = u("TextButton", {
+				Name = "ATGWorkspaceButton",
+				Parent = A,
+				Size = E and E.Size or UDim2.new(1, 0, 0, E and E.Height or 34),
+				Position = E and E.Position or UDim2.new(),
+				BackgroundColor3 = E and E.Background or Color3.fromRGB(31, 31, 39),
+				BackgroundTransparency = E and E.BackgroundTransparency or 0.08,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "",
+				ZIndex = F
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = G})
+			u("UIStroke", {
+				Color = E and E.StrokeColor or Color3.fromRGB(89, 89, 105),
+				Transparency = E and E.StrokeTransparency or 0.62,
+				Thickness = 1,
+				Parent = G
+			})
+			if C then
+				u("ImageLabel", {
+					Name = "Icon",
+					Parent = G,
+					BackgroundTransparency = 1,
+					Image = x.GetIcon(C) or C,
+					ImageColor3 = E and E.IconColor or Color3.fromRGB(215, 215, 222),
+					Size = UDim2.fromOffset(14, 14),
+					Position = UDim2.new(0, 9, 0.5, -7),
+					ZIndex = F + 1
+				})
+			end
+			self:Text(G, B, E and E.TextSize or 12, {
+				Name = "Title",
+				Weight = E and E.Weight or Enum.FontWeight.Medium,
+				Size = UDim2.new(1, C and -34 or -16, 1, 0),
+				Position = UDim2.new(0, C and 30 or 8, 0, 0),
+				ZIndex = F + 1
+			})
+			self:Bind(G.MouseEnter, function()
+				l:Create(G, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+			end)
+			self:Bind(G.MouseLeave, function()
+				l:Create(G, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = E and E.BackgroundTransparency or 0.08}):Play()
+			end)
+			self:Bind(G.MouseButton1Click, function()
+				x:SafeCallback(D)
+			end)
+			return G
+		end
+		function Workspace:SquareButton(A, B, C)
+			local D = (A and A.ZIndex or 0) + 1
+			local E = u("ImageButton", {
+				Name = "ATGWorkspaceAction",
+				Parent = A,
+				Size = UDim2.fromOffset(22, 22),
+				BackgroundColor3 = Color3.fromRGB(31, 31, 39),
+				BackgroundTransparency = 0.14,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Image = x.GetIcon(B) or B,
+				ImageColor3 = Color3.fromRGB(219, 219, 226), ZIndex = D
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 6), Parent = E})
+			u("UIStroke", {Color = Color3.fromRGB(90, 90, 104), Transparency = 0.75, Parent = E})
+			self:Bind(E.MouseEnter, function()
+				l:Create(E, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+					BackgroundTransparency = 0,
+					ImageColor3 = Color3.fromRGB(255, 99, 113)
+				}):Play()
+			end)
+			self:Bind(E.MouseLeave, function()
+				l:Create(E, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+					BackgroundTransparency = 0.14,
+					ImageColor3 = Color3.fromRGB(219, 219, 226)
+				}):Play()
+			end)
+			self:Bind(E.MouseButton1Click, function()
+				x:SafeCallback(C)
+			end)
+			return E
+		end
+		function Workspace:ClearList(A)
+			for _, B in ipairs(A:GetChildren()) do
+				B:Destroy()
+			end
+			local B = u("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = A})
+			B:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+				if A.Parent then
+					A.CanvasSize = UDim2.new(0, 0, 0, B.AbsoluteContentSize.Y + 4)
+				end
+			end)
+			return B
+		end
+		function Workspace:ShowPanel(A)
+			if not self.Panel then
+				return
+			end
+			if not A then
+				local B = l:Create(self.Panel, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+					GroupTransparency = 1,
+					Position = UDim2.fromOffset(12, 112)
+				})
+				B:Play()
+				B.Completed:Connect(function()
+					if self.Panel and self.Panel.GroupTransparency >= 0.99 then
+						self.Panel.Visible = false
+					end
+				end)
+				self.PanelKind = nil
+				return
+			end
+			self.Panel.Visible = true
+			self.Panel.GroupTransparency = 1
+			self.Panel.Position = UDim2.fromOffset(12, 112)
+			l:Create(self.Panel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				GroupTransparency = 0,
+				Position = UDim2.fromOffset(12, 116)
+			}):Play()
+		end
+		function Workspace:BeginPanel(A, B)
+			if not self.Panel then
+				return nil
+			end
+			local C = self.PanelKind ~= A or not self.Panel.Visible
+			self.PanelKind = A
+			self.PanelTitle.Text = B
+			if C then self:ShowPanel(true) end
+			self:ClearList(self.PanelContent)
+			return self.PanelContent
+		end
+		function Workspace:RenderEntries(A, B, C)
+			if #B == 0 then
+				self:Text(A, C or "Nothing here yet.", 12, {
+					Color = Color3.fromRGB(154, 154, 168),
+					Wrapped = true,
+					Size = UDim2.new(1, 0, 0, 38)
+				})
+				return
+			end
+			for _, D in ipairs(B) do
+				local E = self:Button(A, D.Title, nil, function()
+					self:Navigate(D)
+					self:ShowPanel(false)
+				end, {Height = 42})
+				local F = E:FindFirstChild("Title")
+				if F then
+					F.Size = UDim2.new(1, -42, 0, 18)
+					F.Position = UDim2.fromOffset(8, 3)
+				end
+				local H = E.ZIndex
+				self:Text(E, (D.TabTitle ~= "" and D.TabTitle .. "  /  " or "") .. (D.Description ~= "" and D.Description or D.Type), 10, {
+					Color = Color3.fromRGB(151, 151, 165),
+					Size = UDim2.new(1, -42, 0, 16),
+					Position = UDim2.fromOffset(8, 21),
+					ZIndex = H + 1
+				})
+				local G = u("ImageButton", {
+					Name = "Favorite",
+					Parent = E,
+					Size = UDim2.fromOffset(26, 26),
+					Position = UDim2.new(1, -31, 0.5, -13),
+					BackgroundTransparency = 1,
+					AutoButtonColor = false,
+					Image = x.GetIcon("star"),
+					ImageColor3 = self:IsFavorite(D.Id) and Color3.fromRGB(255, 198, 82) or Color3.fromRGB(150, 150, 165),
+					ZIndex = H + 2
+				})
+				self:Bind(G.MouseButton1Click, function()
+					self:ToggleFavorite(D.Id)
+					if self.PanelKind == "favorites" then self:RenderFavorites() else self:RenderSearch(self.SearchQuery or "") end
+				end)
+			end
+		end
+		function Workspace:RenderSearch(A)
+			self.SearchQuery = A or ""
+			local B = self:BeginPanel("search", workspaceTrim(A) == "" and "Recent" or "Search results")
+			if B then
+				self:RenderEntries(B, self:FindEntries(A), workspaceTrim(A) == "" and "Use Ctrl+K to search controls and tabs." or "No matching control.")
+			end
+		end
+		function Workspace:RenderFavorites()
+			local A, B = self:BeginPanel("favorites", "Favorites"), {}
+			for _, C in ipairs(self.State.Favorites) do
+				local D = self.EntryById[C] or self.TabById[C]
+				if D then
+					if D.Type == "Tab" then
+						table.insert(B, {Id = D.Id, Title = D.Name, Description = "Tab", Type = "Tab", Tab = D})
+					else
+						table.insert(B, D)
+					end
+				end
+			end
+			if A then self:RenderEntries(A, B, "Search a control, then use the star to pin it here.") end
+		end
+		function Workspace:RenderRecent()
+			local A = self:BeginPanel("recent", "Recent")
+			if A then self:RenderEntries(A, self:FindEntries(""), "Your recent controls appear here.") end
+		end
+		function Workspace:RenderHistory()
+			local A = self:BeginPanel("history", "Notification history")
+			if not A then return end
+			if #self.Notifications == 0 then
+				self:Text(A, "New notifications are saved here for this session.", 12, {
+					Color = Color3.fromRGB(154, 154, 168), Wrapped = true, Size = UDim2.new(1, 0, 0, 38)
+				})
+				return
+			end
+			for _, B in ipairs(self.Notifications) do
+				local C = self:Button(A, B.Title, "history", function() end, {Height = 41})
+				local D = C:FindFirstChild("Title")
+				if D then D.Size = UDim2.new(1, -38, 0, 18); D.Position = UDim2.fromOffset(30, 3) end
+				self:Text(C, B.Content, 10, {
+					Color = Color3.fromRGB(151, 151, 165), Size = UDim2.new(1, -38, 0, 16), Position = UDim2.fromOffset(30, 21), ZIndex = C.ZIndex + 1
+				})
+			end
+		end
+		function Workspace:RenderProfiles()
+			local A = self:BeginPanel("profiles", "Profiles")
+			if not A then return end
+			local storage = self:GetStorage()
+			if not storage or type(storage.CanUseFiles) ~= "function" or not storage:CanUseFiles() then
+				self:Text(A, "Session only - this executor cannot save files.", 10, {
+					Color = Color3.fromRGB(187, 150, 103), Size = UDim2.new(1, 0, 0, 17)
+				})
+			end
+			local B = u("TextBox", {
+				Name = "ProfileName", Parent = A, Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(23, 23, 30),
+				BackgroundTransparency = 0.04, BorderSizePixel = 0, ClearTextOnFocus = false, Text = self.ProfileDraft or "", PlaceholderText = "Profile name",
+				PlaceholderColor3 = Color3.fromRGB(133, 133, 149), TextColor3 = Color3.fromRGB(239, 239, 244), TextSize = 12,
+				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), TextXAlignment = Enum.TextXAlignment.Left, I18nSkip = true, ZIndex = A.ZIndex + 1
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = B})
+			u("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = B})
+			u("UIStroke", {Color = Color3.fromRGB(89, 89, 105), Transparency = 0.62, Parent = B})
+			self:Bind(B.FocusLost, function() self.ProfileDraft = B.Text end)
+			self:Button(A, "Save current settings", "bookmark-plus", function()
+				self.ProfileDraft = B.Text
+				local C, D = self:SaveProfile(B.Text)
+				if C then
+					x:Notify {Title = "Profiles", Content = "Profile saved.", Duration = 2}
+					self:RenderProfiles()
+				else
+					x:Notify {Title = "Profiles", Content = D, Duration = 3}
+				end
+			end)
+			local C = {}
+			for _, D in ipairs(self.State.RecentProfiles) do
+				if self.State.Profiles[D] then table.insert(C, D) end
+			end
+			if #C > 0 then
+				self:Text(A, "Recent profiles", 10, {
+					Color = Color3.fromRGB(151, 151, 165), Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 18)
+				})
+				for _, D in ipairs(C) do
+					self:Button(A, D, "history", function()
+						local E, F = self:ApplyProfile(D)
+						x:Notify {Title = "Profiles", Content = E and ("Applied " .. D) or F, Duration = 2}
+						self:ShowPanel(false)
+					end)
+				end
+			end
+			local D = {}
+			for E in pairs(self.State.Profiles) do table.insert(D, E) end
+			table.sort(D)
+			for _, E in ipairs(D) do
+				local F = self:Button(A, E, "bookmark", function()
+					local G, H = self:ApplyProfile(E)
+					x:Notify {Title = "Profiles", Content = G and ("Applied " .. E) or H, Duration = 2}
+					self:ShowPanel(false)
+				end)
+				local G = u("ImageButton", {
+					Parent = F, Size = UDim2.fromOffset(24, 24), Position = UDim2.new(1, -29, 0.5, -12), BackgroundTransparency = 1,
+					Image = x.GetIcon("x"), ImageColor3 = Color3.fromRGB(190, 130, 138), AutoButtonColor = false, ZIndex = F.ZIndex + 2
+				})
+				self:Bind(G.MouseButton1Click, function()
+					self:Confirm({Title = "Delete profile", Content = "Remove " .. E .. "?", ConfirmText = "Delete"}, function()
+						self.State.Profiles[E] = nil
+						self:SaveSoon()
+						self:RenderProfiles()
+					end)
+				end)
+			end
+		end
+		function Workspace:RenderWorkspaceMenu()
+			local A = self:BeginPanel("workspace", "Workspace")
+			if not A then return end
+			self:Button(A, "Compact sidebar: " .. (self.State.CompactMode and "On" or "Off"), "layout", function()
+				self:SetCompact(not self.State.CompactMode)
+				self:RenderWorkspaceMenu()
+			end)
+			self:Button(A, "Focus current tab: " .. (self.State.FocusMode and "On" or "Off"), "focus", function()
+				self:SetFocus(not self.State.FocusMode)
+				self:RenderWorkspaceMenu()
+			end)
+			self:Button(A, (self.ArrangeMode and "Done arranging tabs" or "Arrange tabs (Beta)"), "grip-vertical", function()
+				self:SetArrangeMode(not self.ArrangeMode)
+				self:ShowPanel(false)
+			end)
+			self:Button(A, "Smart confirmations: " .. (self.State.SmartConfirm == false and "Off" or "On"), "shield-check", function()
+				self.State.SmartConfirm = not self.State.SmartConfirm
+				self:SaveSoon()
+				self:RenderWorkspaceMenu()
+			end)
+			self:Button(A, "Recent controls", "history", function() self:RenderRecent() end)
+		end
+		function Workspace:RefreshSurface()
+			if self.PanelKind == "search" then self:RenderSearch(self.SearchQuery or "")
+			elseif self.PanelKind == "favorites" then self:RenderFavorites()
+			elseif self.PanelKind == "history" then self:RenderHistory()
+			elseif self.PanelKind == "profiles" then self:RenderProfiles()
+			elseif self.PanelKind == "workspace" then self:RenderWorkspaceMenu() end
+			if self.Palette and self.Palette.Visible then self:RenderPalette(self.PaletteInput.Text) end
+		end
+		function Workspace:CreatePanel()
+			local A = self.Window
+			self.Panel = u("CanvasGroup", {
+				Name = "ATGWorkspacePanel", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 260),
+				Position = UDim2.fromOffset(12, 116), BackgroundColor3 = Color3.fromRGB(20, 20, 27),
+				BackgroundTransparency = 0.02, BorderSizePixel = 0, Visible = false, GroupTransparency = 1, ZIndex = 35
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 9), Parent = self.Panel})
+			u("UIStroke", {Color = Color3.fromRGB(124, 52, 62), Transparency = 0.35, Parent = self.Panel})
+			self.PanelTitle = self:Text(self.Panel, "Workspace", 13, {
+				Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, -38, 0, 34), Position = UDim2.fromOffset(10, 0), ZIndex = 36
+			})
+			local B = u("ImageButton", {
+				Name = "Close", Parent = self.Panel, Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -27, 0, 6),
+				BackgroundTransparency = 1, Image = x.GetIcon("x"), ImageColor3 = Color3.fromRGB(178, 178, 191), AutoButtonColor = false, ZIndex = 37
+			})
+			self:Connect(B.MouseButton1Click, function() self:ShowPanel(false) end)
+			self.PanelContent = u("ScrollingFrame", {
+				Name = "Content", Parent = self.Panel, Size = UDim2.new(1, -16, 1, -46), Position = UDim2.fromOffset(8, 38),
+				BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 3,
+				ScrollBarImageColor3 = Color3.fromRGB(255, 93, 107), ScrollBarImageTransparency = 0.42, ZIndex = 36
+			})
+		end
+		function Workspace:CreateChrome()
+			local A = self.Window
+			self.Sidebar = u("Frame", {
+				Name = "ATGWorkspaceSidebar", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 62),
+				Position = UDim2.fromOffset(12, 52), BackgroundTransparency = 1, ZIndex = 20
+			})
+			self.SidebarSearch = u("TextBox", {
+				Name = "Search", Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 0),
+				BackgroundColor3 = Color3.fromRGB(27, 27, 34), BackgroundTransparency = 0.1, BorderSizePixel = 0, ClearTextOnFocus = false,
+				Text = "", PlaceholderText = "Search...  Ctrl+K", PlaceholderColor3 = Color3.fromRGB(142, 142, 157), TextColor3 = Color3.fromRGB(240, 240, 244),
+				TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 21
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.SidebarSearch})
+			u("UIStroke", {Color = Color3.fromRGB(115, 55, 64), Transparency = 0.45, Parent = self.SidebarSearch})
+			u("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = self.SidebarSearch})
+			self:Connect(self.SidebarSearch:GetPropertyChangedSignal("Text"), function()
+				local B = self.SidebarSearch.Text
+				if workspaceTrim(B) == "" then
+					if self.PanelKind == "search" then self:ShowPanel(false) end
+				else
+					self:RenderSearch(B)
+				end
+			end)
+			self.SidebarToolbar = u("Frame", {
+				Name = "Actions", Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 31), BackgroundTransparency = 1, ZIndex = 21
+			})
+			local B = u("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, 4), Parent = self.SidebarToolbar
+			})
+			self.ToolbarLayout = B
+			self:SquareButton(self.SidebarToolbar, "search", function() self:OpenPalette() end)
+			self:SquareButton(self.SidebarToolbar, "star", function() self:RenderFavorites() end)
+			self:SquareButton(self.SidebarToolbar, "history", function() self:RenderHistory() end)
+			self:SquareButton(self.SidebarToolbar, "bookmark", function() self:RenderProfiles() end)
+			self:SquareButton(self.SidebarToolbar, "layout-dashboard", function() self:RenderWorkspaceMenu() end)
+			A.TabArea.Position = UDim2.new(0, 12, 0, 124)
+			A.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -136)
+			self:CreatePanel()
+		end
+		function Workspace:RenderPalette(A)
+			if not self.PaletteContent then return end
+			self:ClearList(self.PaletteContent)
+			A = A or ""
+			local B = workspaceTrim(A):lower()
+			local C = {
+				{Title = "Open Favorites", Icon = "star", Match = "favorites favorite star", Action = function() self:ClosePalette(); self:RenderFavorites() end},
+				{Title = "Open Profiles", Icon = "bookmark", Match = "profiles profile config", Action = function() self:ClosePalette(); self:RenderProfiles() end},
+				{Title = "Notification history", Icon = "history", Match = "history notifications activity", Action = function() self:ClosePalette(); self:RenderHistory() end},
+				{Title = "Toggle compact sidebar", Icon = "layout-dashboard", Match = "compact sidebar layout", Action = function() self:SetCompact(not self.State.CompactMode); self:ClosePalette() end},
+				{Title = "Toggle focus mode", Icon = "focus", Match = "focus mode", Action = function() self:SetFocus(not self.State.FocusMode); self:ClosePalette() end},
+				{Title = self.ArrangeMode and "Finish arranging tabs" or "Arrange tabs (Beta)", Icon = "grip-vertical", Match = "arrange reorder tabs", Action = function() self:SetArrangeMode(not self.ArrangeMode); self:ClosePalette() end}
+			}
+			for _, D in ipairs(C) do
+				if B == "" or D.Title:lower():find(B, 1, true) or D.Match:find(B, 1, true) then
+					self:Button(self.PaletteContent, D.Title, D.Icon, D.Action, {Height = 34, ZIndex = 94})
+				end
+			end
+			local D = self:FindEntries(A)
+			if #D > 0 then
+				self:Text(self.PaletteContent, B == "" and "Recent" or "Results", 10, {
+					Color = Color3.fromRGB(150, 150, 164), Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 20), ZIndex = 94
+				})
+				self:RenderEntries(self.PaletteContent, D, "")
+			end
+		end
+		function Workspace:CreatePalette()
+			local A = self.Window.Root
+			self.Palette = u("CanvasGroup", {
+				Name = "ATGCommandPalette", Parent = A, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
+				BackgroundTransparency = 0.36, BorderSizePixel = 0, Visible = false, GroupTransparency = 1, ZIndex = 90
+			})
+			local B = u("Frame", {
+				Name = "Modal", Parent = self.Palette, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.new(0, 420, 0, 330), Position = UDim2.new(0.5, 0, 0.46, 0),
+				BackgroundColor3 = Color3.fromRGB(21, 21, 28), BackgroundTransparency = 0.02, BorderSizePixel = 0, ZIndex = 91
+			})
+			u("UISizeConstraint", {MinSize = Vector2.new(300, 230), MaxSize = Vector2.new(520, 420), Parent = B})
+			u("UICorner", {CornerRadius = UDim.new(0, 10), Parent = B})
+			u("UIStroke", {Color = Color3.fromRGB(180, 63, 79), Transparency = 0.25, Thickness = 1, Parent = B})
+			self:Text(B, "Quick search", 15, {Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, -80, 0, 36), Position = UDim2.fromOffset(14, 4), ZIndex = 92})
+			self:Text(B, "Ctrl+K", 10, {Color = Color3.fromRGB(165, 165, 180), Align = Enum.TextXAlignment.Right, Size = UDim2.new(0, 54, 0, 36), Position = UDim2.new(1, -70, 0, 4), ZIndex = 92})
+			local C = u("ImageButton", {
+				Parent = B, Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -28, 0, 12), BackgroundTransparency = 1, Image = x.GetIcon("x"),
+				ImageColor3 = Color3.fromRGB(180, 180, 194), AutoButtonColor = false, ZIndex = 93
+			})
+			self:Connect(C.MouseButton1Click, function() self:ClosePalette() end)
+			self.PaletteInput = u("TextBox", {
+				Name = "Query", Parent = B, Size = UDim2.new(1, -28, 0, 34), Position = UDim2.fromOffset(14, 42), BackgroundColor3 = Color3.fromRGB(28, 28, 36),
+				BackgroundTransparency = 0.03, BorderSizePixel = 0, ClearTextOnFocus = false, Text = "", PlaceholderText = "Search controls, tabs, or commands...",
+				PlaceholderColor3 = Color3.fromRGB(143, 143, 158), TextColor3 = Color3.fromRGB(244, 244, 248), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
+				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 93
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.PaletteInput})
+			u("UIStroke", {Color = Color3.fromRGB(125, 60, 70), Transparency = 0.4, Parent = self.PaletteInput})
+			u("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = self.PaletteInput})
+			self.PaletteContent = u("ScrollingFrame", {
+				Name = "Results", Parent = B, Size = UDim2.new(1, -28, 1, -94), Position = UDim2.fromOffset(14, 84), BackgroundTransparency = 1,
+				BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ScrollBarImageColor3 = Color3.fromRGB(255, 93, 107), ScrollBarImageTransparency = 0.44, ZIndex = 93
+			})
+			self:Connect(self.PaletteInput:GetPropertyChangedSignal("Text"), function() self:RenderPalette(self.PaletteInput.Text) end)
+		end
+		function Workspace:OpenPalette()
+			if not self.Palette then return end
+			self:ShowPanel(false)
+			self.Palette.Visible = true
+			self.Palette.GroupTransparency = 1
+			local A = self.Palette:FindFirstChild("Modal")
+			if A then A.Position = UDim2.new(0.5, 0, 0.44, 0) end
+			l:Create(self.Palette, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {GroupTransparency = 0}):Play()
+			if A then l:Create(A, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.46, 0)}):Play() end
+			self.PaletteInput.Text = ""
+			self:RenderPalette("")
+			task.defer(function() if self.PaletteInput and self.PaletteInput.Parent then self.PaletteInput:CaptureFocus() end end)
+		end
+		function Workspace:ClosePalette()
+			if not self.Palette or not self.Palette.Visible then return end
+			local A = l:Create(self.Palette, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {GroupTransparency = 1})
+			A:Play()
+			A.Completed:Connect(function()
+				if self.Palette and self.Palette.GroupTransparency >= 0.99 then self.Palette.Visible = false end
+			end)
+		end
+		function Workspace:Attach(A)
+			if self.Window then return self end
+			self.Window = A
+			self.OriginalTabWidth = tonumber(A.TabWidth) or 180
+			self:Load()
+			self:CreateChrome()
+			self:CreatePalette()
+			self:SetCompact(self.State.CompactMode)
+			self:SetFocus(self.State.FocusMode)
+			self:Connect(k.InputBegan, function(B, C)
+				if B.UserInputType ~= Enum.UserInputType.Keyboard then return end
+				if B.KeyCode == Enum.KeyCode.Escape and self.Palette and self.Palette.Visible then self:ClosePalette(); return end
+				if not C and B.KeyCode == Enum.KeyCode.K and not k:GetFocusedTextBox() and
+					(k:IsKeyDown(Enum.KeyCode.LeftControl) or k:IsKeyDown(Enum.KeyCode.RightControl)) then
+					self:OpenPalette()
+				end
+			end)
+			self:Connect(k.InputChanged, function(B)
+				if not self.Drag or not (B.UserInputType == Enum.UserInputType.MouseMovement or B.UserInputType == Enum.UserInputType.Touch) then return end
+				local C = B.Position - self.Drag.Start
+				if C.Magnitude > 6 then
+					self.Drag.Moved = true
+					self:MoveDraggingTab(B.Position.Y)
+				end
+			end)
+			self:Connect(k.InputEnded, function(B)
+				if self.Drag and (B.UserInputType == Enum.UserInputType.MouseButton1 or B.UserInputType == Enum.UserInputType.Touch) then
+					if self.Drag.Moved and self.Drag.Tab then self.Drag.Tab.SuppressClick = true end
+					self.Drag = nil
+				end
+			end)
+			return self
+		end
+		function Workspace:Destroy()
+			for _, A in ipairs(self.Connections) do pcall(function() A:Disconnect() end) end
+			self.Connections = {}
+			self.Window = nil
+			self.Tabs, self.TabById, self.Entries, self.EntryById = {}, {}, {}, {}
+			self.Sidebar, self.SidebarSearch, self.SidebarToolbar, self.ToolbarLayout = nil, nil, nil, nil
+			self.Panel, self.PanelContent, self.PanelTitle, self.Palette, self.PaletteInput, self.PaletteContent = nil, nil, nil, nil, nil, nil
 		end
 		-- Built-in floating minimize/open button. This replaces the old
 		-- per-script FluentToggleGui snippet and talks to this window directly
@@ -3674,7 +4779,31 @@ local aa = {
 				B.Type = C.Type
 				B.ScrollFrame = C.ScrollFrame
 				B.Library = x
-				return B:New(D, E)
+				local F = type(E) == "table" and E or (type(D) == "table" and D or nil)
+				-- Smart confirmation can be explicit (Confirm = true/string/table),
+				-- or inferred only for obvious destructive labels. Scripts may use
+				-- SmartConfirm = false to opt a button out.
+				local H = F and F.Confirm
+				if B.__type == "Button" and F and H == nil and F.SmartConfirm ~= false then
+					local I = tostring(F.Title or ""):lower()
+					if I:find("delete", 1, true) or I:find("remove", 1, true) or I:find("reset", 1, true) or
+						I:find("clear", 1, true) or I:find("wipe", 1, true) or I:find("shutdown", 1, true) or
+						I:find("rejoin", 1, true) or I:find("leave", 1, true) then
+						H = {Title = "Please confirm", Content = "Continue with " .. tostring(F.Title) .. "?"}
+					end
+				end
+				if B.__type == "Button" and F and H and type(F.Callback) == "function" and not F._ATGConfirmWrapped then
+					F._ATGConfirmWrapped = true
+					local G = F.Callback
+					F.Callback = function(...)
+						return x.Workspace:Confirm(H, G, ...)
+					end
+				end
+				local G = B:New(D, E)
+				if x.Workspace then
+					x.Workspace:RegisterElement(G, C, F, B.__type, type(D) == "string" and D or nil)
+				end
+				return G
 			end
 		end
 		x.Elements = z
@@ -3697,7 +4826,8 @@ local aa = {
 					Mode = F.Mode,
 					Enabled = F.Enabled,
 					EnableRemoteAssets = F.EnableRemoteAssets,
-					FontProfile = F.FontProfile
+					FontProfile = F.FontProfile,
+					FontTuning = F.FontTuning
 				}
 			end
 			x.CurrentLanguage = CustomizationSystem.I18n.CurrentLocale
@@ -3708,7 +4838,12 @@ local aa = {
 			end
 			local E =
 				e(s.Window) {Parent = w, Size = D.Size, Title = D.Title, SubTitle = D.SubTitle, TabWidth = D.TabWidth}
+			E.Library = x
 			x.Window = E
+			if x.Workspace then
+				x.Workspace:Configure {ScriptId = CustomizationSystem.I18n.Scope}
+				x.Workspace:Attach(E)
+			end
 			x:SetTheme(D.Theme)
 			if D.FloatingToggle ~= false then
 				local F = type(D.FloatingToggle) == "table" and D.FloatingToggle or nil
@@ -3736,6 +4871,9 @@ local aa = {
 				CustomizationSystem.I18n:CancelPending()
 				CustomizationSystem.I18n:ClearRegistry()
 				CustomizationSystem.Fonts:ClearRegistry()
+				if x.Workspace then
+					x.Workspace:Destroy()
+				end
 				if x.FloatingToggle then
 					x.FloatingToggle:Destroy()
 				end
@@ -3765,6 +4903,9 @@ local aa = {
 			end
 		end
 		function x.Notify(C, D)
+			if x.Workspace then
+				x.Workspace:RecordNotification(D)
+			end
 			return t:New(D)
 		end
 		if getgenv then
@@ -5023,7 +6164,8 @@ local aa = {
 			local t, u = e(h), o.Window
 			local v = t.Elements
 			o.TabCount = o.TabCount + 1
-			local w, x = o.TabCount, {Selected = false, Name = q, Type = "Tab"}
+			local w, x = o.TabCount, {Selected = false, Name = q, Type = "Tab", Index = o.TabCount}
+			x.Id = "tab-" .. tostring(w) .. "-" .. tostring(q)
 			if t:GetIcon(r) then
 				r = t:GetIcon(r)
 			end
@@ -5035,6 +6177,8 @@ local aa = {
 					"TextButton",
 					{
 						Size = UDim2.new(1, 0, 0, 34),
+						Name = "ATGTab_" .. tostring(w),
+						LayoutOrder = w,
 						BackgroundTransparency = 1,
 						Parent = s,
 						ThemeTag = {BackgroundColor3 = "Tab"}
@@ -5044,6 +6188,7 @@ local aa = {
 						k(
 							"TextLabel",
 							{
+								Name = "TabLabel",
 								AnchorPoint = Vector2.new(0, 0.5),
 								Position = r and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
 								Text = q,
@@ -5066,6 +6211,7 @@ local aa = {
 						k(
 							"ImageLabel",
 							{
+								Name = "TabIcon",
 								AnchorPoint = Vector2.new(0, 0.5),
 								Size = UDim2.fromOffset(16, 16),
 								Position = UDim2.new(0, 8, 0.5, 0),
@@ -5076,6 +6222,8 @@ local aa = {
 						)
 					}
 				)
+			x.Label = x.Frame:FindFirstChild("TabLabel")
+			x.IconObject = x.Frame:FindFirstChild("TabIcon")
 			local y = k("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
 			x.ContainerFrame =
 				k(
@@ -5142,6 +6290,10 @@ local aa = {
 			j.AddSignal(
 				x.Frame.MouseButton1Click,
 				function()
+					if x.SuppressClick then
+						x.SuppressClick = false
+						return
+					end
 					o:SelectTab(w)
 				end
 			)
@@ -5149,6 +6301,9 @@ local aa = {
 			o.Tabs[w] = x
 			x.Container = x.ContainerFrame
 			x.ScrollFrame = x.Container
+			x.Select = function()
+				o:SelectTab(w)
+			end
 			local function decorateSectionTitle(z)
 				if type(z) ~= "string" then
 					return z
@@ -5189,6 +6344,9 @@ local aa = {
 					return C.SetVisible(type(D) == "boolean" and D or E)
 				end
 				B.ScrollFrame = x.Container
+				B.Tab = x
+				B.TabId = x.Id
+				B.TabTitle = x.Name
 				setmetatable(B, v)
 				return B
 			end
@@ -5204,6 +6362,10 @@ local aa = {
 			end
 			o.Tabs[q].SetTransparency(0.89)
 			o.Tabs[q].Selected = true
+			local w = e(h)
+			if w.Workspace and type(w.Workspace.TouchTab) == "function" then
+				w.Workspace:TouchTab(o.Tabs[q])
+			end
 			r.TabDisplay.Text = o.Tabs[q].Name
 			TranslationSystem:Register(r.TabDisplay, o.Tabs[q].Name, "Text")
 			r.SelectorPosMotor:setGoal(l(o:GetCurrentTabPos(), {frequency = 6}))
@@ -5456,40 +6618,90 @@ local aa = {
 				end
 			end
 
-			-- caret/scroll logic (kept from original)
-			local function adjustInputPosition()
-				local pad, width = 2, o.Container.AbsoluteSize.X
-				if not o.Input:IsFocused() or o.Input.TextBounds.X <= width - 2 * pad then
-					o.Input.Position = UDim2.new(0, pad, 0, 0)
-				else
-					local r = o.Input.CursorPosition
-					if r ~= -1 then
-						local s = string.sub(o.Input.Text, 1, r - 1)
-						-- A custom FontFace makes the legacy Font property report
-						-- Enum.Font.Unknown.  TextService:GetTextSize only accepts a
-						-- concrete Enum.Font, so use a safe metric fallback for the
-						-- caret calculation instead of spamming the developer console.
-						local inputFont = o.Input.Font
-						if inputFont == Enum.Font.Unknown then
-							inputFont = Enum.Font.Gotham
-						end
-						local measured, textSize = pcall(function()
-							return TextService:GetTextSize(s, o.Input.TextSize, inputFont, Vector2.new(math.huge, math.huge))
-						end)
-						local t = measured and textSize.X or o.Input.TextBounds.X
-						local u = o.Input.Position.X.Offset + t
-						if u < pad then
-							o.Input.Position = UDim2.fromOffset(pad - t, 0)
-						elseif u > width - pad - 1 then
-							o.Input.Position = UDim2.fromOffset(width - t - pad - 1, 0)
-						end
+			-- Keep the caret visible without moving the whole TextBox off-screen.
+			-- The old calculation ran before AbsoluteSize/TextBounds had settled,
+			-- which could leave a focused input at a negative X offset until blur.
+			local function setInputOffset(offset)
+				if o.Input.Position.X.Offset ~= offset or o.Input.Position.Y.Offset ~= 0 then
+					o.Input.Position = UDim2.fromOffset(offset, 0)
+				end
+			end
+
+			local function getCursorWidth(beforeCursor, textWidth)
+				if #beforeCursor == 0 then
+					return 0
+				end
+
+				local inputFont = o.Input.Font
+				if inputFont ~= Enum.Font.Unknown then
+					local measured, textSize = pcall(function()
+						return TextService:GetTextSize(
+							beforeCursor,
+							o.Input.TextSize,
+							inputFont,
+							Vector2.new(math.huge, math.huge)
+						)
+					end)
+					if measured and textSize then
+						return textSize.X
 					end
 				end
+
+				-- Custom FontFace reports Enum.Font.Unknown to TextService. Use the
+				-- rendered TextBounds for a safe approximation instead of emitting
+				-- an error or shifting all input text outside its clipped container.
+				local fullText = o.Input.Text
+				if textWidth > 0 and #fullText > 0 then
+					return textWidth * math.clamp(#beforeCursor / #fullText, 0, 1)
+				end
+				return 0
+			end
+
+			local function adjustInputPosition()
+				local pad = 2
+				local width = o.Container.AbsoluteSize.X
+				if width <= 2 * pad then
+					-- Layout has not resolved yet. Leave the input in a safe position;
+					-- AbsoluteSize will trigger a second pass once it is visible.
+					setInputOffset(pad)
+					return
+				end
+
+				local textWidth = math.max(0, o.Input.TextBounds.X)
+				if not o.Input:IsFocused() or textWidth <= width - 2 * pad then
+					setInputOffset(pad)
+					return
+				end
+
+				local cursorPosition = o.Input.CursorPosition
+				if not cursorPosition or cursorPosition < 1 then
+					return
+				end
+
+				local beforeCursor = string.sub(o.Input.Text, 1, cursorPosition - 1)
+				local cursorWidth = getCursorWidth(beforeCursor, textWidth)
+				local targetOffset = o.Input.Position.X.Offset
+				local cursorX = targetOffset + cursorWidth
+				local rightEdge = width - pad
+				if cursorX < pad then
+					targetOffset = pad - cursorWidth
+				elseif cursorX > rightEdge then
+					targetOffset = rightEdge - cursorWidth
+				end
+
+				-- Clamp to the text's real rendered bounds so a stale metric cannot
+				-- hide the entire value while the user is still typing.
+				local minimumOffset = math.min(pad, width - pad - textWidth)
+				setInputOffset(math.clamp(targetOffset, minimumOffset, pad))
 			end
 
 			task.spawn(adjustInputPosition)
 			k.AddSignal(o.Input:GetPropertyChangedSignal("Text"), adjustInputPosition)
 			k.AddSignal(o.Input:GetPropertyChangedSignal("CursorPosition"), adjustInputPosition)
+			k.AddSignal(o.Container:GetPropertyChangedSignal("AbsoluteSize"), adjustInputPosition)
+			pcall(function()
+				k.AddSignal(o.Input:GetPropertyChangedSignal("TextBounds"), adjustInputPosition)
+			end)
 
 			-- Focus behavior: match CSS :focus rules (0.3s transitions), plus our extra emphasis
 			k.AddSignal(o.Input.Focused, function()
@@ -5918,6 +7130,8 @@ local aa = {
 					},
 					{v.TabHolder, D}
 				)
+			v.TabArea = F
+			v.TabWidth = t.TabWidth
 			v.TabDisplay =
 				s(
 					"TextLabel",
@@ -6000,6 +7214,18 @@ local aa = {
 					v.ContainerHolder.Position = UDim2.fromOffset(t.TabWidth + 26, K)
 				end
 			)
+			-- Public, additive layout hook used by the workspace toolbar.  Keeping
+			-- this inside Window means compact mode does not fight the existing
+			-- Flipper position motor when a tab is selected.
+			function v.SetTabWidth(M, N)
+				N = math.clamp(tonumber(N) or t.TabWidth, 52, 320)
+				t.TabWidth = N
+				v.TabWidth = N
+				F.Size = UDim2.new(0, N, 1, F.Size.Y.Offset)
+				v.TabDisplay.Position = UDim2.fromOffset(N + 26, 56)
+				v.ContainerHolder.Size = UDim2.new(1, -N - 32, 1, -102)
+				v.ContainerHolder.Position = UDim2.fromOffset(N + 26, v.ContainerPosMotor:getValue())
+			end
 			local K, L
 			v.Maximize = function(M, N, O)
 				v.Maximized = M
@@ -6106,15 +7332,28 @@ local aa = {
 			m.AddSignal(
 				h.InputBegan,
 				function(M)
+					local function toggleMinimize()
+						-- Ctrl is Fluent's legacy default.  Give Ctrl+K one short
+						-- chord window so command search does not minimize first.
+						if M.KeyCode == Enum.KeyCode.LeftControl or M.KeyCode == Enum.KeyCode.RightControl then
+							task.delay(0.16, function()
+								if h:IsKeyDown(M.KeyCode) and not h:IsKeyDown(Enum.KeyCode.K) and not h:GetFocusedTextBox() then
+									v:Minimize()
+								end
+							end)
+						else
+							v:Minimize()
+						end
+					end
 					if
 						type(u.MinimizeKeybind) == "table" and u.MinimizeKeybind.Type == "Keybind" and
 						not h:GetFocusedTextBox()
 					then
 						if M.KeyCode.Name == u.MinimizeKeybind.Value then
-							v:Minimize()
+							toggleMinimize()
 						end
 					elseif M.KeyCode == u.MinimizeKey and not h:GetFocusedTextBox() then
-						v:Minimize()
+						toggleMinimize()
 					end
 				end
 			)
@@ -6173,10 +7412,20 @@ local aa = {
 			end
 			local N = e(p.Tab):Init(v)
 			function v.AddTab(O, P)
-				return N:New(P.Title, P.Icon, v.TabHolder)
+				local Q = N:New(P.Title, P.Icon, v.TabHolder)
+				if v.Library and v.Library.Workspace and type(v.Library.Workspace.RegisterTab) == "function" then
+					v.Library.Workspace:RegisterTab(Q, P)
+				end
+				return Q
 			end
 			function v.SelectTab(O, P)
-				N:SelectTab(1)
+				if type(P) == "table" and type(P.Index) == "number" then
+					N:SelectTab(P.Index)
+				elseif type(P) == "number" then
+					N:SelectTab(P)
+				else
+					N:SelectTab(1)
+				end
 			end
 			m.AddSignal(
 				v.TabHolder:GetPropertyChangedSignal "CanvasPosition",
@@ -6430,6 +7679,7 @@ local aa = {
 			local A = e(t.Element)(x.Title, x.Description, v.Container, true)
 			z.SetTitle = A.SetTitle
 			z.SetDesc = A.SetDesc
+			z.Frame = A.Frame
 			local B =
 				s(
 					"Frame",
@@ -6907,6 +8157,7 @@ local aa = {
 			m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
 			l.SetTitle = m.SetTitle
 			l.SetDesc = m.SetDesc
+			l.Frame = m.Frame
 			local n, o =
 				e(
 					"TextLabel",
@@ -8016,6 +9267,7 @@ local aa = {
 			ac(aj.Element)(f.Title, f.Description, d.Container, false)
 			h.SetTitle = i.SetTitle
 			h.SetDesc = i.SetDesc
+			h.Frame = i.Frame
 			local j = ac(aj.Textbox)(i.Frame, true)
 			j.Frame.Position = UDim2.new(1, -10, 0.5, 0)
 			j.Frame.AnchorPoint = Vector2.new(1, 0.5)
@@ -8040,10 +9292,10 @@ local aa = {
 			if h.Finished then
 				ai(
 					k.FocusLost,
-					function(l)
-						if not l then
-							return
-						end
+					function()
+						-- Finished inputs should commit when focus leaves for any reason.
+						-- Roblox only sets this event argument for Enter, so requiring it
+						-- made clicks/taps outside the field silently discard the value.
 						h:SetValue(k.Text)
 					end
 				)
@@ -8094,6 +9346,7 @@ local aa = {
 			ac(aj.Element)(f.Title, f.Description, d.Container, true)
 			h.SetTitle = j.SetTitle
 			h.SetDesc = j.SetDesc
+			h.Frame = j.Frame
 			local k =
 				ai(
 					"TextLabel",
@@ -8303,6 +9556,7 @@ local aa = {
 			j.DescLabel.Size = UDim2.new(1, -170, 0, 14)
 			h.SetTitle = j.SetTitle
 			h.SetDesc = j.SetDesc
+			h.Frame = j.Frame
 			local k =
 				ai(
 					"ImageLabel",
@@ -8482,6 +9736,7 @@ local aa = {
 			i.DescLabel.Size = UDim2.new(1, -54, 0, 14)
 			h.SetTitle = i.SetTitle
 			h.SetDesc = i.SetDesc
+			h.Frame = i.Frame
 			local j, k =
 				ai(
 					"ImageLabel",
