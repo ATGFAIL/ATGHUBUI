@@ -33,7 +33,7 @@ do
 
         FontProfile = "default",
         FontUrl = "",
-        FontTarget = "Both (Latin + Thai)"
+        FontTarget = "Both"
     }
 
     local DEFAULT_CONFIGURATION = {
@@ -66,17 +66,17 @@ do
     }
 
     local MODE_VALUES = {
-        ["Auto (pack -> Roblox -> machine)"] = "auto",
-        ["Community pack only"] = "community",
-        ["Roblox LocalizationTable"] = "roblox",
-        ["Machine translation only"] = "machine",
-        ["Original text"] = "source"
+        ["Auto"] = "auto",
+        ["JSON pack"] = "community",
+        ["Roblox"] = "roblox",
+        ["Machine"] = "machine",
+        ["Original"] = "source"
     }
 
     local FONT_TARGET_VALUES = {
-        ["Both (Latin + Thai)"] = "both",
-        ["English / Latin only"] = "latin",
-        ["Thai only"] = "thai"
+        ["Both"] = "both",
+        ["Latin"] = "latin",
+        ["Thai"] = "thai"
     }
 
     InterfaceManager.Folder = "FluentSettings"
@@ -178,7 +178,7 @@ do
                 return display
             end
         end
-        return "Auto (pack -> Roblox -> machine)"
+        return "Auto"
     end
 
     local function getCustomization(library)
@@ -390,6 +390,12 @@ do
         if not validModes[self.Settings.TranslationMode] then
             self.Settings.TranslationMode = DEFAULT_SETTINGS.TranslationMode
         end
+        local oldFontTargets = {
+            ["Both (Latin + Thai)"] = "Both",
+            ["English / Latin only"] = "Latin",
+            ["Thai only"] = "Thai"
+        }
+        self.Settings.FontTarget = oldFontTargets[self.Settings.FontTarget] or self.Settings.FontTarget
         if not FONT_TARGET_VALUES[self.Settings.FontTarget] then
             self.Settings.FontTarget = DEFAULT_SETTINGS.FontTarget
         end
@@ -442,7 +448,7 @@ do
         local section = tab:AddSection("Interface")
         local theme = section:AddDropdown("InterfaceTheme", {
             Title = "Theme",
-            Description = "Changes the interface theme.",
+            Description = "Choose a look.",
             Values = library.Themes,
             Default = settings.Theme,
             Callback = function(value)
@@ -458,7 +464,7 @@ do
         if library.UseAcrylic then
             section:AddToggle("AcrylicToggle", {
                 Title = "Acrylic",
-                Description = "The blurred background requires graphic quality 8+.",
+                Description = "Blur background.",
                 Default = settings.Acrylic,
                 Callback = function(value)
                     library:ToggleAcrylic(value)
@@ -470,7 +476,7 @@ do
 
         section:AddToggle("TransparentToggle", {
             Title = "Transparency",
-            Description = "Makes the interface transparent.",
+            Description = "See-through background.",
             Default = settings.Transparency,
             Callback = function(value)
                 library:ToggleTransparency(value)
@@ -491,8 +497,8 @@ do
 
         if type(library.SetFloatingToggleConfig) == "function" then
             section:AddToggle("InterfaceFloatingToggle", {
-                Title = "Floating menu button",
-                Description = "Shows the draggable open/minimize button built into MainUI. Ctrl + M remains available while enabled.",
+                Title = "Floating button",
+                Description = "Drag it. Ctrl + M toggles UI.",
                 Default = settings.FloatingToggle,
                 Callback = function(value)
                     settings.FloatingToggle = value
@@ -520,7 +526,7 @@ do
         if not customizationReady then
             tab:AddSection("Customization"):AddParagraph({
                 Title = "Customization core unavailable",
-                Content = "Deploy the matching ATG MainUI.lua before using language packs and custom fonts."
+                Content = "Update MainUI to use language and font tools."
             })
             return
         end
@@ -540,10 +546,10 @@ do
             end)
         end
 
-        local localization = tab:AddSection("Language & translation")
+        local localization = tab:AddSection("Language")
         local languageDropdown = localization:AddDropdown("InterfaceLanguage", {
             Title = "UI language",
-            Description = "Changes all registered UI text. Existing script APIs stay unchanged.",
+            Description = "Choose your language.",
             Values = i18n:GetLanguageOptions(),
             Default = getLanguageValue(i18n, settings.Language),
             Callback = function(value)
@@ -563,16 +569,16 @@ do
         end
         table.sort(modeValues)
         local modeDropdown = localization:AddDropdown("InterfaceTranslationMode", {
-            Title = "Translation source",
-            Description = "Pack uses JSON made by people. Roblox only reads the game's LocalizationTable; it is not generic machine translation.",
+            Title = "Translate by",
+            Description = "Pick a source.",
             Values = modeValues,
             Default = modeDisplay(settings.TranslationMode),
             Callback = function(value)
                 settings.TranslationMode = MODE_VALUES[value] or "auto"
                 if settings.TranslationMode == "machine" and not capabilities.MachineTranslation then
-                    safeNotify(library, "Machine translation", "Unsupported by this executor", "A POST-capable request function is required. Original text will be kept.")
+                    safeNotify(library, "Machine translation", "Unsupported executor", "Original text will be used.")
                 elseif settings.TranslationMode == "roblox" and not capabilities.RobloxTranslation then
-                    safeNotify(library, "Roblox translation", "Unavailable in this client", "Original text will be kept unless a compatible LocalizationTable translator is available.")
+                    safeNotify(library, "Roblox translation", "Unavailable here", "Original text will be used.")
                 end
                 i18n:SetMode(settings.TranslationMode)
                 self:SaveSettings()
@@ -583,8 +589,8 @@ do
         end)
 
         localization:AddToggle("InterfaceTranslationEnabled", {
-            Title = "Enable UI translation",
-            Description = "Turn off to show the original script text immediately.",
+            Title = "Translation",
+            Description = "Show translated text.",
             Default = settings.TranslationEnabled,
             Callback = function(value)
                 settings.TranslationEnabled = value
@@ -594,21 +600,21 @@ do
         })
 
         local capabilityText = string.format(
-            "Storage: %s | Remote JSON: %s | Local custom fonts: %s",
-            capabilities.FileSystem and "ready" or "unavailable",
-            (capabilities.RemoteFetch and assets.Enabled) and "ready" or "unavailable/disabled",
-            capabilities.CustomFonts and "experimental-ready" or "unavailable"
+            "Save: %s | Web: %s | Fonts: %s",
+            capabilities.FileSystem and "OK" or "No",
+            (capabilities.RemoteFetch and assets.Enabled) and "OK" or "No",
+            capabilities.CustomFonts and "OK" or "No"
         )
         localization:AddParagraph({
-            Title = "Customization status",
+            Title = "Status",
             Content = capabilityText
         })
 
         localization:AddInput("InterfaceLanguagePackUrl", {
-            Title = "Language pack URL",
-            Description = "Paste raw JSON, a local executor JSON path, a raw GitHub URL, or a GitHub /blob/ URL.",
+            Title = "Language JSON",
+            Description = "Paste a link or file path.",
             Default = settings.LanguagePackUrl,
-            Placeholder = "https://raw.githubusercontent.com/user/repo/main/th.json  |  FluentSettings/i18n/...",
+            Placeholder = "GitHub raw URL or local file path",
             Finished = false,
             Callback = function(value)
                 settings.LanguagePackUrl = value
@@ -617,8 +623,8 @@ do
         })
 
         localization:AddInput("InterfaceTemplateLocale", {
-            Title = "Export template locale (optional)",
-            Description = "Use this for a new locale that is not in the dropdown yet, for example ja-JP or id-ID.",
+            Title = "Target code",
+            Description = "Optional, e.g. ja-JP.",
             Default = settings.TemplateLocale,
             Placeholder = "th-TH",
             Finished = false,
@@ -653,8 +659,8 @@ do
         end
 
         localization:AddButton({
-            Title = "Install / update language pack",
-            Description = "Downloads JSON only; it never executes remote Lua.",
+            Title = "Install JSON",
+            Description = "Install the JSON above.",
             Callback = function()
                 local pack, importError = assets:ImportLanguage(settings.LanguagePackUrl)
                 if not pack then
@@ -673,8 +679,8 @@ do
         })
 
         localization:AddButton({
-            Title = "Export default JSON template",
-            Description = "Uses the optional locale above, or the selected UI language. The template is written to the executor folder and copied when supported.",
+            Title = "Export JSON",
+            Description = "Save a blank template.",
             Callback = function()
                 local targetLocale = settings.TemplateLocale:match("^%s*(.-)%s*$")
                 if targetLocale == "" then
@@ -697,8 +703,8 @@ do
         })
 
         installedPackDropdown = localization:AddDropdown("InterfaceInstalledLanguagePack", {
-            Title = "Installed language pack",
-            Description = "Select a saved pack to update or remove it.",
+            Title = "Saved pack",
+            Description = "Choose a pack.",
             Values = {"No installed language packs"},
             Default = "No installed language packs",
             Callback = function(value)
@@ -712,8 +718,8 @@ do
         refreshLanguagePacks(installedPackDropdown)
 
         localization:AddButton({
-            Title = "Update selected language pack",
-            Description = "Re-downloads the URL saved with that pack.",
+            Title = "Update pack",
+            Description = "Download it again.",
             Callback = function()
                 local pack, updateError = assets:UpdateLanguage(settings.LanguagePack)
                 if not pack then
@@ -726,8 +732,8 @@ do
         })
 
         localization:AddButton({
-            Title = "Remove selected language pack",
-            Description = "Removes it from the active registry; the executor may retain its file if delfile is unavailable.",
+            Title = "Remove pack",
+            Description = "Delete this pack.",
             Callback = function()
                 local removed, removeError = assets:RemoveLanguage(settings.LanguagePack)
                 if not removed then
@@ -741,10 +747,10 @@ do
             end
         })
 
-        local typography = tab:AddSection("Typography")
+        local typography = tab:AddSection("Fonts")
         typography:AddParagraph({
-            Title = "Font profiles",
-            Content = "Use a Roblox Font Family asset ID, direct TTF/OTF URL, Google Fonts specimen URL, ATG FontPack JSON, or a local executor file path. Local TTF/OTF loading is experimental and requires getcustomasset."
+            Title = "Font help",
+            Content = "Use ID, Google Fonts, or a font file."
         })
 
         local fontProfileDropdown
@@ -758,8 +764,8 @@ do
         end
 
         fontProfileDropdown = typography:AddDropdown("InterfaceFontProfile", {
-            Title = "Active font profile",
-            Description = "Font role is selected from the displayed text. Thai text uses Thai; other text uses Latin. A missing role keeps the script's original font.",
+            Title = "Active font",
+            Description = "Thai uses Thai; other text uses Latin.",
             Values = fonts:GetProfileOptions(),
             Default = profileDisplay(fonts, settings.FontProfile),
             Callback = function(value)
@@ -776,9 +782,9 @@ do
         pcall(refreshFontProfiles)
 
         typography:AddDropdown("InterfaceFontTarget", {
-            Title = "Install font for",
-            Description = "Choose the text role. If a custom profile is active, installing Latin and then Thai combines both fonts into that one profile.",
-            Values = {"Both (Latin + Thai)", "English / Latin only", "Thai only"},
+            Title = "Apply font to",
+            Description = "Choose the text to change.",
+            Values = {"Both", "Latin", "Thai"},
             Default = settings.FontTarget,
             Callback = function(value)
                 settings.FontTarget = value
@@ -787,10 +793,10 @@ do
         })
 
         typography:AddInput("InterfaceFontUrl", {
-            Title = "Font URL / Family asset ID",
-            Description = "Paste a Google Fonts link, direct TTF/OTF URL, Font Family asset ID, or an executor-local .ttf/.otf path. CSS, WOFF and WOFF2 cannot be used by Roblox FontFace.",
+            Title = "Font link / ID",
+            Description = "Paste an ID, link, or file.",
             Default = settings.FontUrl,
-            Placeholder = "https://fonts.google.com/specimen/Noto+Sans+Thai  |  fonts/MyThaiFont.ttf",
+            Placeholder = "Google Fonts link, Asset ID, or .ttf file",
             Finished = false,
             Callback = function(value)
                 settings.FontUrl = value
@@ -799,8 +805,8 @@ do
         })
 
         typography:AddButton({
-            Title = "Install and apply font",
-            Description = "Downloads assets once, stores their paths, and rebuilds the local Font Family after every Roblox session.",
+            Title = "Install font",
+            Description = "Install and use this font.",
             Callback = function()
                 local profile, installError = assets:ImportFont(settings.FontUrl, {
                     Target = FONT_TARGET_VALUES[settings.FontTarget] or "both",
@@ -818,8 +824,8 @@ do
         })
 
         typography:AddButton({
-            Title = "Use script default font",
-            Description = "Restores the original FontFace captured when each UI element was created.",
+            Title = "Default font",
+            Description = "Use the script font.",
             Callback = function()
                 settings.FontProfile = "default"
                 fonts:ApplyProfile("default")
@@ -830,8 +836,8 @@ do
         })
 
         typography:AddButton({
-            Title = "Remove selected font profile",
-            Description = "Removes the profile from the registry; font files may remain when delfile is unavailable.",
+            Title = "Remove font",
+            Description = "Remove this profile.",
             Callback = function()
                 local removed, removeError = assets:RemoveFont(settings.FontProfile)
                 if not removed then
