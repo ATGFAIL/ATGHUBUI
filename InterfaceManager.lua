@@ -507,6 +507,13 @@ do
         })
 
         library.CurrentLanguage = customization.I18n.CurrentLocale
+        -- Productivity data is scoped the same way as language/font packs.
+        -- This is optional so an older MainUI never breaks this manager.
+        if type(library.Workspace) == "table" and type(library.Workspace.Configure) == "function" then
+            pcall(library.Workspace.Configure, library.Workspace, {
+                ScriptId = self.Configuration.ScriptId
+            })
+        end
         if type(library.SetFloatingToggleConfig) == "function" then
             library:SetFloatingToggleConfig(settings.FloatingToggle and {} or false)
         end
