@@ -462,6 +462,2288 @@ do
 end
 -- ============================================================================
 
+--[[
+    User customization layer
+
+    This is intentionally kept outside the bundled Fluent modules below.  The
+    modules still use TranslationSystem:Register(), so the compatibility facade
+    at the end of this block lets old scripts opt into the new system without
+    changing their AddButton/AddToggle/etc. calls.
+
+    Remote input is treated as data only: language packs are JSON and font
+    downloads are saved as assets.  Nothing downloaded here is ever executed.
+]]
+local CustomizationSystem = {}
+do
+    local HttpService = game:GetService("HttpService")
+    local localizationOk, LocalizationService = pcall(function()
+        return game:GetService("LocalizationService")
+    end)
+
+    local function getExecutorGlobal(name)
+        local direct = {
+            request = request,
+            http_request = http_request,
+            httpget = httpget,
+            writefile = writefile,
+            readfile = readfile,
+            isfile = isfile,
+            isfolder = isfolder,
+            makefolder = makefolder,
+            listfiles = listfiles,
+            delfile = delfile,
+            getcustomasset = getcustomasset,
+            getsynasset = getsynasset,
+            setclipboard = setclipboard
+        }
+
+        if type(direct[name]) == "function" then
+            return direct[name]
+        end
+
+        if type(getgenv) == "function" then
+            local ok, environment = pcall(getgenv)
+            if ok and type(environment) == "table" and type(environment[name]) == "function" then
+                return environment[name]
+            end
+        end
+
+        if type(_G) == "table" and type(_G[name]) == "function" then
+            return _G[name]
+        end
+
+        return nil
+    end
+
+    local function trim(value)
+        if type(value) ~= "string" then
+            return ""
+        end
+        return value:match("^%s*(.-)%s*$") or ""
+    end
+
+    local function sanitizeSegment(value, fallback)
+        value = tostring(value or fallback or "default")
+        value = value:gsub("[^%w%-%._]", "_")
+        value = value:gsub("_+", "_")
+        value = value:sub(1, 80)
+        if value == "" or value == "." or value == ".." then
+            return fallback or "default"
+        end
+        return value
+    end
+
+    local function sanitizeRelativePath(value, fallback)
+        local parts = {}
+        value = tostring(value or ""):gsub("\\", "/")
+        for part in string.gmatch(value, "[^/]+") do
+            table.insert(parts, sanitizeSegment(part, "folder"))
+        end
+        if #parts == 0 then
+            return sanitizeSegment(fallback, "FluentSettings")
+        end
+        return table.concat(parts, "/")
+    end
+
+    local function joinPath(...)
+        local parts = {...}
+        return table.concat(parts, "/")
+    end
+
+    local function stableHash(value)
+        value = tostring(value or "")
+        local hash = 7
+        for index = 1, #value do
+            -- Kept below 2^53 so the result is stable on Luau doubles too.
+            hash = (hash * 131 + string.byte(value, index)) % 2147483647
+        end
+        return string.format("%08x", hash)
+    end
+
+    local function normalizeLocale(locale)
+        locale = tostring(locale or "en"):lower():gsub("_", "-")
+        locale = locale:gsub("%s+", "")
+        if locale == "" then
+            return "en"
+        end
+        return locale
+    end
+
+    local function localeBase(locale)
+        return normalizeLocale(locale):match("^[^-]+") or "en"
+    end
+
+    local function robloxLocale(locale)
+        local normalized = normalizeLocale(locale)
+        local aliases = {
+            en = "en-us",
+            th = "th-th",
+            vi = "vi-vn",
+            es = "es-es"
+        }
+        return aliases[normalized] or normalized
+    end
+
+    local function isTextObject(object)
+        local ok, result = pcall(function()
+            return object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")
+        end)
+        return ok and result
+    end
+
+    local nestedHttpRequest = type(http) == "table" and type(http.request) == "function" and http.request or nil
+    local synRequest = type(syn) == "table" and type(syn.request) == "function" and syn.request or nil
+    local synCustomAsset = type(syn) == "table" and type(syn.getcustomasset) == "function" and syn.getcustomasset or nil
+    local gameHttpGetOk, gameHttpGetAvailable = pcall(function()
+        return type(game.HttpGet) == "function"
+    end)
+
+    local Capabilities = {
+        Request = getExecutorGlobal("request") or getExecutorGlobal("http_request") or nestedHttpRequest or synRequest,
+        HttpGet = getExecutorGlobal("httpget"),
+        WriteFile = getExecutorGlobal("writefile"),
+        ReadFile = getExecutorGlobal("readfile"),
+        IsFile = getExecutorGlobal("isfile"),
+        IsFolder = getExecutorGlobal("isfolder"),
+        MakeFolder = getExecutorGlobal("makefolder"),
+        ListFiles = getExecutorGlobal("listfiles"),
+        DeleteFile = getExecutorGlobal("delfile"),
+        GetCustomAsset = getExecutorGlobal("getcustomasset") or getExecutorGlobal("getsynasset") or synCustomAsset,
+        GameHttpGet = gameHttpGetOk and gameHttpGetAvailable,
+        SetClipboard = getExecutorGlobal("setclipboard")
+    }
+
+    Capabilities.FileSystem = Capabilities.WriteFile ~= nil
+        and Capabilities.ReadFile ~= nil
+        and Capabilities.IsFile ~= nil
+        and Capabilities.IsFolder ~= nil
+        and Capabilities.MakeFolder ~= nil
+    Capabilities.CustomFonts = Capabilities.FileSystem and Capabilities.GetCustomAsset ~= nil
+    Capabilities.RemoteFetch = Capabilities.Request ~= nil or Capabilities.HttpGet ~= nil or Capabilities.GameHttpGet == true
+    Capabilities.MachineTranslation = Capabilities.Request ~= nil
+    Capabilities.RobloxTranslation = localizationOk and LocalizationService ~= nil
+
+    function Capabilities:Supports(feature)
+        return self[feature] == true or type(self[feature]) == "function"
+    end
+
+    local Storage = {
+        Root = "FluentSettings"
+    }
+
+    function Storage:SetRoot(folder)
+        self.Root = sanitizeRelativePath(folder, "FluentSettings")
+    end
+
+    function Storage:CanUseFiles()
+        return Capabilities.FileSystem
+    end
+
+    function Storage:Ensure(folder)
+        if not self:CanUseFiles() then
+            return false, "This executor does not expose a file system."
+        end
+
+        local current = ""
+        for segment in string.gmatch(folder, "[^/]+") do
+            current = current == "" and segment or joinPath(current, segment)
+            local exists, isFolder = pcall(Capabilities.IsFolder, current)
+            if not exists or not isFolder then
+                local created, err = pcall(Capabilities.MakeFolder, current)
+                if not created then
+                    return false, tostring(err)
+                end
+            end
+        end
+
+        return true
+    end
+
+    function Storage:Read(path)
+        if not self:CanUseFiles() then
+            return nil, "This executor does not expose a file system."
+        end
+        local exists, isFile = pcall(Capabilities.IsFile, path)
+        if not exists or not isFile then
+            return nil, "File not found."
+        end
+        local ok, contents = pcall(Capabilities.ReadFile, path)
+        if not ok then
+            return nil, tostring(contents)
+        end
+        return contents
+    end
+
+    function Storage:Write(path, contents)
+        if not self:CanUseFiles() then
+            return false, "This executor does not expose a file system."
+        end
+        local folder = path:match("^(.*)/[^/]+$")
+        if folder and folder ~= "" then
+            local ensured, ensureError = self:Ensure(folder)
+            if not ensured then
+                return false, ensureError
+            end
+        end
+        local ok, err = pcall(Capabilities.WriteFile, path, contents)
+        if not ok then
+            return false, tostring(err)
+        end
+        return true
+    end
+
+    function Storage:Delete(path)
+        if type(Capabilities.DeleteFile) ~= "function" then
+            return false, "This executor does not expose delfile."
+        end
+        local ok, err = pcall(Capabilities.DeleteFile, path)
+        return ok, ok and nil or tostring(err)
+    end
+
+    function Storage:List(folder)
+        if type(Capabilities.ListFiles) ~= "function" then
+            return {}
+        end
+        local ok, files = pcall(Capabilities.ListFiles, folder)
+        if not ok or type(files) ~= "table" then
+            return {}
+        end
+        return files
+    end
+
+    local function jsonEncode(data)
+        local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
+        if ok then
+            return encoded
+        end
+        return nil, tostring(encoded)
+    end
+
+    local function jsonDecode(data)
+        local ok, decoded = pcall(HttpService.JSONDecode, HttpService, data)
+        if ok and type(decoded) == "table" then
+            return decoded
+        end
+        return nil, ok and "JSON must decode to an object." or tostring(decoded)
+    end
+
+    local function normalizeRemoteUrl(url)
+        url = trim(url)
+        if url == "" then
+            return nil, "Enter a URL first."
+        end
+
+        local owner, repository, branchAndPath = url:match("^https://github%.com/([^/]+)/([^/]+)/blob/(.+)$")
+        if owner and repository and branchAndPath then
+            url = "https://raw.githubusercontent.com/" .. owner .. "/" .. repository .. "/" .. branchAndPath
+        end
+
+        if not url:match("^https://") then
+            return nil, "Only HTTPS URLs are accepted."
+        end
+
+        local host = (url:match("^https://([^/%?#:]+)") or ""):lower()
+        if host == "" or host == "localhost" or host:match("^127%.") or host:match("^10%.")
+            or host:match("^192%.168%.") or host:match("^172%.1[6-9]%.")
+            or host:match("^172%.2[0-9]%.") or host:match("^172%.3[0-1]%.") then
+            return nil, "Local-network URLs are not allowed."
+        end
+
+        return url
+    end
+
+    local function isLikelyJson(text)
+        text = trim(text)
+        return text:sub(1, 1) == "{" or text:sub(1, 1) == "["
+    end
+
+    local RemoteAssets = {
+        Enabled = true
+    }
+
+    function RemoteAssets:SetEnabled(enabled)
+        self.Enabled = enabled ~= false
+    end
+
+    function RemoteAssets:Fetch(url)
+        if not self.Enabled then
+            return nil, "Remote assets are disabled for this script by its InterfaceManager configuration."
+        end
+        local safeUrl, validationError = normalizeRemoteUrl(url)
+        if not safeUrl then
+            return nil, validationError
+        end
+
+        if type(Capabilities.Request) == "function" then
+            local ok, response = pcall(Capabilities.Request, {
+                Url = safeUrl,
+                Method = "GET",
+                Headers = {
+                    ["Accept"] = "application/json, text/plain, */*",
+                    ["User-Agent"] = "ATG-Fluent-Customization"
+                }
+            })
+            if ok then
+                if type(response) == "string" then
+                    return response, nil, safeUrl
+                end
+                if type(response) == "table" then
+                    local status = tonumber(response.StatusCode or response.Status or response.status_code or 200) or 0
+                    local body = response.Body or response.body
+                    local succeeded = response.Success
+                    if (succeeded == nil and status >= 200 and status < 300) or succeeded == true then
+                        if type(body) == "string" then
+                            return body, nil, safeUrl
+                        end
+                    end
+                    return nil, response.StatusMessage or response.StatusDescription or ("HTTP " .. tostring(status))
+                end
+            end
+        end
+
+        if type(Capabilities.HttpGet) == "function" then
+            local ok, body = pcall(Capabilities.HttpGet, safeUrl)
+            if ok and type(body) == "string" then
+                return body, nil, safeUrl
+            end
+        end
+
+        if Capabilities.GameHttpGet then
+            local ok, body = pcall(function()
+                return game:HttpGet(safeUrl)
+            end)
+            if ok and type(body) == "string" then
+                return body, nil, safeUrl
+            end
+        end
+
+        return nil, "No supported HTTP function is available in this executor."
+    end
+
+    local FontManager = {
+        Registry = setmetatable({}, {__mode = "k"}),
+        Profiles = {},
+        ProfileOrder = {},
+        CurrentProfile = "default",
+        LoadedRegistryPath = nil,
+        FaceCache = {},
+        LastError = nil
+    }
+
+    FontManager.Profiles.default = {
+        Id = "default",
+        Name = "Script default",
+        UseOriginal = true,
+        BuiltIn = true
+    }
+    FontManager.ProfileOrder[1] = "default"
+
+    local I18n = {
+        Registry = setmetatable({}, {__mode = "k"}),
+        Packs = {},
+        PackOrder = {},
+        MachineCache = {},
+        MachineCacheOrder = {},
+        MachinePending = {},
+        MachineQueue = {},
+        MachineActive = 0,
+        MachineMaxConcurrent = 2,
+        MachineRequestLimit = 80,
+        MachineRequests = 0,
+        RobloxCache = {},
+        RobloxCacheOrder = {},
+        RobloxPending = {},
+        RobloxTranslators = {},
+        RobloxTranslatorPending = {},
+        CurrentLocale = "en",
+        SourceLocale = "en",
+        Mode = "auto",
+        Enabled = true,
+        Scope = "shared",
+        Revision = 0,
+        LoadedScopePath = nil,
+        CacheLimit = 750,
+        AvailableLanguages = {
+            {code = "en", name = "English", flag = ""},
+            {code = "th", name = "Thai", flag = ""},
+            {code = "vi", name = "Vietnamese", flag = ""},
+            {code = "es", name = "Spanish", flag = ""}
+        }
+    }
+
+    local function getEntryKey(text, explicitKey)
+        if type(explicitKey) == "string" and explicitKey ~= "" then
+            return explicitKey
+        end
+        return "legacy." .. stableHash(text)
+    end
+
+    local function cacheTranslation(owner, cacheName, orderName, key, value)
+        local cache = owner[cacheName]
+        local order = owner[orderName]
+        if cache[key] == nil then
+            table.insert(order, key)
+        end
+        cache[key] = value
+        local limit = tonumber(owner.CacheLimit) or 750
+        while #order > limit do
+            local oldest = table.remove(order, 1)
+            cache[oldest] = nil
+        end
+    end
+
+    local function setEntryText(entry, text, expectedRevision)
+        if expectedRevision and expectedRevision ~= I18n.Revision then
+            return
+        end
+        if not entry or not entry.Object then
+            return
+        end
+        local changed = false
+        pcall(function()
+            if entry.Object[entry.Property] ~= text then
+                entry.Object[entry.Property] = text
+                changed = true
+            end
+        end)
+        if changed then
+            local fontEntry = FontManager.Registry[entry.Object]
+            if fontEntry then
+                FontManager:ApplyObject(fontEntry)
+            end
+        end
+    end
+
+    local function addKnownLocale(locale)
+        local normalized = normalizeLocale(locale)
+        for _, item in ipairs(I18n.AvailableLanguages) do
+            if normalizeLocale(item.code) == normalized then
+                return
+            end
+        end
+        table.insert(I18n.AvailableLanguages, {
+            code = normalized,
+            name = normalized,
+            flag = ""
+        })
+    end
+
+    local function normalizePack(data, fallbackId)
+        if type(data) ~= "table" then
+            return nil, "Language pack must be a JSON object."
+        end
+
+        local meta = type(data.meta) == "table" and data.meta or {}
+        local rawTranslations = data.translations or data.entries or data.messages
+        if type(rawTranslations) ~= "table" then
+            -- A compact source-key -> translation map is intentionally supported.
+            rawTranslations = data
+        end
+
+        local translations = {}
+        for key, value in pairs(rawTranslations) do
+            if type(key) == "string" then
+                local translated
+                if type(value) == "string" then
+                    translated = value
+                elseif type(value) == "table" then
+                    translated = value.translation or value.text or value.value
+                end
+                if type(translated) == "string" and translated ~= "" then
+                    translations[key] = translated
+                end
+            end
+        end
+
+        local locale = normalizeLocale(meta.locale or data.locale or data.language or "")
+        if locale == "en" and not (meta.locale or data.locale or data.language) then
+            return nil, "Language pack is missing meta.locale (for example th or th-TH)."
+        end
+
+        local packId = sanitizeSegment(meta.id or data.id or fallbackId or ("pack_" .. stableHash(locale .. tostring(data.name or ""))), "pack")
+        return {
+            Id = packId,
+            Name = tostring(meta.name or data.name or packId),
+            Locale = locale,
+            SourceLocale = normalizeLocale(meta.sourceLocale or data.sourceLocale or I18n.SourceLocale),
+            Version = tostring(meta.version or data.version or "1"),
+            Author = tostring(meta.author or data.author or ""),
+            Url = tostring(meta.url or data.url or ""),
+            Translations = translations,
+            Raw = data
+        }
+    end
+
+    function I18n:GetScopeFolder()
+        return joinPath(Storage.Root, "i18n", sanitizeSegment(self.Scope, "shared"))
+    end
+
+    function I18n:GetRegistryPath()
+        return joinPath(self:GetScopeFolder(), "registry.json")
+    end
+
+    function I18n:SaveRegistry()
+        if not Storage:CanUseFiles() then
+            return false, "This executor does not expose a file system."
+        end
+        local packs = {}
+        for _, id in ipairs(self.PackOrder) do
+            local pack = self.Packs[id]
+            if pack then
+                table.insert(packs, {
+                    id = pack.Id,
+                    name = pack.Name,
+                    locale = pack.Locale,
+                    sourceLocale = pack.SourceLocale,
+                    version = pack.Version,
+                    author = pack.Author,
+                    url = pack.Url,
+                    path = pack.Path
+                })
+            end
+        end
+        local encoded, encodeError = jsonEncode({
+            schema = "atg.i18n.registry.v1",
+            packs = packs
+        })
+        if not encoded then
+            return false, encodeError
+        end
+        return Storage:Write(self:GetRegistryPath(), encoded)
+    end
+
+    function I18n:LoadPacks()
+        local registryPath = self:GetRegistryPath()
+        if self.LoadedScopePath == registryPath then
+            return
+        end
+
+        self.Packs = {}
+        self.PackOrder = {}
+        self.LoadedScopePath = registryPath
+        if not Storage:CanUseFiles() then
+            return
+        end
+
+        local contents = Storage:Read(registryPath)
+        if not contents then
+            return
+        end
+        local registry = jsonDecode(contents)
+        if not registry or type(registry.packs) ~= "table" then
+            return
+        end
+
+        for _, saved in ipairs(registry.packs) do
+            if type(saved) == "table" and type(saved.path) == "string" then
+                local raw = Storage:Read(saved.path)
+                if raw then
+                    local decoded = jsonDecode(raw)
+                    local pack = decoded and normalizePack(decoded, saved.id)
+                    if pack then
+                        pack.Path = saved.path
+                        pack.Url = saved.url or pack.Url
+                        self.Packs[pack.Id] = pack
+                        table.insert(self.PackOrder, pack.Id)
+                        addKnownLocale(pack.Locale)
+                    end
+                end
+            end
+        end
+    end
+
+    function I18n:InstallPack(data, options)
+        options = options or {}
+        local pack, packError = normalizePack(data, options.Id)
+        if not pack then
+            return nil, packError
+        end
+
+        pack.Url = options.Url or pack.Url
+        local fileName = sanitizeSegment(pack.Locale, "locale") .. "." .. sanitizeSegment(pack.Id, "pack") .. ".json"
+        pack.Path = joinPath(self:GetScopeFolder(), fileName)
+        local shouldPersist = options.Persist ~= false
+
+        if shouldPersist and Storage:CanUseFiles() then
+            local encoded, encodeError = jsonEncode(data)
+            if not encoded then
+                return nil, encodeError
+            end
+            local written, writeError = Storage:Write(pack.Path, encoded)
+            if not written then
+                return nil, writeError
+            end
+        elseif not shouldPersist or not Storage:CanUseFiles() then
+            pack.Path = nil
+        end
+
+        local alreadyKnown = self.Packs[pack.Id] ~= nil
+        self.Packs[pack.Id] = pack
+        if not alreadyKnown then
+            table.insert(self.PackOrder, pack.Id)
+        end
+        addKnownLocale(pack.Locale)
+        if shouldPersist then
+            self:SaveRegistry()
+        end
+        self:AdvanceRevision()
+        self:UpdateAllText()
+        return pack
+    end
+
+    function I18n:RemovePack(packId)
+        packId = sanitizeSegment(packId, "")
+        local pack = self.Packs[packId]
+        if not pack then
+            return false, "Language pack was not found."
+        end
+        self.Packs[packId] = nil
+        for index = #self.PackOrder, 1, -1 do
+            if self.PackOrder[index] == packId then
+                table.remove(self.PackOrder, index)
+            end
+        end
+        if pack.Path then
+            Storage:Delete(pack.Path)
+        end
+        self:SaveRegistry()
+        self:AdvanceRevision()
+        self:UpdateAllText()
+        return true
+    end
+
+    function I18n:GetInstalledPacks()
+        local result = {}
+        for _, id in ipairs(self.PackOrder) do
+            local pack = self.Packs[id]
+            if pack then
+                table.insert(result, {
+                    Id = pack.Id,
+                    Name = pack.Name,
+                    Locale = pack.Locale,
+                    Version = pack.Version,
+                    Author = pack.Author,
+                    Url = pack.Url
+                })
+            end
+        end
+        return result
+    end
+
+    function I18n:GetManualTranslation(entry, locale)
+        local requested = normalizeLocale(locale)
+        local requestedBase = localeBase(requested)
+        for index = #self.PackOrder, 1, -1 do
+            local pack = self.Packs[self.PackOrder[index]]
+            if pack and (normalizeLocale(pack.Locale) == requested or localeBase(pack.Locale) == requestedBase) then
+                local translated = pack.Translations[entry.Key] or pack.Translations[entry.OriginalText]
+                if type(translated) == "string" and translated ~= "" then
+                    return translated, pack
+                end
+            end
+        end
+        return nil
+    end
+
+    function I18n:GetLanguageOptions()
+        local options = {}
+        for _, language in ipairs(self.AvailableLanguages) do
+            local prefix = language.flag ~= "" and (language.flag .. " ") or ""
+            table.insert(options, prefix .. language.name .. " (" .. language.code .. ")")
+        end
+        return options
+    end
+
+    function I18n:GetLanguageCode(value)
+        if type(value) == "number" then
+            local language = self.AvailableLanguages[value]
+            return language and language.code or self.SourceLocale
+        end
+        if type(value) == "string" then
+            local normalized = normalizeLocale(value)
+            for _, language in ipairs(self.AvailableLanguages) do
+                local display = ((language.flag ~= "" and language.flag .. " " or "") .. language.name .. " (" .. language.code .. ")")
+                if value == display or normalized == normalizeLocale(language.code) then
+                    return language.code
+                end
+            end
+            local code = value:match("%(([^%(%)]+)%)$")
+            if code then
+                normalized = normalizeLocale(code)
+            end
+            -- Permit a valid BCP-47-like locale before a pack has been
+            -- installed (for example th-TH, ja-JP, id-ID).
+            if normalized:match("^[a-z][a-z][a-z]?(-[a-z0-9]+)*$") then
+                return normalized
+            end
+        end
+        return self.SourceLocale
+    end
+
+    function I18n:GetLanguageIndex()
+        for index, language in ipairs(self.AvailableLanguages) do
+            if normalizeLocale(language.code) == normalizeLocale(self.CurrentLocale) then
+                return index
+            end
+        end
+        return 1
+    end
+
+    function I18n:AdvanceRevision()
+        self.Revision = self.Revision + 1
+        -- In-flight callbacks are intentionally retained: a request is keyed
+        -- by source+target text, so when the user switches away and back its
+        -- result is still valid. Clearing them here creates a race where an
+        -- old completion can consume callbacks from a newly queued same-key
+        -- request. Prune only jobs which have not started and target a locale
+        -- that is no longer current.
+        self.MachineRequests = 0
+        local retainedQueue = {}
+        for _, job in ipairs(self.MachineQueue) do
+            if job.SourceLocale == self.SourceLocale and job.TargetLocale == self.CurrentLocale then
+                table.insert(retainedQueue, job)
+            else
+                self.MachinePending[job.Key] = nil
+            end
+        end
+        self.MachineQueue = retainedQueue
+    end
+
+    function I18n:CancelPending()
+        -- Used only while unloading the whole UI. No future request can reuse
+        -- these callback lists, so releasing them immediately is safe.
+        self:AdvanceRevision()
+        self.MachineQueue = {}
+        self.MachinePending = {}
+        self.RobloxPending = {}
+        self.RobloxTranslatorPending = {}
+    end
+
+    function I18n:SetEnabled(enabled)
+        local nextEnabled = enabled ~= false
+        if self.Enabled == nextEnabled and TranslationSystem.Enabled == nextEnabled then
+            return
+        end
+        self.Enabled = nextEnabled
+        TranslationSystem.Enabled = self.Enabled
+        self:AdvanceRevision()
+        self:UpdateAllText()
+    end
+
+    function I18n:SetMode(mode)
+        local accepted = {
+            auto = true,
+            community = true,
+            roblox = true,
+            machine = true,
+            source = true
+        }
+        if not accepted[mode] then
+            mode = "auto"
+        end
+        if self.Mode == mode then
+            return
+        end
+        self.Mode = mode
+        self:AdvanceRevision()
+        self:UpdateAllText()
+    end
+
+    function I18n:SetLanguage(locale)
+        locale = self:GetLanguageCode(locale)
+        locale = normalizeLocale(locale)
+        addKnownLocale(locale)
+        if locale == self.CurrentLocale then
+            return
+        end
+        self.CurrentLocale = locale
+        self:AdvanceRevision()
+        TranslationSystem.CurrentLanguage = locale
+        if type(getgenv) == "function" then
+            local ok, environment = pcall(getgenv)
+            if ok and type(environment) == "table" and type(environment.Fluent) == "table" then
+                environment.Fluent.CurrentLanguage = locale
+            end
+        end
+        self:UpdateAllText()
+        FontManager:ApplyAll()
+    end
+
+    function I18n:SetScope(scope, sourceLocale)
+        local nextScope = sanitizeSegment(scope, "shared")
+        local nextSourceLocale = sourceLocale and normalizeLocale(sourceLocale) or self.SourceLocale
+        local scopeChanged = nextScope ~= self.Scope
+        local sourceChanged = nextSourceLocale ~= self.SourceLocale
+        if not scopeChanged and not sourceChanged then
+            self:LoadPacks()
+            return
+        end
+        self.Scope = nextScope
+        if sourceLocale then
+            self.SourceLocale = nextSourceLocale
+            TranslationSystem.SourceLanguage = self.SourceLocale
+        end
+        self.LoadedScopePath = nil
+        self:LoadPacks()
+        self:AdvanceRevision()
+        self:UpdateAllText()
+    end
+
+    function I18n:Register(textObject, originalText, propertyName, options)
+        if not textObject or type(originalText) ~= "string" then
+            return nil
+        end
+        options = type(options) == "table" and options or {}
+        propertyName = propertyName or "Text"
+        local entry = {
+            Object = textObject,
+            OriginalText = originalText,
+            Property = propertyName,
+            Key = getEntryKey(originalText, options.Key),
+            Context = options.Context or "",
+            Skip = options.Skip == true
+        }
+        self.Registry[textObject] = entry
+        FontManager:Track(textObject, options.FontRole)
+        self:ApplyEntry(entry)
+        return textObject
+    end
+
+    function I18n:AutoRegister(textObject, properties)
+        if not isTextObject(textObject) then
+            return
+        end
+        properties = properties or {}
+        if properties.I18nSkip or type(properties.Text) ~= "string" or properties.Text == "" then
+            FontManager:Track(textObject, properties.FontRole)
+            return
+        end
+        self:Register(textObject, properties.Text, "Text", {
+            Key = properties.I18nKey,
+            Context = properties.I18nContext,
+            FontRole = properties.FontRole
+        })
+    end
+
+    function I18n:WithRobloxTranslator(locale, callback)
+        if not localizationOk or not LocalizationService then
+            callback(nil)
+            return
+        end
+
+        locale = robloxLocale(locale)
+        if self.RobloxTranslators[locale] ~= nil then
+            callback(self.RobloxTranslators[locale] or nil)
+            return
+        end
+
+        local waiting = self.RobloxTranslatorPending[locale]
+        if waiting then
+            table.insert(waiting, callback)
+            return
+        end
+
+        self.RobloxTranslatorPending[locale] = {callback}
+        task.spawn(function()
+            local translator
+            local gotTranslator = pcall(function()
+                translator = LocalizationService:GetTranslatorForLocaleAsync(locale)
+            end)
+            self.RobloxTranslators[locale] = gotTranslator and translator or false
+            local callbacks = self.RobloxTranslatorPending[locale] or {}
+            self.RobloxTranslatorPending[locale] = nil
+            for _, waitingCallback in ipairs(callbacks) do
+                waitingCallback(gotTranslator and translator or nil)
+            end
+        end)
+    end
+
+    function I18n:TryRoblox(entry, revision, callback)
+        if not localizationOk or not LocalizationService then
+            callback(nil)
+            return
+        end
+
+        local locale = self.CurrentLocale
+        local cacheKey = normalizeLocale(locale) .. "|" .. entry.OriginalText
+        if self.RobloxCache[cacheKey] then
+            callback(self.RobloxCache[cacheKey])
+            return
+        end
+
+        local waiting = self.RobloxPending[cacheKey]
+        if waiting then
+            table.insert(waiting, callback)
+            return
+        end
+        self.RobloxPending[cacheKey] = {callback}
+
+        self:WithRobloxTranslator(locale, function(translator)
+            task.spawn(function()
+                local translated
+                if translator then
+                    local ok, result = pcall(function()
+                        return translator:Translate(entry.Object, entry.OriginalText)
+                    end)
+                    if ok and type(result) == "string" and result ~= "" and result ~= entry.OriginalText then
+                        translated = result
+                        cacheTranslation(self, "RobloxCache", "RobloxCacheOrder", cacheKey, result)
+                    end
+                end
+                local callbacks = self.RobloxPending[cacheKey] or {}
+                self.RobloxPending[cacheKey] = nil
+                for _, waitingCallback in ipairs(callbacks) do
+                    waitingCallback(translated)
+                end
+            end)
+        end)
+    end
+
+    function I18n:DrainMachineQueue()
+        while self.MachineActive < self.MachineMaxConcurrent and #self.MachineQueue > 0 do
+            local job = table.remove(self.MachineQueue, 1)
+            self.MachineActive = self.MachineActive + 1
+            task.spawn(function()
+                local translated
+                local body = jsonEncode({
+                    q = job.Text,
+                    source = job.SourceLocale,
+                    target = job.TargetLocale
+                })
+                if body then
+                    local ok, response = pcall(Capabilities.Request, {
+                        Url = job.Endpoint:gsub("/$", "") .. "/translate",
+                        Method = "POST",
+                        Headers = {["Content-Type"] = "application/json"},
+                        Body = body
+                    })
+                    local rawResponse
+                    if ok and type(response) == "string" then
+                        rawResponse = response
+                    elseif ok and type(response) == "table" and response.Success ~= false then
+                        rawResponse = response.Body or response.body
+                    end
+                    local decoded = type(rawResponse) == "string" and jsonDecode(rawResponse)
+                    local result = decoded and decoded.translatedText
+                    if type(result) == "string" and result ~= "" then
+                        translated = result
+                        cacheTranslation(self, "MachineCache", "MachineCacheOrder", job.Key, result)
+                    end
+                end
+
+                local callbacks = self.MachinePending[job.Key] or {}
+                self.MachinePending[job.Key] = nil
+                self.MachineActive = math.max(0, self.MachineActive - 1)
+                for _, waitingCallback in ipairs(callbacks) do
+                    waitingCallback(translated)
+                end
+                self:DrainMachineQueue()
+            end)
+        end
+    end
+
+    function I18n:TryMachine(entry, revision, callback)
+        local endpoint = TranslationSystem.API_URL
+        if type(Capabilities.Request) ~= "function" or type(endpoint) ~= "string" or endpoint == "" then
+            callback(nil)
+            return
+        end
+
+        local cacheKey = self.SourceLocale .. "|" .. self.CurrentLocale .. "|" .. entry.OriginalText
+        if self.MachineCache[cacheKey] then
+            callback(self.MachineCache[cacheKey])
+            return
+        end
+
+        local waiting = self.MachinePending[cacheKey]
+        if waiting then
+            table.insert(waiting, callback)
+            return
+        end
+        if self.MachineRequests >= self.MachineRequestLimit then
+            callback(nil)
+            return
+        end
+
+        self.MachineRequests = self.MachineRequests + 1
+        self.MachinePending[cacheKey] = {callback}
+        table.insert(self.MachineQueue, {
+            Key = cacheKey,
+            Text = entry.OriginalText,
+            SourceLocale = self.SourceLocale,
+            TargetLocale = self.CurrentLocale,
+            Endpoint = endpoint
+        })
+        self:DrainMachineQueue()
+    end
+
+    function I18n:ApplyEntry(entry)
+        if not entry or entry.Skip then
+            return
+        end
+
+        local revision = self.Revision
+        local source = entry.OriginalText
+        if not self.Enabled or TranslationSystem.Enabled == false or self.Mode == "source"
+            or localeBase(self.CurrentLocale) == localeBase(self.SourceLocale) then
+            setEntryText(entry, source, revision)
+            return
+        end
+
+        local manual = self:GetManualTranslation(entry, self.CurrentLocale)
+        if manual then
+            setEntryText(entry, manual, revision)
+            return
+        end
+
+        setEntryText(entry, source, revision)
+        if self.Mode == "community" then
+            return
+        end
+
+        local tryMachine = self.Mode == "machine" or self.Mode == "auto"
+        local tryRoblox = self.Mode == "roblox" or self.Mode == "auto"
+        local function afterRoblox(translated)
+            if revision ~= self.Revision then
+                return
+            end
+            if translated then
+                setEntryText(entry, translated, revision)
+            elseif tryMachine then
+                self:TryMachine(entry, revision, function(machineTranslated)
+                    if machineTranslated then
+                        setEntryText(entry, machineTranslated, revision)
+                    end
+                end)
+            end
+        end
+
+        if tryRoblox then
+            self:TryRoblox(entry, revision, afterRoblox)
+        elseif tryMachine then
+            self:TryMachine(entry, revision, function(machineTranslated)
+                if machineTranslated then
+                    setEntryText(entry, machineTranslated, revision)
+                end
+            end)
+        end
+    end
+
+    function I18n:UpdateText(textObject)
+        local entry = self.Registry[textObject]
+        if entry then
+            self:ApplyEntry(entry)
+        end
+    end
+
+    function I18n:UpdateAllText()
+        for textObject, entry in pairs(self.Registry) do
+            if textObject and textObject.Parent then
+                self:ApplyEntry(entry)
+            else
+                self.Registry[textObject] = nil
+            end
+        end
+    end
+
+    function I18n:ClearRegistry()
+        for textObject in pairs(self.Registry) do
+            self.Registry[textObject] = nil
+        end
+    end
+
+    function I18n:TranslateText(text, targetLocale, callback)
+        local sourceText = tostring(text or "")
+        targetLocale = normalizeLocale(targetLocale or self.CurrentLocale)
+        if not self.Enabled or TranslationSystem.Enabled == false or sourceText == ""
+            or localeBase(targetLocale) == localeBase(self.SourceLocale) then
+            if callback then
+                callback(sourceText)
+            end
+            return sourceText
+        end
+
+        -- Keep old executor translator behavior safe around emoji strings.
+        -- (Thai UTF-8 begins below 240, while normal emoji uses 4-byte UTF-8.)
+        for index = 1, #sourceText do
+            if string.byte(sourceText, index) >= 240 then
+                if callback then
+                    callback(sourceText)
+                end
+                return sourceText
+            end
+        end
+
+        local entry = {
+            OriginalText = sourceText,
+            Key = getEntryKey(sourceText),
+            Property = "Text"
+        }
+        local manual = self:GetManualTranslation(entry, targetLocale)
+        if manual then
+            if callback then
+                callback(manual)
+            end
+            return manual
+        end
+
+        local endpoint = TranslationSystem.API_URL
+        local cacheKey = self.SourceLocale .. "|" .. targetLocale .. "|" .. sourceText
+        if self.MachineCache[cacheKey] then
+            if callback then
+                callback(self.MachineCache[cacheKey])
+            end
+            return self.MachineCache[cacheKey]
+        end
+        if type(Capabilities.Request) ~= "function" or type(endpoint) ~= "string" or endpoint == "" then
+            if callback then
+                callback(sourceText)
+            end
+            return sourceText
+        end
+
+        task.spawn(function()
+            local translated
+            local body = jsonEncode({
+                q = sourceText,
+                source = self.SourceLocale,
+                target = targetLocale
+            })
+            if body then
+                local ok, response = pcall(Capabilities.Request, {
+                    Url = endpoint:gsub("/$", "") .. "/translate",
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = body
+                })
+                local rawResponse
+                if ok and type(response) == "string" then
+                    rawResponse = response
+                elseif ok and type(response) == "table" and response.Success ~= false then
+                    rawResponse = response.Body or response.body
+                end
+                local decoded = type(rawResponse) == "string" and jsonDecode(rawResponse)
+                if decoded and type(decoded.translatedText) == "string" and decoded.translatedText ~= "" then
+                    translated = decoded.translatedText
+                    cacheTranslation(self, "MachineCache", "MachineCacheOrder", cacheKey, translated)
+                end
+            end
+            if callback then
+                callback(translated or sourceText)
+            end
+        end)
+        return sourceText
+    end
+
+    function I18n:BuildDefaultPack(targetLocale)
+        local entries = {}
+        local normalizedTargetLocale = normalizeLocale(targetLocale or self.CurrentLocale)
+        for textObject, entry in pairs(self.Registry) do
+            if textObject and entry and entry.OriginalText ~= "" then
+                entries[entry.Key] = {
+                    source = entry.OriginalText,
+                    context = entry.Context,
+                    translation = ""
+                }
+            end
+        end
+        return {
+            schema = "atg.i18n.v1",
+            meta = {
+                id = sanitizeSegment(self.Scope, "script") .. "-" .. sanitizeSegment(normalizedTargetLocale, "locale") .. "-template",
+                name = "Translation template",
+                locale = normalizedTargetLocale,
+                sourceLocale = self.SourceLocale,
+                generatedBy = "ATG Fluent"
+            },
+            entries = entries
+        }
+    end
+
+    function I18n:ExportDefaultPack(targetLocale)
+        local pack = self:BuildDefaultPack(targetLocale)
+        return jsonEncode(pack), pack
+    end
+
+    function RemoteAssets:ImportLanguage(source, options)
+        options = options or {}
+        local raw = source
+        local sourceUrl
+        if not isLikelyJson(raw) then
+            local localFileExists = false
+            if Capabilities.FileSystem and type(source) == "string" then
+                local checked, exists = pcall(Capabilities.IsFile, source)
+                localFileExists = checked and exists
+            end
+            if localFileExists then
+                local readError
+                raw, readError = Storage:Read(source)
+                if not raw then
+                    return nil, readError
+                end
+            else
+                local fetchError
+                raw, fetchError, sourceUrl = self:Fetch(source)
+                if not raw then
+                    return nil, fetchError
+                end
+            end
+        end
+        if type(raw) ~= "string" then
+            return nil, "Language data must be JSON text, a local JSON file, or an HTTPS URL."
+        end
+        if #raw > 1500000 then
+            return nil, "Language pack is larger than 1.5 MB."
+        end
+        local decoded, decodeError = jsonDecode(raw)
+        if not decoded then
+            return nil, decodeError
+        end
+        return I18n:InstallPack(decoded, {
+            Id = options.Id,
+            Url = sourceUrl or options.Url,
+            Persist = options.Persist
+        })
+    end
+
+    function RemoteAssets:ExportDefaultLanguagePack(targetLocale)
+        local encoded, pack = I18n:ExportDefaultPack(targetLocale)
+        if not encoded then
+            return nil, pack
+        end
+        local path
+        if Storage:CanUseFiles() then
+            path = joinPath(
+                I18n:GetScopeFolder(),
+                "exports",
+                sanitizeSegment(I18n.Scope, "script") .. "." .. sanitizeSegment(pack.meta.locale, "locale") .. ".template.json"
+            )
+            local written, writeError = Storage:Write(path, encoded)
+            if not written then
+                return nil, writeError
+            end
+        end
+        local copied = false
+        if type(Capabilities.SetClipboard) == "function" then
+            copied = pcall(Capabilities.SetClipboard, encoded)
+        end
+        return {
+            Path = path,
+            Json = encoded,
+            Pack = pack,
+            Copied = copied
+        }
+    end
+
+    function RemoteAssets:UpdateLanguage(packId)
+        local pack = I18n.Packs[packId]
+        if not pack or type(pack.Url) ~= "string" or pack.Url == "" then
+            return nil, "This language pack has no saved remote URL."
+        end
+        return self:ImportLanguage(pack.Url, {Id = pack.Id})
+    end
+
+    local function enumWeight(value)
+        if typeof(value) == "EnumItem" then
+            return value
+        end
+        if type(value) == "number" then
+            local numericWeights = {
+                [100] = Enum.FontWeight.Thin,
+                [200] = Enum.FontWeight.ExtraLight,
+                [300] = Enum.FontWeight.Light,
+                [400] = Enum.FontWeight.Regular,
+                [500] = Enum.FontWeight.Medium,
+                [600] = Enum.FontWeight.SemiBold,
+                [700] = Enum.FontWeight.Bold,
+                [800] = Enum.FontWeight.ExtraBold,
+                [900] = Enum.FontWeight.Heavy
+            }
+            return numericWeights[value] or Enum.FontWeight.Regular
+        end
+        if type(value) == "string" and Enum.FontWeight[value] then
+            return Enum.FontWeight[value]
+        end
+        return Enum.FontWeight.Regular
+    end
+
+    local function enumStyle(value)
+        if typeof(value) == "EnumItem" then
+            return value
+        end
+        if type(value) == "string" and Enum.FontStyle[value] then
+            return Enum.FontStyle[value]
+        end
+        return Enum.FontStyle.Normal
+    end
+
+    local function textContainsThai(text)
+        if type(text) ~= "string" or text == "" then
+            return false
+        end
+        local found = false
+        local ok = pcall(function()
+            for _, codepoint in utf8.codes(text) do
+                if codepoint >= 0x0E00 and codepoint <= 0x0E7F then
+                    found = true
+                    break
+                end
+            end
+        end)
+        if ok then
+            return found
+        end
+        -- Fallback for uncommon environments without utf8.codes.
+        return text:find(string.char(224) .. "[\184-\185]") ~= nil
+    end
+
+    local function fontRoleForText(role, text)
+        role = type(role) == "string" and role:lower() or "auto"
+        if role == "latin" or role == "english" then
+            return "Latin"
+        end
+        if role == "thai" then
+            return "Thai"
+        end
+        if textContainsThai(text) then
+            return "Thai"
+        end
+        return localeBase(I18n.CurrentLocale) == "th" and "Thai" or "Latin"
+    end
+
+    function FontManager:GetFolder()
+        return joinPath(Storage.Root, "fonts")
+    end
+
+    function FontManager:GetRegistryPath()
+        return joinPath(self:GetFolder(), "registry.json")
+    end
+
+    function FontManager:SaveProfiles()
+        if not Storage:CanUseFiles() then
+            return false, "This executor does not expose a file system."
+        end
+
+        local function copyForStorage(value)
+            if type(value) ~= "table" then
+                return value
+            end
+            local copy = {}
+            for key, nestedValue in pairs(value) do
+                -- RuntimeFamily is a getcustomasset URI and becomes invalid
+                -- after restart. Persist only the original local file paths.
+                if key ~= "RuntimeFamily" then
+                    copy[key] = copyForStorage(nestedValue)
+                end
+            end
+            return copy
+        end
+
+        local profiles = {}
+        for _, id in ipairs(self.ProfileOrder) do
+            local profile = self.Profiles[id]
+            if profile and not profile.BuiltIn then
+                table.insert(profiles, copyForStorage(profile))
+            end
+        end
+        local encoded, encodeError = jsonEncode({
+            schema = "atg.font.registry.v1",
+            profiles = profiles
+        })
+        if not encoded then
+            return false, encodeError
+        end
+        return Storage:Write(self:GetRegistryPath(), encoded)
+    end
+
+    function FontManager:LoadProfiles()
+        local registryPath = self:GetRegistryPath()
+        if self.LoadedRegistryPath == registryPath then
+            return
+        end
+        self.LoadedRegistryPath = registryPath
+
+        local defaultProfile = self.Profiles.default
+        self.Profiles = {default = defaultProfile}
+        self.ProfileOrder = {"default"}
+        self.FaceCache = {}
+        if not Storage:CanUseFiles() then
+            return
+        end
+
+        local contents = Storage:Read(registryPath)
+        local decoded = contents and jsonDecode(contents)
+        if not decoded or type(decoded.profiles) ~= "table" then
+            return
+        end
+        for _, profile in ipairs(decoded.profiles) do
+            if type(profile) == "table" and type(profile.Id) == "string" and type(profile.Roles) == "table" then
+                profile.Id = sanitizeSegment(profile.Id, "font")
+                -- getcustomasset returns a session-local URI. Never trust a
+                -- serialized one; rebuild the Font Family from saved files.
+                for _, role in pairs(profile.Roles) do
+                    if type(role) == "table" then
+                        role.RuntimeFamily = nil
+                    end
+                end
+                self.Profiles[profile.Id] = profile
+                table.insert(self.ProfileOrder, profile.Id)
+            end
+        end
+    end
+
+    function FontManager:GetProfileOptions()
+        local options = {}
+        for _, id in ipairs(self.ProfileOrder) do
+            local profile = self.Profiles[id]
+            if profile then
+                table.insert(options, profile.Name .. " [" .. profile.Id .. "]")
+            end
+        end
+        return options
+    end
+
+    function FontManager:GetProfileId(value)
+        if type(value) == "number" then
+            return self.ProfileOrder[value] or "default"
+        end
+        if type(value) == "string" then
+            if self.Profiles[value] then
+                return value
+            end
+            local id = value:match("%[([^%[%]]+)%]$")
+            if id and self.Profiles[id] then
+                return id
+            end
+        end
+        return "default"
+    end
+
+    function FontManager:GetProfiles()
+        local result = {}
+        for _, id in ipairs(self.ProfileOrder) do
+            local profile = self.Profiles[id]
+            if profile then
+                table.insert(result, {
+                    Id = profile.Id,
+                    Name = profile.Name,
+                    BuiltIn = profile.BuiltIn == true
+                })
+            end
+        end
+        return result
+    end
+
+    function FontManager:ResolveLocalFamily(profile, roleName, role)
+        if type(role) ~= "table" then
+            return nil, "Font role is invalid."
+        end
+        if type(role.AssetId) == "string" and role.AssetId ~= "" then
+            return role.AssetId
+        end
+        if type(role.RuntimeFamily) == "string" and role.RuntimeFamily ~= "" then
+            return role.RuntimeFamily
+        end
+        if type(role.Faces) ~= "table" or #role.Faces == 0 then
+            return nil, "No font face is installed for this role."
+        end
+        if type(Capabilities.GetCustomAsset) ~= "function" then
+            return nil, "This executor does not support getcustomasset."
+        end
+
+        local faces = {}
+        for _, face in ipairs(role.Faces) do
+            if type(face) == "table" and type(face.Path) == "string" then
+                local exists, isFile = pcall(Capabilities.IsFile, face.Path)
+                if exists and isFile then
+                    local ok, assetId = pcall(Capabilities.GetCustomAsset, face.Path)
+                    if ok and type(assetId) == "string" and assetId ~= "" then
+                        table.insert(faces, {
+                            name = tostring(face.Name or "Regular"),
+                            weight = tonumber(face.Weight) or 400,
+                            style = tostring(face.Style or "normal"):lower(),
+                            assetId = assetId
+                        })
+                    end
+                end
+            end
+        end
+        if #faces == 0 then
+            return nil, "The downloaded font files are no longer available."
+        end
+
+        local familyPath = joinPath(self:GetFolder(), sanitizeSegment(profile.Id, "font"), "runtime-" .. roleName:lower() .. ".fontfamily.json")
+        local familyJson, encodeError = jsonEncode({
+            name = profile.Name .. " " .. roleName,
+            faces = faces
+        })
+        if not familyJson then
+            return nil, encodeError
+        end
+        local written, writeError = Storage:Write(familyPath, familyJson)
+        if not written then
+            return nil, writeError
+        end
+        local ok, familyAsset = pcall(Capabilities.GetCustomAsset, familyPath)
+        if not ok or type(familyAsset) ~= "string" or familyAsset == "" then
+            return nil, ok and "getcustomasset did not return a Font Family asset." or tostring(familyAsset)
+        end
+        role.RuntimeFamily = familyAsset
+        return familyAsset
+    end
+
+    local function enumNumericWeight(weight)
+        local value = 400
+        pcall(function()
+            value = weight.Value
+        end)
+        return tonumber(value) or 400
+    end
+
+    local function chooseInstalledFace(role, desiredWeight, desiredStyle)
+        if type(role) ~= "table" or type(role.Faces) ~= "table" or #role.Faces == 0 then
+            return desiredWeight, desiredStyle
+        end
+        local desiredNumber = enumNumericWeight(desiredWeight)
+        local bestFace
+        local bestScore
+        for _, face in ipairs(role.Faces) do
+            if type(face) == "table" then
+                local faceWeight = tonumber(face.Weight) or 400
+                local faceStyle = enumStyle(face.Style)
+                local stylePenalty = faceStyle == desiredStyle and 0 or 10000
+                local score = stylePenalty + math.abs(faceWeight - desiredNumber)
+                if not bestScore or score < bestScore then
+                    bestFace = face
+                    bestScore = score
+                end
+            end
+        end
+        if bestFace then
+            return enumWeight(bestFace.Weight), enumStyle(bestFace.Style)
+        end
+        return desiredWeight, desiredStyle
+    end
+
+    function FontManager:BuildFace(profile, roleName, originalFace)
+        if not profile or profile.UseOriginal then
+            return originalFace
+        end
+        local role = profile.Roles and profile.Roles[roleName]
+        -- A partial profile is useful: a user can install a Latin font first,
+        -- then add a Thai font later. Until then, leave the missing script in
+        -- the UI's original FontFace instead of silently applying Latin to it.
+        if not role then
+            return originalFace
+        end
+        local family, familyError = self:ResolveLocalFamily(profile, roleName, role)
+        if not family then
+            return nil, familyError
+        end
+
+        local weight = role and enumWeight(role.Weight) or Enum.FontWeight.Regular
+        local style = role and enumStyle(role.Style) or Enum.FontStyle.Normal
+        if originalFace then
+            pcall(function()
+                weight = originalFace.Weight
+                style = originalFace.Style
+            end)
+        end
+        -- A downloaded TTF often contains only Regular. Select the closest
+        -- installed face instead of requesting an unavailable Bold/SemiBold.
+        weight, style = chooseInstalledFace(role, weight, style)
+        local cacheKey = table.concat({
+            tostring(profile.Id),
+            tostring(roleName),
+            tostring(family),
+            tostring(enumNumericWeight(weight)),
+            tostring(style)
+        }, "|")
+        if self.FaceCache[cacheKey] then
+            return self.FaceCache[cacheKey]
+        end
+        local ok, face = pcall(Font.new, family, weight, style)
+        if not ok then
+            return nil, tostring(face)
+        end
+        self.FaceCache[cacheKey] = face
+        return face
+    end
+
+    function FontManager:Track(textObject, role)
+        if not isTextObject(textObject) then
+            return
+        end
+        local entry = self.Registry[textObject]
+        if not entry then
+            local originalFace
+            pcall(function()
+                originalFace = textObject.FontFace
+            end)
+            entry = {
+                Object = textObject,
+                OriginalFace = originalFace,
+                Role = role
+            }
+            self.Registry[textObject] = entry
+            -- Weak keys alone are not enough because the value also refers to
+            -- the instance. Explicit cleanup keeps virtualized dropdown rows
+            -- and notifications from accumulating during long sessions.
+            pcall(function()
+                entry.Cleanup = textObject.Destroying:Connect(function()
+                    self.Registry[textObject] = nil
+                    I18n.Registry[textObject] = nil
+                end)
+            end)
+        elseif role then
+            entry.Role = role
+        end
+        -- A new object already has its script FontFace. Avoid assigning that
+        -- same value again unless a custom profile is active.
+        if self.CurrentProfile ~= "default" then
+            self:ApplyObject(entry)
+        end
+    end
+
+    function FontManager:ApplyObject(entry)
+        if not entry or not entry.Object then
+            return
+        end
+        local profile = self.Profiles[self.CurrentProfile] or self.Profiles.default
+        local displayedText = ""
+        pcall(function()
+            displayedText = entry.Object.Text
+        end)
+        local face, faceError = self:BuildFace(profile, fontRoleForText(entry.Role, displayedText), entry.OriginalFace)
+        if face then
+            pcall(function()
+                entry.Object.FontFace = face
+            end)
+        elseif profile and profile.UseOriginal and entry.OriginalFace then
+            pcall(function()
+                entry.Object.FontFace = entry.OriginalFace
+            end)
+        elseif faceError then
+            entry.LastError = faceError
+        end
+    end
+
+    function FontManager:ApplyAll()
+        for textObject, entry in pairs(self.Registry) do
+            if textObject and textObject.Parent then
+                self:ApplyObject(entry)
+            else
+                if entry.Cleanup then
+                    pcall(function()
+                        entry.Cleanup:Disconnect()
+                    end)
+                end
+                self.Registry[textObject] = nil
+            end
+        end
+    end
+
+    function FontManager:ClearRegistry()
+        for textObject, entry in pairs(self.Registry) do
+            if entry.Cleanup then
+                pcall(function()
+                    entry.Cleanup:Disconnect()
+                end)
+            end
+            self.Registry[textObject] = nil
+        end
+    end
+
+    function FontManager:RegisterProfile(profile, shouldPersist)
+        if type(profile) ~= "table" or type(profile.Roles) ~= "table" then
+            return nil, "Invalid font profile."
+        end
+        profile.Id = sanitizeSegment(profile.Id or ("font_" .. stableHash(profile.Name)), "font")
+        profile.Name = tostring(profile.Name or profile.Id)
+        local previousProfile = self.Profiles[profile.Id]
+        local exists = previousProfile ~= nil
+        self.Profiles[profile.Id] = profile
+        self.FaceCache = {}
+        if not exists then
+            table.insert(self.ProfileOrder, profile.Id)
+        end
+        if shouldPersist ~= false then
+            local saved, saveError = self:SaveProfiles()
+            if not saved and Storage:CanUseFiles() then
+                self.Profiles[profile.Id] = previousProfile
+                if not exists then
+                    for index = #self.ProfileOrder, 1, -1 do
+                        if self.ProfileOrder[index] == profile.Id then
+                            table.remove(self.ProfileOrder, index)
+                            break
+                        end
+                    end
+                end
+                self.FaceCache = {}
+                return nil, saveError
+            end
+        end
+        return profile
+    end
+
+    function FontManager:ValidateProfile(profile)
+        if not profile or profile.UseOriginal then
+            return true
+        end
+        local validatedRoles = {}
+        local foundRole = false
+        for roleName, role in pairs(profile.Roles or {}) do
+            if type(role) == "table" and not validatedRoles[role] then
+                foundRole = true
+                validatedRoles[role] = true
+                local family, familyError = self:ResolveLocalFamily(profile, roleName, role)
+                if not family then
+                    return false, familyError
+                end
+                local ok, fontError = pcall(Font.new, family, enumWeight(role.Weight), enumStyle(role.Style))
+                if not ok then
+                    return false, tostring(fontError)
+                end
+            end
+        end
+        if not foundRole then
+            return false, "The font profile has no installed roles."
+        end
+        return true
+    end
+
+    function FontManager:ApplyProfile(profileId)
+        profileId = self:GetProfileId(profileId)
+        local profile = self.Profiles[profileId]
+        if not profile then
+            self.LastError = "Font profile was not found."
+            return false, "Font profile was not found."
+        end
+        local valid, validationError = self:ValidateProfile(profile)
+        if not valid then
+            self.LastError = "This executor cannot use this font profile: " .. tostring(validationError)
+            return false, self.LastError
+        end
+        self.LastError = nil
+        self.CurrentProfile = profileId
+        self:ApplyAll()
+        return true
+    end
+
+    function FontManager:RemoveProfile(profileId)
+        profileId = self:GetProfileId(profileId)
+        if profileId == "default" then
+            return false, "The default font profile cannot be removed."
+        end
+        if not self.Profiles[profileId] then
+            return false, "Font profile was not found."
+        end
+        self.Profiles[profileId] = nil
+        self.FaceCache = {}
+        for index = #self.ProfileOrder, 1, -1 do
+            if self.ProfileOrder[index] == profileId then
+                table.remove(self.ProfileOrder, index)
+            end
+        end
+        if self.CurrentProfile == profileId then
+            self.CurrentProfile = "default"
+            self:ApplyAll()
+        end
+        self:SaveProfiles()
+        return true
+    end
+
+    local function urlDecode(value)
+        return (value:gsub("%%(%x%x)", function(hex)
+            return string.char(tonumber(hex, 16))
+        end))
+    end
+
+    local function fileExtension(url)
+        local clean = tostring(url):match("^([^%?#]+)") or tostring(url)
+        return (clean:match("%.([%a%d]+)$") or ""):lower()
+    end
+
+    local function chooseGoogleFontFile(listing)
+        if type(listing) ~= "table" then
+            return nil
+        end
+        local candidate
+        for _, item in ipairs(listing) do
+            if type(item) == "table" and type(item.download_url) == "string" then
+                local name = tostring(item.name or ""):lower()
+                if name:match("%.ttf$") and not name:find("italic", 1, true) then
+                    if name:find("regular", 1, true) then
+                        return item.download_url, item.name
+                    end
+                    if not candidate and not name:find("variable", 1, true) then
+                        candidate = {item.download_url, item.name}
+                    end
+                end
+            end
+        end
+        return candidate and candidate[1], candidate and candidate[2]
+    end
+
+    function RemoteAssets:ResolveGoogleFont(url)
+        local family = url:match("fonts%.google%.com/specimen/([^%?#/]+)")
+        if not family then
+            family = url:match("[?&]family=([^:&]+)")
+        end
+        if not family then
+            return nil, "Could not find a Google Fonts family in this URL."
+        end
+        family = urlDecode(family):gsub("%+", " ")
+        local slug = family:lower():gsub("[^%w]", "")
+        if slug == "" then
+            return nil, "Could not normalize the Google Fonts family name."
+        end
+
+        for _, root in ipairs({"ofl", "apache", "ufl"}) do
+            local raw = self:Fetch("https://api.github.com/repos/google/fonts/contents/" .. root .. "/" .. slug)
+            if raw then
+                local listing = jsonDecode(raw)
+                local downloadUrl, fileName = chooseGoogleFontFile(listing)
+                if downloadUrl then
+                    return {
+                        Url = downloadUrl,
+                        Name = family,
+                        FileName = fileName
+                    }
+                end
+            end
+        end
+        return nil, "Google Fonts could not resolve a static TTF. Paste a direct .ttf/.otf URL or ATG FontPack URL instead."
+    end
+
+    local function normalizeFontTarget(target)
+        target = tostring(target or "both"):lower()
+        if target == "english" or target == "latin" then
+            return {"Latin"}
+        end
+        if target == "thai" then
+            return {"Thai"}
+        end
+        return {"Latin", "Thai"}
+    end
+
+    local function downloadFontFile(url, profileId, roleName, suffix)
+        local extension = fileExtension(url)
+        if extension == "woff" or extension == "woff2" or extension == "css" then
+            return nil, "Roblox FontFace cannot use CSS, WOFF, or WOFF2 files. Use a TTF/OTF or FontPack."
+        end
+        if extension ~= "ttf" and extension ~= "otf" then
+            return nil, "Font URL must point to a .ttf or .otf file."
+        end
+        local contents, fetchError = RemoteAssets:Fetch(url)
+        if not contents then
+            return nil, fetchError
+        end
+        if #contents > 25000000 then
+            return nil, "Font file is larger than 25 MB."
+        end
+        local path = joinPath(FontManager:GetFolder(), sanitizeSegment(profileId, "font"), roleName:lower() .. "-" .. tostring(suffix or 1) .. "." .. extension)
+        local written, writeError = Storage:Write(path, contents)
+        if not written then
+            return nil, writeError
+        end
+        return path
+    end
+
+    local function copyLocalFontFile(sourcePath, profileId, roleName, suffix)
+        local extension = fileExtension(sourcePath)
+        if extension ~= "ttf" and extension ~= "otf" then
+            return nil, "Local font file must end in .ttf or .otf."
+        end
+        local contents, readError = Storage:Read(sourcePath)
+        if not contents then
+            return nil, readError
+        end
+        if #contents > 25000000 then
+            return nil, "Font file is larger than 25 MB."
+        end
+        local path = joinPath(FontManager:GetFolder(), sanitizeSegment(profileId, "font"), roleName:lower() .. "-" .. tostring(suffix or 1) .. "." .. extension)
+        local written, writeError = Storage:Write(path, contents)
+        if not written then
+            return nil, writeError
+        end
+        return path
+    end
+
+    local function fontPackRoles(data)
+        if type(data) ~= "table" then
+            return nil
+        end
+        return data.roles or data.fonts
+    end
+
+    local function cloneFontData(value)
+        if type(value) ~= "table" then
+            return value
+        end
+        local copy = {}
+        for key, child in pairs(value) do
+            copy[key] = cloneFontData(child)
+        end
+        return copy
+    end
+
+    function RemoteAssets:ImportFont(source, options)
+        options = options or {}
+        source = trim(source)
+        if source == "" then
+            return nil, "Enter a Font Family asset ID or a remote URL."
+        end
+
+        local profileName = tostring(options.Name or "Custom font")
+        local profileId = sanitizeSegment(options.Id or ("font_" .. stableHash(source)), "font")
+        local baseProfile
+        if type(options.MergeProfile) == "string" and options.MergeProfile ~= "" and options.MergeProfile ~= "default" then
+            baseProfile = FontManager.Profiles[sanitizeSegment(options.MergeProfile, "")]
+        end
+        if baseProfile and not baseProfile.UseOriginal then
+            profileId = baseProfile.Id
+            profileName = tostring(options.Name or baseProfile.Name or profileName)
+        else
+            baseProfile = nil
+        end
+        local previousProfile = baseProfile and cloneFontData(baseProfile) or nil
+        local function rollbackProfile(profileId)
+            if previousProfile then
+                FontManager:RegisterProfile(previousProfile)
+                FontManager:ApplyProfile(previousProfile.Id)
+            else
+                FontManager:RemoveProfile(profileId)
+            end
+        end
+        local function makeProfile(extra)
+            local profile = {
+                Id = profileId,
+                Name = profileName,
+                Roles = {}
+            }
+            if baseProfile then
+                for roleName, role in pairs(baseProfile.Roles or {}) do
+                    profile.Roles[roleName] = cloneFontData(role)
+                end
+                profile.Url = baseProfile.Url
+                profile.LocalSource = baseProfile.LocalSource
+            end
+            for key, value in pairs(extra or {}) do
+                profile[key] = value
+            end
+            return profile
+        end
+        if source:match("^rbxassetid://") or source:match("^rbxasset://") or source:match("^%d+$") then
+            local family = source:match("^%d+$") and ("rbxassetid://" .. source) or source
+            local valid, validationError = pcall(Font.new, family)
+            if not valid then
+                return nil, "This Font Family asset is not supported by the current executor/client: " .. tostring(validationError)
+            end
+            local profile = makeProfile()
+            for _, roleName in ipairs(normalizeFontTarget(options.Target)) do
+                profile.Roles[roleName] = {AssetId = family}
+            end
+            local saved, saveError = FontManager:RegisterProfile(profile)
+            if not saved then
+                return nil, saveError
+            end
+            local applied, applyError = FontManager:ApplyProfile(saved.Id)
+            if not applied then
+                rollbackProfile(saved.Id)
+                return nil, applyError
+            end
+            return saved
+        end
+
+        if not Capabilities.CustomFonts then
+            return nil, "This executor cannot install local/remote TTF or OTF fonts. It needs readfile, writefile, folder APIs, and getcustomasset (or getsynasset). Roblox Font Family asset IDs can still be used."
+        end
+
+        -- Optional local-file route for executors with a filesystem. The file
+        -- is copied into our own folder so a user can later clean up Downloads.
+        local localFileExists = false
+        local localFontPackRaw
+        if Capabilities.FileSystem then
+            local checked, exists = pcall(Capabilities.IsFile, source)
+            localFileExists = checked and exists
+        end
+        if localFileExists and fileExtension(source) == "json" then
+            local rawPack, readError = Storage:Read(source)
+            if not rawPack then
+                return nil, readError
+            end
+            localFontPackRaw = rawPack
+            localFileExists = false
+        end
+        if localFileExists then
+            local targetRoles = normalizeFontTarget(options.Target)
+            local storageRole = targetRoles[1] or "Latin"
+            -- Keep files distinct when a user adds Latin and Thai to the same
+            -- profile in separate steps; otherwise the second install could
+            -- overwrite the first font on disk.
+            local path, copyError = copyLocalFontFile(source, profileId, storageRole, stableHash(source))
+            if not path then
+                return nil, copyError
+            end
+            local localProfile = makeProfile({LocalSource = source})
+            for _, roleName in ipairs(targetRoles) do
+                localProfile.Roles[roleName] = {
+                    Faces = {{
+                        Path = path,
+                        Name = "Regular",
+                        Weight = 400,
+                        Style = "normal"
+                    }}
+                }
+            end
+            local valid, validationError = FontManager:ValidateProfile(localProfile)
+            if not valid then
+                return nil, "This executor/client cannot load the local font: " .. tostring(validationError)
+            end
+            local saved, saveError = FontManager:RegisterProfile(localProfile)
+            if not saved then
+                return nil, saveError
+            end
+            local applied, applyError = FontManager:ApplyProfile(saved.Id)
+            if not applied then
+                rollbackProfile(saved.Id)
+                return nil, applyError
+            end
+            return saved
+        end
+
+        local raw = localFontPackRaw or source
+        local originalUrl = source
+        if not isLikelyJson(raw) then
+            if source:find("fonts.google.com", 1, true) or source:find("fonts.googleapis.com", 1, true) then
+                local resolved, resolveError = self:ResolveGoogleFont(source)
+                if not resolved then
+                    return nil, resolveError
+                end
+                source = resolved.Url
+                originalUrl = source
+                if not baseProfile then
+                    profileName = options.Name or resolved.Name
+                end
+                raw = nil
+            else
+                local extension = fileExtension(source)
+                if extension == "json" then
+                    raw = self:Fetch(source)
+                    if not raw then
+                        return nil, "Could not download the FontPack JSON."
+                    end
+                end
+            end
+        end
+
+        local pack
+        if type(raw) == "string" and isLikelyJson(raw) then
+            pack = jsonDecode(raw)
+            if not pack then
+                return nil, "FontPack JSON is invalid."
+            end
+        end
+
+        if not baseProfile and pack then
+            profileName = tostring(((pack.meta or {}).name or pack.name) or profileName)
+        end
+        local profile = makeProfile({Url = originalUrl})
+
+        if pack then
+            local roles = fontPackRoles(pack)
+            if type(roles) ~= "table" then
+                return nil, "FontPack needs a roles object (latin/thai) with direct TTF or OTF URLs."
+            end
+            for roleKey, definition in pairs(roles) do
+                local roleName = tostring(roleKey):lower() == "thai" and "Thai" or "Latin"
+                local faces = type(definition) == "table" and (definition.faces or definition) or {definition}
+                if type(faces) == "table" and faces.url then
+                    faces = {faces}
+                end
+                local installedFaces = {}
+                for index, face in ipairs(faces) do
+                    local faceUrl = type(face) == "table" and face.url or face
+                    if type(faceUrl) == "string" then
+                        local path, downloadError = downloadFontFile(
+                            faceUrl,
+                            profileId,
+                            roleName,
+                            stableHash(faceUrl) .. "_" .. tostring(index)
+                        )
+                        if not path then
+                            return nil, downloadError
+                        end
+                        table.insert(installedFaces, {
+                            Path = path,
+                            Name = type(face) == "table" and face.name or "Regular",
+                            Weight = type(face) == "table" and face.weight or 400,
+                            Style = type(face) == "table" and face.style or "normal"
+                        })
+                    end
+                end
+                if #installedFaces > 0 then
+                    profile.Roles[roleName] = {Faces = installedFaces}
+                end
+            end
+        else
+            local targetRoles = normalizeFontTarget(options.Target)
+            local storageRole = targetRoles[1] or "Latin"
+            local path, downloadError = downloadFontFile(source, profileId, storageRole, stableHash(source))
+            if not path then
+                return nil, downloadError
+            end
+            for _, roleName in ipairs(targetRoles) do
+                profile.Roles[roleName] = {
+                    Faces = {{
+                        Path = path,
+                        Name = "Regular",
+                        Weight = 400,
+                        Style = "normal"
+                    }}
+                }
+            end
+        end
+
+        if not profile.Roles.Latin and not profile.Roles.Thai then
+            return nil, "No usable fonts were found in the FontPack."
+        end
+        local valid, validationError = FontManager:ValidateProfile(profile)
+        if not valid then
+            return nil, "This executor/client cannot load the downloaded font: " .. tostring(validationError)
+        end
+        local saved, saveError = FontManager:RegisterProfile(profile)
+        if not saved then
+            return nil, saveError
+        end
+        local applied, applyError = FontManager:ApplyProfile(saved.Id)
+        if not applied then
+            rollbackProfile(saved.Id)
+            return nil, applyError
+        end
+        return saved
+    end
+
+    function RemoteAssets:GetLanguagePacks()
+        return I18n:GetInstalledPacks()
+    end
+
+    function RemoteAssets:GetFontProfiles()
+        return FontManager:GetProfiles()
+    end
+
+    function RemoteAssets:RemoveLanguage(packId)
+        return I18n:RemovePack(packId)
+    end
+
+    function RemoteAssets:RemoveFont(profileId)
+        return FontManager:RemoveProfile(profileId)
+    end
+
+    function CustomizationSystem:Configure(options)
+        options = options or {}
+        self.LastError = nil
+        if options.Folder then
+            Storage:SetRoot(options.Folder)
+            I18n.LoadedScopePath = nil
+            FontManager.LoadedRegistryPath = nil
+        end
+        I18n:SetScope(options.ScriptId or I18n.Scope, options.SourceLocale or I18n.SourceLocale)
+        FontManager:LoadProfiles()
+        if options.Locale then
+            I18n:SetLanguage(options.Locale)
+        end
+        if options.Mode then
+            I18n:SetMode(options.Mode)
+        end
+        if options.Enabled ~= nil then
+            I18n:SetEnabled(options.Enabled)
+        end
+        if options.EnableRemoteAssets ~= nil then
+            RemoteAssets:SetEnabled(options.EnableRemoteAssets)
+        end
+        if options.FontProfile then
+            local applied, applyError = FontManager:ApplyProfile(options.FontProfile)
+            if not applied then
+                self.LastError = applyError
+            end
+        else
+            FontManager:ApplyAll()
+        end
+        return self
+    end
+
+    function CustomizationSystem:GetStatus()
+        return {
+            FileSystem = Capabilities.FileSystem,
+            RemoteFetch = Capabilities.RemoteFetch,
+            RemoteAssetsEnabled = RemoteAssets.Enabled,
+            CustomFonts = Capabilities.CustomFonts,
+            Locale = I18n.CurrentLocale,
+            SourceLocale = I18n.SourceLocale,
+            Mode = I18n.Mode,
+            FontProfile = FontManager.CurrentProfile,
+            Scope = I18n.Scope,
+            LastError = self.LastError or FontManager.LastError
+        }
+    end
+
+    CustomizationSystem.Capabilities = Capabilities
+    CustomizationSystem.Storage = Storage
+    CustomizationSystem.I18n = I18n
+    CustomizationSystem.Fonts = FontManager
+    CustomizationSystem.RemoteAssets = RemoteAssets
+
+    -- Preserve the original public TranslationSystem surface for existing scripts.
+    TranslationSystem.Registry = I18n.Registry
+    TranslationSystem.Cache = I18n.MachineCache
+    TranslationSystem.AvailableLanguages = I18n.AvailableLanguages
+    TranslationSystem.CurrentLanguage = I18n.CurrentLocale
+    TranslationSystem.SourceLanguage = I18n.SourceLocale
+    TranslationSystem.Enabled = I18n.Enabled
+
+    function TranslationSystem:Register(textObject, originalText, propertyName, options)
+        return I18n:Register(textObject, originalText, propertyName, options)
+    end
+
+    function TranslationSystem:UpdateText(textObject)
+        return I18n:UpdateText(textObject)
+    end
+
+    function TranslationSystem:UpdateAllText()
+        return I18n:UpdateAllText()
+    end
+
+    function TranslationSystem:SetLanguage(locale)
+        return I18n:SetLanguage(locale)
+    end
+
+    function TranslationSystem:SetEnabled(enabled)
+        return I18n:SetEnabled(enabled)
+    end
+
+    function TranslationSystem:SetMode(mode)
+        return I18n:SetMode(mode)
+    end
+
+    function TranslationSystem:GetLanguageOptions()
+        return I18n:GetLanguageOptions()
+    end
+
+    function TranslationSystem:GetLanguageCode(value)
+        return I18n:GetLanguageCode(value)
+    end
+
+    function TranslationSystem:GetLanguageIndex()
+        return I18n:GetLanguageIndex()
+    end
+
+    function TranslationSystem:TranslateText(text, targetLanguage, callback)
+        return I18n:TranslateText(text, targetLanguage, callback)
+    end
+end
+
 local a, b = {
 	{
 		1,
@@ -607,8 +2889,13 @@ local aa = {
 			MinimizeKeybind = nil,
 			MinimizeKey = Enum.KeyCode.LeftControl,
 			GUI = w,
-			-- Translation System
+			-- Compatibility facade plus the modern customization APIs.
 			Translation = TranslationSystem,
+			I18n = CustomizationSystem.I18n,
+			Fonts = CustomizationSystem.Fonts,
+			RemoteAssets = CustomizationSystem.RemoteAssets,
+			Capabilities = CustomizationSystem.Capabilities,
+			Customization = CustomizationSystem,
 			CurrentLanguage = "en"
 		}
 		function x.SafeCallback(y, z, ...)
@@ -643,6 +2930,332 @@ local aa = {
 			end
 			return nil
 		end
+		-- Built-in floating minimize/open button. This replaces the old
+		-- per-script FluentToggleGui snippet and talks to this window directly
+		-- instead of scanning every ScreenGui in CoreGui.
+		local FloatingToggleDefaults = {
+			Enabled = true,
+			ForceShowButton = true,
+			Position = {
+				Horizontal = "left",
+				Vertical = "top",
+				OffsetX = 140,
+				OffsetY = 140
+			},
+			ButtonSize = {
+				Min = 40,
+				Max = 46
+			},
+			ImageId = "rbxassetid://114090251469395",
+			Stroke = {
+				BaseThickness = 1,
+				PulseThickness = 1.5,
+				PulseSpeed = 1,
+				HueSpeed = 0.09,
+				Saturation = 0.95,
+				Value = 1,
+				BaseTransparency = 0.05,
+				PulseTransparency = 0.12
+			},
+			Keybind = {
+				Enabled = true,
+				Key = Enum.KeyCode.M,
+				Modifier = Enum.KeyCode.LeftControl
+			}
+		}
+		local function mergeFloatingToggleConfig(A, B)
+			local C = {}
+			for D, E in pairs(A or {}) do
+				if type(E) == "table" then
+					C[D] = mergeFloatingToggleConfig(E, type(B) == "table" and B[D] or nil)
+				elseif type(B) == "table" and B[D] ~= nil then
+					C[D] = B[D]
+				else
+					C[D] = E
+				end
+			end
+			if type(B) == "table" then
+				for D, E in pairs(B) do
+					if C[D] == nil then
+						C[D] = E
+					end
+				end
+			end
+			return C
+		end
+		local function getFloatingToggleConfig(A)
+			local B
+			if type(getgenv) == "function" then
+				local C, D = pcall(getgenv)
+				if C and type(D) == "table" and type(D.ATGButtonUI) == "table" then
+					B = D.ATGButtonUI
+				end
+			end
+			local C = mergeFloatingToggleConfig(mergeFloatingToggleConfig(FloatingToggleDefaults, B), A)
+			local function keyCodeOrDefault(D, E)
+				if typeof(D) == "EnumItem" then
+					return D
+				end
+				if type(D) == "string" and Enum.KeyCode[D] then
+					return Enum.KeyCode[D]
+				end
+				return E
+			end
+			C.Keybind.Key = keyCodeOrDefault(C.Keybind.Key, FloatingToggleDefaults.Keybind.Key)
+			C.Keybind.Modifier = keyCodeOrDefault(C.Keybind.Modifier, FloatingToggleDefaults.Keybind.Modifier)
+			return C
+		end
+		local function floatingToggleSize(A)
+			local B = k.TouchEnabled and A.ButtonSize.Min or A.ButtonSize.Max
+			return UDim2.fromOffset(tonumber(B) or 42, tonumber(B) or 42)
+		end
+		local function floatingTogglePosition(A)
+			local B, C, D
+			if A.Position.Horizontal == "right" then
+				B, C, D = 1, -(tonumber(A.Position.OffsetX) or 140), 1
+			elseif A.Position.Horizontal == "center" then
+				B, C, D = 0.5, 0, 0.5
+			else
+				B, C, D = 0, tonumber(A.Position.OffsetX) or 140, 0
+			end
+			local E, F, G
+			if A.Position.Vertical == "bottom" then
+				E, F, G = 1, -(tonumber(A.Position.OffsetY) or 140), 1
+			elseif A.Position.Vertical == "center" then
+				E, F, G = 0.5, 0, 0.5
+			else
+				E, F, G = 0, tonumber(A.Position.OffsetY) or 140, 0
+			end
+			return UDim2.new(B, C, E, F), Vector2.new(D, G)
+		end
+		function x.CreateFloatingToggle(A, B)
+			if x.FloatingToggle then
+				x.FloatingToggle:Destroy()
+			end
+			local C = getFloatingToggleConfig(B)
+			local D = C.Enabled ~= false and
+				(C.ForceShowButton or not k.KeyboardEnabled or (k.TouchEnabled and not k.KeyboardEnabled) or
+					(k.GamepadEnabled and not k.KeyboardEnabled))
+			if not D then
+				return nil
+			end
+
+			local E = Instance.new("ImageButton")
+			E.Name = "ATGFloatingToggleButton"
+			E.Size = floatingToggleSize(C)
+			E.Position, E.AnchorPoint = floatingTogglePosition(C)
+			E.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+			E.BackgroundTransparency = 0
+			E.BorderSizePixel = 0
+			E.Image = tostring(C.ImageId or "")
+			E.Active = true
+			E.AutoButtonColor = true
+			E.ZIndex = 1000
+			E.Parent = w
+			local F = Instance.new("UICorner")
+			F.CornerRadius = UDim.new(0, 8)
+			F.Parent = E
+			local G = Instance.new("UIStroke")
+			G.Name = "ATGFloatingToggleStroke"
+			G.Thickness = tonumber(C.Stroke.BaseThickness) or 1
+			G.Transparency = tonumber(C.Stroke.BaseTransparency) or 0.05
+			G.LineJoinMode = Enum.LineJoinMode.Round
+			G.ZIndex = 1000
+			G.Parent = E
+
+			local dragStateConnection
+			local H = {
+				Button = E,
+				Stroke = G,
+				Config = C,
+				Connections = {},
+				Destroyed = false
+			}
+			local function I(J)
+				table.insert(H.Connections, J)
+				return J
+			end
+			local function J()
+				if not E.Parent then
+					return
+				end
+				local K = game:GetService("Workspace").CurrentCamera
+				local L = K and K.ViewportSize or Vector2.new(1280, 720)
+				local M, N = E.AbsoluteSize.X, E.AbsoluteSize.Y
+				if M <= 0 or N <= 0 then
+					return
+				end
+				local O = math.clamp(E.AbsolutePosition.X, 0, math.max(0, L.X - M))
+				local P = math.clamp(E.AbsolutePosition.Y, 0, math.max(0, L.Y - N))
+				if math.abs(O - E.AbsolutePosition.X) > 0.5 or math.abs(P - E.AbsolutePosition.Y) > 0.5 then
+					E.AnchorPoint = Vector2.new(0, 0)
+					E.Position = UDim2.fromOffset(O, P)
+				end
+			end
+			function H.Toggle()
+				if x.Window and type(x.Window.Minimize) == "function" then
+					x.Window:Minimize()
+				elseif x.Window and x.Window.Root then
+					x.Window.Root.Visible = not x.Window.Root.Visible
+				end
+			end
+			function H.Destroy()
+				if H.Destroyed then
+					return
+				end
+				H.Destroyed = true
+				if dragStateConnection then
+					pcall(function()
+						dragStateConnection:Disconnect()
+					end)
+					dragStateConnection = nil
+				end
+				for _, K in ipairs(H.Connections) do
+					pcall(function()
+						K:Disconnect()
+					end)
+				end
+				H.Connections = {}
+				if E then
+					pcall(function()
+						E:Destroy()
+					end)
+				end
+				if x.FloatingToggle == H then
+					x.FloatingToggle = nil
+				end
+			end
+
+			local K, L, M, N = false, nil, nil, nil
+			I(
+				E.InputBegan:Connect(function(O)
+					if O.UserInputType == Enum.UserInputType.MouseButton1 or O.UserInputType == Enum.UserInputType.Touch then
+						if dragStateConnection then
+							pcall(function()
+								dragStateConnection:Disconnect()
+							end)
+							dragStateConnection = nil
+						end
+						K = true
+						L = O.Position
+						M = E.Position
+						N = false
+						dragStateConnection = O.Changed:Connect(function()
+							if O.UserInputState == Enum.UserInputState.End then
+								K = false
+								J()
+								local connection = dragStateConnection
+								dragStateConnection = nil
+								if connection then
+									pcall(function()
+										connection:Disconnect()
+									end)
+								end
+							end
+						end)
+					end
+				end)
+			)
+			I(
+				k.InputChanged:Connect(function(O)
+					if K and (O.UserInputType == Enum.UserInputType.MouseMovement or O.UserInputType == Enum.UserInputType.Touch) and L and M then
+						local P = O.Position - L
+						if P.Magnitude > 6 then
+							N = true
+						end
+						E.Position = UDim2.new(M.X.Scale, M.X.Offset + P.X, M.Y.Scale, M.Y.Offset + P.Y)
+					end
+				end)
+			)
+			I(
+				E.Activated:Connect(function()
+					if N then
+						N = false
+						return
+					end
+					H.Toggle()
+				end)
+			)
+			local O = 0
+			I(
+				i.RenderStepped:Connect(function(P)
+					O = O + P
+					if O < 0.05 or not G.Parent then
+						return
+					end
+					O = 0
+					local Q = os.clock()
+					local R = (Q * (tonumber(C.Stroke.HueSpeed) or 0.09)) % 1
+					local S = (math.sin(Q * (tonumber(C.Stroke.PulseSpeed) or 1) * math.pi * 2) + 1) / 2
+					G.Color = Color3.fromHSV(R, tonumber(C.Stroke.Saturation) or 0.95, tonumber(C.Stroke.Value) or 1)
+					G.Thickness = (tonumber(C.Stroke.BaseThickness) or 1) + S * (tonumber(C.Stroke.PulseThickness) or 1.5)
+					G.Transparency =
+						(tonumber(C.Stroke.BaseTransparency) or 0.05) + S * (tonumber(C.Stroke.PulseTransparency) or 0.12)
+				end)
+			)
+			local P = game:GetService("Workspace").CurrentCamera
+			if P then
+				I(
+					P:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+						E.Size = floatingToggleSize(C)
+						J()
+					end)
+				)
+			end
+			if C.Keybind.Enabled ~= false and k.KeyboardEnabled then
+				local modifierAlreadyToggledWindow = false
+				local function modifierMatchesWindowMinimizeKey()
+					local activeKey = x.MinimizeKey
+					if type(x.MinimizeKeybind) == "table" and x.MinimizeKeybind.Type == "Keybind" then
+						activeKey = x.MinimizeKeybind.Value
+					end
+					if activeKey == C.Keybind.Modifier then
+						return true
+					end
+					local modifierName
+					pcall(function()
+						modifierName = C.Keybind.Modifier.Name
+					end)
+					return type(activeKey) == "string" and activeKey == modifierName
+				end
+				I(
+					k.InputBegan:Connect(function(Q, R)
+						if not R and Q.UserInputType == Enum.UserInputType.Keyboard then
+							if Q.KeyCode == C.Keybind.Modifier then
+								-- Fluent's legacy default minimize bind is LeftControl.
+								-- It has already toggled the window before Ctrl+M arrives,
+								-- so suppress the second toggle from this handler.
+								modifierAlreadyToggledWindow = modifierMatchesWindowMinimizeKey() and not k:GetFocusedTextBox()
+							elseif Q.KeyCode == C.Keybind.Key and not k:GetFocusedTextBox() and
+								k:IsKeyDown(C.Keybind.Modifier) then
+								if not modifierAlreadyToggledWindow then
+									H.Toggle()
+								end
+							end
+						end
+					end)
+				)
+				I(
+					k.InputEnded:Connect(function(Q)
+						if Q.UserInputType == Enum.UserInputType.Keyboard and Q.KeyCode == C.Keybind.Modifier then
+							modifierAlreadyToggledWindow = false
+						end
+					end)
+				)
+			end
+			task.defer(J)
+			x.FloatingToggle = H
+			return H
+		end
+		function x.SetFloatingToggleConfig(A, B)
+			if B == false then
+				if x.FloatingToggle then
+					x.FloatingToggle:Destroy()
+				end
+				return nil
+			end
+			return x:CreateFloatingToggle(B)
+		end
 		local z = {}
 		z.__index = z
 		z.__namecall = function(A, B, ...)
@@ -664,6 +3277,23 @@ local aa = {
 				print "You cannot create more than one window."
 				return
 			end
+			-- Optional and additive: old CreateWindow calls continue to work.
+			-- InterfaceManager normally configures this later, but accepting it
+			-- here gives standalone scripts an early, flicker-free setup path.
+			if type(D.I18n) == "table" or type(D.Customization) == "table" then
+				local F = D.I18n or D.Customization
+				CustomizationSystem:Configure {
+					Folder = F.Folder,
+					ScriptId = F.ScriptId,
+					SourceLocale = F.SourceLocale,
+					Locale = F.Locale,
+					Mode = F.Mode,
+					Enabled = F.Enabled,
+					EnableRemoteAssets = F.EnableRemoteAssets,
+					FontProfile = F.FontProfile
+				}
+			end
+			x.CurrentLanguage = CustomizationSystem.I18n.CurrentLocale
 			x.MinimizeKey = D.MinimizeKey
 			x.UseAcrylic = D.Acrylic
 			if D.Acrylic then
@@ -673,6 +3303,9 @@ local aa = {
 				e(s.Window) {Parent = w, Size = D.Size, Title = D.Title, SubTitle = D.SubTitle, TabWidth = D.TabWidth}
 			x.Window = E
 			x:SetTheme(D.Theme)
+			if D.FloatingToggle ~= false then
+				x:CreateFloatingToggle(type(D.FloatingToggle) == "table" and D.FloatingToggle or nil)
+			end
 			return E
 		end
 		function x.SetTheme(C, D)
@@ -684,6 +3317,13 @@ local aa = {
 		function x.Destroy(C)
 			if x.Window then
 				x.Unloaded = true
+				-- Invalidates and detaches any in-flight/queued translation work.
+				CustomizationSystem.I18n:CancelPending()
+				CustomizationSystem.I18n:ClearRegistry()
+				CustomizationSystem.Fonts:ClearRegistry()
+				if x.FloatingToggle then
+					x.FloatingToggle:Destroy()
+				end
 				if x.UseAcrylic then
 					x.Window.AcrylicPaint.Model:Destroy()
 				end
@@ -1237,7 +3877,9 @@ local aa = {
 						Text = m,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
+						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
+						AutomaticSize = Enum.AutomaticSize.Y,
 						Size = UDim2.new(1, 0, 0, 14),
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
@@ -2104,6 +4746,7 @@ local aa = {
 			o.Tabs[q].SetTransparency(0.89)
 			o.Tabs[q].Selected = true
 			r.TabDisplay.Text = o.Tabs[q].Name
+			TranslationSystem:Register(r.TabDisplay, o.Tabs[q].Name, "Text")
 			r.SelectorPosMotor:setGoal(l(o:GetCurrentTabPos(), {frequency = 6}))
 			task.spawn(
 				function()
@@ -2811,6 +5454,7 @@ local aa = {
 					{
 						RichText = true,
 						Text = "Tab",
+						I18nSkip = true,
 						TextTransparency = 0,
 						FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 						TextSize = 28,
@@ -3023,6 +5667,7 @@ local aa = {
 			function v.Dialog(N, O)
 				local P = M:Create()
 				P.Title.Text = O.Title
+				TranslationSystem:Register(P.Title, O.Title, "Text")
 				local Q =
 					s(
 						"TextLabel",
@@ -3194,7 +5839,10 @@ local aa = {
 				p[q] = r
 			end
 			for s, t in next, n or {} do
-				if s ~= "ThemeTag" then
+				-- These are creation metadata for the customization layer, not
+				-- Roblox Instance properties.
+				if s ~= "ThemeTag" and s ~= "I18nKey" and s ~= "I18nContext" and s ~= "I18nSkip"
+					and s ~= "FontRole" then
 					p[s] = t
 				end
 			end
@@ -3202,6 +5850,9 @@ local aa = {
 				v.Parent = p
 			end
 			l(p, n)
+			-- Registers only once at creation, then updates only on a real
+			-- language/font change. This avoids expensive descendant scans.
+			CustomizationSystem.I18n:AutoRegister(p, n)
 			return p
 		end
 		function k.SpringMotor(m, n, o, p, s)
@@ -3796,6 +6447,7 @@ local aa = {
 							Enum.FontStyle.Normal
 						),
 						Text = "Value",
+						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -4602,6 +7254,10 @@ local aa = {
 									Enum.FontStyle.Normal
 								),
 								Text = cleanText,
+								-- Dropdown values are often game logic keys
+								-- (for example "Instant" / "Tween").  Keep their
+								-- runtime values stable instead of translating them.
+								I18nSkip = true,
 								TextSize = 13,
 								TextXAlignment = Enum.TextXAlignment.Left,
 								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -4978,6 +7634,7 @@ local aa = {
 							Enum.FontStyle.Normal
 						),
 						Text = f.Default,
+						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
 						TextXAlignment = Enum.TextXAlignment.Center,
@@ -5205,6 +7862,7 @@ local aa = {
 				{
 					FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
 					Text = "Value",
+					I18nSkip = true,
 					TextSize = 12,
 					ClearTextOnFocus = false,
 					TextWrapped = true,
