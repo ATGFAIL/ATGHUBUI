@@ -1,0 +1,552 @@
+{
+  "meta": {
+    "locale": "th",
+    "name": "Translation template",
+    "id": "atg.ui-th-template",
+    "generatedBy": "ATG Fluent",
+    "sourceLocale": "en"
+  },
+  "schema": "atg.i18n.v1",
+  "entries": {
+    "legacy.71b0dbd7": {
+      "context": "",
+      "source": "Join the Lower server",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์ประชากรน้อย"
+    },
+    "legacy.0e900dfc": {
+      "context": "",
+      "source": "Players",
+      "translation": "ผู้เล่น"
+    },
+    "legacy.3d0413e2": {
+      "context": "",
+      "source": "Noclip",
+      "translation": "ทะลุกำแพง (Noclip)"
+    },
+    "legacy.5be91243": {
+      "context": "",
+      "source": "Enable UI translation",
+      "translation": "เปิดใช้งานการแปล UI"
+    },
+    "legacy.07d44922": {
+      "context": "",
+      "source": "Typography",
+      "translation": "รูปแบบตัวอักษร"
+    },
+    "legacy.7aba0c10": {
+      "context": "",
+      "source": "Downloads JSON only; it never executes remote Lua.",
+      "translation": "ดาวน์โหลดเฉพาะไฟล์ JSON เท่านั้น และไม่มีการรันโค้ด Lua ระยะไกล"
+    },
+    "legacy.677c8866": {
+      "context": "",
+      "source": "Fly Speed",
+      "translation": "ความเร็วในการบิน"
+    },
+    "legacy.4685dc85": {
+      "context": "",
+      "source": "Use this for a new locale that is not in the dropdown yet, for example ja-JP or id-ID.",
+      "translation": "ใช้สำหรับภาษาใหม่ที่ยังไม่มีในเมนูดรอปดาวน์ เช่น ja-JP หรือ id-ID"
+    },
+    "legacy.232571c6": {
+      "context": "",
+      "source": "Auto Load",
+      "translation": "โหลดอัตโนมัติ"
+    },
+    "legacy.3d94f542": {
+      "context": "",
+      "source": "Reset Walk/Jump to default values (16, 50)",
+      "translation": "รีเซ็ตค่าเดิน/กระโดดเป็นค่าเริ่มต้น (16, 50)"
+    },
+    "legacy.7492bbfe": {
+      "context": "",
+      "source": "Teleport to entered Job ID",
+      "translation": "เทเลพอร์ตไปยัง Job ID ที่กรอก"
+    },
+    "legacy.11a49d51": {
+      "context": "",
+      "source": "Active font profile",
+      "translation": "โปรไฟล์ฟอนต์ที่ใช้งานอยู่"
+    },
+    "legacy.5ea9edd1": {
+      "context": "",
+      "source": "Font role is selected from the displayed text. Thai text uses Thai; other text uses Latin. A missing role keeps the script's original font.",
+      "translation": "บทบาทฟอนต์จะถูกเลือกจากข้อความที่แสดง ข้อความภาษาไทยจะใช้ฟอนต์ไทย ข้อความอื่นจะใช้ละติน หากไม่มีบทบาทฟอนต์จะใช้ฟอนต์ดั้งเดิมของสคริปต์"
+    },
+    "legacy.6bd5c0af": {
+      "context": "",
+      "source": "Name: ATGFAIL (@LawakaitunY725)\nDate: 15/08/2026\n\nPlayed Time: 00:01:54\n",
+      "translation": "ชื่อ: ATGFAIL (@LawakaitunY725)\nวันที่: 15/08/2026\n\nเวลาที่เล่น: 00:01:54\n"
+    },
+    "legacy.1fa3777d": {
+      "context": "",
+      "source": "Use script default font",
+      "translation": "ใช้ฟอนต์เริ่มต้นของสคริปต์"
+    },
+    "legacy.0a13379c": {
+      "context": "",
+      "source": "Removes the profile from the registry; font files may remain when delfile is unavailable.",
+      "translation": "ลบโปรไฟล์ออกจากรีจิสทรี ไฟล์ฟอนต์อาจจะยังอยู่หากไม่สามารถใช้งานคำสั่ง delfile ได้"
+    },
+    "legacy.070a677a": {
+      "context": "",
+      "source": "Fly hotkey",
+      "translation": "ปุ่มลัดการบิน"
+    },
+    "legacy.799400a4": {
+      "context": "",
+      "source": "Select to Teleport",
+      "translation": "เลือกเพื่อเทเลพอร์ต"
+    },
+    "legacy.7c7d0b20": {
+      "context": "",
+      "source": "Rejoin",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์เดิมอีกครั้ง"
+    },
+    "legacy.1cf2b1d0": {
+      "context": "",
+      "source": "ATG Hub Freemium",
+      "translation": "ATG Hub Freemium"
+    },
+    "legacy.0a9ddcca": {
+      "context": "",
+      "source": "Paste raw JSON, a local executor JSON path, a raw GitHub URL, or a GitHub /blob/ URL.",
+      "translation": "วางข้อความ JSON ดิบ, พาธไฟล์ JSON ของเอ็กซ์คิวเตอร์, URL ดิบจาก GitHub หรือ URL แบบ /blob/ ของ GitHub"
+    },
+    "legacy.47680335": {
+      "context": "",
+      "source": "Pack uses JSON made by people. Roblox only reads the game's LocalizationTable; it is not generic machine translation.",
+      "translation": "แพ็กนี้ใช้ข้อมูล JSON ที่สร้างโดยมนุษย์ Roblox จะอ่านเฉพาะ LocalizationTable ของเกมเท่านั้น ไม่ใช่การแปลอัตโนมัติทั่วไป"
+    },
+    "legacy.17b6d491": {
+      "context": "",
+      "source": "Paste a Google Fonts link, direct TTF/OTF URL, Font Family asset ID, or an executor-local .ttf/.otf path. CSS, WOFF and WOFF2 cannot be used by Roblox FontFace.",
+      "translation": "วางลิงก์ Google Fonts, URL ไฟล์ TTF/OTF โดยตรง, Asset ID ของตระกูลฟอนต์ หรือพาธไฟล์ .ttf/.otf ในเอ็กซ์คิวเตอร์ ไม่สามารถใช้ CSS, WOFF และ WOFF2 กับ Roblox FontFace ได้"
+    },
+    "legacy.2d79fed7": {
+      "context": "",
+      "source": "Copy your current Job ID",
+      "translation": "คัดลอก Job ID ปัจจุบันของคุณ"
+    },
+    "legacy.44625d78": {
+      "context": "",
+      "source": "Floating menu button",
+      "translation": "ปุ่มเมนูแบบลอย"
+    },
+    "legacy.47bed0c2": {
+      "context": "",
+      "source": "Font profiles",
+      "translation": "โปรไฟล์ฟอนต์"
+    },
+    "legacy.6f1386bf": {
+      "context": "",
+      "source": "Enable/Disable WalkSpeed enforcement",
+      "translation": "เปิด/ปิด การบังคับความเร็วในการเดิน"
+    },
+    "legacy.77ffad61": {
+      "context": "",
+      "source": "Turn off to show the original script text immediately.",
+      "translation": "ปิดเพื่อแสดงข้อความต้นฉบับของสคริปต์ทันที"
+    },
+    "legacy.2b2cdc1c": {
+      "context": "",
+      "source": "Remove selected font profile",
+      "translation": "ลบโปรไฟล์ฟอนต์ที่เลือก"
+    },
+    "legacy.2411f145": {
+      "context": "",
+      "source": "Auto Save",
+      "translation": "บันทึกอัตโนมัติ"
+    },
+    "legacy.012b9e12": {
+      "context": "",
+      "source": "❌",
+      "translation": "❌"
+    },
+    "legacy.312814f3": {
+      "context": "",
+      "source": "Theme",
+      "translation": "ธีม"
+    },
+    "legacy.0102ab70": {
+      "context": "",
+      "source": "Fly",
+      "translation": "บิน"
+    },
+    "legacy.3ca93195": {
+      "context": "",
+      "source": "Settings",
+      "translation": "ตั้งค่า"
+    },
+    "legacy.17d68c51": {
+      "context": "",
+      "source": "Update selected language pack",
+      "translation": "อัปเดตชุดภาษาที่เลือก"
+    },
+    "legacy.090ee725": {
+      "context": "",
+      "source": "Instant / Tween / MoveTo",
+      "translation": "ทันที / ทวีน (Tween) / เคลื่อนย้ายไปที่ (MoveTo)"
+    },
+    "legacy.4d320530": {
+      "context": "",
+      "source": "Teleport to selected player",
+      "translation": "เทเลพอร์ตไปยังผู้เล่นที่เลือก"
+    },
+    "legacy.4295915b": {
+      "context": "",
+      "source": "Auto Load Save",
+      "translation": "โหลดข้อมูลที่บันทึกไว้อัตโนมัติ"
+    },
+    "legacy.519402e8": {
+      "context": "",
+      "source": "Teleport",
+      "translation": "เทเลพอร์ต"
+    },
+    "legacy.05b4aa12": {
+      "context": "",
+      "source": "Choose the text role. If a custom profile is active, installing Latin and then Thai combines both fonts into that one profile.",
+      "translation": "เลือกบทบาทของข้อความ หากเปิดใช้งานโปรไฟล์กำหนดเอง การติดตั้งภาษาละตินแล้วตามด้วยภาษาไทยจะรวมฟอนต์ทั้งสองเข้าไว้ในโปรไฟล์เดียวกัน"
+    },
+    "legacy.05edbb1f": {
+      "context": "",
+      "source": "Join a Random server",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์สุ่ม"
+    },
+    "legacy.7f22522d": {
+      "context": "",
+      "source": "Player",
+      "translation": "ผู้เล่น"
+    },
+    "legacy.6d5614be": {
+      "context": "",
+      "source": "Remove selected language pack",
+      "translation": "ลบชุดภาษาที่เลือก"
+    },
+    "legacy.30518073": {
+      "context": "",
+      "source": "Auto Save When You Settings",
+      "translation": "บันทึกอัตโนมัติเมื่อมีการตั้งค่า"
+    },
+    "legacy.054af069": {
+      "context": "",
+      "source": "Main",
+      "translation": "หลัก"
+    },
+    "legacy.56782491": {
+      "context": "",
+      "source": "Install and apply font",
+      "translation": "ติดตั้งและใช้งานฟอนต์"
+    },
+    "legacy.4bc9b34b": {
+      "context": "",
+      "source": "Reset to defaults",
+      "translation": "รีเซ็ตเป็นค่าเริ่มต้น"
+    },
+    "legacy.73eb82a5": {
+      "context": "",
+      "source": "Minimize Bind",
+      "translation": "ปุ่มลัดย่อหน้าต่าง"
+    },
+    "legacy.01025b73": {
+      "context": "",
+      "source": "ESP",
+      "translation": "ESP"
+    },
+    "legacy.47971287": {
+      "context": "",
+      "source": "Input Job ID",
+      "translation": "ป้อน Job ID"
+    },
+    "legacy.152ef974": {
+      "context": "",
+      "source": "Storage: ready | Remote JSON: ready | Local custom fonts: experimental-ready",
+      "translation": "ที่เก็บข้อมูล: พร้อม | JSON ระยะไกล: พร้อม | ฟอนต์กำหนดเองในเครื่อง: พร้อมแบบทดลอง"
+    },
+    "legacy.05cd22ae": {
+      "context": "",
+      "source": "Export default JSON template",
+      "translation": "ส่งออกเทมเพลต JSON เริ่มต้น"
+    },
+    "legacy.6f14e5ce": {
+      "context": "",
+      "source": "Installed language pack",
+      "translation": "ชุดภาษาที่ติดตั้งแล้ว"
+    },
+    "legacy.041abf08": {
+      "context": "",
+      "source": "Removes it from the active registry; the executor may retain its file if delfile is unavailable.",
+      "translation": "ลบออกจากรีจิสทรีที่ใช้งานอยู่ เอ็กซ์คิวเตอร์อาจเก็บไฟล์ไว้หากไม่สามารถใช้คำสั่ง delfile ได้"
+    },
+    "legacy.61e0f980": {
+      "context": "",
+      "source": "Enable Jump",
+      "translation": "เปิดใช้งานการกระโดด"
+    },
+    "legacy.38c9b1ff": {
+      "context": "",
+      "source": "Humanoid",
+      "translation": "ฮิวแมนนอยด์ (Humanoid)"
+    },
+    "legacy.04081348": {
+      "context": "",
+      "source": "Follow player",
+      "translation": "ติดตามผู้เล่น"
+    },
+    "legacy.6399ad23": {
+      "context": "",
+      "source": "Enable Walk",
+      "translation": "เปิดใช้งานการเดิน"
+    },
+    "legacy.33145a5c": {
+      "context": "",
+      "source": "Server Hop",
+      "translation": "ย้ายเซิร์ฟเวอร์ (Server Hop)"
+    },
+    "legacy.46f6215a": {
+      "context": "",
+      "source": "Translation source",
+      "translation": "แหล่งที่มาของการแปล"
+    },
+    "legacy.791596b4": {
+      "context": "",
+      "source": "Server",
+      "translation": "เซิร์ฟเวอร์"
+    },
+    "legacy.3fe05c4f": {
+      "context": "",
+      "source": "Auto Rejoin",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์ใหม่อัตโนมัติ"
+    },
+    "legacy.608ecacb": {
+      "context": "",
+      "source": "Use a Roblox Font Family asset ID, direct TTF/OTF URL, Google Fonts specimen URL, ATG FontPack JSON, or a local executor file path. Local TTF/OTF loading is experimental and requires getcustomasset.",
+      "translation": "ใช้ Asset ID ของตระกูลฟอนต์ Roblox, URL ไฟล์ TTF/OTF โดยตรง, URL ตัวอย่างจาก Google Fonts, ATG FontPack JSON หรือพาธไฟล์ในเครื่องของเอ็กซ์คิวเตอร์ การโหลดไฟล์ TTF/OTF ในเครื่องยังอยู่ในช่วงทดลองและต้องใช้ฟังก์ชัน getcustomasset"
+    },
+    "legacy.4ebca0fb": {
+      "context": "",
+      "source": "Job ID",
+      "translation": "Job ID"
+    },
+    "legacy.1b3c2e6a": {
+      "context": "",
+      "source": "Teleport Now",
+      "translation": "เทเลพอร์ตทันที"
+    },
+    "legacy.6847f19b": {
+      "context": "",
+      "source": "Anti-AFK",
+      "translation": "ป้องกัน AFK"
+    },
+    "legacy.19e4254d": {
+      "context": "",
+      "source": "Customization status",
+      "translation": "สถานะการปรับแต่ง"
+    },
+    "legacy.41e18729": {
+      "context": "",
+      "source": "Refresh player list",
+      "translation": "รีเฟรชรายชื่อผู้เล่น"
+    },
+    "legacy.0b8fb886": {
+      "context": "",
+      "source": "Teleport to Job",
+      "translation": "เทเลพอร์ตไปยัง Job"
+    },
+    "legacy.5c2b8027": {
+      "context": "",
+      "source": "Fly & Noclip",
+      "translation": "บิน & ทะลุกำแพง"
+    },
+    "legacy.5043dd68": {
+      "context": "",
+      "source": "Player Info",
+      "translation": "ข้อมูลผู้เล่น"
+    },
+    "legacy.0aba2627": {
+      "context": "",
+      "source": "Interface",
+      "translation": "อินเทอร์เฟซ"
+    },
+    "legacy.7db7ce8b": {
+      "context": "",
+      "source": "Uses the optional locale above, or the selected UI language. The template is written to the executor folder and copied when supported.",
+      "translation": "ใช้ภาษาเสริมด้านบน หรือภาษา UI ที่เลือก เทมเพลตจะถูกเขียนลงในโฟลเดอร์ของเอ็กซ์คิวเตอร์และคัดลอกเมื่อระบบรองรับ"
+    },
+    "legacy.1af8e2a6": {
+      "context": "",
+      "source": "Adjust fly speed",
+      "translation": "ปรับความเร็วในการบิน"
+    },
+    "legacy.12184ca0": {
+      "context": "",
+      "source": "Refresh list",
+      "translation": "รีเฟรชรายการ"
+    },
+    "legacy.528c27fc": {
+      "context": "",
+      "source": "Auto-Follow",
+      "translation": "ติดตามอัตโนมัติ"
+    },
+    "legacy.32e0f87a": {
+      "context": "",
+      "source": "Install font for",
+      "translation": "ติดตั้งฟอนต์สำหรับ"
+    },
+    "legacy.79487024": {
+      "context": "",
+      "source": "Makes the interface transparent.",
+      "translation": "ทำให้ส่วนติดต่อผู้ใช้มีความโปร่งใส"
+    },
+    "legacy.4dba51e6": {
+      "context": "",
+      "source": "Speed & Jump",
+      "translation": "ความเร็ว & การกระโดด"
+    },
+    "legacy.7535884c": {
+      "context": "",
+      "source": "Select a saved pack to update or remove it.",
+      "translation": "เลือกแพ็กที่บันทึกไว้เพื่ออัปเดตหรือลบออก"
+    },
+    "legacy.143cc75f": {
+      "context": "",
+      "source": "Method",
+      "translation": "วิธี"
+    },
+    "legacy.74975e5f": {
+      "context": "",
+      "source": "Changes all registered UI text. Existing script APIs stay unchanged.",
+      "translation": "เปลี่ยนข้อความ UI ที่ลงทะเบียนไว้ทั้งหมด API ของสคริปต์ที่มีอยู่จะไม่เปลี่ยนแปลง"
+    },
+    "legacy.451aaa69": {
+      "context": "",
+      "source": "Language pack URL",
+      "translation": "URL ชุดภาษา"
+    },
+    "legacy.738afa79": {
+      "context": "",
+      "source": "Restores the original FontFace captured when each UI element was created.",
+      "translation": "คืนค่า FontFace ดั้งเดิมที่บันทึกไว้ตอนสร้างองค์ประกอบ UI แต่ละชิ้น"
+    },
+    "legacy.4dc47fe2": {
+      "context": "",
+      "source": "Install / update language pack",
+      "translation": "ติดตั้ง / อัปเดตชุดภาษา"
+    },
+    "legacy.31b772f5": {
+      "context": "",
+      "source": "UI language",
+      "translation": "ภาษา UI"
+    },
+    "legacy.35439d7b": {
+      "context": "",
+      "source": "Language & translation",
+      "translation": "ภาษาและการแปล"
+    },
+    "legacy.41765260": {
+      "context": "",
+      "source": "Transparency",
+      "translation": "ความโปร่งใส"
+    },
+    "legacy.11b10b9b": {
+      "context": "",
+      "source": "Walk Speed",
+      "translation": "ความเร็วในการเดิน"
+    },
+    "legacy.3bdfce52": {
+      "context": "",
+      "source": "Jump Power",
+      "translation": "พลังในการกระโดด"
+    },
+    "legacy.7f6b4fd1": {
+      "context": "",
+      "source": "Export template locale (optional)",
+      "translation": "ส่งออกภาษาของเทมเพลต (ไม่บังคับ)"
+    },
+    "legacy.78d0ad56": {
+      "context": "",
+      "source": "Enable/Disable JumpPower enforcement",
+      "translation": "เปิด/ปิด การบังคับพลังกระโดด"
+    },
+    "legacy.59e85772": {
+      "context": "",
+      "source": "Running speed",
+      "translation": "ความเร็วในการวิ่ง"
+    },
+    "legacy.71ba7671": {
+      "context": "",
+      "source": "The blurred background requires graphic quality 8+.",
+      "translation": "พื้นหลังแบบเบลอต้องใช้คุณภาพกราฟิก 8 ขึ้นไป"
+    },
+    "legacy.0684cc6d": {
+      "context": "",
+      "source": "Jump height",
+      "translation": "ความสูงในการกระโดด"
+    },
+    "legacy.71cd48e6": {
+      "context": "",
+      "source": "by ATGFAIL",
+      "translation": "โดย ATGFAIL"
+    },
+    "legacy.4811312c": {
+      "context": "",
+      "source": "Re-downloads the URL saved with that pack.",
+      "translation": "ดาวน์โหลด URL ที่บันทึกไว้ในแพ็กนั้นอีกครั้ง"
+    },
+    "legacy.39943e15": {
+      "context": "",
+      "source": "Shows the draggable open/minimize button built into MainUI. Ctrl + M remains available while enabled.",
+      "translation": "แสดงปุ่มเปิด/ย่อหน้าต่างแบบลากได้ที่อยู่ใน MainUI ปุ่ม Ctrl + M ยังคงใช้งานได้ในขณะที่เปิดอยู่"
+    },
+    "legacy.370f77c2": {
+      "context": "",
+      "source": "Changes the interface theme.",
+      "translation": "เปลี่ยนธีมของอินเทอร์เฟซ"
+    },
+    "legacy.7413e805": {
+      "context": "",
+      "source": "[ 📁 ] Configuration Manager",
+      "translation": "[ 📁 ] ตัวจัดการการกำหนดค่า"
+    },
+    "legacy.53432452": {
+      "context": "",
+      "source": "Click To Teleport",
+      "translation": "คลิกเพื่อเทเลพอร์ต"
+    },
+    "legacy.4adca6aa": {
+      "context": "",
+      "source": "Acrylic",
+      "translation": "อะคริลิก"
+    },
+    "legacy.2a640dfb": {
+      "context": "",
+      "source": "Downloads assets once, stores their paths, and rebuilds the local Font Family after every Roblox session.",
+      "translation": "ดาวน์โหลดแอสเซทเพียงครั้งเดียว จัดเก็บพาธ และสร้าง Font Family ในเครื่องใหม่ทุกครั้งหลังจบเซสชันของ Roblox"
+    },
+    "legacy.2a3cf5e6": {
+      "context": "",
+      "source": "Rejoin this server",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์นี้อีกครั้ง"
+    },
+    "legacy.18eae2c1": {
+      "context": "",
+      "source": "Fly Key",
+      "translation": "ปุ่มบิน"
+    },
+    "legacy.19bbf1b1": {
+      "context": "",
+      "source": "Font URL / Family asset ID",
+      "translation": "URL ฟอนต์ / Asset ID ตระกูลฟอนต์"
+    },
+    "legacy.50d5f6bb": {
+      "context": "",
+      "source": "Lower Server",
+      "translation": "เซิร์ฟเวอร์ประชากรน้อย"
+    },
+    "legacy.67fc12f6": {
+      "context": "",
+      "source": "Copy Current Job ID",
+      "translation": "คัดลอก Job ID ปัจจุบัน"
+    }
+  }
+}
