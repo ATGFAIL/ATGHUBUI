@@ -34,6 +34,14 @@ do
         FontProfile = "default",
         FontUrl = "",
         FontTarget = "Both",
+        -- Optional per-script typography overrides.  Keeping these scoped
+        -- means each game can use a readable size without changing another.
+        FontTuningEnabled = false,
+        FontSizeScale = 100,
+        FontWeight = "Auto",
+        FontStyle = "Auto",
+        FontLineHeight = 100,
+        FontStroke = 0,
         -- Technical import/update controls stay collapsed for normal users.
         AdvancedTools = false
     }
@@ -65,6 +73,12 @@ do
         "FontProfile",
         "FontUrl",
         "FontTarget",
+        "FontTuningEnabled",
+        "FontSizeScale",
+        "FontWeight",
+        "FontStyle",
+        "FontLineHeight",
+        "FontStroke",
         "AdvancedTools"
     }
 
@@ -80,6 +94,25 @@ do
         ["Both"] = "both",
         ["Latin"] = "latin",
         ["Thai"] = "thai"
+    }
+
+    local FONT_WEIGHT_VALUES = {
+        ["Auto"] = true,
+        ["Thin"] = true,
+        ["ExtraLight"] = true,
+        ["Light"] = true,
+        ["Regular"] = true,
+        ["Medium"] = true,
+        ["SemiBold"] = true,
+        ["Bold"] = true,
+        ["ExtraBold"] = true,
+        ["Heavy"] = true
+    }
+
+    local FONT_STYLE_VALUES = {
+        ["Auto"] = true,
+        ["Normal"] = true,
+        ["Italic"] = true
     }
 
     InterfaceManager.Folder = "FluentSettings"
@@ -223,6 +256,24 @@ do
         end
         local options = fonts:GetProfileOptions()
         return options[1]
+    end
+
+    local function clampInteger(value, fallback, minimum, maximum)
+        if type(value) ~= "number" then
+            return fallback
+        end
+        return math.floor(math.clamp(value, minimum, maximum) + 0.5)
+    end
+
+    local function fontTuningFromSettings(settings)
+        return {
+            Enabled = settings.FontTuningEnabled == true,
+            SizeScale = settings.FontSizeScale,
+            Weight = settings.FontWeight,
+            Style = settings.FontStyle,
+            LineHeight = settings.FontLineHeight,
+            Stroke = settings.FontStroke
+        }
     end
 
     local function writeSettings(path, settings)
@@ -402,6 +453,33 @@ do
         if not FONT_TARGET_VALUES[self.Settings.FontTarget] then
             self.Settings.FontTarget = DEFAULT_SETTINGS.FontTarget
         end
+        if type(self.Settings.FontTuningEnabled) ~= "boolean" then
+            self.Settings.FontTuningEnabled = DEFAULT_SETTINGS.FontTuningEnabled
+        end
+        self.Settings.FontSizeScale = clampInteger(
+            self.Settings.FontSizeScale,
+            DEFAULT_SETTINGS.FontSizeScale,
+            70,
+            160
+        )
+        if not FONT_WEIGHT_VALUES[self.Settings.FontWeight] then
+            self.Settings.FontWeight = DEFAULT_SETTINGS.FontWeight
+        end
+        if not FONT_STYLE_VALUES[self.Settings.FontStyle] then
+            self.Settings.FontStyle = DEFAULT_SETTINGS.FontStyle
+        end
+        self.Settings.FontLineHeight = clampInteger(
+            self.Settings.FontLineHeight,
+            DEFAULT_SETTINGS.FontLineHeight,
+            80,
+            160
+        )
+        self.Settings.FontStroke = clampInteger(
+            self.Settings.FontStroke,
+            DEFAULT_SETTINGS.FontStroke,
+            0,
+            100
+        )
         if type(self.Settings.AdvancedTools) ~= "boolean" then
             self.Settings.AdvancedTools = DEFAULT_SETTINGS.AdvancedTools
         end
@@ -424,7 +502,8 @@ do
             Mode = settings.TranslationMode,
             Enabled = settings.TranslationEnabled,
             EnableRemoteAssets = self.Configuration.EnableRemoteAssets,
-            FontProfile = settings.FontProfile
+            FontProfile = settings.FontProfile,
+            FontTuning = fontTuningFromSettings(settings)
         })
 
         library.CurrentLanguage = customization.I18n.CurrentLocale
@@ -610,10 +689,145 @@ do
         })
         pcall(refreshFontProfiles)
 
+        -- These controls are deliberately separate from the import tools.
+        -- Most users only need to reveal them when text needs accessibility
+        -- adjustments; the saved values remain dormant while the toggle is off.
+        local fontTuningSupported = type(fonts.GetTextStyleConfig) == "function"
+            and type(fonts.SetTextStyleConfig) == "function"
+        local fontTuningUiReady = false
+        local fontTuningRevision = 0
+        local fontAppearance
+        local function setFontAppearanceVisible(visible)
+            if fontAppearance and type(fontAppearance.SetVisible) == "function" then
+                fontAppearance:SetVisible(visible)
+            elseif fontAppearance and fontAppearance.Root then
+                fontAppearance.Root.Visible = visible == true
+            end
+        end
+        local function applyFontTuning()
+            local called, applied, applyError = pcall(function()
+                return fonts:SetTextStyleConfig(fontTuningFromSettings(settings))
+            end)
+            if not called or applied == false then
+                safeNotify(
+                    library,
+                    "Font appearance",
+                    "Could not apply settings",
+                    tostring(called and applyError or applied or "Unknown error")
+                )
+                return false
+            end
+            return true
+        end
+        local function requestFontTuningUpdate(immediate)
+            if not fontTuningUiReady then
+                return
+            end
+            fontTuningRevision = fontTuningRevision + 1
+            local revision = fontTuningRevision
+            if immediate then
+                applyFontTuning()
+            else
+                -- A slider emits while dragging; apply once after it settles
+                -- instead of rebuilding every FontFace on every mouse move.
+                task.delay(0.15, function()
+                    if revision == fontTuningRevision then
+                        applyFontTuning()
+                    end
+                end)
+            end
+            saveSoon()
+        end
+
+        if fontTuningSupported then
+            localization:AddToggle("InterfaceFontTuningEnabled", {
+                Title = "Advanced font settings",
+                Description = "Size, weight, spacing and outline.",
+                Default = settings.FontTuningEnabled,
+                Callback = function(value)
+                    settings.FontTuningEnabled = value
+                    setFontAppearanceVisible(value)
+                    requestFontTuningUpdate(true)
+                end
+            })
+
+            fontAppearance = tab:AddSection("Font appearance")
+            fontAppearance:AddSlider("InterfaceFontSizeScale", {
+                Title = "Text size",
+                Description = "100% = normal.",
+                Default = settings.FontSizeScale,
+                Min = 70,
+                Max = 160,
+                Rounding = 0,
+                Callback = function(value)
+                    settings.FontSizeScale = value
+                    requestFontTuningUpdate(false)
+                end
+            })
+
+            fontAppearance:AddDropdown("InterfaceFontWeight", {
+                Title = "Weight",
+                Description = "How bold the text is.",
+                Values = {"Auto", "Thin", "ExtraLight", "Light", "Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Heavy"},
+                Default = settings.FontWeight,
+                Callback = function(value)
+                    settings.FontWeight = value
+                    requestFontTuningUpdate(true)
+                end
+            })
+
+            fontAppearance:AddDropdown("InterfaceFontStyle", {
+                Title = "Style",
+                Description = "Keep normal or use italic.",
+                Values = {"Auto", "Normal", "Italic"},
+                Default = settings.FontStyle,
+                Callback = function(value)
+                    settings.FontStyle = value
+                    requestFontTuningUpdate(true)
+                end
+            })
+
+            fontAppearance:AddSlider("InterfaceFontLineHeight", {
+                Title = "Line spacing",
+                Description = "100% = normal.",
+                Default = settings.FontLineHeight,
+                Min = 80,
+                Max = 160,
+                Rounding = 0,
+                Callback = function(value)
+                    settings.FontLineHeight = value
+                    requestFontTuningUpdate(false)
+                end
+            })
+
+            fontAppearance:AddSlider("InterfaceFontStroke", {
+                Title = "Outline",
+                Description = "0% = script default.",
+                Default = settings.FontStroke,
+                Min = 0,
+                Max = 100,
+                Rounding = 0,
+                Callback = function(value)
+                    settings.FontStroke = value
+                    requestFontTuningUpdate(false)
+                end
+            })
+
+            fontTuningUiReady = true
+            setFontAppearanceVisible(settings.FontTuningEnabled)
+        else
+            localization:AddParagraph({
+                Title = "Advanced font settings",
+                Content = "Update MainUI to use font appearance controls."
+            })
+        end
+
         local advancedSections = {}
         local function setAdvancedVisible(visible)
             for _, advancedSection in ipairs(advancedSections) do
-                if advancedSection.Root then
+                if type(advancedSection.SetVisible) == "function" then
+                    advancedSection:SetVisible(visible)
+                elseif advancedSection.Root then
                     advancedSection.Root.Visible = visible
                 end
             end
@@ -740,7 +954,7 @@ do
 
         languageTools:AddButton({
             Title = "Export JSON",
-            Description = "Save a blank template.",
+            Description = "Copy a blank template.",
             Callback = function()
                 local targetLocale = settings.TemplateLocale:match("^%s*(.-)%s*$")
                 if targetLocale == "" then
@@ -751,12 +965,20 @@ do
                     safeNotify(library, "Language template", "Export failed", exportError)
                     return
                 end
+                local delivery = {}
+                if export.Copied then
+                    table.insert(delivery, "Copied to clipboard.")
+                end
+                if export.Path then
+                    table.insert(delivery, "Saved: " .. export.Path)
+                elseif export.SaveError then
+                    table.insert(delivery, "File save failed: " .. tostring(export.SaveError))
+                end
                 safeNotify(
                     library,
                     "Language template",
-                    "Template exported",
-                    export.Path
-                        or (export.Copied and "Copied to clipboard.")
+                    export.Copied and "Copied" or "Template exported",
+                    #delivery > 0 and table.concat(delivery, "\n")
                         or "Generated, but this executor cannot save files or copy to clipboard."
                 )
             end
