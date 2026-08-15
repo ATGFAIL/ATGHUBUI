@@ -3328,6 +3328,12 @@ local aa = {
 		local function workspaceTrim(A)
 			return type(A) == "string" and (A:match("^%s*(.-)%s*$") or "") or ""
 		end
+		local function workspaceObjectText(A)
+			if type(A) == "string" then return A end
+			if A == nil then return "" end
+			local B, C = pcall(function() return A.Text end)
+			return B and type(C) == "string" and C or ""
+		end
 		local function workspaceIndex(A, B)
 			for C, D in ipairs(A or {}) do
 				if D == B then
@@ -3768,6 +3774,22 @@ local aa = {
 				end)
 			end
 		end
+		function Workspace:GetTabDisplayTitle(A)
+			if type(A) ~= "table" then return "" end
+			if A.Selected and self.Window then
+				local B = workspaceObjectText(self.Window.TabDisplay)
+				if B ~= "" then return B end
+			end
+			local B = workspaceObjectText(A.Label)
+			return B ~= "" and B or tostring(A.Name or "")
+		end
+		function Workspace:GetEntryDisplayText(A)
+			if type(A) ~= "table" then return "", "" end
+			local B = type(A.Object) == "table" and A.Object or nil
+			local C = workspaceObjectText(B and B.TitleLabel)
+			local D = workspaceObjectText(B and B.DescLabel)
+			return C ~= "" and C or tostring(A.Title or ""), D ~= "" and D or tostring(A.Description or "")
+		end
 		function Workspace:FindEntries(A)
 			A = workspaceTrim(A):lower()
 			local B = {}
@@ -3789,16 +3811,19 @@ local aa = {
 				-- display field. Search is optional UI, so normalize missing data
 				-- instead of letting it interrupt the main UI creation flow.
 				if type(C) == "table" then
-					local D = (tostring(C.Title or "") .. " " .. tostring(C.Description or "") .. " " .. tostring(C.TabTitle or "") .. " " .. tostring(C.Type or "")):lower()
-					if D:find(A, 1, true) then
+					local D, E = self:GetEntryDisplayText(C)
+					local F = self:GetTabDisplayTitle(C.Tab)
+					local G = (tostring(C.Title or "") .. " " .. tostring(C.Description or "") .. " " .. tostring(C.TabTitle or "") .. " " .. tostring(C.Type or "") .. " " .. D .. " " .. E .. " " .. F):lower()
+					if G:find(A, 1, true) then
 						table.insert(B, C)
 					end
 				end
 			end
 			for _, C in ipairs(self.Tabs) do
 				local D = type(C) == "table" and tostring(C.Name or "") or ""
-				if D:lower():find(A, 1, true) then
-					table.insert(B, {Id = C.Id, Title = D, Description = "Tab", Type = "Tab", Tab = C})
+				local E = self:GetTabDisplayTitle(C)
+				if (D .. " " .. E):lower():find(A, 1, true) then
+					table.insert(B, {Id = C.Id, Title = E, Description = "Tab", Type = "Tab", Tab = C})
 				end
 			end
 			return B
@@ -4105,11 +4130,12 @@ local aa = {
 			local D = self.Window and self.Window.TabHolder
 			if not D then return nil end
 			local E = type(B) == "table" and B or {}
-			local F = tostring(E.Title or E.Name or "Untitled")
-			local G = type(E.TabTitle) == "string" and E.TabTitle or ""
-			local H = type(E.Description) == "string" and E.Description or ""
+			local F, H = self:GetEntryDisplayText(E)
+			F = F ~= "" and F or tostring(E.Title or E.Name or "Untitled")
+			local G = self:GetTabDisplayTitle(E.Tab)
+			if G == "" then G = type(E.TabTitle) == "string" and E.TabTitle or "" end
 			local I = type(E.Type) == "string" and E.Type or "Control"
-			local J = G ~= "" and G or (H ~= "" and H or I)
+			local J = I == "Tab" and "Tab" or (G ~= "" and G or (H ~= "" and H or I))
 			local K = E.Tab and E.Tab.IconObject and E.Tab.IconObject.Image or x.GetIcon("search")
 			local L = u("TextButton", {
 				Name = "ATGSearchTab_" .. tostring(C), Parent = D, Size = UDim2.new(1, 0, 0, 38), LayoutOrder = 90000 + C,
@@ -6317,6 +6343,11 @@ local aa = {
 				)
 			x.Label = x.Frame:FindFirstChild("TabLabel")
 			x.IconObject = x.Frame:FindFirstChild("TabIcon")
+			-- Translate the sidebar label as well as the large selected-tab title,
+			-- allowing navigation search to match the language users actually see.
+			if x.Label then
+				TranslationSystem:Register(x.Label, q, "Text")
+			end
 			local y = k("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
 			x.ContainerFrame =
 				k(
