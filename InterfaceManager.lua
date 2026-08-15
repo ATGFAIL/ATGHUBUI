@@ -33,7 +33,9 @@ do
 
         FontProfile = "default",
         FontUrl = "",
-        FontTarget = "Both"
+        FontTarget = "Both",
+        -- Technical import/update controls stay collapsed for normal users.
+        AdvancedTools = false
     }
 
     local DEFAULT_CONFIGURATION = {
@@ -62,7 +64,8 @@ do
         "TemplateLocale",
         "FontProfile",
         "FontUrl",
-        "FontTarget"
+        "FontTarget",
+        "AdvancedTools"
     }
 
     local MODE_VALUES = {
@@ -399,6 +402,9 @@ do
         if not FONT_TARGET_VALUES[self.Settings.FontTarget] then
             self.Settings.FontTarget = DEFAULT_SETTINGS.FontTarget
         end
+        if type(self.Settings.AdvancedTools) ~= "boolean" then
+            self.Settings.AdvancedTools = DEFAULT_SETTINGS.AdvancedTools
+        end
         return true
     end
 
@@ -546,7 +552,7 @@ do
             end)
         end
 
-        local localization = tab:AddSection("Language")
+        local localization = tab:AddSection("Quick settings")
         local languageDropdown = localization:AddDropdown("InterfaceLanguage", {
             Title = "UI language",
             Description = "Choose your language.",
@@ -563,12 +569,77 @@ do
             languageDropdown:SetValue(getLanguageValue(i18n, settings.Language))
         end)
 
+        localization:AddToggle("InterfaceTranslationEnabled", {
+            Title = "Translation",
+            Description = "Show translated text.",
+            Default = settings.TranslationEnabled,
+            Callback = function(value)
+                settings.TranslationEnabled = value
+                i18n:SetEnabled(value)
+                self:SaveSettings()
+            end
+        })
+
+        -- Keep the common actions visible. Import/update tools are grouped
+        -- below so first-time users do not have to scan a long settings page.
+        local fontProfileDropdown
+        local function refreshFontProfiles()
+            local values = fonts:GetProfileOptions()
+            if #values == 0 then
+                values = {"Script default [default]"}
+            end
+            fontProfileDropdown:SetValues(values)
+            fontProfileDropdown:SetValue(profileDisplay(fonts, settings.FontProfile) or values[1])
+        end
+
+        fontProfileDropdown = localization:AddDropdown("InterfaceFontProfile", {
+            Title = "Active font",
+            Description = "Choose a saved font.",
+            Values = fonts:GetProfileOptions(),
+            Default = profileDisplay(fonts, settings.FontProfile),
+            Callback = function(value)
+                local profileId = fonts:GetProfileId(value)
+                local applied, applyError = fonts:ApplyProfile(profileId)
+                if not applied then
+                    safeNotify(library, "Font", "This font is unavailable in this executor", applyError)
+                    return
+                end
+                settings.FontProfile = profileId
+                self:SaveSettings()
+            end
+        })
+        pcall(refreshFontProfiles)
+
+        local advancedSections = {}
+        local function setAdvancedVisible(visible)
+            for _, advancedSection in ipairs(advancedSections) do
+                if advancedSection.Root then
+                    advancedSection.Root.Visible = visible
+                end
+            end
+        end
+
+        localization:AddToggle("InterfaceAdvancedTools", {
+            Title = "Advanced tools",
+            Description = "Language packs and font installs.",
+            Default = settings.AdvancedTools,
+            Callback = function(value)
+                settings.AdvancedTools = value
+                setAdvancedVisible(value)
+                self:SaveSettings()
+            end
+        })
+
+        local languageTools = tab:AddSection("Language tools")
+        table.insert(advancedSections, languageTools)
+        setAdvancedVisible(settings.AdvancedTools)
+
         local modeValues = {}
         for display in pairs(MODE_VALUES) do
             table.insert(modeValues, display)
         end
         table.sort(modeValues)
-        local modeDropdown = localization:AddDropdown("InterfaceTranslationMode", {
+        local modeDropdown = languageTools:AddDropdown("InterfaceTranslationMode", {
             Title = "Translate by",
             Description = "Pick a source.",
             Values = modeValues,
@@ -588,29 +659,18 @@ do
             modeDropdown:SetValue(modeDisplay(settings.TranslationMode))
         end)
 
-        localization:AddToggle("InterfaceTranslationEnabled", {
-            Title = "Translation",
-            Description = "Show translated text.",
-            Default = settings.TranslationEnabled,
-            Callback = function(value)
-                settings.TranslationEnabled = value
-                i18n:SetEnabled(value)
-                self:SaveSettings()
-            end
-        })
-
         local capabilityText = string.format(
             "Save: %s | Web: %s | Fonts: %s",
             capabilities.FileSystem and "OK" or "No",
             (capabilities.RemoteFetch and assets.Enabled) and "OK" or "No",
             capabilities.CustomFonts and "OK" or "No"
         )
-        localization:AddParagraph({
+        languageTools:AddParagraph({
             Title = "Status",
             Content = capabilityText
         })
 
-        localization:AddInput("InterfaceLanguagePackUrl", {
+        languageTools:AddInput("InterfaceLanguagePackUrl", {
             Title = "Language JSON",
             Description = "Paste a link or file path.",
             Default = settings.LanguagePackUrl,
@@ -622,7 +682,7 @@ do
             end
         })
 
-        localization:AddInput("InterfaceTemplateLocale", {
+        languageTools:AddInput("InterfaceTemplateLocale", {
             Title = "Target code",
             Description = "Optional, e.g. ja-JP.",
             Default = settings.TemplateLocale,
@@ -658,7 +718,7 @@ do
             end
         end
 
-        localization:AddButton({
+        languageTools:AddButton({
             Title = "Install JSON",
             Description = "Install the JSON above.",
             Callback = function()
@@ -678,7 +738,7 @@ do
             end
         })
 
-        localization:AddButton({
+        languageTools:AddButton({
             Title = "Export JSON",
             Description = "Save a blank template.",
             Callback = function()
@@ -702,7 +762,7 @@ do
             end
         })
 
-        installedPackDropdown = localization:AddDropdown("InterfaceInstalledLanguagePack", {
+        installedPackDropdown = languageTools:AddDropdown("InterfaceInstalledLanguagePack", {
             Title = "Saved pack",
             Description = "Choose a pack.",
             Values = {"No installed language packs"},
@@ -717,7 +777,7 @@ do
         })
         refreshLanguagePacks(installedPackDropdown)
 
-        localization:AddButton({
+        languageTools:AddButton({
             Title = "Update pack",
             Description = "Download it again.",
             Callback = function()
@@ -731,7 +791,7 @@ do
             end
         })
 
-        localization:AddButton({
+        languageTools:AddButton({
             Title = "Remove pack",
             Description = "Delete this pack.",
             Callback = function()
@@ -747,39 +807,13 @@ do
             end
         })
 
-        local typography = tab:AddSection("Fonts")
+        local typography = tab:AddSection("Font tools")
+        table.insert(advancedSections, typography)
+        setAdvancedVisible(settings.AdvancedTools)
         typography:AddParagraph({
             Title = "Font help",
             Content = "Use ID, Google Fonts, or a font file."
         })
-
-        local fontProfileDropdown
-        local function refreshFontProfiles()
-            local values = fonts:GetProfileOptions()
-            if #values == 0 then
-                values = {"Script default [default]"}
-            end
-            fontProfileDropdown:SetValues(values)
-            fontProfileDropdown:SetValue(profileDisplay(fonts, settings.FontProfile) or values[1])
-        end
-
-        fontProfileDropdown = typography:AddDropdown("InterfaceFontProfile", {
-            Title = "Active font",
-            Description = "Thai uses Thai; other text uses Latin.",
-            Values = fonts:GetProfileOptions(),
-            Default = profileDisplay(fonts, settings.FontProfile),
-            Callback = function(value)
-                local profileId = fonts:GetProfileId(value)
-                local applied, applyError = fonts:ApplyProfile(profileId)
-                if not applied then
-                    safeNotify(library, "Font", "This font is unavailable in this executor", applyError)
-                    return
-                end
-                settings.FontProfile = profileId
-                self:SaveSettings()
-            end
-        })
-        pcall(refreshFontProfiles)
 
         typography:AddDropdown("InterfaceFontTarget", {
             Title = "Apply font to",
@@ -850,6 +884,8 @@ do
                 safeNotify(library, "Font", "Profile removed")
             end
         })
+
+        setAdvancedVisible(settings.AdvancedTools)
 
         -- Public convenience for callers that need to refresh the selector
         -- after installing a pack programmatically.
