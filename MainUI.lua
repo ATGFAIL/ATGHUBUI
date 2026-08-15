@@ -3471,6 +3471,9 @@ local aa = {
 			if type(F.SmartConfirm) ~= "boolean" then
 				F.SmartConfirm = true
 			end
+			-- Focus is intentionally session-only.  Restoring it at startup can
+			-- make every tab except the first one look as if it vanished.
+			F.FocusMode = false
 			return true
 		end
 		function Workspace:Configure(A)
@@ -3688,6 +3691,11 @@ local aa = {
 			self:ApplyModes()
 			self:SaveSoon()
 		end
+		function Workspace:UpdateSearchHint()
+			if self.SidebarSearch then
+				self.SidebarSearch.PlaceholderText = self.State.FocusMode and "Focus mode on  •  Ctrl+K to exit" or "Search...  Ctrl+K"
+			end
+		end
 		function Workspace:SetFocus(A)
 			A = A == true
 			if A then
@@ -3701,6 +3709,7 @@ local aa = {
 			end
 			self.State.FocusMode = A
 			self:ApplyModes()
+			self:UpdateSearchHint()
 			self:SaveSoon()
 		end
 		function Workspace:SetArrangeMode(A)
@@ -3771,14 +3780,20 @@ local aa = {
 				return B
 			end
 			for _, C in ipairs(self.Entries) do
-				local D = (C.Title .. " " .. C.Description .. " " .. C.TabTitle .. " " .. C.Type):lower()
-				if D:find(A, 1, true) then
-					table.insert(B, C)
+				-- Controls created by older scripts do not always provide every
+				-- display field. Search is optional UI, so normalize missing data
+				-- instead of letting it interrupt the main UI creation flow.
+				if type(C) == "table" then
+					local D = (tostring(C.Title or "") .. " " .. tostring(C.Description or "") .. " " .. tostring(C.TabTitle or "") .. " " .. tostring(C.Type or "")):lower()
+					if D:find(A, 1, true) then
+						table.insert(B, C)
+					end
 				end
 			end
 			for _, C in ipairs(self.Tabs) do
-				if C.Name:lower():find(A, 1, true) then
-					table.insert(B, {Id = C.Id, Title = C.Name, Description = "Tab", Type = "Tab", Tab = C})
+				local D = type(C) == "table" and tostring(C.Name or "") or ""
+				if D:lower():find(A, 1, true) then
+					table.insert(B, {Id = C.Id, Title = D, Description = "Tab", Type = "Tab", Tab = C})
 				end
 			end
 			return B
@@ -4014,6 +4029,7 @@ local aa = {
 			return self.PanelContent
 		end
 		function Workspace:RenderEntries(A, B, C)
+			B = type(B) == "table" and B or {}
 			if #B == 0 then
 				self:Text(A, C or "Nothing here yet.", 12, {
 					Color = Color3.fromRGB(154, 154, 168),
@@ -4023,17 +4039,23 @@ local aa = {
 				return
 			end
 			for _, D in ipairs(B) do
-				local E = self:Button(A, D.Title, nil, function()
-					self:Navigate(D)
-					self:ShowPanel(false)
-				end, {Height = 42})
+				if type(D) == "table" then
+					local E0 = tostring(D.Title or D.Name or "Untitled")
+					local F0 = type(D.TabTitle) == "string" and D.TabTitle or ""
+					local G0 = type(D.Description) == "string" and D.Description or ""
+					local H0 = type(D.Type) == "string" and D.Type or "Control"
+					local I0 = (F0 ~= "" and F0 .. "  /  " or "") .. (G0 ~= "" and G0 or H0)
+					local E = self:Button(A, E0, nil, function()
+						self:Navigate(D)
+						self:ShowPanel(false)
+					end, {Height = 42})
 				local F = E:FindFirstChild("Title")
 				if F then
 					F.Size = UDim2.new(1, -42, 0, 18)
 					F.Position = UDim2.fromOffset(8, 3)
 				end
 				local H = E.ZIndex
-				self:Text(E, (D.TabTitle ~= "" and D.TabTitle .. "  /  " or "") .. (D.Description ~= "" and D.Description or D.Type), 10, {
+				self:Text(E, I0, 10, {
 					Color = Color3.fromRGB(151, 151, 165),
 					Size = UDim2.new(1, -42, 0, 16),
 					Position = UDim2.fromOffset(8, 21),
@@ -4051,13 +4073,15 @@ local aa = {
 					ZIndex = H + 2
 				})
 				self:Bind(G.MouseButton1Click, function()
-					self:ToggleFavorite(D.Id)
+					if D.Id then self:ToggleFavorite(D.Id) end
 					if self.PanelKind == "favorites" then self:RenderFavorites() else self:RenderSearch(self.SearchQuery or "") end
 				end)
+				end
 			end
 		end
 		function Workspace:RenderSearch(A)
-			self.SearchQuery = A or ""
+			A = type(A) == "string" and A or ""
+			self.SearchQuery = A
 			local B = self:BeginPanel("search", workspaceTrim(A) == "" and "Recent" or "Search results")
 			if B then
 				self:RenderEntries(B, self:FindEntries(A), workspaceTrim(A) == "" and "Use Ctrl+K to search controls and tabs." or "No matching control.")
@@ -4234,12 +4258,16 @@ local aa = {
 			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.SidebarSearch})
 			u("UIStroke", {Color = Color3.fromRGB(115, 55, 64), Transparency = 0.45, Parent = self.SidebarSearch})
 			u("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = self.SidebarSearch})
+			self:UpdateSearchHint()
 			self:Connect(self.SidebarSearch:GetPropertyChangedSignal("Text"), function()
 				local B = self.SidebarSearch.Text
 				if workspaceTrim(B) == "" then
 					if self.PanelKind == "search" then self:ShowPanel(false) end
 				else
-					self:RenderSearch(B)
+					-- Search is an optional enhancement: never let a malformed
+					-- third-party control interrupt the script creating its tabs.
+					local C, D = pcall(function() self:RenderSearch(B) end)
+					if not C then warn("[ATG Workspace] Search error: " .. tostring(D)) end
 				end
 			end)
 			A.TabArea.Position = UDim2.new(0, 12, 0, 88)
