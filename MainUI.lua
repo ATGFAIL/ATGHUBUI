@@ -3675,18 +3675,12 @@ local aa = {
 				self.Window:SetTabWidth(A and 54 or self.OriginalTabWidth)
 			end
 			if self.Sidebar then
-				self.Sidebar.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 0, A and 140 or 62)
+				self.Sidebar.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 0, A and 0 or 26)
 				self.SidebarSearch.Visible = not A
-				self.SidebarToolbar.Position = UDim2.new(0, A and 15 or 0, 0, A and 3 or 31)
-				self.SidebarToolbar.Size = UDim2.new(1, A and -30 or 0, 0, A and 134 or 26)
-				if self.ToolbarLayout then
-					self.ToolbarLayout.FillDirection = A and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
-					self.ToolbarLayout.Padding = UDim.new(0, 4)
-				end
 			end
 			if self.Window and self.Window.TabArea then
-				self.Window.TabArea.Position = UDim2.new(0, 12, 0, A and 202 or 124)
-				self.Window.TabArea.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 1, A and -214 or -136)
+				self.Window.TabArea.Position = UDim2.new(0, 12, 0, A and 54 or 88)
+				self.Window.TabArea.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 1, A and -66 or -100)
 			end
 			if self.Panel then
 				self.Panel.Size = UDim2.new(0, A and 230 or self.OriginalTabWidth, 0, 260)
@@ -3989,7 +3983,7 @@ local aa = {
 			if not A then
 				local B = l:Create(self.Panel, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
 					GroupTransparency = 1,
-					Position = UDim2.fromOffset(12, 112)
+					Position = UDim2.fromOffset(12, 78)
 				})
 				B:Play()
 				B.Completed:Connect(function()
@@ -4002,10 +3996,10 @@ local aa = {
 			end
 			self.Panel.Visible = true
 			self.Panel.GroupTransparency = 1
-			self.Panel.Position = UDim2.fromOffset(12, 112)
+			self.Panel.Position = UDim2.fromOffset(12, 78)
 			l:Create(self.Panel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 				GroupTransparency = 0,
-				Position = UDim2.fromOffset(12, 116)
+				Position = UDim2.fromOffset(12, 82)
 			}):Play()
 		end
 		function Workspace:BeginPanel(A, B)
@@ -4206,7 +4200,7 @@ local aa = {
 			local A = self.Window
 			self.Panel = u("CanvasGroup", {
 				Name = "ATGWorkspacePanel", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 260),
-				Position = UDim2.fromOffset(12, 116), BackgroundColor3 = Color3.fromRGB(20, 20, 27),
+				Position = UDim2.fromOffset(12, 82), BackgroundColor3 = Color3.fromRGB(20, 20, 27),
 				BackgroundTransparency = 0.02, BorderSizePixel = 0, Visible = false, GroupTransparency = 1, ZIndex = 35
 			})
 			u("UICorner", {CornerRadius = UDim.new(0, 9), Parent = self.Panel})
@@ -4228,7 +4222,7 @@ local aa = {
 		function Workspace:CreateChrome()
 			local A = self.Window
 			self.Sidebar = u("Frame", {
-				Name = "ATGWorkspaceSidebar", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 62),
+				Name = "ATGWorkspaceSidebar", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 26),
 				Position = UDim2.fromOffset(12, 52), BackgroundTransparency = 1, ZIndex = 20
 			})
 			self.SidebarSearch = u("TextBox", {
@@ -4248,21 +4242,8 @@ local aa = {
 					self:RenderSearch(B)
 				end
 			end)
-			self.SidebarToolbar = u("Frame", {
-				Name = "Actions", Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 31), BackgroundTransparency = 1, ZIndex = 21
-			})
-			local B = u("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center,
-				Padding = UDim.new(0, 4), Parent = self.SidebarToolbar
-			})
-			self.ToolbarLayout = B
-			self:SquareButton(self.SidebarToolbar, "search", function() self:OpenPalette() end)
-			self:SquareButton(self.SidebarToolbar, "star", function() self:RenderFavorites() end)
-			self:SquareButton(self.SidebarToolbar, "history", function() self:RenderHistory() end)
-			self:SquareButton(self.SidebarToolbar, "bookmark", function() self:RenderProfiles() end)
-			self:SquareButton(self.SidebarToolbar, "layout-dashboard", function() self:RenderWorkspaceMenu() end)
-			A.TabArea.Position = UDim2.new(0, 12, 0, 124)
-			A.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -136)
+			A.TabArea.Position = UDim2.new(0, 12, 0, 88)
+			A.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -100)
 			self:CreatePanel()
 		end
 		function Workspace:RenderPalette(A)
