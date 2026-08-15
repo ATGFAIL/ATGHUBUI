@@ -827,6 +827,16 @@ do
         CurrentProfile = "default",
         LoadedRegistryPath = nil,
         FaceCache = {},
+        -- These are presentation overrides, not part of a downloaded font
+        -- profile.  InterfaceManager persists them per script scope.
+        TextStyleConfig = {
+            Enabled = false,
+            SizeScale = 100,
+            Weight = "Auto",
+            Style = "Auto",
+            LineHeight = 100,
+            Stroke = 0
+        },
         LastError = nil
     }
 
@@ -1711,7 +1721,17 @@ do
         if not encoded then
             return nil, pack
         end
+
+        -- Clipboard is the fastest hand-off for normal users: they can paste
+        -- the template straight into an AI/editor even if file writing later
+        -- fails.  It is deliberately attempted before the optional file save.
+        local copied = false
+        if type(Capabilities.SetClipboard) == "function" then
+            copied = pcall(Capabilities.SetClipboard, encoded)
+        end
+
         local path
+        local saveError
         if Storage:CanUseFiles() then
             path = joinPath(
                 I18n:GetScopeFolder(),
@@ -1720,18 +1740,19 @@ do
             )
             local written, writeError = Storage:Write(path, encoded)
             if not written then
-                return nil, writeError
+                path = nil
+                saveError = writeError
             end
         end
-        local copied = false
-        if type(Capabilities.SetClipboard) == "function" then
-            copied = pcall(Capabilities.SetClipboard, encoded)
+        if not path and not copied and saveError then
+            return nil, saveError
         end
         return {
             Path = path,
             Json = encoded,
             Pack = pack,
-            Copied = copied
+            Copied = copied,
+            SaveError = saveError
         }
     end
 
@@ -1852,6 +1873,139 @@ do
             return value
         end
         return canonicalFontStyle(value) == "italic" and Enum.FontStyle.Italic or Enum.FontStyle.Normal
+    end
+
+    -- These are deliberately conservative.  Font tuning changes every text
+    -- control in the library, so bounded values keep an oversized setting from
+    -- breaking the layout while still giving users a meaningful range.
+    local TEXT_STYLE_WEIGHT_OPTIONS = {
+        Thin = 100,
+        ExtraLight = 200,
+        Light = 300,
+        Regular = 400,
+        Medium = 500,
+        SemiBold = 600,
+        Bold = 700,
+        ExtraBold = 800,
+        Heavy = 900
+    }
+
+    local TEXT_STYLE_WEIGHT_NAMES = {
+        thin = "Thin",
+        extralight = "ExtraLight",
+        light = "Light",
+        regular = "Regular",
+        normal = "Regular",
+        medium = "Medium",
+        semibold = "SemiBold",
+        bold = "Bold",
+        extrabold = "ExtraBold",
+        heavy = "Heavy",
+        black = "Heavy"
+    }
+
+    local function clampNumber(value, minimum, maximum, fallback)
+        value = tonumber(value)
+        if not value then
+            return fallback
+        end
+        value = math.floor(value + 0.5)
+        return math.max(minimum, math.min(maximum, value))
+    end
+
+    local function normalizeTextStyleWeight(value)
+        if value == nil then
+            return "Auto"
+        end
+        if type(value) == "string" then
+            local normalized = value:lower():gsub("[%s_%-]", "")
+            if normalized == "auto" then
+                return "Auto"
+            end
+            if TEXT_STYLE_WEIGHT_NAMES[normalized] then
+                return TEXT_STYLE_WEIGHT_NAMES[normalized]
+            end
+        elseif type(value) == "number" then
+            local numeric = canonicalFontWeight(value)
+            for name, weight in pairs(TEXT_STYLE_WEIGHT_OPTIONS) do
+                if weight == numeric then
+                    return name
+                end
+            end
+        end
+        return "Auto"
+    end
+
+    local function normalizeTextStyleStyle(value)
+        if value == nil then
+            return "Auto"
+        end
+        if type(value) == "string" and value:lower():gsub("%s+", "") == "auto" then
+            return "Auto"
+        end
+        return canonicalFontStyle(value) == "italic" and "Italic" or "Normal"
+    end
+
+    local function copyTextStyleConfig(config)
+        config = config or {}
+        return {
+            Enabled = config.Enabled == true,
+            SizeScale = clampNumber(config.SizeScale, 70, 160, 100),
+            Weight = normalizeTextStyleWeight(config.Weight),
+            Style = normalizeTextStyleStyle(config.Style),
+            LineHeight = clampNumber(config.LineHeight, 80, 160, 100),
+            Stroke = clampNumber(config.Stroke, 0, 100, 0)
+        }
+    end
+
+    local function textStyleWeight(value)
+        local numeric = TEXT_STYLE_WEIGHT_OPTIONS[value]
+        return numeric and enumWeight(numeric) or nil
+    end
+
+    local function textStyleStyle(value)
+        if value == "Normal" then
+            return Enum.FontStyle.Normal
+        end
+        if value == "Italic" then
+            return Enum.FontStyle.Italic
+        end
+        return nil
+    end
+
+    function FontManager:GetTextStyleConfig()
+        return copyTextStyleConfig(self.TextStyleConfig)
+    end
+
+    function FontManager:SetTextStyleConfig(config, deferApply)
+        if type(config) ~= "table" then
+            return false, "Font style settings must be a table."
+        end
+
+        local previous = self:GetTextStyleConfig()
+        local merged = {
+            Enabled = config.Enabled == nil and previous.Enabled or config.Enabled == true,
+            SizeScale = config.SizeScale == nil and previous.SizeScale or config.SizeScale,
+            Weight = config.Weight == nil and previous.Weight or config.Weight,
+            Style = config.Style == nil and previous.Style or config.Style,
+            LineHeight = config.LineHeight == nil and previous.LineHeight or config.LineHeight,
+            Stroke = config.Stroke == nil and previous.Stroke or config.Stroke
+        }
+        local normalized = copyTextStyleConfig(merged)
+        if previous.Enabled == normalized.Enabled
+            and previous.SizeScale == normalized.SizeScale
+            and previous.Weight == normalized.Weight
+            and previous.Style == normalized.Style
+            and previous.LineHeight == normalized.LineHeight
+            and previous.Stroke == normalized.Stroke then
+            return true
+        end
+        self.TextStyleConfig = normalized
+        self.FaceCache = {}
+        if not deferApply then
+            self:ApplyAll()
+        end
+        return true
     end
 
     local function textContainsThai(text)
@@ -2105,9 +2259,33 @@ do
         return desiredWeight, desiredStyle
     end
 
-    function FontManager:BuildFace(profile, roleName, originalFace)
-        if not profile or profile.UseOriginal then
+    local function buildTunedOriginalFace(originalFace, config)
+        if not originalFace or not config or not config.Enabled then
             return originalFace
+        end
+        local weightOverride = textStyleWeight(config.Weight)
+        local styleOverride = textStyleStyle(config.Style)
+        if not weightOverride and not styleOverride then
+            return originalFace
+        end
+
+        local family, weight, style
+        local readOk = pcall(function()
+            family = originalFace.Family
+            weight = originalFace.Weight
+            style = originalFace.Style
+        end)
+        if not readOk or family == nil or tostring(family) == "" then
+            return originalFace
+        end
+        local built, tunedFace = pcall(Font.new, family, weightOverride or weight, styleOverride or style)
+        return built and tunedFace or originalFace
+    end
+
+    function FontManager:BuildFace(profile, roleName, originalFace)
+        local textStyle = self.TextStyleConfig
+        if not profile or profile.UseOriginal then
+            return buildTunedOriginalFace(originalFace, textStyle)
         end
         local role = profile.Roles and profile.Roles[roleName]
         -- A partial profile is useful: a user can install a Latin font first,
@@ -2128,6 +2306,10 @@ do
                 weight = originalFace.Weight
                 style = originalFace.Style
             end)
+        end
+        if textStyle.Enabled then
+            weight = textStyleWeight(textStyle.Weight) or weight
+            style = textStyleStyle(textStyle.Style) or style
         end
         -- A downloaded TTF often contains only Regular. Select the closest
         -- installed face instead of requesting an unavailable Bold/SemiBold.
@@ -2156,13 +2338,25 @@ do
         end
         local entry = self.Registry[textObject]
         if not entry then
-            local originalFace
+            local originalFace, originalTextSize, originalLineHeight, originalStrokeTransparency
             pcall(function()
                 originalFace = textObject.FontFace
+            end)
+            pcall(function()
+                originalTextSize = textObject.TextSize
+            end)
+            pcall(function()
+                originalLineHeight = textObject.LineHeight
+            end)
+            pcall(function()
+                originalStrokeTransparency = textObject.TextStrokeTransparency
             end)
             entry = {
                 Object = textObject,
                 OriginalFace = originalFace,
+                OriginalTextSize = originalTextSize,
+                OriginalLineHeight = originalLineHeight,
+                OriginalStrokeTransparency = originalStrokeTransparency,
                 Role = role
             }
             self.Registry[textObject] = entry
@@ -2182,6 +2376,47 @@ do
         -- same value again unless a custom profile is active.
         if self.CurrentProfile ~= "default" then
             self:ApplyObject(entry)
+        elseif self.TextStyleConfig and self.TextStyleConfig.Enabled then
+            self:ApplyObject(entry)
+        end
+    end
+
+    function FontManager:ApplyTextStyle(entry)
+        if not entry or not entry.Object then
+            return
+        end
+        local textObject = entry.Object
+        local config = self.TextStyleConfig
+
+        local function setProperty(name, value)
+            if value ~= nil then
+                pcall(function()
+                    textObject[name] = value
+                end)
+            end
+        end
+
+        if not config.Enabled then
+            setProperty("TextSize", entry.OriginalTextSize)
+            setProperty("LineHeight", entry.OriginalLineHeight)
+            setProperty("TextStrokeTransparency", entry.OriginalStrokeTransparency)
+            return
+        end
+
+        if type(entry.OriginalTextSize) == "number" then
+            local size = math.max(6, math.min(96, math.floor(entry.OriginalTextSize * config.SizeScale / 100 + 0.5)))
+            setProperty("TextSize", size)
+        end
+        if type(entry.OriginalLineHeight) == "number" then
+            local height = math.max(0.5, math.min(3, entry.OriginalLineHeight * config.LineHeight / 100))
+            setProperty("LineHeight", height)
+        end
+        -- 0 means "keep the script's outline".  Above 0 is a user-selected
+        -- outline strength where 100 is fully opaque.
+        if config.Stroke > 0 then
+            setProperty("TextStrokeTransparency", 1 - config.Stroke / 100)
+        else
+            setProperty("TextStrokeTransparency", entry.OriginalStrokeTransparency)
         end
     end
 
@@ -2205,22 +2440,27 @@ do
         )
         if not built then
             entry.LastError = tostring(face)
+            self:ApplyTextStyle(entry)
             return false, entry.LastError
         end
         if face then
             pcall(function()
                 entry.Object.FontFace = face
             end)
+            self:ApplyTextStyle(entry)
             return true
         elseif profile and profile.UseOriginal and entry.OriginalFace then
             pcall(function()
                 entry.Object.FontFace = entry.OriginalFace
             end)
+            self:ApplyTextStyle(entry)
             return true
         elseif faceError then
             entry.LastError = faceError
+            self:ApplyTextStyle(entry)
             return false, faceError
         end
+        self:ApplyTextStyle(entry)
         return false
     end
 
@@ -2365,6 +2605,7 @@ do
             return nil
         end
         local candidate
+        local variableCandidate
         for _, item in ipairs(listing) do
             if type(item) == "table" and type(item.download_url) == "string" then
                 local name = tostring(item.name or ""):lower()
@@ -2375,14 +2616,24 @@ do
                     if not candidate and not name:find("variable", 1, true) then
                         candidate = {item.download_url, item.name}
                     end
+                    -- A growing number of Google families ship only as a
+                    -- VariableFont. It is still a valid TTF for a local
+                    -- FontFamily, so use it only after a static face.
+                    if not variableCandidate then
+                        variableCandidate = {item.download_url, item.name}
+                    end
                 end
             end
         end
-        return candidate and candidate[1], candidate and candidate[2]
+        local chosen = candidate or variableCandidate
+        return chosen and chosen[1], chosen and chosen[2]
     end
 
     function RemoteAssets:ResolveGoogleFont(url)
+        -- Google now serves some families below a collection path, e.g.
+        -- fonts.google.com/noto/specimen/Noto+Sans+Thai.
         local family = url:match("fonts%.google%.com/specimen/([^%?#/]+)")
+            or url:match("fonts%.google%.com/.-/specimen/([^%?#/]+)")
         if not family then
             family = url:match("[?&]family=([^:&]+)")
         end
@@ -2409,7 +2660,7 @@ do
                 end
             end
         end
-        return nil, "Google Fonts could not resolve a static TTF. Paste a direct .ttf/.otf URL or ATG FontPack URL instead."
+        return nil, "Google Fonts could not resolve a usable TTF. Paste a direct .ttf/.otf URL or ATG FontPack URL instead."
     end
 
     local function normalizeFontTarget(target)
@@ -2759,6 +3010,11 @@ do
         if options.EnableRemoteAssets ~= nil then
             RemoteAssets:SetEnabled(options.EnableRemoteAssets)
         end
+        if type(options.FontTuning) == "table" then
+            -- Defer the sweep: ApplyProfile/ApplyAll below performs one pass
+            -- after every saved setting has been loaded.
+            FontManager:SetTextStyleConfig(options.FontTuning, true)
+        end
         if options.FontProfile then
             local applied, applyError = FontManager:ApplyProfile(options.FontProfile)
             if not applied then
@@ -2780,6 +3036,7 @@ do
             SourceLocale = I18n.SourceLocale,
             Mode = I18n.Mode,
             FontProfile = FontManager.CurrentProfile,
+            FontTuning = FontManager:GetTextStyleConfig(),
             Scope = I18n.Scope,
             LastError = self.LastError or FontManager.LastError
         }
@@ -4692,6 +4949,7 @@ local aa = {
 		local j = i.New
 		return function(k, l)
 			local m = {}
+			m.Visible = true
 			m.Layout = j("UIListLayout", {Padding = UDim.new(0, 5)})
 			m.Container =
 				j(
@@ -4730,9 +4988,16 @@ local aa = {
 				m.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
 					m.Container.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y)
-					m.Root.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y + 25)
+					if m.Visible then
+						m.Root.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y + 25)
+					end
 				end
 			)
+			m.SetVisible = function(n)
+				m.Visible = n == true
+				m.Root.Visible = m.Visible
+				m.Root.Size = UDim2.new(1, 0, 0, m.Visible and (m.Layout.AbsoluteContentSize.Y + 25) or 0)
+			end
 			return m
 		end
 	end,
@@ -4920,6 +5185,9 @@ local aa = {
 				-- handle. Addons can use LayoutOrder/Visible without depending on
 				-- private descendants of the tab.
 				B.Root = C.Root
+				B.SetVisible = function(D, E)
+					return C.SetVisible(type(D) == "boolean" and D or E)
+				end
 				B.ScrollFrame = x.Container
 				setmetatable(B, v)
 				return B
@@ -5197,7 +5465,18 @@ local aa = {
 					local r = o.Input.CursorPosition
 					if r ~= -1 then
 						local s = string.sub(o.Input.Text, 1, r - 1)
-						local t = TextService:GetTextSize(s, o.Input.TextSize, o.Input.Font, Vector2.new(math.huge, math.huge)).X
+						-- A custom FontFace makes the legacy Font property report
+						-- Enum.Font.Unknown.  TextService:GetTextSize only accepts a
+						-- concrete Enum.Font, so use a safe metric fallback for the
+						-- caret calculation instead of spamming the developer console.
+						local inputFont = o.Input.Font
+						if inputFont == Enum.Font.Unknown then
+							inputFont = Enum.Font.Gotham
+						end
+						local measured, textSize = pcall(function()
+							return TextService:GetTextSize(s, o.Input.TextSize, inputFont, Vector2.new(math.huge, math.huge))
+						end)
+						local t = measured and textSize.X or o.Input.TextBounds.X
 						local u = o.Input.Position.X.Offset + t
 						if u < pad then
 							o.Input.Position = UDim2.fromOffset(pad - t, 0)
