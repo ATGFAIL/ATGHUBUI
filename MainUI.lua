@@ -1743,38 +1743,115 @@ do
         return self:ImportLanguage(pack.Url, {Id = pack.Id})
     end
 
+    -- Font Family JSON uses CSS-style values ("normal", "italic", 400),
+    -- while Font.new needs Roblox EnumItems.  Never dynamically index an Enum
+    -- here: Enum.FontStyle["normal"] throws instead of returning nil.
+    local FONT_WEIGHTS = {
+        [100] = Enum.FontWeight.Thin,
+        [200] = Enum.FontWeight.ExtraLight,
+        [300] = Enum.FontWeight.Light,
+        [400] = Enum.FontWeight.Regular,
+        [500] = Enum.FontWeight.Medium,
+        [600] = Enum.FontWeight.SemiBold,
+        [700] = Enum.FontWeight.Bold,
+        [800] = Enum.FontWeight.ExtraBold,
+        [900] = Enum.FontWeight.Heavy
+    }
+
+    local FONT_WEIGHT_NAMES = {
+        thin = 100,
+        hairline = 100,
+        extralight = 200,
+        ultralight = 200,
+        light = 300,
+        regular = 400,
+        normal = 400,
+        book = 400,
+        medium = 500,
+        semibold = 600,
+        demibold = 600,
+        bold = 700,
+        extrabold = 800,
+        ultrabold = 800,
+        heavy = 900,
+        black = 900
+    }
+
+    local function isEnumItemOfType(value, enumType)
+        if typeof(value) ~= "EnumItem" then
+            return false
+        end
+        local ok, valueType = pcall(function()
+            return value.EnumType
+        end)
+        return ok and valueType == enumType
+    end
+
+    local function canonicalFontWeight(value)
+        if isEnumItemOfType(value, Enum.FontWeight) then
+            local ok, numeric = pcall(function()
+                return value.Value
+            end)
+            if ok then
+                value = numeric
+            end
+        end
+
+        local numeric
+        if type(value) == "number" then
+            numeric = value
+        elseif type(value) == "string" then
+            local normalized = value:lower():gsub("[%s_%-]", "")
+            numeric = tonumber(normalized) or FONT_WEIGHT_NAMES[normalized]
+        end
+        numeric = tonumber(numeric) or 400
+
+        -- CSS variable-font ranges and uncommon values are represented by the
+        -- closest Roblox FontWeight instead of failing the entire UI.
+        local bestWeight = 400
+        local bestDistance = math.huge
+        for weight in pairs(FONT_WEIGHTS) do
+            local distance = math.abs(weight - numeric)
+            if distance < bestDistance then
+                bestWeight = weight
+                bestDistance = distance
+            end
+        end
+        return bestWeight
+    end
+
+    local function canonicalFontStyle(value)
+        if isEnumItemOfType(value, Enum.FontStyle) then
+            local ok, name = pcall(function()
+                return value.Name
+            end)
+            if ok and tostring(name):lower() == "italic" then
+                return "italic"
+            end
+            return "normal"
+        end
+        if type(value) == "string" then
+            local normalized = value:lower():gsub("^enum%.fontstyle%.", ""):gsub("[%s_%-]", "")
+            -- Google CSS can use italic, oblique, or the `ital` axis name.
+            if normalized:find("italic", 1, true) or normalized:find("oblique", 1, true) or normalized == "ital" then
+                return "italic"
+            end
+        end
+        return "normal"
+    end
+
     local function enumWeight(value)
-        if typeof(value) == "EnumItem" then
+        if isEnumItemOfType(value, Enum.FontWeight) then
             return value
         end
-        if type(value) == "number" then
-            local numericWeights = {
-                [100] = Enum.FontWeight.Thin,
-                [200] = Enum.FontWeight.ExtraLight,
-                [300] = Enum.FontWeight.Light,
-                [400] = Enum.FontWeight.Regular,
-                [500] = Enum.FontWeight.Medium,
-                [600] = Enum.FontWeight.SemiBold,
-                [700] = Enum.FontWeight.Bold,
-                [800] = Enum.FontWeight.ExtraBold,
-                [900] = Enum.FontWeight.Heavy
-            }
-            return numericWeights[value] or Enum.FontWeight.Regular
-        end
-        if type(value) == "string" and Enum.FontWeight[value] then
-            return Enum.FontWeight[value]
-        end
-        return Enum.FontWeight.Regular
+        return FONT_WEIGHTS[canonicalFontWeight(value)] or Enum.FontWeight.Regular
     end
 
     local function enumStyle(value)
-        if typeof(value) == "EnumItem" then
+        if isEnumItemOfType(value, Enum.FontStyle) then
             return value
         end
-        if type(value) == "string" and Enum.FontStyle[value] then
-            return Enum.FontStyle[value]
-        end
-        return Enum.FontStyle.Normal
+        return canonicalFontStyle(value) == "italic" and Enum.FontStyle.Italic or Enum.FontStyle.Normal
     end
 
     local function textContainsThai(text)
@@ -1960,8 +2037,11 @@ do
                     if ok and type(assetId) == "string" and assetId ~= "" then
                         table.insert(faces, {
                             name = tostring(face.Name or "Regular"),
-                            weight = tonumber(face.Weight) or 400,
-                            style = tostring(face.Style or "normal"):lower(),
+                            -- FontFamily JSON expects CSS values, not Roblox
+                            -- enum names.  Normalize user/Google FontPack data
+                            -- before writing it to the runtime family.
+                            weight = canonicalFontWeight(face.Weight),
+                            style = canonicalFontStyle(face.Style),
                             assetId = assetId
                         })
                     end
@@ -2009,7 +2089,7 @@ do
         local bestScore
         for _, face in ipairs(role.Faces) do
             if type(face) == "table" then
-                local faceWeight = tonumber(face.Weight) or 400
+                local faceWeight = canonicalFontWeight(face.Weight)
                 local faceStyle = enumStyle(face.Style)
                 local stylePenalty = faceStyle == desiredStyle and 0 or 10000
                 local score = stylePenalty + math.abs(faceWeight - desiredNumber)
@@ -2107,25 +2187,41 @@ do
 
     function FontManager:ApplyObject(entry)
         if not entry or not entry.Object then
-            return
+            return false
         end
         local profile = self.Profiles[self.CurrentProfile] or self.Profiles.default
         local displayedText = ""
         pcall(function()
             displayedText = entry.Object.Text
         end)
-        local face, faceError = self:BuildFace(profile, fontRoleForText(entry.Role, displayedText), entry.OriginalFace)
+        -- A malformed external font must never stop the script from building
+        -- its UI. Keep the original face and remember the error instead.
+        local built, face, faceError = pcall(
+            self.BuildFace,
+            self,
+            profile,
+            fontRoleForText(entry.Role, displayedText),
+            entry.OriginalFace
+        )
+        if not built then
+            entry.LastError = tostring(face)
+            return false, entry.LastError
+        end
         if face then
             pcall(function()
                 entry.Object.FontFace = face
             end)
+            return true
         elseif profile and profile.UseOriginal and entry.OriginalFace then
             pcall(function()
                 entry.Object.FontFace = entry.OriginalFace
             end)
+            return true
         elseif faceError then
             entry.LastError = faceError
+            return false, faceError
         end
+        return false
     end
 
     function FontManager:ApplyAll()
@@ -2935,6 +3031,9 @@ local aa = {
 		-- instead of scanning every ScreenGui in CoreGui.
 		local FloatingToggleDefaults = {
 			Enabled = true,
+			-- If a legacy ATG/Fluent script creates its own marked button, keep
+			-- that one instead of showing two floating toggles.
+			RespectExistingToggle = true,
 			ForceShowButton = true,
 			Position = {
 				Horizontal = "left",
@@ -3028,6 +3127,43 @@ local aa = {
 			end
 			return UDim2.new(B, C, E, F), Vector2.new(D, G)
 		end
+		local LegacyFloatingToggleNames = {
+			FluentToggleGui = true,
+			ATGToggleGui = true,
+			ATGFloatingToggleGui = true
+		}
+		local function isLegacyFloatingToggle(A)
+			local B = false
+			pcall(function()
+				B = A and A:IsA("ScreenGui") and A ~= w and LegacyFloatingToggleNames[A.Name] == true
+			end)
+			return B
+		end
+		local function getLegacyFloatingToggleParents()
+			local A = {}
+			pcall(function()
+				table.insert(A, game:GetService("CoreGui"))
+			end)
+			pcall(function()
+				local B = game:GetService("Players").LocalPlayer
+				local C = B and B:FindFirstChildOfClass("PlayerGui")
+				if C then
+					table.insert(A, C)
+				end
+			end)
+			return A
+		end
+		local function hasLegacyFloatingToggle()
+			for _, A in ipairs(getLegacyFloatingToggleParents()) do
+				for B in pairs(LegacyFloatingToggleNames) do
+					local C = A:FindFirstChild(B)
+					if isLegacyFloatingToggle(C) then
+						return true
+					end
+				end
+			end
+			return false
+		end
 		function x.CreateFloatingToggle(A, B)
 			if x.FloatingToggle then
 				x.FloatingToggle:Destroy()
@@ -3037,6 +3173,9 @@ local aa = {
 				(C.ForceShowButton or not k.KeyboardEnabled or (k.TouchEnabled and not k.KeyboardEnabled) or
 					(k.GamepadEnabled and not k.KeyboardEnabled))
 			if not D then
+				return nil
+			end
+			if C.RespectExistingToggle ~= false and hasLegacyFloatingToggle() then
 				return nil
 			end
 
@@ -3123,6 +3262,18 @@ local aa = {
 				end
 				if x.FloatingToggle == H then
 					x.FloatingToggle = nil
+				end
+			end
+			x.FloatingToggle = H
+			if C.RespectExistingToggle ~= false then
+				for _, K in ipairs(getLegacyFloatingToggleParents()) do
+					I(
+						K.ChildAdded:Connect(function(L)
+							if isLegacyFloatingToggle(L) and not H.Destroyed then
+								H:Destroy()
+							end
+						end)
+					)
 				end
 			end
 
@@ -3244,7 +3395,6 @@ local aa = {
 				)
 			end
 			task.defer(J)
-			x.FloatingToggle = H
 			return H
 		end
 		function x.SetFloatingToggleConfig(A, B)
@@ -3304,7 +3454,15 @@ local aa = {
 			x.Window = E
 			x:SetTheme(D.Theme)
 			if D.FloatingToggle ~= false then
-				x:CreateFloatingToggle(type(D.FloatingToggle) == "table" and D.FloatingToggle or nil)
+				local F = type(D.FloatingToggle) == "table" and D.FloatingToggle or nil
+				-- Give legacy scripts that append FluentToggleGui after CreateWindow
+				-- one scheduler turn to register it before we add our own button.
+				task.defer(function()
+					task.wait(0.25)
+					if not x.Unloaded and x.Window == E and not x.FloatingToggle then
+						x:CreateFloatingToggle(F)
+					end
+				end)
 			end
 			return E
 		end
@@ -4726,9 +4884,42 @@ local aa = {
 			o.Tabs[w] = x
 			x.Container = x.ContainerFrame
 			x.ScrollFrame = x.Container
+			local function decorateSectionTitle(z)
+				if type(z) ~= "string" then
+					return z
+				end
+				local A = z:match("^%s*(.-)%s*$") or z
+				-- Keep an icon supplied by a script; this makes the behavior
+				-- additive and avoids `[ icon ] [ icon ] Title`.
+				if A == "" or A:match("^%[.-%]") then
+					return z
+				end
+				local B = A:lower()
+				local C = "⚙️"
+				if B:find("save", 1, true) or B:find("config", 1, true) then
+					C = "💾"
+				elseif B:find("language", 1, true) or B:find("translation", 1, true) then
+					C = "🌐"
+				elseif B:find("font", 1, true) or B:find("typography", 1, true) then
+					C = "🔤"
+				elseif B:find("interface", 1, true) or B:find("theme", 1, true) or B:find("appearance", 1, true) then
+					C = "🎨"
+				elseif B:find("player", 1, true) then
+					C = "👥"
+				elseif B:find("teleport", 1, true) or B:find("travel", 1, true) then
+					C = "🧭"
+				elseif B:find("combat", 1, true) or B:find("farm", 1, true) then
+					C = "⚡"
+				end
+				return "[ " .. C .. " ] " .. A
+			end
 			function x.AddSection(z, A)
-				local B, C = {Type = "Section"}, e(n.Section)(A, x.Container)
+				local B, C = {Type = "Section"}, e(n.Section)(decorateSectionTitle(A), x.Container)
 				B.Container = C.Container
+				-- Expose the section frame as an optional, backwards-compatible
+				-- handle. Addons can use LayoutOrder/Visible without depending on
+				-- private descendants of the tab.
+				B.Root = C.Root
 				B.ScrollFrame = x.Container
 				setmetatable(B, v)
 				return B
