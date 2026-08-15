@@ -3527,6 +3527,9 @@ local aa = {
 			end
 			self:TouchEntry(A.Id)
 			self:ApplyModes()
+			if self.SearchActive then
+				self:ApplySearchControlVisibility(A)
+			end
 		end
 		function Workspace:RegisterTab(A, B)
 			if type(A) ~= "table" or not A.Frame or self.TabById[A.Id] then
@@ -3539,15 +3542,6 @@ local aa = {
 			self:Connect(A.Frame.InputBegan, function(C)
 				if self.ArrangeMode and (C.UserInputType == Enum.UserInputType.MouseButton1 or C.UserInputType == Enum.UserInputType.Touch) then
 					self.Drag = {Tab = A, Start = C.Position, Input = C, Moved = false}
-				end
-			end)
-			self:Connect(A.Frame.MouseButton1Click, function()
-				-- A genuine visible tab always keeps its normal behaviour: selecting
-				-- it exits live search and opens that tab's original controls.
-				if self.SearchActive and self.SidebarSearch then
-					task.defer(function()
-						if self.SidebarSearch and self.SidebarSearch.Parent then self.SidebarSearch.Text = "" end
-					end)
 				end
 			end)
 			self:ApplyTabOrder()
@@ -3571,6 +3565,7 @@ local aa = {
 				Type = tostring(D or A.Type or "Control"),
 				Object = A,
 				Frame = A.Frame or A.Root,
+				Section = B,
 				Tab = B and B.Tab or nil,
 				TabTitle = B and B.TabTitle or ""
 			}
@@ -3807,6 +3802,52 @@ local aa = {
 			local C = workspaceObjectText(B and B.TitleLabel)
 			local D = workspaceObjectText(B and B.DescLabel)
 			return C ~= "" and C or tostring(A.Title or ""), D ~= "" and D or tostring(A.Description or "")
+		end
+		function Workspace:TabMatchesSearch(A, B)
+			B = workspaceTrim(B):lower()
+			if B == "" or type(A) ~= "table" then return B == "" end
+			local C = tostring(A.Name or "")
+			local D = tostring(A.OriginalName or "")
+			local E = tostring(A.OriginalLabelText or "")
+			local F = self:GetTabDisplayTitle(A)
+			return (C .. " " .. D .. " " .. E .. " " .. F):lower():find(B, 1, true) ~= nil
+		end
+		function Workspace:RestoreSearchControlVisibility()
+			for A, B in pairs(self.SearchControlVisibility or {}) do
+				if A and A.Parent then pcall(function() A.Visible = B end) end
+			end
+			self.SearchControlVisibility = {}
+			for A, B in pairs(self.SearchSectionVisibility or {}) do
+				if A and A.Parent then pcall(function() A.Visible = B end) end
+			end
+			self.SearchSectionVisibility = {}
+		end
+		function Workspace:ApplySearchControlVisibility(A)
+			self:RestoreSearchControlVisibility()
+			if not self.SearchActive or not A then return end
+			-- A title match means this is the exact requested Tab: retain its
+			-- complete, original UI.  Only an indirect control match is filtered.
+			if self.SearchDirectTabs and self.SearchDirectTabs[A.Id] then return end
+			local B = {}
+			for _, C in ipairs(self.Entries) do
+				if C and C.Tab == A and C.Section and C.Section.Root then
+					B[C.Section.Root] = B[C.Section.Root] or false
+					if self.SearchMatchedEntries and self.SearchMatchedEntries[C.Id] then B[C.Section.Root] = true end
+				end
+			end
+			for C, D in pairs(B) do
+				if C.Parent then
+					self.SearchSectionVisibility[C] = C.Visible
+					C.Visible = D
+				end
+			end
+			for _, B in ipairs(self.Entries) do
+				local C = B and B.Frame
+				if B and B.Tab == A and C and C.Parent then
+					self.SearchControlVisibility[C] = C.Visible
+					C.Visible = self.SearchMatchedEntries and self.SearchMatchedEntries[B.Id] == true
+				end
+			end
 		end
 		function Workspace:FindEntries(A)
 			A = workspaceTrim(A):lower()
@@ -4129,49 +4170,21 @@ local aa = {
 		end
 		function Workspace:RenderSearch(A)
 			A = type(A) == "string" and A or ""
-			self.SearchQuery = A
-			local B = self:BeginPanel("search", workspaceTrim(A) == "" and "Recent" or "Search results")
-			if B then
-				self:RenderEntries(B, self:FindEntries(A), workspaceTrim(A) == "" and "Use Ctrl+K to search controls and tabs." or "No matching control.")
-			end
+			-- Keep the legacy method, but route it through the same in-place
+			-- filtering path as the sidebar input. No proxy search results exist.
+			self:RenderSidebarSearch(A)
 		end
-		-- Live search keeps the sidebar as a real tab list. The right pane uses
-		-- lightweight result cards which navigate to the original control. This
-		-- avoids reparenting live Toggle/Input/Dropdown instances mid-session.
+		-- Legacy card helpers below are no longer used by live search. Search now
+		-- filters the original tabs and original controls in place.
 		function Workspace:CreateSearchSurface()
-			if self.SearchSurface or not self.Window or not self.Window.ContainerHolder then return end
-			local A = u("ScrollingFrame", {
-				Name = "ATGLiveSearch", Parent = self.Window.ContainerHolder, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(20, 20, 27),
-				BackgroundTransparency = 0.02, BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 3,
-				ScrollBarImageColor3 = Color3.fromRGB(255, 93, 107), ScrollBarImageTransparency = 0.42, Visible = false, ZIndex = 90
-			})
-			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = A})
-			u("UIPadding", {PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 1), PaddingRight = UDim.new(0, 10), Parent = A})
-			local B = u("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = A})
-			self.SearchSurface, self.SearchSurfaceLayout = A, B
-			self:Connect(B:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-				if A.Parent then A.CanvasSize = UDim2.new(0, 0, 0, B.AbsoluteContentSize.Y + 10) end
-			end)
+			return nil
 		end
 		function Workspace:ClearSearchSurface()
-			for _, A in ipairs(self.SearchCards or {}) do
-				if A and A.Parent then A:Destroy() end
-			end
-			self.SearchCards = {}
-			if self.SearchSurface then
-				self.SearchSurface.Visible = false
-				self.SearchSurface.CanvasPosition = Vector2.zero
-			end
-		end
-		function Workspace:AddSearchTabHeader(A, B)
-			local C = self:Text(self.SearchSurface, self:GetTabDisplayTitle(A), 12, {
-				Name = "ATGSearchTabHeader", Weight = Enum.FontWeight.SemiBold, Color = Color3.fromRGB(238, 238, 244),
-				Size = UDim2.new(1, 0, 0, 24), ZIndex = 101
-			})
-			C.LayoutOrder = B
-			table.insert(self.SearchCards, C)
+			return nil
 		end
 		function Workspace:AddSearchControlCard(A, B)
+			-- Kept private for old callers, but intentionally never mounts cards.
+			if false then
 			local C, D = self:GetEntryDisplayText(A)
 			if C == "" then C = tostring(A.Title or A.Type or "Control") end
 			local E = self:GetTabDisplayTitle(A.Tab)
@@ -4202,50 +4215,12 @@ local aa = {
 				Position = UDim2.fromOffset(30, 34), ZIndex = 102
 			})
 			table.insert(self.SearchCards, H)
+			end
+			return nil
 		end
-		function Workspace:RenderSearchSurface(A)
-			self:CreateSearchSurface()
-			self:ClearSearchSurface()
-			if not self.SearchSurface then return end
-			local B, C = {}, {}
-			for _, D in ipairs(A or {}) do
-				if type(D) == "table" and D.Type ~= "Tab" and D.Id and not C[D.Id] then
-					C[D.Id] = true
-					table.insert(B, D)
-				end
-			end
-			table.sort(B, function(D, E)
-				local F = D.Tab and D.Tab.Index or math.huge
-				local G = E.Tab and E.Tab.Index or math.huge
-				if F ~= G then return F < G end
-				return (D.Frame and D.Frame.LayoutOrder or 0) < (E.Frame and E.Frame.LayoutOrder or 0)
-			end)
-			self.SearchSurface.Visible = true
-			if #B == 0 then
-				local D = self:Text(self.SearchSurface, "No matching controls", 12, {
-					Name = "ATGSearchEmpty", Color = Color3.fromRGB(150, 150, 164), Size = UDim2.new(1, 0, 0, 34),
-					Align = Enum.TextXAlignment.Center, ZIndex = 101
-				})
-				D.LayoutOrder = 10
-				table.insert(self.SearchCards, D)
-				return
-			end
-			local D, E, F = 10, nil, {}
-			for _, G in ipairs(B) do
-				local H = G.Tab
-				if H and H ~= E then
-					if F[H] then
-						H = nil
-					else
-						F[H] = true
-						self:AddSearchTabHeader(H, D)
-						D = D + 10
-						E = H
-					end
-				end
-				self:AddSearchControlCard(G, D)
-				D = D + 10
-			end
+		function Workspace:RenderSearchSurface()
+			-- Compatibility no-op. Sidebar search now works only with the real UI.
+			return nil
 		end
 		function Workspace:RenderSidebarSearch(A)
 			A = type(A) == "string" and A or ""
@@ -4253,20 +4228,45 @@ local aa = {
 			local B = workspaceTrim(A)
 			if not self.Window then return end
 			if B == "" then
-				self.SearchActive, self.SearchMatchedTabs = false, {}
-				self:ClearSearchSurface()
+				self.SearchActive, self.SearchMatchedTabs, self.SearchMatchedEntries, self.SearchDirectTabs = false, {}, {}, {}
+				self:RestoreSearchControlVisibility()
 				if self.Window.TabSelector then self.Window.TabSelector.Visible = true end
 				self:ApplyModes()
 				return
 			end
-			local C, D = self:FindEntries(B), {}
-			for _, E in ipairs(C) do
-				if E.Tab and E.Tab.Id then D[E.Tab.Id] = true end
+			local C = self:FindEntries(B)
+			local D, E, F = {}, {}, {}
+			for _, G in ipairs(self.Tabs) do
+				if self:TabMatchesSearch(G, B) then
+					D[G.Id], E[G.Id] = true, true
+				end
+			end
+			for _, G in ipairs(C) do
+				if G.Tab and G.Tab.Id then D[G.Tab.Id] = true end
+				if G.Type ~= "Tab" and G.Id then F[G.Id] = true end
 			end
 			self.SearchActive, self.SearchMatchedTabs = true, D
-			if self.Window.TabSelector then self.Window.TabSelector.Visible = false end
+			self.SearchMatchedEntries, self.SearchDirectTabs = F, E
+			if self.Window.TabSelector then self.Window.TabSelector.Visible = true end
 			self:ApplyModes()
-			self:RenderSearchSurface(C)
+			local G
+			for _, H in ipairs(self.Tabs) do
+				if H.Selected then G = H break end
+			end
+			if not G or not D[G.Id] then
+				local H = {}
+				for _, I in ipairs(self.Tabs) do
+					if D[I.Id] then table.insert(H, I) end
+				end
+				table.sort(H, function(I, J)
+					return (I.Frame and I.Frame.LayoutOrder or 0) < (J.Frame and J.Frame.LayoutOrder or 0)
+				end)
+				if H[1] and type(H[1].Select) == "function" then
+					H[1]:Select()
+					return
+				end
+			end
+			self:ApplySearchControlVisibility(G)
 		end
 		function Workspace:QueueSidebarSearch(A)
 			A = type(A) == "string" and A or ""
@@ -4280,7 +4280,7 @@ local aa = {
 			if workspaceTrim(A) == "" then
 				C()
 			else
-				-- Avoid rebuilding a whole search surface for every keystroke while
+				-- Avoid re-filtering every tab/control for every keystroke while
 				-- keeping the delay too small to feel anything but instant.
 				task.delay(0.08, C)
 			end
@@ -4493,52 +4493,20 @@ local aa = {
 			end
 		end
 		function Workspace:CreatePalette()
-			local A = self.Window.Root
-			self.Palette = u("CanvasGroup", {
-				Name = "ATGCommandPalette", Parent = A, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
-				BackgroundTransparency = 0.36, BorderSizePixel = 0, Visible = false, GroupTransparency = 1, ZIndex = 90
-			})
-			local B = u("Frame", {
-				Name = "Modal", Parent = self.Palette, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.new(0, 420, 0, 330), Position = UDim2.new(0.5, 0, 0.46, 0),
-				BackgroundColor3 = Color3.fromRGB(21, 21, 28), BackgroundTransparency = 0.02, BorderSizePixel = 0, ZIndex = 91
-			})
-			u("UISizeConstraint", {MinSize = Vector2.new(300, 230), MaxSize = Vector2.new(520, 420), Parent = B})
-			u("UICorner", {CornerRadius = UDim.new(0, 10), Parent = B})
-			u("UIStroke", {Color = Color3.fromRGB(180, 63, 79), Transparency = 0.25, Thickness = 1, Parent = B})
-			self:Text(B, "Quick search", 15, {Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, -80, 0, 36), Position = UDim2.fromOffset(14, 4), ZIndex = 92})
-			self:Text(B, "Ctrl+K", 10, {Color = Color3.fromRGB(165, 165, 180), Align = Enum.TextXAlignment.Right, Size = UDim2.new(0, 54, 0, 36), Position = UDim2.new(1, -70, 0, 4), ZIndex = 92})
-			local C = u("ImageButton", {
-				Parent = B, Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -28, 0, 12), BackgroundTransparency = 1, Image = x.GetIcon("x"),
-				ImageColor3 = Color3.fromRGB(180, 180, 194), AutoButtonColor = false, ZIndex = 93
-			})
-			self:Connect(C.MouseButton1Click, function() self:ClosePalette() end)
-			self.PaletteInput = u("TextBox", {
-				Name = "Query", Parent = B, Size = UDim2.new(1, -28, 0, 34), Position = UDim2.fromOffset(14, 42), BackgroundColor3 = Color3.fromRGB(28, 28, 36),
-				BackgroundTransparency = 0.03, BorderSizePixel = 0, ClearTextOnFocus = false, Text = "", PlaceholderText = "Search controls, tabs, or commands...",
-				PlaceholderColor3 = Color3.fromRGB(143, 143, 158), TextColor3 = Color3.fromRGB(244, 244, 248), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
-				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 93
-			})
-			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.PaletteInput})
-			u("UIStroke", {Color = Color3.fromRGB(125, 60, 70), Transparency = 0.4, Parent = self.PaletteInput})
-			u("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = self.PaletteInput})
-			self.PaletteContent = u("ScrollingFrame", {
-				Name = "Results", Parent = B, Size = UDim2.new(1, -28, 1, -94), Position = UDim2.fromOffset(14, 84), BackgroundTransparency = 1,
-				BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ScrollBarImageColor3 = Color3.fromRGB(255, 93, 107), ScrollBarImageTransparency = 0.44, ZIndex = 93
-			})
-			self:Connect(self.PaletteInput:GetPropertyChangedSignal("Text"), function() self:RenderPalette(self.PaletteInput.Text) end)
+			-- Retained as a harmless compatibility method. Search lives in the
+			-- sidebar so it can keep showing the original controls.
+			return nil
 		end
 		function Workspace:OpenPalette()
-			if not self.Palette then return end
+			-- Compatibility alias: Ctrl+K used to open an artificial result panel.
+			-- It now focuses the real sidebar search so results stay as real UI.
+			if self.State.CompactMode then self:SetCompact(false) end
 			self:ShowPanel(false)
-			self.Palette.Visible = true
-			self.Palette.GroupTransparency = 1
-			local A = self.Palette:FindFirstChild("Modal")
-			if A then A.Position = UDim2.new(0.5, 0, 0.44, 0) end
-			l:Create(self.Palette, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {GroupTransparency = 0}):Play()
-			if A then l:Create(A, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.46, 0)}):Play() end
-			self.PaletteInput.Text = ""
-			self:RenderPalette("")
-			task.defer(function() if self.PaletteInput and self.PaletteInput.Parent then self.PaletteInput:CaptureFocus() end end)
+			task.defer(function()
+				if self.SidebarSearch and self.SidebarSearch.Parent then
+					self.SidebarSearch:CaptureFocus()
+				end
+			end)
 		end
 		function Workspace:ClosePalette()
 			if not self.Palette or not self.Palette.Visible then return end
@@ -4554,7 +4522,6 @@ local aa = {
 			self.OriginalTabWidth = tonumber(A.TabWidth) or 180
 			self:Load()
 			self:CreateChrome()
-			self:CreatePalette()
 			self:SetCompact(self.State.CompactMode)
 			self:SetFocus(self.State.FocusMode)
 			self:Connect(k.InputBegan, function(B, C)
