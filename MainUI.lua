@@ -3674,6 +3674,11 @@ local aa = {
 		function Workspace:SetCompact(A)
 			A = A == true
 			self.State.CompactMode = A
+			if A and self.SidebarSearch and self.SidebarSearch.Text ~= "" then
+				-- Compact mode intentionally has no search field, so never leave
+				-- the tab rail replaced by invisible search rows.
+				self.SidebarSearch.Text = ""
+			end
 			if self.Window and type(self.Window.SetTabWidth) == "function" then
 				self.Window:SetTabWidth(A and 54 or self.OriginalTabWidth)
 			end
@@ -4087,6 +4092,89 @@ local aa = {
 				self:RenderEntries(B, self:FindEntries(A), workspaceTrim(A) == "" and "Use Ctrl+K to search controls and tabs." or "No matching control.")
 			end
 		end
+		-- Sidebar search deliberately reuses the tab rail.  It does not open a
+		-- second "Search results" card, so the navigation stays as clean as a
+		-- normal tab list while still finding controls across every tab.
+		function Workspace:ClearSidebarSearchRows()
+			for _, A in ipairs(self.SearchRows or {}) do
+				if A and A.Parent then A:Destroy() end
+			end
+			self.SearchRows = {}
+		end
+		function Workspace:CreateSidebarSearchRow(A, B, C)
+			local D = self.Window and self.Window.TabHolder
+			if not D then return nil end
+			local E = type(B) == "table" and B or {}
+			local F = tostring(E.Title or E.Name or "Untitled")
+			local G = type(E.TabTitle) == "string" and E.TabTitle or ""
+			local H = type(E.Description) == "string" and E.Description or ""
+			local I = type(E.Type) == "string" and E.Type or "Control"
+			local J = G ~= "" and G or (H ~= "" and H or I)
+			local K = E.Tab and E.Tab.IconObject and E.Tab.IconObject.Image or x.GetIcon("search")
+			local L = u("TextButton", {
+				Name = "ATGSearchTab_" .. tostring(C), Parent = D, Size = UDim2.new(1, 0, 0, 38), LayoutOrder = 90000 + C,
+				BackgroundColor3 = Color3.fromRGB(54, 54, 65), BackgroundTransparency = 0.86, BorderSizePixel = 0,
+				AutoButtonColor = false, Text = "", I18nSkip = true
+			})
+			u("UICorner", {CornerRadius = UDim.new(0, 6), Parent = L})
+			if K and K ~= "" then
+				u("ImageLabel", {
+					Name = "Icon", Parent = L, BackgroundTransparency = 1, Image = K, ImageColor3 = Color3.fromRGB(208, 208, 218),
+					Size = UDim2.fromOffset(14, 14), Position = UDim2.new(0, 8, 0, 6)
+				})
+			end
+			self:Text(L, F, 11, {
+				Name = "Title", Weight = Enum.FontWeight.Medium, Size = UDim2.new(1, -34, 0, 18),
+				Position = UDim2.fromOffset(K and 29 or 9, 2), Truncate = Enum.TextTruncate.AtEnd
+			})
+			self:Text(L, J, 9, {
+				Name = "Context", Color = Color3.fromRGB(151, 151, 165), Size = UDim2.new(1, -34, 0, 15),
+				Position = UDim2.fromOffset(K and 29 or 9, 19), Truncate = Enum.TextTruncate.AtEnd
+			})
+			self:Bind(L.MouseEnter, function()
+				l:Create(L, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.72}):Play()
+			end)
+			self:Bind(L.MouseLeave, function()
+				l:Create(L, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.86}):Play()
+			end)
+			self:Bind(L.MouseButton1Click, function()
+				if self.SidebarSearch then self.SidebarSearch.Text = "" end
+				self:Navigate(E)
+			end)
+			return L
+		end
+		function Workspace:RenderSidebarSearch(A)
+			A = type(A) == "string" and A or ""
+			self.SearchQuery = A
+			local B = workspaceTrim(A)
+			self:ClearSidebarSearchRows()
+			if not self.Window then return end
+			if B == "" then
+				if self.Window.TabSelector then self.Window.TabSelector.Visible = true end
+				self:ApplyModes()
+				return
+			end
+			-- Hide genuine tabs only while the query is active; they are restored
+			-- immediately when the input is cleared.
+			if self.Window.TabSelector then self.Window.TabSelector.Visible = false end
+			for _, C in ipairs(self.Tabs) do
+				if C.Frame then C.Frame.Visible = false end
+			end
+			local C = self:FindEntries(B)
+			local D = math.min(#C, 24)
+			for E = 1, D do
+				local F = self:CreateSidebarSearchRow(A, C[E], E)
+				if F then table.insert(self.SearchRows, F) end
+			end
+			if D == 0 and self.Window.TabHolder then
+				local E = self:Text(self.Window.TabHolder, "No matches", 11, {
+					Name = "ATGSearchEmpty", Color = Color3.fromRGB(145, 145, 158), Size = UDim2.new(1, 0, 0, 30),
+					Align = Enum.TextXAlignment.Center
+				})
+				E.LayoutOrder = 90001
+				table.insert(self.SearchRows, E)
+			end
+		end
 		function Workspace:RenderFavorites()
 			local A, B = self:BeginPanel("favorites", "Favorites"), {}
 			for _, C in ipairs(self.State.Favorites) do
@@ -4261,14 +4349,10 @@ local aa = {
 			self:UpdateSearchHint()
 			self:Connect(self.SidebarSearch:GetPropertyChangedSignal("Text"), function()
 				local B = self.SidebarSearch.Text
-				if workspaceTrim(B) == "" then
-					if self.PanelKind == "search" then self:ShowPanel(false) end
-				else
-					-- Search is an optional enhancement: never let a malformed
-					-- third-party control interrupt the script creating its tabs.
-					local C, D = pcall(function() self:RenderSearch(B) end)
-					if not C then warn("[ATG Workspace] Search error: " .. tostring(D)) end
-				end
+				-- Search replaces the tab list in-place; it never opens a results
+				-- popup over the content area.
+				local C, D = pcall(function() self:RenderSidebarSearch(B) end)
+				if not C then warn("[ATG Workspace] Search error: " .. tostring(D)) end
 			end)
 			A.TabArea.Position = UDim2.new(0, 12, 0, 88)
 			A.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -100)
@@ -7140,6 +7224,9 @@ local aa = {
 					{v.TabHolder, D}
 				)
 			v.TabArea = F
+			-- Expose the existing selector only as an optional visual handle.
+			-- Workspace search can hide it while the tab rail shows live matches.
+			v.TabSelector = D
 			v.TabWidth = t.TabWidth
 			v.TabDisplay =
 				s(
