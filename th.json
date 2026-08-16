@@ -1,37 +1,37 @@
 {
   "meta": {
-    "locale": "https://github.com/atgfa",
+    "locale": "en",
     "name": "Translation template",
-    "id": "atg.ui-https_github.com_atgfa-template",
+    "id": "atg.magic-loot-en-template",
     "generatedBy": "ATG Fluent",
     "sourceLocale": "en"
   },
   "schema": "atg.i18n.v1",
   "entries": {
-    "legacy.71b0dbd7": {
-      "context": "",
-      "source": "Join the Lower server",
-      "translation": "เข้าร่วมเซิร์ฟเวอร์ประชากรน้อย"
-    },
     "legacy.40f0b53d": {
       "context": "",
       "source": "Install and use this font.",
       "translation": "ติดตั้งและใช้ฟอนต์นี้"
-    },
-    "legacy.5043dd68": {
-      "context": "",
-      "source": "Player Info",
-      "translation": "ข้อมูลผู้เล่น"
     },
     "legacy.180508b5": {
       "context": "",
       "source": "Language JSON",
       "translation": "JSON ภาษา"
     },
-    "legacy.500795bc": {
+    "legacy.443d81e4": {
       "context": "",
-      "source": "Remove pack",
-      "translation": "ลบแพ็กออก"
+      "source": "✅ Select All",
+      "translation": "✅ เลือกทั้งหมด"
+    },
+    "legacy.56dd3352": {
+      "context": "",
+      "source": "Time between teleports.",
+      "translation": "เวลาระหว่างการเทเลพอร์ตแต่ละครั้ง"
+    },
+    "legacy.2ce8fa22": {
+      "context": "",
+      "source": "Use selected potions from your bag.",
+      "translation": "ใช้ยาที่เลือกจากกระเป๋าของคุณ"
     },
     "legacy.04081348": {
       "context": "",
@@ -43,80 +43,60 @@
       "source": "Fly Speed",
       "translation": "ความเร็วในการบิน"
     },
-    "legacy.232571c6": {
+    "legacy.1ebc32a2": {
       "context": "",
-      "source": "Auto Load",
-      "translation": "โหลดอัตโนมัติ"
+      "source": "Teleport to Stack 8",
+      "translation": "เทเลพอร์ตไปยังกองที่ 8"
     },
-    "legacy.3d94f542": {
+    "legacy.470db3af": {
       "context": "",
-      "source": "Reset Walk/Jump to default values (16, 50)",
-      "translation": "รีเซ็ตค่าเดิน/กระโดดเป็นค่าเริ่มต้น (16, 50)"
+      "source": "Choose potions (32 available).",
+      "translation": "เลือกยา (มีทั้งหมด 32 ชนิด)"
     },
-    "legacy.7492bbfe": {
+    "legacy.12d12ed4": {
       "context": "",
-      "source": "Teleport to entered Job ID",
-      "translation": "เทเลพอร์ตไปยัง Job ID ที่กรอก"
-    },
-    "legacy.6d553bfc": {
-      "context": "",
-      "source": "Apply font to",
-      "translation": "ปรับใช้ฟอนต์กับ"
+      "source": "Saved pack",
+      "translation": "แพ็กที่บันทึกไว้"
     },
     "legacy.687ec51e": {
       "context": "",
       "source": "Install the JSON above.",
       "translation": "ติดตั้งไฟล์ JSON ด้านบน"
     },
-    "legacy.413bd3a4": {
+    "legacy.4c98b426": {
       "context": "",
-      "source": "Font link / ID",
-      "translation": "ลิงก์/ID ฟอนต์"
+      "source": "Auto Altar Exchange",
+      "translation": "แลกเปลี่ยนแท่นบูชาอัตโนมัติ"
     },
     "legacy.416a1564": {
       "context": "",
       "source": "Download it again.",
       "translation": "ดาวน์โหลดอีกครั้ง"
     },
-    "legacy.1cf2b1d0": {
+    "legacy.77d134ed": {
       "context": "",
-      "source": "ATG Hub Freemium",
-      "translation": "ATG Hub Freemium"
+      "source": "Loading brooms...",
+      "translation": "กำลังโหลดไม้กวาด..."
     },
-    "legacy.17089ce2": {
+    "legacy.3b1e51b5": {
       "context": "",
-      "source": "[ 💾 ] Auto save",
-      "translation": "[ 💾 ] บันทึกอัตโนมัติ"
+      "source": "Exchange the selected altar voucher.",
+      "translation": "แลกเปลี่ยนคูปองแท่นบูชาที่เลือก"
     },
-    "legacy.18eae2c1": {
+    "legacy.2524b9a5": {
       "context": "",
-      "source": "Fly Key",
-      "translation": "ปุ่มบิน"
+      "source": "Pick up drops automatically.",
+      "translation": "เก็บไอเทมที่ดรอปโดยอัตโนมัติ"
     },
-    "legacy.6650dcb8": {
+    "legacy.5d10d87a": {
       "context": "",
-      "source": "Load saved settings on start.",
-      "translation": "โหลดการตั้งค่าที่บันทึกไว้เมื่อเริ่มต้น"
+      "source": "Check Delay",
+      "translation": "ดีเลย์ในการตรวจสอบ"
     },
-    "legacy.44d27d60": {
+    "legacy.189fd063": {
       "context": "",
-      "source": "Show translated text.",
-      "translation": "แสดงข้อความที่แปลแล้ว"
-    },
-    "legacy.1d0fe50f": {
-      "context": "",
-      "source": "Language packs and font installs.",
-      "translation": "ชุดภาษาและการติดตั้งฟอนต์"
-    },
-    "legacy.0e900dfc": {
-      "context": "",
-      "source": "Players",
-      "translation": "ผู้เล่น"
-    },
-    "legacy.12d12ed4": {
-      "context": "",
-      "source": "Saved pack",
-      "translation": "แพ็กที่บันทึกไว้"
+      "source": "Time between exchanges.",
+      "translation": "เวลาระหว่างการแลกเปลี่ยนแต่ละครั้ง"
     },
     "legacy.070a677a": {
       "context": "",
@@ -128,95 +108,545 @@
       "source": "Auto Save",
       "translation": "บันทึกอัตโนมัติ"
     },
-    "legacy.226f4326": {
-      "context": "",
-      "source": "0% = script default.",
-      "translation": "0% = ค่าเริ่มต้นของสคริปต์"
-    },
-    "legacy.73eb82a5": {
-      "context": "",
-      "source": "Minimize Bind",
-      "translation": "ปุ่มลัดย่อหน้าต่าง"
-    },
     "legacy.7c7d0b20": {
       "context": "",
       "source": "Rejoin",
       "translation": "เข้าร่วมเซิร์ฟเวอร์เดิมอีกครั้ง"
     },
-    "legacy.00107063": {
+    "legacy.69916d5a": {
       "context": "",
-      "source": "[ 🌐 ] Language tools",
-      "translation": "[ 🌐 ] เครื่องมือภาษา"
+      "source": "Claim online rewards when ready.",
+      "translation": "รับรางวัลออนไลน์เมื่อพร้อม"
     },
-    "legacy.781b8b89": {
+    "legacy.71ace2c8": {
       "context": "",
-      "source": "Text size",
-      "translation": "ขนาดตัวอักษร"
+      "source": "Items",
+      "translation": "ไอเทม"
     },
-    "legacy.7d637577": {
+    "legacy.0e1d794f": {
       "context": "",
-      "source": "Name: ATGFAIL (@LawakaitunY725)\nDate: 15/08/2026\n\nPlayed Time: 00:02:51\n",
-      "translation": "ชื่อ: ATGFAIL (@LawakaitunY725)\nวันที่: 15/08/2026\n\nเวลาที่เล่น: 00:02:51\n"
-    },
-    "legacy.11b2bd98": {
-      "context": "",
-      "source": "Translate by",
-      "translation": "แปลโดย"
-    },
-    "legacy.2ebe01d2": {
-      "context": "",
-      "source": "Advanced font settings",
-      "translation": "การตั้งค่าฟอนต์ขั้นสูง"
-    },
-    "legacy.054af069": {
-      "context": "",
-      "source": "Main",
-      "translation": "หลัก"
-    },
-    "legacy.48235d15": {
-      "context": "",
-      "source": "[ 👥 ] Player",
-      "translation": "[ 👥 ] ผู้เล่น"
-    },
-    "legacy.6734e078": {
-      "context": "",
-      "source": "Keep normal or use italic.",
-      "translation": "คงแบบปกติหรือใช้ตัวเอียง"
+      "source": "Auto Pickup",
+      "translation": "เก็บของอัตโนมัติ"
     },
     "legacy.791596b4": {
       "context": "",
       "source": "Server",
       "translation": "เซิร์ฟเวอร์"
     },
-    "legacy.5d8976da": {
+    "legacy.3a4de5a8": {
       "context": "",
-      "source": "[ ⚙️ ] Speed & Jump",
-      "translation": "[ ⚙️ ] ความเร็วและการกระโดด"
-    },
-    "legacy.18419cb0": {
-      "context": "",
-      "source": "[ 🧭 ] Teleport",
-      "translation": "[ 🧭 ] เทเลพอร์ต"
-    },
-    "legacy.65ee1e59": {
-      "context": "",
-      "source": "Weight",
-      "translation": "ความหนาตัวอักษร"
-    },
-    "legacy.1129da30": {
-      "context": "",
-      "source": "Font help",
-      "translation": "ความช่วยเหลือเกี่ยวกับฟอนต์"
+      "source": "Teleport to Stack 18",
+      "translation": "เทเลพอร์ตไปยังกองที่ 18"
     },
     "legacy.4eb43dd6": {
       "context": "",
       "source": "Remove font",
       "translation": "ลบฟอนต์"
     },
+    "legacy.7dc13748": {
+      "context": "",
+      "source": "Sell selected materials.",
+      "translation": "ขายวัสดุที่เลือก"
+    },
+    "legacy.7e1ba049": {
+      "context": "",
+      "source": "Status",
+      "translation": "สถานะ"
+    },
+    "legacy.3850b51c": {
+      "context": "",
+      "source": "Recipes",
+      "translation": "สูตรคราฟต์"
+    },
+    "legacy.3a4de626": {
+      "context": "",
+      "source": "Teleport to Stack 23",
+      "translation": "เทเลพอร์ตไปยังกองที่ 23"
+    },
+    "legacy.49725074": {
+      "context": "",
+      "source": "Exchange Delay",
+      "translation": "ดีเลย์ในการแลกเปลี่ยน"
+    },
+    "legacy.01025b73": {
+      "context": "",
+      "source": "ESP",
+      "translation": "ESP"
+    },
+    "legacy.67fc12f6": {
+      "context": "",
+      "source": "Copy Current Job ID",
+      "translation": "คัดลอก Job ID ปัจจุบัน"
+    },
+    "legacy.4d320530": {
+      "context": "",
+      "source": "Teleport to selected player",
+      "translation": "เทเลพอร์ตไปยังผู้เล่นที่เลือก"
+    },
+    "legacy.64fcae56": {
+      "context": "",
+      "source": "Armor",
+      "translation": "เกราะ"
+    },
+    "legacy.4ebca0fb": {
+      "context": "",
+      "source": "Job ID",
+      "translation": "Job ID"
+    },
+    "legacy.0e43b925": {
+      "context": "",
+      "source": "Optional, e.g. ja-JP.",
+      "translation": "ไม่บังคับ เช่น ja-JP"
+    },
+    "legacy.781b8b89": {
+      "context": "",
+      "source": "Text size",
+      "translation": "ขนาดตัวอักษร"
+    },
+    "legacy.2fcc87b0": {
+      "context": "",
+      "source": "Inventory",
+      "translation": "ช่องเก็บของ"
+    },
     "legacy.497cf06f": {
       "context": "",
       "source": "Paste a link or file path.",
       "translation": "วางลิงก์หรือพาธไฟล์"
+    },
+    "legacy.1ebc329e": {
+      "context": "",
+      "source": "Teleport to Stack 4",
+      "translation": "เทเลพอร์ตไปยังกองที่ 4"
+    },
+    "legacy.24c032ff": {
+      "context": "",
+      "source": "Use ID, Google Fonts, or a font file.",
+      "translation": "ใช้ ID, Google Fonts หรือไฟล์ฟอนต์"
+    },
+    "legacy.47971287": {
+      "context": "",
+      "source": "Input Job ID",
+      "translation": "ป้อน Job ID"
+    },
+    "legacy.1f2faef2": {
+      "context": "",
+      "source": "Export JSON",
+      "translation": "ส่งออก JSON"
+    },
+    "legacy.3f8e9fff": {
+      "context": "",
+      "source": "Blur background.",
+      "translation": "เบลอพื้นหลัง"
+    },
+    "legacy.29b773a8": {
+      "context": "",
+      "source": "Exchange selected event-shop items.",
+      "translation": "แลกเปลี่ยนไอเทมร้านค้าอีเวนต์ที่เลือก"
+    },
+    "legacy.312814f3": {
+      "context": "",
+      "source": "Theme",
+      "translation": "ธีม"
+    },
+    "legacy.6399ad23": {
+      "context": "",
+      "source": "Enable Walk",
+      "translation": "เปิดใช้งานการเดิน"
+    },
+    "legacy.33145a5c": {
+      "context": "",
+      "source": "Server Hop",
+      "translation": "ย้ายเซิร์ฟเวอร์"
+    },
+    "legacy.2296174e": {
+      "context": "",
+      "source": "Auto Rebirth",
+      "translation": "จุติ (Rebirth) อัตโนมัติ"
+    },
+    "legacy.2a3cf5e6": {
+      "context": "",
+      "source": "Rejoin this server",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์นี้อีกครั้ง"
+    },
+    "legacy.4138fb2e": {
+      "context": "",
+      "source": "Auto Return",
+      "translation": "กลับจุดเดิมอัตโนมัติ"
+    },
+    "legacy.1f44d1c1": {
+      "context": "",
+      "source": "Install font",
+      "translation": "ติดตั้งฟอนต์"
+    },
+    "legacy.7270309f": {
+      "context": "",
+      "source": "Buy selected wands when affordable.",
+      "translation": "ซื้อไม้เท้าที่เลือกเมื่อมีเงินพอ"
+    },
+    "legacy.5ba29551": {
+      "context": "",
+      "source": "Auto Buy Brooms",
+      "translation": "ซื้อไม้กวาดอัตโนมัติ"
+    },
+    "legacy.5f610157": {
+      "context": "",
+      "source": "Update pack",
+      "translation": "อัปเดตแพ็ก"
+    },
+    "legacy.1af8e2a6": {
+      "context": "",
+      "source": "Adjust fly speed",
+      "translation": "ปรับความเร็วในการบิน"
+    },
+    "legacy.0102ab70": {
+      "context": "",
+      "source": "Fly",
+      "translation": "บิน"
+    },
+    "legacy.05edbb1f": {
+      "context": "",
+      "source": "Join a Random server",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์สุ่ม"
+    },
+    "legacy.5dc8fefa": {
+      "context": "",
+      "source": "Auto Click",
+      "translation": "คลิกอัตโนมัติ"
+    },
+    "legacy.04d4f445": {
+      "context": "",
+      "source": "Time between uses.",
+      "translation": "เวลาระหว่างการใช้งานแต่ละครั้ง"
+    },
+    "legacy.6bb4a17b": {
+      "context": "",
+      "source": "Time between reward checks.",
+      "translation": "เวลาระหว่างการตรวจสอบรางวัล"
+    },
+    "legacy.12767886": {
+      "context": "",
+      "source": "Save: OK | Web: OK | Fonts: OK",
+      "translation": "บันทึก: ปกติ | เว็บ: ปกติ | ฟอนต์: ปกติ"
+    },
+    "legacy.7d4bb1ce": {
+      "context": "",
+      "source": "Outline",
+      "translation": "เส้นขอบ"
+    },
+    "legacy.31b772f5": {
+      "context": "",
+      "source": "UI language",
+      "translation": "ภาษา UI"
+    },
+    "legacy.0460977d": {
+      "context": "",
+      "source": "Teleport Delay",
+      "translation": "ดีเลย์ในการเทเลพอร์ต"
+    },
+    "legacy.322b1655": {
+      "context": "",
+      "source": "Line spacing",
+      "translation": "ระยะห่างระหว่างบรรทัด"
+    },
+    "legacy.11b10b9b": {
+      "context": "",
+      "source": "Walk Speed",
+      "translation": "ความเร็วในการเดิน"
+    },
+    "legacy.0ad310eb": {
+      "context": "",
+      "source": "Choose a saved font.",
+      "translation": "เลือกฟอนต์ที่บันทึกไว้"
+    },
+    "legacy.689f472a": {
+      "context": "",
+      "source": "Materials",
+      "translation": "วัสดุ"
+    },
+    "legacy.47d3f83f": {
+      "context": "",
+      "source": "Loading armor...",
+      "translation": "กำลังโหลดเกราะ..."
+    },
+    "legacy.3edefbdf": {
+      "context": "",
+      "source": "Brew selected recipes when ready.",
+      "translation": "ปรุงยาตามสูตรที่เลือกเมื่อพร้อม"
+    },
+    "legacy.0711ff7a": {
+      "context": "",
+      "source": "Drag it. Ctrl + M toggles UI.",
+      "translation": "ลากเพื่อย้ายปุ่ม กด Ctrl + M เพื่อเปิด/ปิด UI"
+    },
+    "legacy.107c5f3e": {
+      "context": "",
+      "source": "Click Speed",
+      "translation": "ความเร็วในการคลิก"
+    },
+    "legacy.4adca6aa": {
+      "context": "",
+      "source": "Acrylic",
+      "translation": "อะคริลิก"
+    },
+    "legacy.1b7cefce": {
+      "context": "",
+      "source": "Install JSON",
+      "translation": "ติดตั้ง JSON"
+    },
+    "legacy.01931727": {
+      "context": "",
+      "source": "Auto Equip",
+      "translation": "สวมใส่อัตโนมัติ"
+    },
+    "legacy.5997b7a0": {
+      "context": "",
+      "source": "Tap Teleport",
+      "translation": "แตะเพื่อเทเลพอร์ต"
+    },
+    "legacy.5cdbc7bb": {
+      "context": "",
+      "source": "Pick a source.",
+      "translation": "เลือกแหล่งที่มา"
+    },
+    "legacy.655f7699": {
+      "context": "",
+      "source": "Auto Buy Armor",
+      "translation": "ซื้อเกราะอัตโนมัติ"
+    },
+    "legacy.4a453ba4": {
+      "context": "",
+      "source": "Sell All",
+      "translation": "ขายทั้งหมด"
+    },
+    "legacy.0cf013a2": {
+      "context": "",
+      "source": "How bold the text is.",
+      "translation": "ระดับความหนาของข้อความ"
+    },
+    "legacy.6f1386bf": {
+      "context": "",
+      "source": "Enable/Disable WalkSpeed enforcement",
+      "translation": "เปิด/ปิด การบังคับความเร็วในการเดิน"
+    },
+    "legacy.3d0413e2": {
+      "context": "",
+      "source": "Noclip",
+      "translation": "ทะลุกำแพง"
+    },
+    "legacy.5dc6e9c6": {
+      "context": "",
+      "source": "Auto Claim",
+      "translation": "รับรางวัลอัตโนมัติ"
+    },
+    "legacy.7e9a86e1": {
+      "context": "",
+      "source": "Loading materials...",
+      "translation": "กำลังโหลดวัสดุ..."
+    },
+    "legacy.5b79830c": {
+      "context": "",
+      "source": "Auto Event Shop",
+      "translation": "ร้านค้าอีเวนต์อัตโนมัติ"
+    },
+    "legacy.60828f59": {
+      "context": "",
+      "source": "Events",
+      "translation": "อีเวนต์"
+    },
+    "legacy.18eae2c1": {
+      "context": "",
+      "source": "Fly Key",
+      "translation": "ปุ่มบิน"
+    },
+    "legacy.3a4de5a3": {
+      "context": "",
+      "source": "Teleport to Stack 13",
+      "translation": "เทเลพอร์ตไปยังกองที่ 13"
+    },
+    "legacy.232571c6": {
+      "context": "",
+      "source": "Auto Load",
+      "translation": "โหลดอัตโนมัติ"
+    },
+    "legacy.3d94f542": {
+      "context": "",
+      "source": "Reset Walk/Jump to default values (16, 50)",
+      "translation": "รีเซ็ตค่าเดิน/กระโดดเป็นค่าเริ่มต้น (16, 50)"
+    },
+    "legacy.1c6701ff": {
+      "context": "",
+      "source": "Font tools",
+      "translation": "เครื่องมือฟอนต์"
+    },
+    "legacy.2d79fed7": {
+      "context": "",
+      "source": "Copy your current Job ID",
+      "translation": "คัดลอก Job ID ปัจจุบันของคุณ"
+    },
+    "legacy.2af1c21f": {
+      "context": "",
+      "source": "Font appearance",
+      "translation": "ลักษณะฟอนต์"
+    },
+    "legacy.7edee0b0": {
+      "context": "",
+      "source": "Advanced tools",
+      "translation": "เครื่องมือขั้นสูง"
+    },
+    "legacy.21eb2295": {
+      "context": "",
+      "source": "Keep returning to the selected destination.",
+      "translation": "กลับไปยังจุดหมายที่เลือกซ้ำๆ"
+    },
+    "legacy.71b0dbd7": {
+      "context": "",
+      "source": "Join the Lower server",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์ประชากรน้อย"
+    },
+    "legacy.24148903": {
+      "context": "",
+      "source": "Auto Skip",
+      "translation": "ข้ามอัตโนมัติ"
+    },
+    "legacy.7492bbfe": {
+      "context": "",
+      "source": "Teleport to entered Job ID",
+      "translation": "เทเลพอร์ตไปยัง Job ID ที่กรอก"
+    },
+    "legacy.3392f936": {
+      "context": "",
+      "source": "Choose which altar voucher to exchange.",
+      "translation": "เลือกคูปองแท่นบูชาที่จะแลกเปลี่ยน"
+    },
+    "legacy.41765260": {
+      "context": "",
+      "source": "Transparency",
+      "translation": "ความโปร่งใส"
+    },
+    "legacy.79b65d5a": {
+      "context": "",
+      "source": "Auto Potion",
+      "translation": "ใช้ยาอัตโนมัติ"
+    },
+    "legacy.4adf5a6d": {
+      "context": "",
+      "source": "Potion Delay",
+      "translation": "ดีเลย์การใช้ยา"
+    },
+    "legacy.4a7e8cc5": {
+      "context": "",
+      "source": "Choose how selected potions are used.",
+      "translation": "เลือกวิธีการใช้ยาที่เลือก"
+    },
+    "legacy.42171a53": {
+      "context": "",
+      "source": "Auto Online Rewards",
+      "translation": "รับรางวัลออนไลน์อัตโนมัติ"
+    },
+    "legacy.6e0c43c0": {
+      "context": "",
+      "source": "Choose event items (7 available).",
+      "translation": "เลือกไอเทมอีเวนต์ (มีทั้งหมด 7 ชนิด)"
+    },
+    "legacy.179716ca": {
+      "context": "",
+      "source": "Translation",
+      "translation": "การแปล"
+    },
+    "legacy.4bc9b34b": {
+      "context": "",
+      "source": "Reset to defaults",
+      "translation": "รีเซ็ตเป็นค่าเริ่มต้น"
+    },
+    "legacy.226f4326": {
+      "context": "",
+      "source": "0% = script default.",
+      "translation": "0% = ค่าเริ่มต้นของสคริปต์"
+    },
+    "legacy.6590f530": {
+      "context": "",
+      "source": "Sell Interval",
+      "translation": "ช่วงเวลาในการขาย"
+    },
+    "legacy.6734e078": {
+      "context": "",
+      "source": "Keep normal or use italic.",
+      "translation": "คงแบบปกติหรือใช้ตัวเอียง"
+    },
+    "legacy.0ec744a9": {
+      "context": "",
+      "source": "Quick settings",
+      "translation": "ตั้งค่าด่วน"
+    },
+    "legacy.1129da30": {
+      "context": "",
+      "source": "Font help",
+      "translation": "ความช่วยเหลือเกี่ยวกับฟอนต์"
+    },
+    "legacy.054af069": {
+      "context": "",
+      "source": "Main",
+      "translation": "หลัก"
+    },
+    "legacy.11b2bd98": {
+      "context": "",
+      "source": "Translate by",
+      "translation": "แปลโดย"
+    },
+    "legacy.3da970ec": {
+      "context": "",
+      "source": "Choose the text to change.",
+      "translation": "เลือกข้อความที่ต้องการเปลี่ยน"
+    },
+    "legacy.0561fef3": {
+      "context": "",
+      "source": "Go to stack 8.",
+      "translation": "ไปที่กองที่ 8"
+    },
+    "legacy.4123a3dc": {
+      "context": "",
+      "source": "Go to stack 13.",
+      "translation": "ไปที่กองที่ 13"
+    },
+    "legacy.0ee738e4": {
+      "context": "",
+      "source": "Buy selected brooms when affordable.",
+      "translation": "ซื้อไม้กวาดที่เลือกเมื่อมีเงินพอ"
+    },
+    "legacy.38c9b1ff": {
+      "context": "",
+      "source": "Humanoid",
+      "translation": "ฮิวแมนนอยด์"
+    },
+    "legacy.5ebd07da": {
+      "context": "",
+      "source": "Delete this pack.",
+      "translation": "ลบแพ็กนี้"
+    },
+    "legacy.45acc568": {
+      "context": "",
+      "source": "Loading wands...",
+      "translation": "กำลังโหลดไม้เท้า..."
+    },
+    "legacy.05d31a6e": {
+      "context": "",
+      "source": "How often to sell.",
+      "translation": "ความถี่ในการขาย"
+    },
+    "legacy.654637b0": {
+      "context": "",
+      "source": "Auto Buy Wands",
+      "translation": "ซื้อไม้เท้าอัตโนมัติ"
+    },
+    "legacy.04de2bbf": {
+      "context": "",
+      "source": "Sell all materials now.",
+      "translation": "ขายวัสดุทั้งหมดทันที"
+    },
+    "legacy.14bf2ffd": {
+      "context": "",
+      "source": "Auto Alchemy",
+      "translation": "ผสมยาอัตโนมัติ"
     },
     "legacy.33cabb1f": {
       "context": "",
@@ -228,90 +658,90 @@
       "source": "❌",
       "translation": "❌"
     },
-    "legacy.38c9b1ff": {
+    "legacy.783730a5": {
       "context": "",
-      "source": "Humanoid",
-      "translation": "ฮิวแมนนอยด์"
+      "source": "See-through background.",
+      "translation": "พื้นหลังแบบมองทะลุผ่าน"
     },
-    "legacy.08b68560": {
+    "legacy.051a52c4": {
       "context": "",
-      "source": "[ 🔤 ] Font tools",
-      "translation": "[ 🔤 ] เครื่องมือฟอนต์"
+      "source": "Active font",
+      "translation": "ฟอนต์ที่ใช้งานอยู่"
     },
     "legacy.3ca93195": {
       "context": "",
       "source": "Settings",
       "translation": "ตั้งค่า"
     },
-    "legacy.095abf97": {
+    "legacy.6d553bfc": {
       "context": "",
-      "source": "[ ⚙️ ] Job ID",
-      "translation": "[ ⚙️ ] Job ID"
+      "source": "Apply font to",
+      "translation": "ปรับใช้ฟอนต์กับ"
     },
     "legacy.090ee725": {
       "context": "",
       "source": "Instant / Tween / MoveTo",
       "translation": "ทันที / ทวีน (Tween) / เคลื่อนย้ายไปที่ (MoveTo)"
     },
-    "legacy.4d320530": {
+    "legacy.7bca3947": {
       "context": "",
-      "source": "Teleport to selected player",
-      "translation": "เทเลพอร์ตไปยังผู้เล่นที่เลือก"
+      "source": "Choose where Auto Teleport goes.",
+      "translation": "เลือกปลายทางของการเทเลพอร์ตอัตโนมัติ"
     },
-    "legacy.0e43b925": {
+    "legacy.413bd3a4": {
       "context": "",
-      "source": "Optional, e.g. ja-JP.",
-      "translation": "ไม่บังคับ เช่น ja-JP"
+      "source": "Font link / ID",
+      "translation": "ลิงก์/ID ฟอนต์"
     },
-    "legacy.0cf013a2": {
+    "legacy.61feedc3": {
       "context": "",
-      "source": "How bold the text is.",
-      "translation": "ระดับความหนาของข้อความ"
+      "source": "Floating button",
+      "translation": "ปุ่มลอย"
     },
-    "legacy.4d77ad89": {
+    "legacy.0916a14d": {
       "context": "",
-      "source": "Use the script font.",
-      "translation": "ใช้ฟอนต์ของสคริปต์"
+      "source": "Remove this profile.",
+      "translation": "ลบโปรไฟล์นี้"
     },
-    "legacy.4bc9b34b": {
+    "legacy.285ba4a5": {
       "context": "",
-      "source": "Reset to defaults",
-      "translation": "รีเซ็ตเป็นค่าเริ่มต้น"
+      "source": "Auto save",
+      "translation": "บันทึกอัตโนมัติ"
     },
     "legacy.7f22522d": {
       "context": "",
       "source": "Player",
       "translation": "ผู้เล่น"
     },
-    "legacy.67fc12f6": {
+    "legacy.6650dcb8": {
       "context": "",
-      "source": "Copy Current Job ID",
-      "translation": "คัดลอก Job ID ปัจจุบัน"
+      "source": "Load saved settings on start.",
+      "translation": "โหลดการตั้งค่าที่บันทึกไว้เมื่อเริ่มต้น"
     },
-    "legacy.47971287": {
+    "legacy.1bc857a2": {
       "context": "",
-      "source": "Input Job ID",
-      "translation": "ป้อน Job ID"
+      "source": "Destination",
+      "translation": "ปลายทาง"
     },
     "legacy.39302c7c": {
       "context": "",
       "source": "Size, weight, spacing and outline.",
       "translation": "ขนาด ความหนา ระยะห่าง และเส้นขอบ"
     },
-    "legacy.41765260": {
+    "legacy.0a42a5e3": {
       "context": "",
-      "source": "Transparency",
-      "translation": "ความโปร่งใส"
+      "source": "Use Mode",
+      "translation": "โหมดการใช้งาน"
     },
     "legacy.1b3c2e6a": {
       "context": "",
       "source": "Teleport Now",
       "translation": "เทเลพอร์ตทันที"
     },
-    "legacy.24c032ff": {
+    "legacy.73eb82a5": {
       "context": "",
-      "source": "Use ID, Google Fonts, or a font file.",
-      "translation": "ใช้ ID, Google Fonts หรือไฟล์ฟอนต์"
+      "source": "Minimize Bind",
+      "translation": "ปุ่มลัดย่อหน้าต่าง"
     },
     "legacy.475c2231": {
       "context": "",
@@ -328,45 +758,45 @@
       "source": "Default font",
       "translation": "ฟอนต์เริ่มต้น"
     },
-    "legacy.27ab591b": {
+    "legacy.07550fe0": {
       "context": "",
-      "source": "Target code",
-      "translation": "รหัสเป้าหมาย"
+      "source": "Skip free brewing screens automatically.",
+      "translation": "ข้ามหน้าจอการปรุงยาฟรีโดยอัตโนมัติ"
     },
-    "legacy.1f2faef2": {
+    "legacy.65ee1e59": {
       "context": "",
-      "source": "Export JSON",
-      "translation": "ส่งออก JSON"
+      "source": "Weight",
+      "translation": "ความหนาตัวอักษร"
     },
-    "legacy.3f8e9fff": {
+    "legacy.64e36f6d": {
       "context": "",
-      "source": "Blur background.",
-      "translation": "เบลอพื้นหลัง"
+      "source": "Wands",
+      "translation": "ไม้เท้า"
     },
     "legacy.61e0f980": {
       "context": "",
       "source": "Enable Jump",
       "translation": "เปิดใช้งานการกระโดด"
     },
-    "legacy.312814f3": {
+    "legacy.52e29d6f": {
       "context": "",
-      "source": "Theme",
-      "translation": "ธีม"
+      "source": "[ Magic Loot ]",
+      "translation": "[ Magic Loot ]"
     },
-    "legacy.3da970ec": {
+    "legacy.500795bc": {
       "context": "",
-      "source": "Choose the text to change.",
-      "translation": "เลือกข้อความที่ต้องการเปลี่ยน"
+      "source": "Remove pack",
+      "translation": "ลบแพ็กออก"
     },
-    "legacy.6399ad23": {
+    "legacy.2a604c21": {
       "context": "",
-      "source": "Enable Walk",
-      "translation": "เปิดใช้งานการเดิน"
+      "source": "\nName: ATGFAIL (@LawakaitunY725)\nDate: 16/08/2026\n\nPlayed Time: 00:00:49\n",
+      "translation": "\nชื่อ: ATGFAIL (@LawakaitunY725)\nวันที่: 16/08/2026\n\nเวลาที่เล่น: 00:00:49\n"
     },
-    "legacy.33145a5c": {
+    "legacy.4123e6e5": {
       "context": "",
-      "source": "Server Hop",
-      "translation": "ย้ายเซิร์ฟเวอร์"
+      "source": "Go to stack 23.",
+      "translation": "ไปที่กองที่ 23"
     },
     "legacy.032c0711": {
       "context": "",
@@ -378,30 +808,30 @@
       "source": "Style",
       "translation": "สไตล์"
     },
-    "legacy.3fe05c4f": {
+    "legacy.27ab591b": {
       "context": "",
-      "source": "Auto Rejoin",
-      "translation": "เข้าร่วมเซิร์ฟเวอร์ใหม่อัตโนมัติ"
+      "source": "Target code",
+      "translation": "รหัสเป้าหมาย"
     },
-    "legacy.2a3cf5e6": {
+    "legacy.3a49a5f9": {
       "context": "",
-      "source": "Rejoin this server",
-      "translation": "เข้าร่วมเซิร์ฟเวอร์นี้อีกครั้ง"
+      "source": "Choose recipes to brew (20 available).",
+      "translation": "เลือกสูตรยาที่จะปรุง (มีทั้งหมด 20 สูตร)"
     },
-    "legacy.12767886": {
+    "legacy.0e900dfc": {
       "context": "",
-      "source": "Save: OK | Web: OK | Fonts: OK",
-      "translation": "บันทึก: ปกติ | เว็บ: ปกติ | ฟอนต์: ปกติ"
+      "source": "Players",
+      "translation": "ผู้เล่น"
     },
-    "legacy.179716ca": {
+    "legacy.0684cc6d": {
       "context": "",
-      "source": "Translation",
-      "translation": "การแปล"
+      "source": "Jump height",
+      "translation": "ความสูงในการกระโดด"
     },
-    "legacy.7e1ba049": {
+    "legacy.3694f6c2": {
       "context": "",
-      "source": "Status",
-      "translation": "สถานะ"
+      "source": "Leave empty to pick up everything.",
+      "translation": "เว้นว่างไว้เพื่อเก็บทุกอย่าง"
     },
     "legacy.78d0ad56": {
       "context": "",
@@ -418,105 +848,105 @@
       "source": "Teleport to Job",
       "translation": "เทเลพอร์ตไปยัง Job"
     },
-    "legacy.5ebd07da": {
+    "legacy.519402e8": {
       "context": "",
-      "source": "Delete this pack.",
-      "translation": "ลบแพ็กนี้"
+      "source": "Teleport",
+      "translation": "เทเลพอร์ต"
     },
-    "legacy.53bb7584": {
+    "legacy.3a32cc85": {
       "context": "",
-      "source": "[ ⚙️ ] Quick settings",
-      "translation": "[ ⚙️ ] ตั้งค่าด่วน"
+      "source": "Equip selected wands after buying.",
+      "translation": "สวมใส่ไม้เท้าที่เลือกหลังจากซื้อ"
     },
-    "legacy.59e85772": {
+    "legacy.0c6a40b2": {
       "context": "",
-      "source": "Running speed",
-      "translation": "ความเร็วในการวิ่ง"
+      "source": "Equip selected brooms after buying.",
+      "translation": "สวมใส่ไม้กวาดที่เลือกหลังจากซื้อ"
     },
-    "legacy.5f610157": {
+    "legacy.26da1a08": {
       "context": "",
-      "source": "Update pack",
-      "translation": "อัปเดตแพ็ก"
+      "source": "Choose a pack.",
+      "translation": "เลือกแพ็ก"
     },
-    "legacy.1af8e2a6": {
+    "legacy.2b700e8c": {
       "context": "",
-      "source": "Adjust fly speed",
-      "translation": "ปรับความเร็วในการบิน"
+      "source": "Click automatically.",
+      "translation": "คลิกอัตโนมัติ"
     },
-    "legacy.12184ca0": {
+    "legacy.4c7f3b2e": {
       "context": "",
-      "source": "Refresh list",
-      "translation": "รีเฟรชรายการ"
+      "source": "Potions",
+      "translation": "ยา"
     },
-    "legacy.528c27fc": {
+    "legacy.320b38aa": {
       "context": "",
-      "source": "Auto-Follow",
-      "translation": "ติดตามอัตโนมัติ"
+      "source": "Equip selected armor after buying.",
+      "translation": "สวมใส่เกราะที่เลือกหลังจากซื้อ"
     },
-    "legacy.1f44d1c1": {
+    "legacy.1d0fe50f": {
       "context": "",
-      "source": "Install font",
-      "translation": "ติดตั้งฟอนต์"
+      "source": "Language packs and font installs.",
+      "translation": "ชุดภาษาและการติดตั้งฟอนต์"
     },
-    "legacy.783730a5": {
+    "legacy.2412f852": {
       "context": "",
-      "source": "See-through background.",
-      "translation": "พื้นหลังแบบมองทะลุผ่าน"
+      "source": "Auto Sell",
+      "translation": "ขายอัตโนมัติ"
     },
-    "legacy.61feedc3": {
+    "legacy.4dba51e6": {
       "context": "",
-      "source": "Floating button",
-      "translation": "ปุ่มลอย"
+      "source": "Speed & Jump",
+      "translation": "ความเร็ว & การกระโดด"
     },
-    "legacy.6f1386bf": {
+    "legacy.2ebe01d2": {
       "context": "",
-      "source": "Enable/Disable WalkSpeed enforcement",
-      "translation": "เปิด/ปิด การบังคับความเร็วในการเดิน"
+      "source": "Advanced font settings",
+      "translation": "การตั้งค่าฟอนต์ขั้นสูง"
     },
-    "legacy.143cc75f": {
+    "legacy.4123a66b": {
       "context": "",
-      "source": "Method",
-      "translation": "วิธี"
+      "source": "Go to stack 18.",
+      "translation": "ไปที่กองที่ 18"
     },
-    "legacy.05edbb1f": {
+    "legacy.3fe05c4f": {
       "context": "",
-      "source": "Join a Random server",
-      "translation": "เข้าร่วมเซิร์ฟเวอร์สุ่ม"
+      "source": "Auto Rejoin",
+      "translation": "เข้าร่วมเซิร์ฟเวอร์ใหม่อัตโนมัติ"
     },
-    "legacy.155efc77": {
+    "legacy.412d50ef": {
       "context": "",
-      "source": "[ 🎨 ] Interface",
-      "translation": "[ 🎨 ] อินเทอร์เฟซ"
+      "source": "Rebirth when your level is ready.",
+      "translation": "จุติเมื่อเลเวลของคุณพร้อม"
     },
-    "legacy.7d4bb1ce": {
+    "legacy.5c2b8027": {
       "context": "",
-      "source": "Outline",
-      "translation": "เส้นขอบ"
+      "source": "Fly & Noclip",
+      "translation": "บิน & ทะลุกำแพง"
+    },
+    "legacy.29161b08": {
+      "context": "",
+      "source": "Brooms",
+      "translation": "ไม้กวาด"
     },
     "legacy.6847f19b": {
       "context": "",
       "source": "Anti-AFK",
       "translation": "ป้องกัน AFK"
     },
-    "legacy.31b772f5": {
-      "context": "",
-      "source": "UI language",
-      "translation": "ภาษา UI"
-    },
     "legacy.31a3d7a4": {
       "context": "",
       "source": "Choose your language.",
       "translation": "เลือกภาษาของคุณ"
     },
-    "legacy.322b1655": {
+    "legacy.2f9c4be8": {
       "context": "",
-      "source": "Line spacing",
-      "translation": "ระยะห่างระหว่างบรรทัด"
+      "source": "Language tools",
+      "translation": "เครื่องมือภาษา"
     },
-    "legacy.11b10b9b": {
+    "legacy.13f91302": {
       "context": "",
-      "source": "Walk Speed",
-      "translation": "ความเร็วในการเดิน"
+      "source": "Pickup Delay",
+      "translation": "ดีเลย์ในการเก็บของ"
     },
     "legacy.3bdfce52": {
       "context": "",
@@ -528,90 +958,90 @@
       "source": "Paste an ID, link, or file.",
       "translation": "วาง ID, ลิงก์ หรือไฟล์"
     },
-    "legacy.7edee0b0": {
+    "legacy.1cf2b1d0": {
       "context": "",
-      "source": "Advanced tools",
-      "translation": "เครื่องมือขั้นสูง"
+      "source": "ATG Hub Freemium",
+      "translation": "ATG Hub Freemium"
     },
-    "legacy.2d79fed7": {
+    "legacy.59e85772": {
       "context": "",
-      "source": "Copy your current Job ID",
-      "translation": "คัดลอก Job ID ปัจจุบันของคุณ"
+      "source": "Running speed",
+      "translation": "ความเร็วในการวิ่ง"
     },
-    "legacy.1572f9c4": {
+    "legacy.143cc75f": {
       "context": "",
-      "source": "[ 🔤 ] Font appearance",
-      "translation": "[ 🔤 ] ลักษณะฟอนต์"
+      "source": "Method",
+      "translation": "วิธี"
     },
-    "legacy.0684cc6d": {
+    "legacy.196d2441": {
       "context": "",
-      "source": "Jump height",
-      "translation": "ความสูงในการกระโดด"
+      "source": "Voucher",
+      "translation": "คูปอง"
     },
-    "legacy.71cd48e6": {
+    "legacy.0561fce7": {
       "context": "",
-      "source": "by ATGFAIL",
-      "translation": "โดย ATGFAIL"
+      "source": "Go to stack 4.",
+      "translation": "ไปที่กองที่ 4"
     },
-    "legacy.3d0413e2": {
+    "legacy.03acfee3": {
       "context": "",
-      "source": "Noclip",
-      "translation": "ทะลุกำแพง"
+      "source": "Equipment",
+      "translation": "อุปกรณ์สวมใส่"
     },
-    "legacy.6bfaa51b": {
+    "legacy.4d77ad89": {
       "context": "",
-      "source": "[ ⚙️ ] Fly & Noclip",
-      "translation": "[ ⚙️ ] บิน & ทะลุกำแพง"
+      "source": "Use the script font.",
+      "translation": "ใช้ฟอนต์ของสคริปต์"
     },
-    "legacy.0711ff7a": {
+    "legacy.44d27d60": {
       "context": "",
-      "source": "Drag it. Ctrl + M toggles UI.",
-      "translation": "ลากเพื่อย้ายปุ่ม กด Ctrl + M เพื่อเปิด/ปิด UI"
+      "source": "Show translated text.",
+      "translation": "แสดงข้อความที่แปลแล้ว"
     },
-    "legacy.051a52c4": {
+    "legacy.02d65824": {
       "context": "",
-      "source": "Active font",
-      "translation": "ฟอนต์ที่ใช้งานอยู่"
+      "source": "Lower is faster.",
+      "translation": "ค่าน้อยหมายถึงเร็วขึ้น"
     },
-    "legacy.0ad310eb": {
+    "legacy.73562024": {
       "context": "",
-      "source": "Choose a saved font.",
-      "translation": "เลือกฟอนต์ที่บันทึกไว้"
+      "source": "Auto Exchange",
+      "translation": "แลกเปลี่ยนอัตโนมัติ"
     },
-    "legacy.4adca6aa": {
+    "legacy.2e510ad1": {
       "context": "",
-      "source": "Acrylic",
-      "translation": "อะคริลิก"
+      "source": "Auto Teleport",
+      "translation": "เทเลพอร์ตอัตโนมัติ"
     },
-    "legacy.1b7cefce": {
+    "legacy.0aba2627": {
       "context": "",
-      "source": "Install JSON",
-      "translation": "ติดตั้ง JSON"
+      "source": "Interface",
+      "translation": "อินเทอร์เฟซ"
     },
-    "legacy.26da1a08": {
+    "legacy.12184ca0": {
       "context": "",
-      "source": "Choose a pack.",
-      "translation": "เลือกแพ็ก"
+      "source": "Refresh list",
+      "translation": "รีเฟรชรายการ"
     },
-    "legacy.0102ab70": {
+    "legacy.528c27fc": {
       "context": "",
-      "source": "Fly",
-      "translation": "บิน"
+      "source": "Auto-Follow",
+      "translation": "ติดตามอัตโนมัติ"
     },
-    "legacy.0916a14d": {
+    "legacy.77e89c91": {
       "context": "",
-      "source": "Remove this profile.",
-      "translation": "ลบโปรไฟล์นี้"
-    },
-    "legacy.5cdbc7bb": {
-      "context": "",
-      "source": "Pick a source.",
-      "translation": "เลือกแหล่งที่มา"
+      "source": "Buy selected armor when affordable.",
+      "translation": "ซื้อเกราะที่เลือกเมื่อมีเงินพอ"
     },
     "legacy.50d5f6bb": {
       "context": "",
       "source": "Lower Server",
       "translation": "เซิร์ฟเวอร์ประชากรน้อย"
+    },
+    "legacy.1c82f4e4": {
+      "context": "",
+      "source": "Teleport back when your bag is full.",
+      "translation": "เทเลพอร์ตกลับเมื่อกระเป๋าของคุณเต็ม"
     }
   }
 }
