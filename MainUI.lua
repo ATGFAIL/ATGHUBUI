@@ -5019,12 +5019,17 @@ local aa = {
 			if x.Workspace then
 				-- Scripts that never call CustomizationSystem:Configure leave
 				-- I18n.Scope at its "shared" default, which made every script's
-				-- Arrange-tabs order / Favorites / Recent bleed into every other
-				-- script's workspace.json. Fall back to the window Title (unique
-				-- per script) so each script gets its own isolated Workspace scope.
+				-- Favorites / Recent / TabOrder bleed into every other script's
+				-- workspace.json. Fall back to Title+SubTitle so each script gets
+				-- its own isolated Workspace scope. Title alone is not enough:
+				-- every Premium script reuses the same brand string ("ATG Hub
+				-- Premium") for Title and puts the actual per-game name in
+				-- SubTitle (e.g. "[ The Forge ]"), so Title-only still collapsed
+				-- every game back into one shared scope.
 				local workspaceScope = CustomizationSystem.I18n.Scope
 				if workspaceScope == "shared" then
-					workspaceScope = D.Title
+					local subtitle = type(D.SubTitle) == "string" and D.SubTitle or ""
+					workspaceScope = tostring(D.Title or "shared") .. (subtitle ~= "" and (" " .. subtitle) or "")
 				end
 				x.Workspace:Configure {ScriptId = workspaceScope}
 				x.Workspace:Attach(E)
