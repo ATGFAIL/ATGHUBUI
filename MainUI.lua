@@ -3632,16 +3632,28 @@ local aa = {
 				return
 			end
 			local B, C = self.Drag.Tab, nil
+			-- self.Tabs is in tab-creation order, not current visual order, so it
+			-- must be sorted by LayoutOrder before hit-testing against cursor Y
+			-- (same sort MoveTabTo already does before computing indices) —
+			-- otherwise this picks the wrong drop target once a drag has moved a
+			-- tab away from its creation-order position.
+			local E = {}
 			for _, D in ipairs(self.Tabs) do
+				table.insert(E, D)
+			end
+			table.sort(E, function(F, G)
+				return F.Frame.LayoutOrder < G.Frame.LayoutOrder
+			end)
+			for _, D in ipairs(E) do
 				if D ~= B and D.Frame.Visible and A < D.Frame.AbsolutePosition.Y + D.Frame.AbsoluteSize.Y * 0.5 then
 					C = D
 					break
 				end
 			end
 			if not C then
-				for D = #self.Tabs, 1, -1 do
-					if self.Tabs[D] ~= B and self.Tabs[D].Frame.Visible then
-						C = self.Tabs[D]
+				for D = #E, 1, -1 do
+					if E[D] ~= B and E[D].Frame.Visible then
+						C = E[D]
 						break
 					end
 				end
@@ -4399,10 +4411,6 @@ local aa = {
 				self:SetFocus(not self.State.FocusMode)
 				self:RenderWorkspaceMenu()
 			end)
-			self:Button(A, (self.ArrangeMode and "Done arranging tabs" or "Arrange tabs (Beta)"), "grip-vertical", function()
-				self:SetArrangeMode(not self.ArrangeMode)
-				self:ShowPanel(false)
-			end)
 			self:Button(A, "Smart confirmations: " .. (self.State.SmartConfirm == false and "Off" or "On"), "shield-check", function()
 				self.State.SmartConfirm = not self.State.SmartConfirm
 				self:SaveSoon()
@@ -4476,8 +4484,7 @@ local aa = {
 				{Title = "Open Profiles", Icon = "bookmark", Match = "profiles profile config", Action = function() self:ClosePalette(); self:RenderProfiles() end},
 				{Title = "Notification history", Icon = "history", Match = "history notifications activity", Action = function() self:ClosePalette(); self:RenderHistory() end},
 				{Title = "Toggle compact sidebar", Icon = "layout-dashboard", Match = "compact sidebar layout", Action = function() self:SetCompact(not self.State.CompactMode); self:ClosePalette() end},
-				{Title = "Toggle focus mode", Icon = "focus", Match = "focus mode", Action = function() self:SetFocus(not self.State.FocusMode); self:ClosePalette() end},
-				{Title = self.ArrangeMode and "Finish arranging tabs" or "Arrange tabs (Beta)", Icon = "grip-vertical", Match = "arrange reorder tabs", Action = function() self:SetArrangeMode(not self.ArrangeMode); self:ClosePalette() end}
+				{Title = "Toggle focus mode", Icon = "focus", Match = "focus mode", Action = function() self:SetFocus(not self.State.FocusMode); self:ClosePalette() end}
 			}
 			for _, D in ipairs(C) do
 				if B == "" or D.Title:lower():find(B, 1, true) or D.Match:find(B, 1, true) then
@@ -5010,7 +5017,16 @@ local aa = {
 			E.Library = x
 			x.Window = E
 			if x.Workspace then
-				x.Workspace:Configure {ScriptId = CustomizationSystem.I18n.Scope}
+				-- Scripts that never call CustomizationSystem:Configure leave
+				-- I18n.Scope at its "shared" default, which made every script's
+				-- Arrange-tabs order / Favorites / Recent bleed into every other
+				-- script's workspace.json. Fall back to the window Title (unique
+				-- per script) so each script gets its own isolated Workspace scope.
+				local workspaceScope = CustomizationSystem.I18n.Scope
+				if workspaceScope == "shared" then
+					workspaceScope = D.Title
+				end
+				x.Workspace:Configure {ScriptId = workspaceScope}
 				x.Workspace:Attach(E)
 			end
 			x:SetTheme(D.Theme)
