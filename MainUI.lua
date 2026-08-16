@@ -6500,33 +6500,7 @@ local aa = {
 				o:SelectTab(w)
 			end
 			local function decorateSectionTitle(z)
-				if type(z) ~= "string" then
-					return z
-				end
-				local A = z:match("^%s*(.-)%s*$") or z
-				-- Keep an icon supplied by a script; this makes the behavior
-				-- additive and avoids `[ icon ] [ icon ] Title`.
-				if A == "" or A:match("^%[.-%]") then
-					return z
-				end
-				local B = A:lower()
-				local C = "⚙️"
-				if B:find("save", 1, true) or B:find("config", 1, true) then
-					C = "💾"
-				elseif B:find("language", 1, true) or B:find("translation", 1, true) then
-					C = "🌐"
-				elseif B:find("font", 1, true) or B:find("typography", 1, true) then
-					C = "🔤"
-				elseif B:find("interface", 1, true) or B:find("theme", 1, true) or B:find("appearance", 1, true) then
-					C = "🎨"
-				elseif B:find("player", 1, true) then
-					C = "👥"
-				elseif B:find("teleport", 1, true) or B:find("travel", 1, true) then
-					C = "🧭"
-				elseif B:find("combat", 1, true) or B:find("farm", 1, true) then
-					C = "⚡"
-				end
-				return "[ " .. C .. " ] " .. A
+				return z
 			end
 			function x.AddSection(z, A)
 				local B, C = {Type = "Section"}, e(n.Section)(decorateSectionTitle(A), x.Container)
