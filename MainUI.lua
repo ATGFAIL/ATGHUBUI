@@ -7286,7 +7286,7 @@ local aa = {
 						CanvasSize = UDim2.fromScale(0, 0),
 						ScrollingDirection = Enum.ScrollingDirection.Y
 					},
-					{s("UIListLayout", {Padding = UDim.new(0, 4)})}
+					{s("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})}
 				)
 			local F =
 				s(
