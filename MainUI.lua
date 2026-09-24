@@ -9975,7 +9975,7 @@ local moduleFunctions = {
 		return Element
 	end,
 	[28] = function()
-		local aa, ab, ac, ad, ae = moduleContext(28)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(28)
 		return {
 			assets = {
 				["lucide-accessibility"] = "rbxassetid://10709751939",
@@ -11488,8 +11488,8 @@ local moduleFunctions = {
 		end
 	end,
 	[47] = function()
-		local aa, ab, ac, ad, ae = moduleContext(47)
-		local af = {
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(47)
+		local Themes = {
 			Names = {
 				"Dark",
 				"Darker",
@@ -11514,14 +11514,14 @@ local moduleFunctions = {
 				"RGB"
 			}
 		}
-		for ag, ah in next, ab:GetChildren() do
-			local aj = ac(ah)
-			af[aj.Name] = aj
+		for _, child in next, moduleScript:GetChildren() do
+			local theme = requireModule(child)
+			Themes[theme.Name] = theme
 		end
-		return af
+		return Themes
 	end,
 	[48] = function()
-		local aa, ab, ac, ad, ae = moduleContext(48)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(48)
 		return {
 			Name = "Amethyst",
 			Accent = Color3.fromRGB(147, 51, 234),
@@ -11561,7 +11561,7 @@ local moduleFunctions = {
 		}
 	end,
 	[49] = function()
-		local aa, ab, ac, ad, ae = moduleContext(49)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(49)
 		return {
 			Name = "Aqua",
 			Accent = Color3.fromRGB(0, 255, 255),
@@ -11601,7 +11601,7 @@ local moduleFunctions = {
 		}
 	end,
 	[50] = function()
-		local aa, ab, ac, ad, ae = moduleContext(50)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(50)
 		return {
 			Name = "Dark V2",
 			Accent = Color3.fromRGB(96, 205, 255),
@@ -11641,7 +11641,7 @@ local moduleFunctions = {
 		}
 	end,
 	[51] = function()
-		local aa, ab, ac, ad, ae = moduleContext(51)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(51)
 		return {
 			Name = "Darker V2",
 			Accent = Color3.fromRGB(72, 138, 182),
@@ -11681,7 +11681,7 @@ local moduleFunctions = {
 		}
 	end,
 	[52] = function()
-		local aa, ab, ac, ad, ae = moduleContext(52)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(52)
 		return {
 			Name = "Light",
 			Accent = Color3.fromRGB(0, 103, 192),
@@ -11721,7 +11721,7 @@ local moduleFunctions = {
 		}
 	end,
 	[53] = function()
-		local aa, ab, ac, ad, ae = moduleContext(53)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(53)
 		return {
 			Name = "Rose",
 			Accent = Color3.fromRGB(255, 20, 147),
@@ -11761,7 +11761,7 @@ local moduleFunctions = {
 		}
 	end,
 	[54] = function()
-		local aa, ab, ac, ad, ae = moduleContext(54)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(54)
 		return {
 			Name = "Ocean",
 			Accent = Color3.fromRGB(0, 191, 255),
@@ -11801,7 +11801,7 @@ local moduleFunctions = {
 		}
 	end,
 	[55] = function()
-		local aa, ab, ac, ad, ae = moduleContext(55)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(55)
 		return {
 			Name = "Forest",
 			Accent = Color3.fromRGB(50, 205, 50),
@@ -11841,7 +11841,7 @@ local moduleFunctions = {
 		}
 	end,
 	[56] = function()
-		local aa, ab, ac, ad, ae = moduleContext(56)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(56)
 		return {
 			Name = "Sunset",
 			Accent = Color3.fromRGB(255, 140, 0),
@@ -11881,7 +11881,7 @@ local moduleFunctions = {
 		}
 	end,
 	[57] = function()
-		local aa, ab, ac, ad, ae = moduleContext(57)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(57)
 		return {
 			Name = "Midnight",
 			Accent = Color3.fromRGB(180, 200, 255), -- slightly cooler accent for contrast
@@ -11921,7 +11921,7 @@ local moduleFunctions = {
 		}
 	end,
 	[58] = function()
-		local aa, ab, ac, ad, ae = moduleContext(58)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(58)
 		return {
 			Name = "Cherry",
 			Accent = Color3.fromRGB(255, 0, 102),
@@ -11961,7 +11961,7 @@ local moduleFunctions = {
 		}
 	end,
 	[59] = function()
-		local aa, ab, ac, ad, ae = moduleContext(59)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(59)
 		return {
 			Name = "Lavender",
 			Accent = Color3.fromRGB(180, 120, 255),
@@ -12001,7 +12001,7 @@ local moduleFunctions = {
 		}
 	end,
 	[60] = function()
-		local aa, ab, ac, ad, ae = moduleContext(60)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(60)
 		return {
 			Name = "Gold",
 			Accent = Color3.fromRGB(255, 215, 0),
@@ -12041,7 +12041,7 @@ local moduleFunctions = {
 		}
 	end,
 	[61] = function()
-		local aa, ab, ac, ad, ae = moduleContext(61)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(61)
 		return {
 			Name = "Mint",
 			Accent = Color3.fromRGB(0, 255, 200),
@@ -12081,7 +12081,7 @@ local moduleFunctions = {
 		}
 	end,
 	[62] = function()
-		local aa, ab, ac, ad, ae = moduleContext(62)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(62)
 		return {
 			Name = "Crimson",
 			Accent = Color3.fromRGB(255, 0, 60),
@@ -12121,7 +12121,7 @@ local moduleFunctions = {
 		}
 	end,
 	[63] = function()
-		local aa, ab, ac, ad, ae = moduleContext(63)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(63)
 		return {
 			Name = "Sapphire",
 			Accent = Color3.fromRGB(0, 120, 255),
@@ -12161,7 +12161,7 @@ local moduleFunctions = {
 		}
 	end,
 	[64] = function()
-		local aa, ab, ac, ad, ae = moduleContext(64)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(64)
 		return {
 			Name = "Peach",
 			Accent = Color3.fromRGB(255, 160, 120),
@@ -12201,7 +12201,7 @@ local moduleFunctions = {
 		}
 	end,
 	[65] = function()
-		local aa, ab, ac, ad, ae = moduleContext(65)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(65)
 		return {
 			Name = "Galaxy",
 			Accent = Color3.fromRGB(180, 100, 255),
@@ -12241,7 +12241,7 @@ local moduleFunctions = {
 		}
 	end,
 	[66] = function()
-		local aa, ab, ac, ad, ae = moduleContext(66)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(66)
 		-- RGB Theme with animated rainbow colors flag
 		return {
 			Name = "RGB",
@@ -12283,7 +12283,7 @@ local moduleFunctions = {
 		}
 	end,
 	[67] = function()
-		local aa, ab, ac, ad, ae = moduleContext(67)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(67)
 		return {
 			Name = "Dark",
 			Accent = Color3.fromRGB(96, 205, 255),
@@ -12323,7 +12323,7 @@ local moduleFunctions = {
 		}
 	end,
 	[68] = function()
-		local aa, ab, ac, ad, ae = moduleContext(68)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(68)
 		return {
 			Name = "Darker",
 			Accent = Color3.fromRGB(72, 138, 182),
