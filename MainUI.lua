@@ -3144,7 +3144,10 @@ local moduleFunctions = {
 			return ok and item or nil
 		end
 		local Library = {
+			-- Fluent's version, kept for scripts that check it.
 			Version = "1.6.0",
+			-- This ATG build: opt-in extras, privacy and bug fixes (CHANGELOG.md).
+			ATGVersion = "2.0.0",
 			OpenFrames = {},
 			Options = {},
 			Themes = requireModule(libraryRoot.Themes).Names,
@@ -6361,7 +6364,7 @@ local moduleFunctions = {
 			if Library:GetIcon(icon) then
 				icon = Library:GetIcon(icon)
 			end
-			if icon == "" or nil then
+			if icon == "" then
 				icon = nil
 			end
 			Tab.Frame =
@@ -9040,12 +9043,6 @@ local moduleFunctions = {
 				)
 			end
 
-			local searchDelay = 0.15 -- 150ms delay
-
-			-- Drag-select state for multi-select
-			local isDragging = false
-			local dragStartValue = false
-
 			-- Clear button animation helper
 			local clearButtonStroke = clearButton:FindFirstChildOfClass("UIStroke")
 			local isClearButtonVisible = false
@@ -9950,7 +9947,6 @@ local moduleFunctions = {
 					AnchorPoint = Vector2.new(1, 0.5),
 					ThemeTag = {TextColor3 = "SubText"},
 					-- Allow numbers input; keyboard will show on mobile
-					ClearTextOnFocus = false,
 					TextEditable = true
 				}
 			)
