@@ -4932,10 +4932,12 @@ local moduleFunctions = {
 				end)
 			)
 			local elapsed = 0
+			-- Stroke animation (20 Hz). Heartbeat does not hold up rendering the
+			-- way RenderStepped does, and nothing is written while hidden.
 			track(
-				RunService.RenderStepped:Connect(function(deltaTime)
+				RunService.Heartbeat:Connect(function(deltaTime)
 					elapsed = elapsed + deltaTime
-					if elapsed < 0.05 or not stroke.Parent then
+					if elapsed < 0.05 or not stroke.Parent or not button.Visible or not gui.Enabled then
 						return
 					end
 					elapsed = 0
@@ -7391,7 +7393,7 @@ local moduleFunctions = {
 			Window.SelectorPosMotor:onStep(
 				function(value)
 					selector.Position = UDim2.new(0, 0, 0, value + 17)
-					local now = tick()
+					local now = os.clock()
 					local deltaTime = now - lastTime
 					if lastValue ~= nil then
 						Window.SelectorSizeMotor:setGoal(Spring((math.abs(value - lastValue) / (deltaTime * 60)) + 16))

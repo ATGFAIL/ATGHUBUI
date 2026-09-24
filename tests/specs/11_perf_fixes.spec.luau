@@ -133,6 +133,27 @@ return function(t)
 		t.equal(#world.errors, 0, "engine errors")
 	end)
 
+	t.test("P8 the floating button animates on Heartbeat and only while shown", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		window:AddTab({ Title = "Main" })
+		task.wait(0.4)
+		world:settle(3)
+		local floating = context.Library.FloatingToggle
+		t.truthy(floating, "floating toggle exists")
+		t.equal(world:renderSteppedConnections(), 0, "no RenderStepped connection when idle")
+		world:settle(0.5)
+		local shown = floating.Stroke.Color
+		world:settle(0.5)
+		t.notEqual(floating.Stroke.Color, shown, "the stroke animates while shown")
+		floating.Button.Visible = false
+		local hidden = floating.Stroke.Color
+		world:settle(1)
+		t.equal(floating.Stroke.Color, hidden, "no updates while hidden")
+		t.equal(#world.errors, 0, "engine errors")
+	end)
+
 	t.test("P4 closed dropdowns do not react to layout changes", function()
 		local context = Boot.new()
 		local world = context.world
