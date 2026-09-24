@@ -177,6 +177,18 @@ check("A corrupt workspace profile does not break ApplyProfile", function()
 	return ok, ok and "" or tostring(err)
 end)
 
+check("Round returns a number rounded half up", function()
+	local value = Library:Round(5.7, 0)
+	return type(value) == "number" and value == 6, type(value) .. " " .. tostring(value)
+end)
+
+check("Sidebar search is off unless CreateWindow{Search = true}", function()
+	if not Library.Workspace then
+		return nil, "no Workspace"
+	end
+	return Library.Workspace.SidebarSearch == nil, "search box present = " .. tostring(Library.Workspace.SidebarSearch ~= nil)
+end)
+
 check("Library exposes OnUnload", function()
 	return type(Library.OnUnload) == "table" and type(Library.OnUnload.Connect) == "function", type(Library.OnUnload)
 end)
@@ -322,7 +334,9 @@ end)
 ------------------------------------------------------------------------------
 
 local counts = { PASS = 0, FAIL = 0, SKIP = 0 }
-local lines = { "ATG smoke [" .. CONFIG.Label .. "]" }
+local lines = {
+	string.format("ATG smoke [%s] ATGVersion=%s touch=%s", CONFIG.Label, tostring(Library.ATGVersion), tostring(UserInputService.TouchEnabled)),
+}
 for _, result in ipairs(results) do
 	counts[result.status] = counts[result.status] + 1
 	table.insert(lines, string.format("%-4s %s %s", result.status, result.name, result.detail and ("(" .. result.detail .. ")") or ""))
@@ -331,15 +345,19 @@ table.insert(lines, string.format("PASS %d  FAIL %d  SKIP %d", counts.PASS, coun
 table.insert(lines, "")
 table.insert(lines, "Manual checklist (answer yes/no):")
 for _, item in ipairs({
-	"Tap Ctrl quickly: does the UI hide/show?",
+	"Tap Ctrl quickly: does the UI hide/show? (new build: on release)",
 	"Hold Ctrl and press K: does the search open WITHOUT hiding the UI? (new build with Search=true)",
 	"Hold Ctrl and press M: does the UI toggle exactly once?",
 	"Hold Ctrl while walking (WASD), release: UI should NOT toggle (new build)",
 	"Mobile: scroll a long dropdown list with your finger: does it select items by accident?",
+	"Mobile: tap a dropdown item: is it selected when you lift your finger?",
+	"Mobile: tap the slider bar (not the dot): does the value jump there? (new build)",
 	"Open/close a notification: do you see a white flash behind it?",
 	"Theme RGB: do borders cycle through colours? (new build)",
 	"Theme Light: do the search box, panel and input underline follow the theme? (new build)",
 	"Phone in landscape: does the whole window fit on screen?",
+	"No splash on load; with getgenv().ATGSplash = true before loading, does it appear? (new build)",
+	"InterfaceManager > Language tools > Translate by > Machine: does a consent dialog appear first? (new build)",
 }) do
 	table.insert(lines, "  [ ] " .. item)
 end
