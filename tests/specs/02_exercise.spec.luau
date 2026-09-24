@@ -291,7 +291,14 @@ return function(t)
 		Library.Translation:TranslateText("Hello", "th", function(result)
 			directResult = result
 		end)
-		task.wait(0.3)
+		-- Requests are rate limited (4 per second), so this one may wait
+		-- behind the interface texts queued by switching to machine mode.
+		for _ = 1, 50 do
+			if directResult ~= nil then
+				break
+			end
+			task.wait(0.1)
+		end
 		table.insert(lines, "TranslateText callback: " .. tostring(directResult ~= nil))
 		Library.I18n:SetLanguage("en")
 		task.wait(0.1)

@@ -154,6 +154,50 @@ return function(t)
 		t.equal(#world.errors, 0, "engine errors")
 	end)
 
+	t.test("P7 machine translations are cached on disk and requests are rate limited", function()
+		local function server()
+			local count = 0
+			return function()
+				count += 1
+				return { Success = true, StatusCode = 200, Body = '{"translatedText":"[mt ' .. count .. ']"}', Headers = {} }
+			end
+		end
+		local function build(context)
+			context.Library.I18n:SetMode("machine")
+			context.Library.I18n:SetLanguage("th")
+			local window = newWindow(context)
+			local tab = window:AddTab({ Title = "Main" })
+			for index = 1, 10 do
+				tab:AddToggle("M" .. index, { Title = "Machine " .. index })
+			end
+		end
+
+		local first = Boot.new({ request = server() })
+		build(first)
+		task.wait(0.3)
+		t.truthy(#first.world.requests <= 4, "at most 4 requests in the first second: " .. #first.world.requests)
+		task.wait(4.5)
+		local sent = #first.world.requests
+		t.truthy(sent >= 10, "all texts requested eventually: " .. sent)
+
+		local second = Boot.new({ request = server() })
+		for path in first.world.folders do
+			second.world.folders[path] = true
+		end
+		for path, contents in first.world.files do
+			second.world.files[path] = contents
+		end
+		build(second)
+		task.wait(0.5)
+		t.equal(#second.world.requests, 0, "a second session reuses the saved translations")
+		local translated = false
+		for _, label in second.Library.GUI:GetDescendants() do
+			translated = translated or (label:IsA("TextLabel") and label.Text:find("[mt", 1, true) ~= nil)
+		end
+		t.truthy(translated, "saved translations are shown")
+		t.equal(#first.world.errors + #second.world.errors, 0, "engine errors")
+	end)
+
 	t.test("P4 closed dropdowns do not react to layout changes", function()
 		local context = Boot.new()
 		local world = context.world

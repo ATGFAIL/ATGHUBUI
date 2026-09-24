@@ -837,6 +837,13 @@ do
         MachineRequestLimit = 200,
         MachineRequests = 0,
         MachineRequestsByLocale = {},
+        -- At most this many machine requests start in any one second.
+        MachineRateLimit = 4,
+        MachineRateTokens = 4,
+        -- Translations received are also kept on disk per script scope and
+        -- language pair (least recently used entries are dropped).
+        MachineDiskCacheLimit = 2000,
+        MachineDiskCaches = {},
         RobloxCache = {},
         RobloxCacheOrder = {},
         RobloxPending = {},
@@ -1422,10 +1429,104 @@ do
         end)
     end
 
+    function I18n:GetMachineCachePath(sourceLocale, targetLocale)
+        local fileName = "machine." .. sanitizeSegment(sourceLocale, "source") .. "-" .. sanitizeSegment(targetLocale, "target") .. ".json"
+        return joinPath(self:GetScopeFolder(), fileName)
+    end
+
+    -- Loaded once per file. Saved as an array of {source, translation}
+    -- pairs, oldest first, so the JSON never mixes array and object keys.
+    function I18n:GetMachineDiskCache(sourceLocale, targetLocale)
+        local path = self:GetMachineCachePath(sourceLocale, targetLocale)
+        local cache = self.MachineDiskCaches[path]
+        if cache then
+            return cache
+        end
+        -- Stamps[source] records when an entry was last used; the oldest one
+        -- is dropped when the cache is full.
+        cache = {Path = path, Entries = {}, Stamps = {}, Count = 0, Clock = 0, SaveQueued = false}
+        self.MachineDiskCaches[path] = cache
+        if Storage:CanUseFiles() then
+            local contents = Storage:Read(path)
+            local decoded = contents and jsonDecode(contents)
+            if type(decoded) == "table" and type(decoded.entries) == "table" then
+                for _, pair in ipairs(decoded.entries) do
+                    if type(pair) == "table" and type(pair[1]) == "string" and type(pair[2]) == "string"
+                        and cache.Entries[pair[1]] == nil then
+                        cache.Entries[pair[1]] = pair[2]
+                        cache.Count = cache.Count + 1
+                        cache.Clock = cache.Clock + 1
+                        cache.Stamps[pair[1]] = cache.Clock
+                    end
+                end
+            end
+        end
+        return cache
+    end
+
+    local function touchDiskEntry(cache, source)
+        cache.Clock = cache.Clock + 1
+        cache.Stamps[source] = cache.Clock
+    end
+
+    function I18n:SaveMachineDiskCache(cache)
+        if cache.SaveQueued or not Storage:CanUseFiles() then
+            return
+        end
+        cache.SaveQueued = true
+        -- Coalesce the writes of one burst of translations.
+        task.delay(2, function()
+            cache.SaveQueued = false
+            local sources = {}
+            for source in pairs(cache.Entries) do
+                table.insert(sources, source)
+            end
+            table.sort(sources, function(left, right)
+                return cache.Stamps[left] < cache.Stamps[right]
+            end)
+            local entries = {}
+            for _, source in ipairs(sources) do
+                table.insert(entries, {source, cache.Entries[source]})
+            end
+            local encoded = jsonEncode({schema = "atg.i18n.machine-cache.v1", entries = entries})
+            if encoded then
+                Storage:Write(cache.Path, encoded)
+            end
+        end)
+    end
+
+    function I18n:RememberMachineTranslation(sourceLocale, targetLocale, source, translated)
+        local cache = self:GetMachineDiskCache(sourceLocale, targetLocale)
+        if cache.Entries[source] == nil then
+            cache.Count = cache.Count + 1
+        end
+        cache.Entries[source] = translated
+        touchDiskEntry(cache, source)
+        local limit = tonumber(self.MachineDiskCacheLimit) or 2000
+        while cache.Count > limit do
+            local oldest, oldestStamp = nil, math.huge
+            for candidate, stamp in pairs(cache.Stamps) do
+                if stamp < oldestStamp then
+                    oldest, oldestStamp = candidate, stamp
+                end
+            end
+            cache.Entries[oldest] = nil
+            cache.Stamps[oldest] = nil
+            cache.Count = cache.Count - 1
+        end
+        self:SaveMachineDiskCache(cache)
+    end
+
     function I18n:DrainMachineQueue()
-        while self.MachineActive < self.MachineMaxConcurrent and #self.MachineQueue > 0 do
+        while self.MachineActive < self.MachineMaxConcurrent and #self.MachineQueue > 0 and self.MachineRateTokens > 0 do
             local job = table.remove(self.MachineQueue, 1)
             self.MachineActive = self.MachineActive + 1
+            -- Each start uses a token that comes back one second later.
+            self.MachineRateTokens = self.MachineRateTokens - 1
+            task.delay(1, function()
+                self.MachineRateTokens = math.min(self.MachineRateTokens + 1, tonumber(self.MachineRateLimit) or 4)
+                self:DrainMachineQueue()
+            end)
             task.spawn(function()
                 local translated
                 local body = jsonEncode({
@@ -1451,6 +1552,7 @@ do
                     if type(result) == "string" and result ~= "" then
                         translated = result
                         cacheTranslation(self, "MachineCache", "MachineCacheOrder", job.Key, result)
+                        self:RememberMachineTranslation(job.SourceLocale, job.TargetLocale, job.Text, result)
                     end
                 end
 
@@ -1476,6 +1578,15 @@ do
         local cacheKey = self.SourceLocale .. "|" .. targetLocale .. "|" .. entry.OriginalText
         if self.MachineCache[cacheKey] then
             callback(self.MachineCache[cacheKey])
+            return
+        end
+        -- Translations from earlier sessions cost no request or quota.
+        local disk = self:GetMachineDiskCache(self.SourceLocale, targetLocale)
+        local stored = disk.Entries[entry.OriginalText]
+        if stored then
+            touchDiskEntry(disk, entry.OriginalText)
+            cacheTranslation(self, "MachineCache", "MachineCacheOrder", cacheKey, stored)
+            callback(stored)
             return
         end
 
