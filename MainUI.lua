@@ -7774,27 +7774,27 @@ local moduleFunctions = {
 		return Creator
 	end,
 	[19] = function()
-		local c, d, e, f, g = moduleContext(19)
-		local h = {}
-		for i, j in next, d:GetChildren() do
-			table.insert(h, e(j))
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(19)
+		local Elements = {}
+		for _, child in next, moduleScript:GetChildren() do
+			table.insert(Elements, requireModule(child))
 		end
-		return h
+		return Elements
 	end,
 	[20] = function()
-		local c, d, e, f, g = moduleContext(20)
-		local h = d.Parent.Parent
-		local i = e(h.Creator)
-		local j, k, l = i.New, h.Components, {}
-		l.__index = l
-		l.__type = "Button"
-		function l.New(m, n)
-			assert(n.Title, "Button - Missing Title")
-			n.Callback = n.Callback or function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(20)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Button"
+		function Element.New(parent, config)
+			assert(config.Title, "Button - Missing Title")
+			config.Callback = config.Callback or function()
 			end
-			local o = e(k.Element)(n.Title, n.Description, m.Container, true)
-			local p =
-				j(
+			local buttonFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			local icon =
+				New(
 					"ImageLabel",
 					{
 						Image = "rbxassetid://10709791437",
@@ -7802,94 +7802,94 @@ local moduleFunctions = {
 						AnchorPoint = Vector2.new(1, 0.5),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						BackgroundTransparency = 1,
-						Parent = o.Frame,
+						Parent = buttonFrame.Frame,
 						ThemeTag = {ImageColor3 = "Text"}
 					}
 				)
-			i.AddSignal(
-				o.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				buttonFrame.Frame.MouseButton1Click,
 				function()
-					m.Library:SafeCallback(n.Callback)
+					parent.Library:SafeCallback(config.Callback)
 				end
 			)
-			return o
+			return buttonFrame
 		end
-		return l
+		return Element
 	end,
 	[21] = function()
-		local c, d, e, f, g = moduleContext(21)
-		local h, i, j, k =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(21)
+		local UserInputService, TouchInputService, RunService, Players =
 			game:GetService "UserInputService",
 		game:GetService "TouchInputService",
 		game:GetService "RunService",
 		game:GetService "Players"
-		local l, m = j.RenderStepped, k.LocalPlayer
-		local n, o = m:GetMouse(), d.Parent.Parent
-		local p = e(o.Creator)
-		local s, t, u = p.New, o.Components, {}
-		u.__index = u
-		u.__type = "Colorpicker"
-		function u.New(v, w, x)
-			local y = v.Library
-			assert(x.Title, "Colorpicker - Missing Title")
-			assert(x.Default, "AddColorPicker: Missing default value.")
-			local z = {
-				Value = x.Default,
-				Transparency = x.Transparency or 0,
+		local RenderStepped, LocalPlayer = RunService.RenderStepped, Players.LocalPlayer
+		local mouse, Root = LocalPlayer:GetMouse(), moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Colorpicker"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Colorpicker - Missing Title")
+			assert(config.Default, "AddColorPicker: Missing default value.")
+			local Colorpicker = {
+				Value = config.Default,
+				Transparency = config.Transparency or 0,
 				Type = "Colorpicker",
-				Title = type(x.Title) == "string" and x.Title or "Colorpicker",
-				Callback = x.Callback or function(z)
+				Title = type(config.Title) == "string" and config.Title or "Colorpicker",
+				Callback = config.Callback or function(_color)
 				end
 			}
-			function z.SetHSVFromRGB(A, B)
-				local C, D, E = Color3.toHSV(B)
-				z.Hue = C
-				z.Sat = D
-				z.Vib = E
+			function Colorpicker.SetHSVFromRGB(_self, color)
+				local hue, sat, vib = Color3.toHSV(color)
+				Colorpicker.Hue = hue
+				Colorpicker.Sat = sat
+				Colorpicker.Vib = vib
 			end
-			z:SetHSVFromRGB(z.Value)
-			local A = e(t.Element)(x.Title, x.Description, v.Container, true)
-			z.SetTitle = A.SetTitle
-			z.SetDesc = A.SetDesc
-			z.Frame = A.Frame
-			local B =
-				s(
+			Colorpicker:SetHSVFromRGB(Colorpicker.Value)
+			local colorpickerFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			Colorpicker.SetTitle = colorpickerFrame.SetTitle
+			Colorpicker.SetDesc = colorpickerFrame.SetDesc
+			Colorpicker.Frame = colorpickerFrame.Frame
+			local displayFrame =
+				New(
 					"Frame",
-					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = z.Value, Parent = A.Frame},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colorpicker.Value, Parent = colorpickerFrame.Frame},
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
 				)
-			local aa, ab =
-				s(
+			local displayFrameHolder, createColorDialog =
+				New(
 					"ImageLabel",
 					{
 						Size = UDim2.fromOffset(26, 26),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
-						Parent = A.Frame,
+						Parent = colorpickerFrame.Frame,
 						Image = "http://www.roblox.com/asset/?id=14204231522",
 						ImageTransparency = 0.45,
 						ScaleType = Enum.ScaleType.Tile,
 						TileSize = UDim2.fromOffset(40, 40)
 					},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)}), B}
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), displayFrame}
 				),
 			function()
-				local C = e(t.Dialog):Create()
-				C.Title.Text = z.Title
-				C.Root.Size = UDim2.fromOffset(430, 330)
-				local D, E, F, G, H, I =
-					z.Hue,
-				z.Sat,
-				z.Vib,
-				z.Transparency,
+				local dialog = requireModule(Components.Dialog):Create()
+				dialog.Title.Text = Colorpicker.Title
+				dialog.Root.Size = UDim2.fromOffset(430, 330)
+				local hue, sat, vib, transparency, createInput, createInputLabel =
+					Colorpicker.Hue,
+				Colorpicker.Sat,
+				Colorpicker.Vib,
+				Colorpicker.Transparency,
 				function()
-					local D = e(t.Textbox)()
-					D.Frame.Parent = C.Root
-					D.Frame.Size = UDim2.new(0, 90, 0, 32)
-					return D
+					local box = requireModule(Components.Textbox)()
+					box.Frame.Parent = dialog.Root
+					box.Frame.Size = UDim2.new(0, 90, 0, 32)
+					return box
 				end,
-				function(D, E)
-					return s(
+				function(text, position)
+					return New(
 						"TextLabel",
 						{
 							FontFace = Font.new(
@@ -7897,24 +7897,24 @@ local moduleFunctions = {
 								Enum.FontWeight.Medium,
 								Enum.FontStyle.Normal
 							),
-							Text = D,
+							Text = text,
 							TextColor3 = Color3.fromRGB(240, 240, 240),
 							TextSize = 13,
 							TextXAlignment = Enum.TextXAlignment.Left,
 							Size = UDim2.new(1, 0, 0, 32),
-							Position = E,
+							Position = position,
 							BackgroundTransparency = 1,
-							Parent = C.Root,
+							Parent = dialog.Root,
 							ThemeTag = {TextColor3 = "Text"}
 						}
 					)
 				end
-				local J, K =
+				local getRGB, satCursor =
 					function()
-						local J = Color3.fromHSV(D, E, F)
-						return {R = math.floor(J.r * 255), G = math.floor(J.g * 255), B = math.floor(J.b * 255)}
+						local color = Color3.fromHSV(hue, sat, vib)
+						return {R = math.floor(color.r * 255), G = math.floor(color.g * 255), B = math.floor(color.b * 255)}
 					end,
-				s(
+				New(
 					"ImageLabel",
 					{
 						Size = UDim2.new(0, 18, 0, 18),
@@ -7924,30 +7924,30 @@ local moduleFunctions = {
 						Image = "http://www.roblox.com/asset/?id=4805639000"
 					}
 				)
-				local L, M =
-					s(
+				local satVibMap, oldColorFrame =
+					New(
 						"ImageLabel",
 						{
 							Size = UDim2.fromOffset(180, 160),
 							Position = UDim2.fromOffset(20, 55),
 							Image = "rbxassetid://4155801252",
-							BackgroundColor3 = z.Value,
+							BackgroundColor3 = Colorpicker.Value,
 							BackgroundTransparency = 0,
-							Parent = C.Root
+							Parent = dialog.Root
 						},
-						{s("UICorner", {CornerRadius = UDim.new(0, 4)}), K}
+						{New("UICorner", {CornerRadius = UDim.new(0, 4)}), satCursor}
 					),
-				s(
+				New(
 					"Frame",
 					{
-						BackgroundColor3 = z.Value,
+						BackgroundColor3 = Colorpicker.Value,
 						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = z.Transparency
+						BackgroundTransparency = Colorpicker.Transparency
 					},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
 				)
-				local N, O =
-					s(
+				local oldColorFrameChecker, dialogDisplayFrame =
+					New(
 						"ImageLabel",
 						{
 							Image = "http://www.roblox.com/asset/?id=14204231522",
@@ -7957,21 +7957,21 @@ local moduleFunctions = {
 							BackgroundTransparency = 1,
 							Position = UDim2.fromOffset(112, 220),
 							Size = UDim2.fromOffset(88, 24),
-							Parent = C.Root
+							Parent = dialog.Root
 						},
 						{
-							s("UICorner", {CornerRadius = UDim.new(0, 4)}),
-							s("UIStroke", {Thickness = 2, Transparency = 0.75}),
-							M
+							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+							New("UIStroke", {Thickness = 2, Transparency = 0.75}),
+							oldColorFrame
 						}
 					),
-				s(
+				New(
 					"Frame",
-					{BackgroundColor3 = z.Value, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{BackgroundColor3 = Colorpicker.Value, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0},
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
 				)
-				local P, Q =
-					s(
+				local dialogDisplayFrameChecker, sequenceTable =
+					New(
 						"ImageLabel",
 						{
 							Image = "http://www.roblox.com/asset/?id=14204231522",
@@ -7981,21 +7981,21 @@ local moduleFunctions = {
 							BackgroundTransparency = 1,
 							Position = UDim2.fromOffset(20, 220),
 							Size = UDim2.fromOffset(88, 24),
-							Parent = C.Root
+							Parent = dialog.Root
 						},
 						{
-							s("UICorner", {CornerRadius = UDim.new(0, 4)}),
-							s("UIStroke", {Thickness = 2, Transparency = 0.75}),
-							O
+							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+							New("UIStroke", {Thickness = 2, Transparency = 0.75}),
+							dialogDisplayFrame
 						}
 					),
 				{}
-				for R = 0, 1, 0.1 do
-					table.insert(Q, ColorSequenceKeypoint.new(R, Color3.fromHSV(R, 1, 1)))
+				for step = 0, 1, 0.1 do
+					table.insert(sequenceTable, ColorSequenceKeypoint.new(step, Color3.fromHSV(step, 1, 1)))
 				end
-				local R, S =
-					s("UIGradient", {Color = ColorSequence.new(Q), Rotation = 90}),
-				s(
+				local hueSliderGradient, hueDragHolder =
+					New("UIGradient", {Color = ColorSequence.new(sequenceTable), Rotation = 90}),
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 1, -10),
@@ -8003,43 +8003,43 @@ local moduleFunctions = {
 						BackgroundTransparency = 1
 					}
 				)
-				local T, U, V =
-					s(
+				local hueDrag, hueSlider, hexInput =
+					New(
 						"ImageLabel",
 						{
 							Size = UDim2.fromOffset(14, 14),
 							Image = "http://www.roblox.com/asset/?id=12266946128",
-							Parent = S,
+							Parent = hueDragHolder,
 							ThemeTag = {ImageColor3 = "DialogInput"}
 						}
 					),
-				s(
+				New(
 					"Frame",
-					{Size = UDim2.fromOffset(12, 190), Position = UDim2.fromOffset(210, 55), Parent = C.Root},
-					{s("UICorner", {CornerRadius = UDim.new(1, 0)}), R, S}
+					{Size = UDim2.fromOffset(12, 190), Position = UDim2.fromOffset(210, 55), Parent = dialog.Root},
+					{New("UICorner", {CornerRadius = UDim.new(1, 0)}), hueSliderGradient, hueDragHolder}
 				),
-				H()
-				V.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 55)
-				I("Hex", UDim2.fromOffset(x.Transparency and 360 or 340, 55))
-				local W = H()
-				W.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 95)
-				I("Red", UDim2.fromOffset(x.Transparency and 360 or 340, 95))
-				local X = H()
-				X.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 135)
-				I("Green", UDim2.fromOffset(x.Transparency and 360 or 340, 135))
-				local Y = H()
-				Y.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 175)
-				I("Blue", UDim2.fromOffset(x.Transparency and 360 or 340, 175))
-				local Z
-				if x.Transparency then
-					Z = H()
-					Z.Frame.Position = UDim2.fromOffset(260, 215)
-					I("Alpha", UDim2.fromOffset(360, 215))
+				createInput()
+				hexInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 55)
+				createInputLabel("Hex", UDim2.fromOffset(config.Transparency and 360 or 340, 55))
+				local redInput = createInput()
+				redInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 95)
+				createInputLabel("Red", UDim2.fromOffset(config.Transparency and 360 or 340, 95))
+				local greenInput = createInput()
+				greenInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 135)
+				createInputLabel("Green", UDim2.fromOffset(config.Transparency and 360 or 340, 135))
+				local blueInput = createInput()
+				blueInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 175)
+				createInputLabel("Blue", UDim2.fromOffset(config.Transparency and 360 or 340, 175))
+				local alphaInput
+				if config.Transparency then
+					alphaInput = createInput()
+					alphaInput.Frame.Position = UDim2.fromOffset(260, 215)
+					createInputLabel("Alpha", UDim2.fromOffset(360, 215))
 				end
-				local _, aa, ab
-				if x.Transparency then
-					local ac =
-						s(
+				local transparencySlider, transparencyDrag, transparencyColor
+				if config.Transparency then
+					local transparencyDragHolder =
+						New(
 							"Frame",
 							{
 								Size = UDim2.new(1, 0, 1, -10),
@@ -8047,22 +8047,22 @@ local moduleFunctions = {
 								BackgroundTransparency = 1
 							}
 						)
-					aa =
-						s(
+					transparencyDrag =
+						New(
 							"ImageLabel",
 							{
 								Size = UDim2.fromOffset(14, 14),
 								Image = "http://www.roblox.com/asset/?id=12266946128",
-								Parent = ac,
+								Parent = transparencyDragHolder,
 								ThemeTag = {ImageColor3 = "DialogInput"}
 							}
 						)
-					ab =
-						s(
+					transparencyColor =
+						New(
 							"Frame",
 							{Size = UDim2.fromScale(1, 1)},
 							{
-								s(
+								New(
 									"UIGradient",
 									{
 										Transparency = NumberSequence.new {
@@ -8072,21 +8072,21 @@ local moduleFunctions = {
 										Rotation = 270
 									}
 								),
-								s("UICorner", {CornerRadius = UDim.new(1, 0)})
+								New("UICorner", {CornerRadius = UDim.new(1, 0)})
 							}
 						)
-					_ =
-						s(
+					transparencySlider =
+						New(
 							"Frame",
 							{
 								Size = UDim2.fromOffset(12, 190),
 								Position = UDim2.fromOffset(230, 55),
-								Parent = C.Root,
+								Parent = dialog.Root,
 								BackgroundTransparency = 1
 							},
 							{
-								s("UICorner", {CornerRadius = UDim.new(1, 0)}),
-								s(
+								New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+								New(
 									"ImageLabel",
 									{
 										Image = "http://www.roblox.com/asset/?id=14204231522",
@@ -8095,243 +8095,243 @@ local moduleFunctions = {
 										TileSize = UDim2.fromOffset(40, 40),
 										BackgroundTransparency = 1,
 										Size = UDim2.fromScale(1, 1),
-										Parent = C.Root
+										Parent = dialog.Root
 									},
-									{s("UICorner", {CornerRadius = UDim.new(1, 0)})}
+									{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
 								),
-								ab,
-								ac
+								transparencyColor,
+								transparencyDragHolder
 							}
 						)
 				end
-				local ac = function()
-					L.BackgroundColor3 = Color3.fromHSV(D, 1, 1)
-					T.Position = UDim2.new(0, -1, D, -6)
-					K.Position = UDim2.new(E, 0, 1 - F, 0)
-					O.BackgroundColor3 = Color3.fromHSV(D, E, F)
-					V.Input.Text = "#" .. Color3.fromHSV(D, E, F):ToHex()
-					W.Input.Text = J().R
-					X.Input.Text = J().G
-					Y.Input.Text = J().B
-					if x.Transparency then
-						ab.BackgroundColor3 = Color3.fromHSV(D, E, F)
-						O.BackgroundTransparency = G
-						aa.Position = UDim2.new(0, -1, 1 - G, -6)
-						Z.Input.Text = e(o):Round((1 - G) * 100, 0) .. "%"
+				local display = function()
+					satVibMap.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+					hueDrag.Position = UDim2.new(0, -1, hue, -6)
+					satCursor.Position = UDim2.new(sat, 0, 1 - vib, 0)
+					dialogDisplayFrame.BackgroundColor3 = Color3.fromHSV(hue, sat, vib)
+					hexInput.Input.Text = "#" .. Color3.fromHSV(hue, sat, vib):ToHex()
+					redInput.Input.Text = getRGB().R
+					greenInput.Input.Text = getRGB().G
+					blueInput.Input.Text = getRGB().B
+					if config.Transparency then
+						transparencyColor.BackgroundColor3 = Color3.fromHSV(hue, sat, vib)
+						dialogDisplayFrame.BackgroundTransparency = transparency
+						transparencyDrag.Position = UDim2.new(0, -1, 1 - transparency, -6)
+						alphaInput.Input.Text = requireModule(Root):Round((1 - transparency) * 100, 0) .. "%"
 					end
 				end
-				p.AddSignal(
-					V.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae, af = pcall(Color3.fromHex, V.Input.Text)
-							if ae and typeof(af) == "Color3" then
-								D, E, F = Color3.toHSV(af)
+				Creator.AddSignal(
+					hexInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local ok, result = pcall(Color3.fromHex, hexInput.Input.Text)
+							if ok and typeof(result) == "Color3" then
+								hue, sat, vib = Color3.toHSV(result)
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				p.AddSignal(
-					W.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae = J()
-							local af, ag = pcall(Color3.fromRGB, W.Input.Text, ae.G, ae.B)
-							if af and typeof(ag) == "Color3" then
-								if tonumber(W.Input.Text) <= 255 then
-									D, E, F = Color3.toHSV(ag)
+				Creator.AddSignal(
+					redInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local rgb = getRGB()
+							local ok, result = pcall(Color3.fromRGB, redInput.Input.Text, rgb.G, rgb.B)
+							if ok and typeof(result) == "Color3" then
+								if tonumber(redInput.Input.Text) <= 255 then
+									hue, sat, vib = Color3.toHSV(result)
 								end
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				p.AddSignal(
-					X.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae = J()
-							local af, ag = pcall(Color3.fromRGB, ae.R, X.Input.Text, ae.B)
-							if af and typeof(ag) == "Color3" then
-								if tonumber(X.Input.Text) <= 255 then
-									D, E, F = Color3.toHSV(ag)
+				Creator.AddSignal(
+					greenInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local rgb = getRGB()
+							local ok, result = pcall(Color3.fromRGB, rgb.R, greenInput.Input.Text, rgb.B)
+							if ok and typeof(result) == "Color3" then
+								if tonumber(greenInput.Input.Text) <= 255 then
+									hue, sat, vib = Color3.toHSV(result)
 								end
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				p.AddSignal(
-					Y.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae = J()
-							local af, ag = pcall(Color3.fromRGB, ae.R, ae.G, Y.Input.Text)
-							if af and typeof(ag) == "Color3" then
-								if tonumber(Y.Input.Text) <= 255 then
-									D, E, F = Color3.toHSV(ag)
+				Creator.AddSignal(
+					blueInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local rgb = getRGB()
+							local ok, result = pcall(Color3.fromRGB, rgb.R, rgb.G, blueInput.Input.Text)
+							if ok and typeof(result) == "Color3" then
+								if tonumber(blueInput.Input.Text) <= 255 then
+									hue, sat, vib = Color3.toHSV(result)
 								end
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				if x.Transparency then
-					p.AddSignal(
-						Z.Input.FocusLost,
-						function(ad)
-							if ad then
+				if config.Transparency then
+					Creator.AddSignal(
+						alphaInput.Input.FocusLost,
+						function(enter)
+							if enter then
 								pcall(
 									function()
-										local ae = tonumber(Z.Input.Text)
-										if ae >= 0 and ae <= 100 then
-											G = 1 - ae * 0.01
+										local alpha = tonumber(alphaInput.Input.Text)
+										if alpha >= 0 and alpha <= 100 then
+											transparency = 1 - alpha * 0.01
 										end
 									end
 								)
 							end
-							ac()
+							display()
 						end
 					)
 				end
-				p.AddSignal(
-					L.InputBegan,
-					function(ad)
+				Creator.AddSignal(
+					satVibMap.InputBegan,
+					function(input)
 						if
-							ad.UserInputType == Enum.UserInputType.MouseButton1 or
-							ad.UserInputType == Enum.UserInputType.Touch
+							input.UserInputType == Enum.UserInputType.MouseButton1 or
+							input.UserInputType == Enum.UserInputType.Touch
 						then
-							while h:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-								local ae = L.AbsolutePosition.X
-								local af = ae + L.AbsoluteSize.X
-								local ag, ah = math.clamp(n.X, ae, af), L.AbsolutePosition.Y
-								local ai = ah + L.AbsoluteSize.Y
-								local aj = math.clamp(n.Y, ah, ai)
-								E = (ag - ae) / (af - ae)
-								F = 1 - ((aj - ah) / (ai - ah))
-								ac()
-								l:Wait()
+							while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+								local minX = satVibMap.AbsolutePosition.X
+								local maxX = minX + satVibMap.AbsoluteSize.X
+								local mouseX, minY = math.clamp(mouse.X, minX, maxX), satVibMap.AbsolutePosition.Y
+								local maxY = minY + satVibMap.AbsoluteSize.Y
+								local mouseY = math.clamp(mouse.Y, minY, maxY)
+								sat = (mouseX - minX) / (maxX - minX)
+								vib = 1 - ((mouseY - minY) / (maxY - minY))
+								display()
+								RenderStepped:Wait()
 							end
 						end
 					end
 				)
-				p.AddSignal(
-					U.InputBegan,
-					function(ad)
+				Creator.AddSignal(
+					hueSlider.InputBegan,
+					function(input)
 						if
-							ad.UserInputType == Enum.UserInputType.MouseButton1 or
-							ad.UserInputType == Enum.UserInputType.Touch
+							input.UserInputType == Enum.UserInputType.MouseButton1 or
+							input.UserInputType == Enum.UserInputType.Touch
 						then
-							while h:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-								local ae = U.AbsolutePosition.Y
-								local af = ae + U.AbsoluteSize.Y
-								local ag = math.clamp(n.Y, ae, af)
-								D = ((ag - ae) / (af - ae))
-								ac()
-								l:Wait()
+							while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+								local minY = hueSlider.AbsolutePosition.Y
+								local maxY = minY + hueSlider.AbsoluteSize.Y
+								local mouseY = math.clamp(mouse.Y, minY, maxY)
+								hue = ((mouseY - minY) / (maxY - minY))
+								display()
+								RenderStepped:Wait()
 							end
 						end
 					end
 				)
-				if x.Transparency then
-					p.AddSignal(
-						_.InputBegan,
-						function(ad)
-							if ad.UserInputType == Enum.UserInputType.MouseButton1 then
-								while h:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-									local ae = _.AbsolutePosition.Y
-									local af = ae + _.AbsoluteSize.Y
-									local ag = math.clamp(n.Y, ae, af)
-									G = 1 - ((ag - ae) / (af - ae))
-									ac()
-									l:Wait()
+				if config.Transparency then
+					Creator.AddSignal(
+						transparencySlider.InputBegan,
+						function(input)
+							if input.UserInputType == Enum.UserInputType.MouseButton1 then
+								while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+									local minY = transparencySlider.AbsolutePosition.Y
+									local maxY = minY + transparencySlider.AbsoluteSize.Y
+									local mouseY = math.clamp(mouse.Y, minY, maxY)
+									transparency = 1 - ((mouseY - minY) / (maxY - minY))
+									display()
+									RenderStepped:Wait()
 								end
 							end
 						end
 					)
 				end
-				ac()
-				C:Button(
+				display()
+				dialog:Button(
 					"Done",
 					function()
-						z:SetValue({D, E, F}, G)
+						Colorpicker:SetValue({hue, sat, vib}, transparency)
 					end
 				)
-				C:Button "Cancel"
-				C:Open()
+				dialog:Button "Cancel"
+				dialog:Open()
 			end
-			function z.Display(ac)
-				z.Value = Color3.fromHSV(z.Hue, z.Sat, z.Vib)
-				B.BackgroundColor3 = z.Value
-				B.BackgroundTransparency = z.Transparency
-				u.Library:SafeCallback(z.Callback, z.Value)
-				u.Library:SafeCallback(z.Changed, z.Value)
+			function Colorpicker.Display(_self)
+				Colorpicker.Value = Color3.fromHSV(Colorpicker.Hue, Colorpicker.Sat, Colorpicker.Vib)
+				displayFrame.BackgroundColor3 = Colorpicker.Value
+				displayFrame.BackgroundTransparency = Colorpicker.Transparency
+				Element.Library:SafeCallback(Colorpicker.Callback, Colorpicker.Value)
+				Element.Library:SafeCallback(Colorpicker.Changed, Colorpicker.Value)
 			end
-			function z.SetValue(ac, ad, ae)
-				local af = Color3.fromHSV(ad[1], ad[2], ad[3])
-				z.Transparency = ae or 0
-				z:SetHSVFromRGB(af)
-				z:Display()
+			function Colorpicker.SetValue(_self, hsv, transparency)
+				local color = Color3.fromHSV(hsv[1], hsv[2], hsv[3])
+				Colorpicker.Transparency = transparency or 0
+				Colorpicker:SetHSVFromRGB(color)
+				Colorpicker:Display()
 			end
-			function z.SetValueRGB(ac, ad, ae)
-				z.Transparency = ae or 0
-				z:SetHSVFromRGB(ad)
-				z:Display()
+			function Colorpicker.SetValueRGB(_self, color, transparency)
+				Colorpicker.Transparency = transparency or 0
+				Colorpicker:SetHSVFromRGB(color)
+				Colorpicker:Display()
 			end
-			function z.OnChanged(ac, ad)
-				z.Changed = ad
-				ad(z.Value)
+			function Colorpicker.OnChanged(_self, callback)
+				Colorpicker.Changed = callback
+				callback(Colorpicker.Value)
 			end
-			function z.Destroy(ac)
-				A:Destroy()
-				y.Options[w] = nil
+			function Colorpicker.Destroy(_self)
+				colorpickerFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			p.AddSignal(
-				A.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				colorpickerFrame.Frame.MouseButton1Click,
 				function()
-					ab()
+					createColorDialog()
 				end
 			)
-			z:Display()
-			y.Options[w] = z
-			return z
+			Colorpicker:Display()
+			Library.Options[idx] = Colorpicker
+			return Colorpicker
 		end
-		return u
+		return Element
 	end,
 	[22] = function()
-		local aa, ab, ac, ad, ae = moduleContext(22)
-		local af, ag, ah, ai, aj =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(22)
+		local TweenService, UserInputService, mouse, camera, Root =
 			game:GetService "TweenService",
 		game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
 		game:GetService "Workspace".CurrentCamera,
-		ab.Parent.Parent
-		local c, d = ac(aj.Creator), ac(aj.Packages.Flipper)
-		local e, f, g = c.New, aj.Components, {}
-		g.__index = g
-		g.__type = "Dropdown"
-		function g.New(h, i, j)
-			local k, l, m =
-				h.Library,
+		moduleScript.Parent.Parent
+		local Creator, Flipper = requireModule(Root.Creator), requireModule(Root.Packages.Flipper)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Dropdown"
+		function Element.New(parent, idx, config)
+			local Library, Dropdown, dropdownFrame =
+				parent.Library,
 			{
-				Values = j.Values,
-				Value = j.Default,
-				Multi = j.Multi,
+				Values = config.Values,
+				Value = config.Default,
+				Multi = config.Multi,
 				Buttons = {},
 				Opened = false,
 				Type = "Dropdown",
 				SearchText = "",
-				Callback = j.Callback or function()
+				Callback = config.Callback or function()
 				end
 			},
-			ac(f.Element)(j.Title, j.Description, h.Container, false)
-			m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
-			l.SetTitle = m.SetTitle
-			l.SetDesc = m.SetDesc
-			l.Frame = m.Frame
-			local n, o =
-				e(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			dropdownFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+			Dropdown.SetTitle = dropdownFrame.SetTitle
+			Dropdown.SetDesc = dropdownFrame.SetDesc
+			Dropdown.Frame = dropdownFrame.Frame
+			local dropdownDisplay, dropdownIcon =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -8353,7 +8353,7 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				),
-			e(
+			New(
 				"ImageLabel",
 				{
 					Image = "rbxassetid://10709790948",
@@ -8364,8 +8364,8 @@ local moduleFunctions = {
 					ThemeTag = {ImageColor3 = "SubText"}
 				}
 			)
-			local p =
-				e(
+			local dropdownInner =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(160, 34),
@@ -8373,12 +8373,12 @@ local moduleFunctions = {
 						AnchorPoint = Vector2.new(1, 0.5),
 						BackgroundTransparency = 0.9,
 						ClipsDescendants = true,
-						Parent = m.Frame,
+						Parent = dropdownFrame.Frame,
 						ThemeTag = {BackgroundColor3 = "DropdownFrame"}
 					},
 					{
-						e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						e(
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New(
 							"UIStroke",
 							{
 								Transparency = 0.5,
@@ -8386,8 +8386,8 @@ local moduleFunctions = {
 								ThemeTag = {Color = "InElementBorder"}
 							}
 						),
-						o,
-						n
+						dropdownIcon,
+						dropdownDisplay
 					}
 				)
 			local textService = game:GetService("TextService")
@@ -8413,23 +8413,23 @@ local moduleFunctions = {
 					selectedLabelScrollTween:Cancel()
 					selectedLabelScrollTween = nil
 				end
-				n.TextTruncate = Enum.TextTruncate.AtEnd
-				n.Size = selectedLabelDefaultSize
-				n.Position = selectedLabelDefaultPosition
+				dropdownDisplay.TextTruncate = Enum.TextTruncate.AtEnd
+				dropdownDisplay.Size = selectedLabelDefaultSize
+				dropdownDisplay.Position = selectedLabelDefaultPosition
 			end
 			local function startSelectedLabelScroll()
-				local visibleWidth = math.max(p.AbsoluteSize.X - 30, 0)
-				local textWidth = getTextWidth(n, n.Text) + 8
+				local visibleWidth = math.max(dropdownInner.AbsoluteSize.X - 30, 0)
+				local textWidth = getTextWidth(dropdownDisplay, dropdownDisplay.Text) + 8
 				if textWidth <= visibleWidth then
 					return
 				end
 				stopSelectedLabelScroll()
-				n.TextTruncate = Enum.TextTruncate.None
-				n.Size = UDim2.fromOffset(textWidth, 14)
+				dropdownDisplay.TextTruncate = Enum.TextTruncate.None
+				dropdownDisplay.Size = UDim2.fromOffset(textWidth, 14)
 				local travel = textWidth - visibleWidth
 				selectedLabelScrollTween =
-					af:Create(
-						n,
+					TweenService:Create(
+						dropdownDisplay,
 						TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
 						{Position = UDim2.new(0, 8 - travel, 0.5, 0)}
 					)
@@ -8437,7 +8437,7 @@ local moduleFunctions = {
 			end
 
 			-- Search Box
-			local searchBoxStroke = e(
+			local searchBoxStroke = New(
 				"UIStroke",
 				{
 					Transparency = 0.5,
@@ -8447,7 +8447,7 @@ local moduleFunctions = {
 			)
 
 			local searchBox =
-				e(
+				New(
 					"TextBox",
 					{
 						Size = UDim2.new(1, -50, 0, 34),
@@ -8463,15 +8463,15 @@ local moduleFunctions = {
 						ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text"}
 					},
 					{
-						e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						e("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
 						searchBoxStroke
 					}
 				)
 
 			-- Clear Button (X)
 			local clearButton =
-				e(
+				New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(0, 0),
@@ -8486,8 +8486,8 @@ local moduleFunctions = {
 						ThemeTag = {BackgroundColor3 = "DialogButton"}
 					},
 					{
-						e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						e(
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New(
 							"UIStroke",
 							{
 								Transparency = 1,
@@ -8501,9 +8501,9 @@ local moduleFunctions = {
 			-- Select All Button (เฉพาะ Multi-select)
 			local selectAllButton = nil
 
-			if j.Multi then
+			if config.Multi then
 				selectAllButton =
-					e(
+					New(
 						"TextButton",
 						{
 							Size = UDim2.new(1, -10, 0, 28),
@@ -8516,8 +8516,8 @@ local moduleFunctions = {
 							ThemeTag = {BackgroundColor3 = "DialogButton"}
 						},
 						{
-							e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-							e(
+							New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+							New(
 								"UIStroke",
 								{
 									Transparency = 0.5,
@@ -8529,12 +8529,12 @@ local moduleFunctions = {
 					)
 			end
 
-			local s = e("UIListLayout", {Padding = UDim.new(0, 4)})
-			local scrollYPos = j.Multi and 77 or 44
-			local scrollYSize = j.Multi and -82 or -49
+			local dropdownListLayout = New("UIListLayout", {Padding = UDim.new(0, 4)})
+			local scrollYPos = config.Multi and 77 or 44
+			local scrollYSize = config.Multi and -82 or -49
 
-			local t =
-				e(
+			local dropdownScrollFrame =
+				New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.new(1, -10, 1, scrollYSize),
@@ -8549,15 +8549,15 @@ local moduleFunctions = {
 						CanvasSize = UDim2.fromScale(0, 0),
 						ThemeTag = {ScrollBarImageColor3 = "Accent"}
 					},
-					{s}
+					{dropdownListLayout}
 				)
 
 			local uChildren = {
 				searchBox,
 				clearButton,
-				t,
-				e("UICorner", {CornerRadius = UDim.new(0, 7)}),
-				e(
+				dropdownScrollFrame,
+				New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+				New(
 					"UIStroke",
 					{
 						Thickness = 1.5,
@@ -8565,7 +8565,7 @@ local moduleFunctions = {
 						ThemeTag = {Color = "DropdownBorder"}
 					}
 				),
-				e(
+				New(
 					"ImageLabel",
 					{
 						BackgroundTransparency = 1,
@@ -8580,36 +8580,36 @@ local moduleFunctions = {
 				)
 			}
 
-			if j.Multi then
+			if config.Multi then
 				table.insert(uChildren, selectAllButton)
 			end
 
-			local u =
-				e(
+			local dropdownHolderFrame =
+				New(
 					"Frame",
 					{Size = UDim2.fromScale(1, 0.5), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
 					uChildren
 				)
 
-			local v =
-				e(
+			local dropdownHolderCanvas =
+				New(
 					"Frame",
 					{
 						BackgroundTransparency = 1,
 						Size = UDim2.fromOffset(170, 250),
-						Parent = h.Library.GUI,
+						Parent = parent.Library.GUI,
 						Visible = false
 					},
-					{u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 320)})}
+					{dropdownHolderFrame, New("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 320)})}
 				)
-			table.insert(k.OpenFrames, v)
+			table.insert(Library.OpenFrames, dropdownHolderCanvas)
 
 			-- Position dropdown with smart positioning
-			local w = function()
-				local mainFrame = p.AbsolutePosition
-				local mainSize = p.AbsoluteSize
+			local recalculateListPosition = function()
+				local mainFrame = dropdownInner.AbsolutePosition
+				local mainSize = dropdownInner.AbsoluteSize
 				local dropdownWidth = 170
-				local viewportSize = ai.ViewportSize
+				local viewportSize = camera.ViewportSize
 
 				-- Try right side first
 				local xPos = mainFrame.X + mainSize.X + 10
@@ -8628,7 +8628,7 @@ local moduleFunctions = {
 				local yPos = mainFrame.Y - 5
 
 				-- Make sure Y position is within screen
-				local maxY = viewportSize.Y - v.AbsoluteSize.Y - 10
+				local maxY = viewportSize.Y - dropdownHolderCanvas.AbsoluteSize.Y - 10
 				if yPos > maxY then
 					yPos = maxY
 				end
@@ -8636,19 +8636,19 @@ local moduleFunctions = {
 					yPos = 10
 				end
 
-				v.Position = UDim2.fromOffset(xPos, yPos)
+				dropdownHolderCanvas.Position = UDim2.fromOffset(xPos, yPos)
 			end
 
-			local x = 170
-			local y = function()
+			local listSizeX = 170
+			local recalculateListSize = function()
 				local maxHeight = 280
-				local contentHeight = s.AbsoluteContentSize.Y + (j.Multi and 87 or 54)
+				local contentHeight = dropdownListLayout.AbsoluteContentSize.Y + (config.Multi and 87 or 54)
 				local finalHeight = math.min(contentHeight, maxHeight)
-				v.Size = UDim2.fromOffset(x, finalHeight)
+				dropdownHolderCanvas.Size = UDim2.fromOffset(listSizeX, finalHeight)
 			end
 
-			local z = function()
-				t.CanvasSize = UDim2.fromOffset(0, s.AbsoluteContentSize.Y)
+			local recalculateCanvasSize = function()
+				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, dropdownListLayout.AbsoluteContentSize.Y)
 			end
 			local searchDebounce = nil
 			local dropdownBuilt = false
@@ -8658,60 +8658,60 @@ local moduleFunctions = {
 			local virtualBuffer = 4
 			local virtualEnabled = false
 			local function rebuildDropdown()
-				l:BuildDropdownList()
+				Dropdown:BuildDropdownList()
 				dropdownBuilt = true
 			end
 
-			w()
-			y()
-			c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", w)
+			recalculateListPosition()
+			recalculateListSize()
+			Creator.AddSignal(dropdownInner:GetPropertyChangedSignal "AbsolutePosition", recalculateListPosition)
 
 			-- Arrow rotation animation
-			local arrowRotation = d.SingleMotor.new(0)
+			local arrowRotation = Flipper.SingleMotor.new(0)
 			arrowRotation:onStep(function(rot)
-				o.Rotation = rot
+				dropdownIcon.Rotation = rot
 			end)
 
 			-- Toggle dropdown on click
-			c.AddSignal(
-				p.MouseEnter,
+			Creator.AddSignal(
+				dropdownInner.MouseEnter,
 				function()
 					startSelectedLabelScroll()
 				end
 			)
 
-			c.AddSignal(
-				p.MouseLeave,
+			Creator.AddSignal(
+				dropdownInner.MouseLeave,
 				function()
 					stopSelectedLabelScroll()
 				end
 			)
 
-			c.AddSignal(
-				p.MouseButton1Click,
+			Creator.AddSignal(
+				dropdownInner.MouseButton1Click,
 				function()
-					if l.Opened then
-						l:Close()
+					if Dropdown.Opened then
+						Dropdown:Close()
 					else
-						l:Open()
+						Dropdown:Open()
 					end
 				end
 			)
 
-			c.AddSignal(
-				ag.InputBegan,
-				function(A)
-					if A.UserInputType == Enum.UserInputType.MouseButton1 or A.UserInputType == Enum.UserInputType.Touch then
-						if l.Opened then
-							local B, C = u.AbsolutePosition, u.AbsoluteSize
-							local pB, pC = p.AbsolutePosition, p.AbsoluteSize
+			Creator.AddSignal(
+				UserInputService.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						if Dropdown.Opened then
+							local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
+							local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
 
 							-- Check if click is outside dropdown and outside button
-							local outsideDropdown = ah.X < B.X or ah.X > B.X + C.X or ah.Y < B.Y or ah.Y > B.Y + C.Y
-							local outsideButton = ah.X < pB.X or ah.X > pB.X + pC.X or ah.Y < pB.Y or ah.Y > pB.Y + pC.Y
+							local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
+							local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
 
 							if outsideDropdown and outsideButton then
-								l:Close()
+								Dropdown:Close()
 							end
 						end
 					end
@@ -8719,22 +8719,22 @@ local moduleFunctions = {
 			)
 
 			-- Search box focus animation
-			c.AddSignal(
+			Creator.AddSignal(
 				searchBox.Focused,
 				function()
-					af:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
+					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
 				end
 			)
 
-			c.AddSignal(
+			Creator.AddSignal(
 				searchBox.FocusLost,
 				function()
-					af:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
 				end
 			)
 
 			-- Search functionality with debounce for better performance
-			c.AddSignal(
+			Creator.AddSignal(
 				searchBox:GetPropertyChangedSignal("Text"),
 				function()
 					if searchDebounce then
@@ -8747,20 +8747,20 @@ local moduleFunctions = {
 							searchDebounce = nil
 						end
 
-						l.SearchText = searchBox.Text:lower()
-						t.CanvasPosition = Vector2.new(0, 0)
+						Dropdown.SearchText = searchBox.Text:lower()
+						dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 						dropdownBuilt = false
-						if l.Opened then
+						if Dropdown.Opened then
 							rebuildDropdown()
 						end
 					end)
 				end
 			)
 
-			c.AddSignal(
-				t:GetPropertyChangedSignal("CanvasPosition"),
+			Creator.AddSignal(
+				dropdownScrollFrame:GetPropertyChangedSignal("CanvasPosition"),
 				function()
-					if not virtualEnabled or not l.Opened or not dropdownBuilt then
+					if not virtualEnabled or not Dropdown.Opened or not dropdownBuilt then
 						return
 					end
 					if virtualScrollDebounce then
@@ -8777,14 +8777,14 @@ local moduleFunctions = {
 			)
 
 			-- Clear button functionality with hover effects
-			local _, clearBgTransparency = c.SpringMotor(0.9, clearButton, "BackgroundTransparency")
+			local _, clearBgTransparency = Creator.SpringMotor(0.9, clearButton, "BackgroundTransparency")
 
-			c.AddSignal(
+			Creator.AddSignal(
 				clearButton.MouseEnter,
 				function()
 					clearBgTransparency(0.8)
 					-- Scale up slightly on hover
-					af:Create(
+					TweenService:Create(
 						clearButton,
 						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{Size = UDim2.fromOffset(38, 38)}
@@ -8792,12 +8792,12 @@ local moduleFunctions = {
 				end
 			)
 
-			c.AddSignal(
+			Creator.AddSignal(
 				clearButton.MouseLeave,
 				function()
 					clearBgTransparency(0.9)
 					-- Scale back to normal
-					af:Create(
+					TweenService:Create(
 						clearButton,
 						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{Size = UDim2.fromOffset(34, 34)}
@@ -8805,77 +8805,77 @@ local moduleFunctions = {
 				end
 			)
 
-			c.AddSignal(
+			Creator.AddSignal(
 				clearButton.MouseButton1Click,
 				function()
 					-- Bounce animation on click
-					local bounceSequence = af:Create(
+					local bounceSequence = TweenService:Create(
 						clearButton,
 						TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{Size = UDim2.fromOffset(30, 30)}
 					)
 					bounceSequence:Play()
 					bounceSequence.Completed:Connect(function()
-						af:Create(
+						TweenService:Create(
 							clearButton,
 							TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 							{Size = UDim2.fromOffset(34, 34)}
 						):Play()
 					end)
 
-					if j.Multi then
-						l.Value = {}
+					if config.Multi then
+						Dropdown.Value = {}
 					else
-						l.Value = nil
+						Dropdown.Value = nil
 					end
 
 					-- Update buttons without rebuilding
-					for button, buttonData in pairs(l.Buttons) do
+					for button, buttonData in pairs(Dropdown.Buttons) do
 						buttonData:UpdateButton()
 					end
 
-					l:Display()
-					k:SafeCallback(l.Callback, l.Value)
-					k:SafeCallback(l.Changed, l.Value)
+					Dropdown:Display()
+					Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+					Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 				end
 			)
 
 			-- Select All button functionality with hover effect
-			if j.Multi and selectAllButton then
-				local _, selectAllTransparency = c.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
+			if config.Multi and selectAllButton then
+				local _, selectAllTransparency = Creator.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
 
-				c.AddSignal(
+				Creator.AddSignal(
 					selectAllButton.MouseEnter,
 					function()
 						selectAllTransparency(0.85)
 					end
 				)
 
-				c.AddSignal(
+				Creator.AddSignal(
 					selectAllButton.MouseLeave,
 					function()
 						selectAllTransparency(0.9)
 					end
 				)
 
-				c.AddSignal(
+				Creator.AddSignal(
 					selectAllButton.MouseButton1Click,
 					function()
 						-- Get all visible values (filtered by search)
-						for _, value in pairs(l.Values) do
-							if l.SearchText == "" or value:lower():find(l.SearchText, 1, true) then
-								l.Value[value] = true
+						for _, value in pairs(Dropdown.Values) do
+							if Dropdown.SearchText == "" or value:lower():find(Dropdown.SearchText, 1, true) then
+								Dropdown.Value[value] = true
 							end
 						end
 
 						-- Update buttons without rebuilding
-						for button, buttonData in pairs(l.Buttons) do
+						for button, buttonData in pairs(Dropdown.Buttons) do
 							buttonData:UpdateButton()
 						end
 
-						l:Display()
-						k:SafeCallback(l.Callback, l.Value)
-						k:SafeCallback(l.Changed, l.Value)
+						Dropdown:Display()
+						Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+						Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 					end
 				)
 			end
@@ -8896,7 +8896,7 @@ local moduleFunctions = {
 				clearButton.Visible = true
 
 				-- Animate size, transparency, and rotation
-				af:Create(
+				TweenService:Create(
 					clearButton,
 					TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{
@@ -8908,7 +8908,7 @@ local moduleFunctions = {
 				):Play()
 
 				if clearButtonStroke then
-					af:Create(
+					TweenService:Create(
 						clearButtonStroke,
 						TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{Transparency = 0.5}
@@ -8921,7 +8921,7 @@ local moduleFunctions = {
 				isClearButtonVisible = false
 
 				-- Animate out with rotation
-				local hideTween = af:Create(
+				local hideTween = TweenService:Create(
 					clearButton,
 					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 					{
@@ -8933,7 +8933,7 @@ local moduleFunctions = {
 				)
 
 				if clearButtonStroke then
-					af:Create(
+					TweenService:Create(
 						clearButtonStroke,
 						TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
 						{Transparency = 1}
@@ -8962,84 +8962,84 @@ local moduleFunctions = {
 				return nil, text
 			end
 
-			local A = h.ScrollFrame
-			function l.Open(B)
-				if l.Opened then
+			local scrollFrame = parent.ScrollFrame
+			function Dropdown.Open(_self)
+				if Dropdown.Opened then
 					return
 				end
-				l.Opened = true
-				A.ScrollingEnabled = false
-				v.Visible = true
+				Dropdown.Opened = true
+				scrollFrame.ScrollingEnabled = false
+				dropdownHolderCanvas.Visible = true
 				searchBox.Text = ""
-				l.SearchText = ""
-				t.CanvasPosition = Vector2.new(0, 0)
+				Dropdown.SearchText = ""
+				dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 				if not dropdownBuilt then
 					rebuildDropdown()
 				end
-				w()
-				y()
+				recalculateListPosition()
+				recalculateListSize()
 
 				-- Arrow rotation animation
-				arrowRotation:setGoal(d.Spring.new(180, {frequency = 4, dampingRatio = 0.8}))
+				arrowRotation:setGoal(Flipper.Spring.new(180, {frequency = 4, dampingRatio = 0.8}))
 
 				-- Open animation with Back easing
-				u.Size = UDim2.fromScale(1, 0.3)
-				af:Create(
-					u,
+				dropdownHolderFrame.Size = UDim2.fromScale(1, 0.3)
+				TweenService:Create(
+					dropdownHolderFrame,
 					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Size = UDim2.fromScale(1, 1)}
 				):Play()
 			end
 
-			function l.Close(B)
-				if not l.Opened then
+			function Dropdown.Close(_self)
+				if not Dropdown.Opened then
 					return
 				end
-				l.Opened = false
-				A.ScrollingEnabled = true
+				Dropdown.Opened = false
+				scrollFrame.ScrollingEnabled = true
 
 				-- Arrow rotation animation
-				arrowRotation:setGoal(d.Spring.new(0, {frequency = 4, dampingRatio = 0.8}))
+				arrowRotation:setGoal(Flipper.Spring.new(0, {frequency = 4, dampingRatio = 0.8}))
 
 				local closeTween =
-					af:Create(
-						u,
+					TweenService:Create(
+						dropdownHolderFrame,
 						TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 						{Size = UDim2.fromScale(1, 0.3)}
 					)
 				closeTween:Play()
 				closeTween.Completed:Connect(
 					function()
-						v.Visible = false
+						dropdownHolderCanvas.Visible = false
 					end
 				)
 			end
 
-			function l.Display(B)
-				local C, D = l.Values, ""
+			function Dropdown.Display(_self)
+				local values, text = Dropdown.Values, ""
 				local hasSelection = false
-				if j.Multi then
-					for E, F in next, C do
-						if l.Value[F] then
+				if config.Multi then
+					for _, value in next, values do
+						if Dropdown.Value[value] then
 							-- Remove color code for display
-							local _, cleanText = parseColorCode(F)
-							D = D .. cleanText .. ", "
+							local _, cleanText = parseColorCode(value)
+							text = text .. cleanText .. ", "
 							hasSelection = true
 						end
 					end
-					D = D:sub(1, #D - 2)
+					text = text:sub(1, #text - 2)
 				else
 					-- Remove color code for display
-					local displayText = l.Value or ""
+					local displayText = Dropdown.Value or ""
 					if displayText ~= "" then
 						local _, cleanText = parseColorCode(displayText)
 						displayText = cleanText
 					end
-					D = displayText
-					hasSelection = l.Value ~= nil and l.Value ~= ""
+					text = displayText
+					hasSelection = Dropdown.Value ~= nil and Dropdown.Value ~= ""
 				end
 				stopSelectedLabelScroll()
-				n.Text = (D == "" and "--" or D)
+				dropdownDisplay.Text = (text == "" and "--" or text)
 
 				-- Animate clear button visibility
 				if hasSelection then
@@ -9048,30 +9048,30 @@ local moduleFunctions = {
 					hideClearButton()
 				end
 			end
-			function l.GetActiveValues(B)
-				if j.Multi then
-					local C = {}
-					for D, E in next, l.Value do
-						table.insert(C, D)
+			function Dropdown.GetActiveValues(_self)
+				if config.Multi then
+					local active = {}
+					for value, _ in next, Dropdown.Value do
+						table.insert(active, value)
 					end
-					return C
+					return active
 				else
-					return l.Value and 1 or 0
+					return Dropdown.Value and 1 or 0
 				end
 			end
-			function l.BuildDropdownList(B)
-				local C, D = l.Values, {}
-				for E, F in next, t:GetChildren() do
-					if not F:IsA "UIListLayout" then
-						F:Destroy()
+			function Dropdown.BuildDropdownList(_self)
+				local values, buttons = Dropdown.Values, {}
+				for _, child in next, dropdownScrollFrame:GetChildren() do
+					if not child:IsA "UIListLayout" then
+						child:Destroy()
 					end
 				end
-				l.Buttons = {}
+				Dropdown.Buttons = {}
 				local renderItems = {}
-				for _, value in next, C do
+				for _, value in next, values do
 					local customColor, cleanText = parseColorCode(value)
 					local searchTarget = cleanText:lower()
-					if l.SearchText == "" or searchTarget:find(l.SearchText, 1, true) then
+					if Dropdown.SearchText == "" or searchTarget:find(Dropdown.SearchText, 1, true) then
 						table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
 					end
 				end
@@ -9080,24 +9080,24 @@ local moduleFunctions = {
 				local useVirtual = virtualEnabled and totalItems > virtualThreshold
 				local startIndex, endIndex = 1, totalItems
 				if useVirtual then
-					startIndex = math.max(1, math.floor(t.CanvasPosition.Y / virtualRowHeight) + 1 - virtualBuffer)
+					startIndex = math.max(1, math.floor(dropdownScrollFrame.CanvasPosition.Y / virtualRowHeight) + 1 - virtualBuffer)
 					startIndex = math.min(startIndex, math.max(totalItems, 1))
-					local visibleCount = math.ceil(math.max(t.AbsoluteSize.Y, 1) / virtualRowHeight) + (virtualBuffer * 2)
+					local visibleCount = math.ceil(math.max(dropdownScrollFrame.AbsoluteSize.Y, 1) / virtualRowHeight) + (virtualBuffer * 2)
 					endIndex = math.min(totalItems, startIndex + visibleCount)
 					local topHeight = (startIndex - 1) * virtualRowHeight
 					if topHeight > 0 then
-						e("Frame", {Size = UDim2.new(1, -10, 0, topHeight), BackgroundTransparency = 1, Parent = t})
+						New("Frame", {Size = UDim2.new(1, -10, 0, topHeight), BackgroundTransparency = 1, Parent = dropdownScrollFrame})
 					end
 				end
 
-				local G = 0
-				for H = startIndex, endIndex do
-					local item = renderItems[H]
+				local rowCount = 0
+				for index = startIndex, endIndex do
+					local item = renderItems[index]
 					if item then
-						local I = item.Value
+						local value = item.Value
 						local customColor, cleanText = item.CustomColor, item.CleanText
-						local J = {}
-						G = G + 1
+						local row = {}
+						rowCount = rowCount + 1
 
 						-- Use custom color for background if provided
 						local bgColor = Color3.fromRGB(255, 255, 255)
@@ -9114,8 +9114,8 @@ local moduleFunctions = {
 							bgTransparency = 0.65  -- โปร่งใส 65% (ลดลงจาก 85% เพื่อให้เห็นสีชัดขึ้น)
 						end
 
-						local K, L =
-							e(
+						local buttonSelector, buttonLabel =
+							New(
 								"Frame",
 								{
 									Size = UDim2.fromOffset(5, 14),
@@ -9125,8 +9125,8 @@ local moduleFunctions = {
 									ThemeTag = {BackgroundColor3 = "Accent"}
 								},
 								{
-									e("UICorner", {CornerRadius = UDim.new(0, 2)}),
-									e(
+									New("UICorner", {CornerRadius = UDim.new(0, 2)}),
+									New(
 										"UIGradient",
 										{
 											Color = ColorSequence.new({
@@ -9138,7 +9138,7 @@ local moduleFunctions = {
 									)
 								}
 							),
-						e(
+						New(
 							"TextLabel",
 							{
 								FontFace = Font.new(
@@ -9166,7 +9166,7 @@ local moduleFunctions = {
 							}
 						)
 						local labelClip =
-							e(
+							New(
 								"Frame",
 								{
 									Size = UDim2.new(1, -24, 1, 0),
@@ -9174,10 +9174,10 @@ local moduleFunctions = {
 									BackgroundTransparency = 1,
 									ClipsDescendants = true
 								},
-								{L}
+								{buttonLabel}
 							)
-						local M, N =
-							(e(
+						local button, selected =
+							(New(
 								"TextButton",
 								{
 									Size = UDim2.new(1, -10, 0, 34),
@@ -9186,14 +9186,14 @@ local moduleFunctions = {
 									ClipsDescendants = true,
 									ZIndex = 23,
 									Text = "",
-									Parent = t,
+									Parent = dropdownScrollFrame,
 									ThemeTag = customColor and {} or {BackgroundColor3 = "DropdownOption"}
 								},
 								{
-									K,
+									buttonSelector,
 									labelClip,
-									e("UICorner", {CornerRadius = UDim.new(0, 6)}),
-									e(
+									New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+									New(
 										"UIStroke",
 										{
 											Thickness = 1.2,
@@ -9204,10 +9204,10 @@ local moduleFunctions = {
 									)
 								}
 								))
-						if j.Multi then
-							N = l.Value[I]
+						if config.Multi then
+							selected = Dropdown.Value[value]
 						else
-							N = l.Value == I
+							selected = Dropdown.Value == value
 						end
 
 						-- ปรับค่า transparency ตามว่ามีสีกำหนดหรือไม่
@@ -9215,8 +9215,8 @@ local moduleFunctions = {
 						local hoverTransparency = customColor and math.max(bgTransparency - 0.2, 0.3) or 0.89
 						local selectedTransparency = customColor and math.max(bgTransparency - 0.3, 0.2) or 0.89
 
-						local O, P = c.SpringMotor(defaultTransparency, M, "BackgroundTransparency")
-						local Q, R = c.SpringMotor(1, K, "BackgroundTransparency")
+						local backMotor, setBackTransparency = Creator.SpringMotor(defaultTransparency, button, "BackgroundTransparency")
+						local selMotor, setSelTransparency = Creator.SpringMotor(1, buttonSelector, "BackgroundTransparency")
 						local labelDefaultPosition = UDim2.fromOffset(0, 0)
 						local labelDefaultSize = UDim2.fromScale(1, 1)
 						local labelScrollTween = nil
@@ -9225,302 +9225,302 @@ local moduleFunctions = {
 								labelScrollTween:Cancel()
 								labelScrollTween = nil
 							end
-							L.TextTruncate = Enum.TextTruncate.AtEnd
-							L.Size = labelDefaultSize
-							L.Position = labelDefaultPosition
+							buttonLabel.TextTruncate = Enum.TextTruncate.AtEnd
+							buttonLabel.Size = labelDefaultSize
+							buttonLabel.Position = labelDefaultPosition
 						end
 						local function startLabelScroll()
 							local visibleWidth = math.max(labelClip.AbsoluteSize.X, 0)
-							local textWidth = getTextWidth(L, cleanText) + 6
+							local textWidth = getTextWidth(buttonLabel, cleanText) + 6
 							if textWidth <= visibleWidth then
 								return
 							end
 							stopLabelScroll()
-							L.TextTruncate = Enum.TextTruncate.None
-							L.Size = UDim2.fromOffset(textWidth, M.AbsoluteSize.Y)
+							buttonLabel.TextTruncate = Enum.TextTruncate.None
+							buttonLabel.Size = UDim2.fromOffset(textWidth, button.AbsoluteSize.Y)
 							local travel = textWidth - visibleWidth
 							labelScrollTween =
-								af:Create(
-									L,
+								TweenService:Create(
+									buttonLabel,
 									TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
 									{Position = UDim2.fromOffset(-travel, 0)}
 								)
 							labelScrollTween:Play()
 						end
-						local S = d.SingleMotor.new(6)
-						S:onStep(
-							function(T)
-								K.Size = UDim2.new(0, 5, 0, T)
+						local selectorSizeMotor = Flipper.SingleMotor.new(6)
+						selectorSizeMotor:onStep(
+							function(size)
+								buttonSelector.Size = UDim2.new(0, 5, 0, size)
 							end
 						)
-						c.AddSignal(
-							M.MouseEnter,
+						Creator.AddSignal(
+							button.MouseEnter,
 							function()
-								P(N and selectedTransparency or hoverTransparency)
+								setBackTransparency(selected and selectedTransparency or hoverTransparency)
 								startLabelScroll()
 							end
 						)
-						c.AddSignal(
-							M.MouseLeave,
+						Creator.AddSignal(
+							button.MouseLeave,
 							function()
-								P(N and selectedTransparency or defaultTransparency)
+								setBackTransparency(selected and selectedTransparency or defaultTransparency)
 								stopLabelScroll()
 							end
 						)
-						c.AddSignal(
-							M.MouseButton1Down,
+						Creator.AddSignal(
+							button.MouseButton1Down,
 							function()
-								P(customColor and 0.3 or 0.92)
+								setBackTransparency(customColor and 0.3 or 0.92)
 							end
 						)
-						c.AddSignal(
-							M.MouseButton1Up,
+						Creator.AddSignal(
+							button.MouseButton1Up,
 							function()
-								P(N and selectedTransparency or hoverTransparency)
+								setBackTransparency(selected and selectedTransparency or hoverTransparency)
 							end
 						)
-						function J.UpdateButton(T)
-							if j.Multi then
-								N = l.Value[I]
-								if N then
-									P(selectedTransparency)
+						function row.UpdateButton(_self)
+							if config.Multi then
+								selected = Dropdown.Value[value]
+								if selected then
+									setBackTransparency(selectedTransparency)
 								end
 							else
-								N = l.Value == I
-								P(N and selectedTransparency or defaultTransparency)
+								selected = Dropdown.Value == value
+								setBackTransparency(selected and selectedTransparency or defaultTransparency)
 							end
-							S:setGoal(d.Spring.new(N and 16 or 6, {frequency = 6, dampingRatio = 0.8}))
-							R(N and 0 or 1)
+							selectorSizeMotor:setGoal(Flipper.Spring.new(selected and 16 or 6, {frequency = 6, dampingRatio = 0.8}))
+							setSelTransparency(selected and 0 or 1)
 						end
-						L.InputBegan:Connect(
-							function(T)
+						buttonLabel.InputBegan:Connect(
+							function(input)
 								if
-									T.UserInputType == Enum.UserInputType.MouseButton1 or
-									T.UserInputType == Enum.UserInputType.Touch
+									input.UserInputType == Enum.UserInputType.MouseButton1 or
+									input.UserInputType == Enum.UserInputType.Touch
 								then
-									local U = not N
-									if l:GetActiveValues() == 1 and not U and not j.AllowNull then
+									local newSelected = not selected
+									if Dropdown:GetActiveValues() == 1 and not newSelected and not config.AllowNull then
 									else
-										if j.Multi then
-											N = U
-											l.Value[I] = N and true or nil
+										if config.Multi then
+											selected = newSelected
+											Dropdown.Value[value] = selected and true or nil
 										else
-											N = U
-											l.Value = N and I or nil
-											for V, W in next, D do
-												W:UpdateButton()
+											selected = newSelected
+											Dropdown.Value = selected and value or nil
+											for _, otherRow in next, buttons do
+												otherRow:UpdateButton()
 											end
 										end
-										J:UpdateButton()
-										l:Display()
-										k:SafeCallback(l.Callback, l.Value)
-										k:SafeCallback(l.Changed, l.Value)
+										row:UpdateButton()
+										Dropdown:Display()
+										Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+										Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 									end
 								end
 							end
 						)
-						J:UpdateButton()
-						D[M] = J
-						l.Buttons[M] = J
+						row:UpdateButton()
+						buttons[button] = row
+						Dropdown.Buttons[button] = row
 					end
 				end
 				if useVirtual then
 					local bottomHeight = (totalItems - endIndex) * virtualRowHeight
 					if bottomHeight > 0 then
-						e("Frame", {Size = UDim2.new(1, -10, 0, bottomHeight), BackgroundTransparency = 1, Parent = t})
+						New("Frame", {Size = UDim2.new(1, -10, 0, bottomHeight), BackgroundTransparency = 1, Parent = dropdownScrollFrame})
 					end
 				end
-				l:Display()
-				z()
-				y()
+				Dropdown:Display()
+				recalculateCanvasSize()
+				recalculateListSize()
 			end
-			function l.SetValues(B, C)
-				if C then
-					l.Values = C
+			function Dropdown.SetValues(_self, values)
+				if values then
+					Dropdown.Values = values
 				end
-				t.CanvasPosition = Vector2.new(0, 0)
+				dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 				dropdownBuilt = false
-				if l.Opened then
+				if Dropdown.Opened then
 					rebuildDropdown()
 				end
-				l:Display()
+				Dropdown:Display()
 			end
-			function l.OnChanged(B, C)
-				l.Changed = C
-				C(l.Value)
+			function Dropdown.OnChanged(_self, callback)
+				Dropdown.Changed = callback
+				callback(Dropdown.Value)
 			end
-			function l.SetValue(B, C)
-				if l.Multi then
-					local D = {}
-					if type(C) == "table" then
-						for E, F in next, C do
-							if F and table.find(l.Values, E) then
-								D[E] = true
+			function Dropdown.SetValue(_self, value)
+				if Dropdown.Multi then
+					local newValue = {}
+					if type(value) == "table" then
+						for key, enabled in next, value do
+							if enabled and table.find(Dropdown.Values, key) then
+								newValue[key] = true
 							end
 						end
 					end
-					l.Value = D
+					Dropdown.Value = newValue
 				else
-					if not C then
-						l.Value = nil
-					elseif table.find(l.Values, C) then
-						l.Value = C
+					if not value then
+						Dropdown.Value = nil
+					elseif table.find(Dropdown.Values, value) then
+						Dropdown.Value = value
 					end
 				end
 				dropdownBuilt = false
-				if l.Opened then
+				if Dropdown.Opened then
 					rebuildDropdown()
 				end
-				l:Display()
-				k:SafeCallback(l.Callback, l.Value)
-				k:SafeCallback(l.Changed, l.Value)
+				Dropdown:Display()
+				Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+				Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 			end
-			function l.Destroy(B)
-				m:Destroy()
-				k.Options[i] = nil
+			function Dropdown.Destroy(_self)
+				dropdownFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			l:Display()
-			local B = {}
-			if type(j.Default) == "string" then
-				local C = table.find(l.Values, j.Default)
-				if C then
-					table.insert(B, C)
+			Dropdown:Display()
+			local defaultIndexes = {}
+			if type(config.Default) == "string" then
+				local index = table.find(Dropdown.Values, config.Default)
+				if index then
+					table.insert(defaultIndexes, index)
 				end
-			elseif type(j.Default) == "table" then
-				for C, D in next, j.Default do
-					local E = table.find(l.Values, D)
-					if E then
-						table.insert(B, E)
+			elseif type(config.Default) == "table" then
+				for _, defaultValue in next, config.Default do
+					local index = table.find(Dropdown.Values, defaultValue)
+					if index then
+						table.insert(defaultIndexes, index)
 					end
 				end
-			elseif type(j.Default) == "number" and l.Values[j.Default] ~= nil then
-				table.insert(B, j.Default)
+			elseif type(config.Default) == "number" and Dropdown.Values[config.Default] ~= nil then
+				table.insert(defaultIndexes, config.Default)
 			end
-			if next(B) then
-				for C = 1, #B do
-					local D = B[C]
-					if j.Multi then
-						l.Value[l.Values[D]] = true
+			if next(defaultIndexes) then
+				for i = 1, #defaultIndexes do
+					local valueIndex = defaultIndexes[i]
+					if config.Multi then
+						Dropdown.Value[Dropdown.Values[valueIndex]] = true
 					else
-						l.Value = l.Values[D]
+						Dropdown.Value = Dropdown.Values[valueIndex]
 					end
-					if not j.Multi then
+					if not config.Multi then
 						break
 					end
 				end
-				l:Display()
+				Dropdown:Display()
 			end
-			k.Options[i] = l
-			return l
+			Library.Options[idx] = Dropdown
+			return Dropdown
 		end
-		return g
+		return Element
 	end,
 	[23] = function()
-		local aa, ab, ac, ad, ae = moduleContext(23)
-		local af = ab.Parent.Parent
-		local ag = ac(af.Creator)
-		local ah, ai, aj, c = ag.New, ag.AddSignal, af.Components, {}
-		c.__index = c
-		c.__type = "Input"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "Input - Missing Title")
-			f.Callback = f.Callback or function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(23)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, AddSignal, Components, Element = Creator.New, Creator.AddSignal, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Input"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Input - Missing Title")
+			config.Callback = config.Callback or function()
 			end
-			local h, i =
+			local Input, inputFrame =
 				{
-					Value = f.Default or "",
-					Numeric = f.Numeric or false,
-					Finished = f.Finished or false,
-					Callback = f.Callback or function(h)
+					Value = config.Default or "",
+					Numeric = config.Numeric or false,
+					Finished = config.Finished or false,
+					Callback = config.Callback or function(_value)
 					end,
 					Type = "Input"
 				},
-			ac(aj.Element)(f.Title, f.Description, d.Container, false)
-			h.SetTitle = i.SetTitle
-			h.SetDesc = i.SetDesc
-			h.Frame = i.Frame
-			local j = ac(aj.Textbox)(i.Frame, true)
-			j.Frame.Position = UDim2.new(1, -10, 0.5, 0)
-			j.Frame.AnchorPoint = Vector2.new(1, 0.5)
-			j.Frame.Size = UDim2.fromOffset(160, 30)
-			j.Input.Text = f.Default or ""
-			j.Input.PlaceholderText = f.Placeholder or ""
-			local k = j.Input
-			function h.SetValue(l, m)
-				if f.MaxLength and #m > f.MaxLength then
-					m = m:sub(1, f.MaxLength)
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			Input.SetTitle = inputFrame.SetTitle
+			Input.SetDesc = inputFrame.SetDesc
+			Input.Frame = inputFrame.Frame
+			local textbox = requireModule(Components.Textbox)(inputFrame.Frame, true)
+			textbox.Frame.Position = UDim2.new(1, -10, 0.5, 0)
+			textbox.Frame.AnchorPoint = Vector2.new(1, 0.5)
+			textbox.Frame.Size = UDim2.fromOffset(160, 30)
+			textbox.Input.Text = config.Default or ""
+			textbox.Input.PlaceholderText = config.Placeholder or ""
+			local inputBox = textbox.Input
+			function Input.SetValue(_self, text)
+				if config.MaxLength and #text > config.MaxLength then
+					text = text:sub(1, config.MaxLength)
 				end
-				if h.Numeric then
-					if (not tonumber(m)) and m:len() > 0 then
-						m = h.Value
+				if Input.Numeric then
+					if (not tonumber(text)) and text:len() > 0 then
+						text = Input.Value
 					end
 				end
-				h.Value = m
-				k.Text = m
-				g:SafeCallback(h.Callback, h.Value)
-				g:SafeCallback(h.Changed, h.Value)
+				Input.Value = text
+				inputBox.Text = text
+				Library:SafeCallback(Input.Callback, Input.Value)
+				Library:SafeCallback(Input.Changed, Input.Value)
 			end
-			if h.Finished then
-				ai(
-					k.FocusLost,
+			if Input.Finished then
+				AddSignal(
+					inputBox.FocusLost,
 					function()
 						-- Finished inputs should commit when focus leaves for any reason.
 						-- Roblox only sets this event argument for Enter, so requiring it
 						-- made clicks/taps outside the field silently discard the value.
-						h:SetValue(k.Text)
+						Input:SetValue(inputBox.Text)
 					end
 				)
 			else
-				ai(
-					k:GetPropertyChangedSignal "Text",
+				AddSignal(
+					inputBox:GetPropertyChangedSignal "Text",
 					function()
-						h:SetValue(k.Text)
+						Input:SetValue(inputBox.Text)
 					end
 				)
 			end
-			function h.OnChanged(l, m)
-				h.Changed = m
-				m(h.Value)
+			function Input.OnChanged(_self, callback)
+				Input.Changed = callback
+				callback(Input.Value)
 			end
-			function h.Destroy(l)
-				i:Destroy()
-				g.Options[e] = nil
+			function Input.Destroy(_self)
+				inputFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			g.Options[e] = h
-			return h
+			Library.Options[idx] = Input
+			return Input
 		end
-		return c
+		return Element
 	end,
 	[24] = function()
-		local aa, ab, ac, ad, ae = moduleContext(24)
-		local af, ag = game:GetService "UserInputService", ab.Parent.Parent
-		local ah = ac(ag.Creator)
-		local ai, aj, c = ah.New, ag.Components, {}
-		c.__index = c
-		c.__type = "Keybind"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "KeyBind - Missing Title")
-			assert(f.Default, "KeyBind - Missing default value.")
-			local h, i, j =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(24)
+		local UserInputService, Root = game:GetService "UserInputService", moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Keybind"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "KeyBind - Missing Title")
+			assert(config.Default, "KeyBind - Missing default value.")
+			local Keybind, picking, keybindFrame =
 				{
-					Value = f.Default,
+					Value = config.Default,
 					Toggled = false,
-					Mode = f.Mode or "Toggle",
+					Mode = config.Mode or "Toggle",
 					Type = "Keybind",
-					Callback = f.Callback or function(h)
+					Callback = config.Callback or function(_toggled)
 					end,
-					ChangedCallback = f.ChangedCallback or function(h)
+					ChangedCallback = config.ChangedCallback or function(_key)
 					end
 				},
 			false,
-			ac(aj.Element)(f.Title, f.Description, d.Container, true)
-			h.SetTitle = j.SetTitle
-			h.SetDesc = j.SetDesc
-			h.Frame = j.Frame
-			local k =
-				ai(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			Keybind.SetTitle = keybindFrame.SetTitle
+			Keybind.SetDesc = keybindFrame.SetDesc
+			Keybind.Frame = keybindFrame.Frame
+			local keybindDisplayLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -9528,7 +9528,7 @@ local moduleFunctions = {
 							Enum.FontWeight.Regular,
 							Enum.FontStyle.Normal
 						),
-						Text = f.Default,
+						Text = config.Default,
 						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
@@ -9542,22 +9542,22 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			local l =
-				ai(
+			local keybindDisplayFrame =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(0, 30),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
 						BackgroundTransparency = 0.9,
-						Parent = j.Frame,
+						Parent = keybindFrame.Frame,
 						AutomaticSize = Enum.AutomaticSize.X,
 						ThemeTag = {BackgroundColor3 = "Keybind"}
 					},
 					{
-						ai("UICorner", {CornerRadius = UDim.new(0, 5)}),
-						ai("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
-						ai(
+						New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+						New(
 							"UIStroke",
 							{
 								Transparency = 0.5,
@@ -9565,87 +9565,87 @@ local moduleFunctions = {
 								ThemeTag = {Color = "InElementBorder"}
 							}
 						),
-						k
+						keybindDisplayLabel
 					}
 				)
-			function h.GetState(m)
-				if af:GetFocusedTextBox() and h.Mode ~= "Always" then
+			function Keybind.GetState(_self)
+				if UserInputService:GetFocusedTextBox() and Keybind.Mode ~= "Always" then
 					return false
 				end
-				if h.Mode == "Always" then
+				if Keybind.Mode == "Always" then
 					return true
-				elseif h.Mode == "Hold" then
-					if h.Value == "None" then
+				elseif Keybind.Mode == "Hold" then
+					if Keybind.Value == "None" then
 						return false
 					end
-					local n = h.Value
-					if n == "MouseLeft" or n == "MouseRight" then
-						return n == "MouseLeft" and af:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or
-							n == "MouseRight" and af:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+					local key = Keybind.Value
+					if key == "MouseLeft" or key == "MouseRight" then
+						return key == "MouseLeft" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or
+							key == "MouseRight" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
 					else
-						return af:IsKeyDown(Enum.KeyCode[h.Value])
+						return UserInputService:IsKeyDown(Enum.KeyCode[Keybind.Value])
 					end
 				else
-					return h.Toggled
+					return Keybind.Toggled
 				end
 			end
-			function h.SetValue(m, n, o)
-				n = n or h.Key
-				o = o or h.Mode
-				k.Text = n
-				h.Value = n
-				h.Mode = o
+			function Keybind.SetValue(_self, key, mode)
+				key = key or Keybind.Key
+				mode = mode or Keybind.Mode
+				keybindDisplayLabel.Text = key
+				Keybind.Value = key
+				Keybind.Mode = mode
 			end
-			function h.OnClick(m, n)
-				h.Clicked = n
+			function Keybind.OnClick(_self, callback)
+				Keybind.Clicked = callback
 			end
-			function h.OnChanged(m, n)
-				h.Changed = n
-				n(h.Value)
+			function Keybind.OnChanged(_self, callback)
+				Keybind.Changed = callback
+				callback(Keybind.Value)
 			end
-			function h.DoClick(m)
-				g:SafeCallback(h.Callback, h.Toggled)
-				g:SafeCallback(h.Clicked, h.Toggled)
+			function Keybind.DoClick(_self)
+				Library:SafeCallback(Keybind.Callback, Keybind.Toggled)
+				Library:SafeCallback(Keybind.Clicked, Keybind.Toggled)
 			end
-			function h.Destroy(m)
-				j:Destroy()
-				g.Options[e] = nil
+			function Keybind.Destroy(_self)
+				keybindFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			ah.AddSignal(
-				l.InputBegan,
-				function(m)
-					if m.UserInputType == Enum.UserInputType.MouseButton1 or m.UserInputType == Enum.UserInputType.Touch then
-						i = true
-						k.Text = "..."
+			Creator.AddSignal(
+				keybindDisplayFrame.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						picking = true
+						keybindDisplayLabel.Text = "..."
 						wait(0.2)
-						local n
-						n =
-							af.InputBegan:Connect(
-								function(o)
-									local p
-									if o.UserInputType == Enum.UserInputType.Keyboard then
-										p = o.KeyCode.Name
-									elseif o.UserInputType == Enum.UserInputType.MouseButton1 then
-										p = "MouseLeft"
-									elseif o.UserInputType == Enum.UserInputType.MouseButton2 then
-										p = "MouseRight"
+						local beganConnection
+						beganConnection =
+							UserInputService.InputBegan:Connect(
+								function(keyInput)
+									local key
+									if keyInput.UserInputType == Enum.UserInputType.Keyboard then
+										key = keyInput.KeyCode.Name
+									elseif keyInput.UserInputType == Enum.UserInputType.MouseButton1 then
+										key = "MouseLeft"
+									elseif keyInput.UserInputType == Enum.UserInputType.MouseButton2 then
+										key = "MouseRight"
 									end
-									local s
-									s =
-									af.InputEnded:Connect(
-										function(t)
+									local endedConnection
+									endedConnection =
+									UserInputService.InputEnded:Connect(
+										function(endInput)
 											if
-												t.KeyCode.Name == p or
-												p == "MouseLeft" and t.UserInputType == Enum.UserInputType.MouseButton1 or
-												p == "MouseRight" and t.UserInputType == Enum.UserInputType.MouseButton2
+												endInput.KeyCode.Name == key or
+												key == "MouseLeft" and endInput.UserInputType == Enum.UserInputType.MouseButton1 or
+												key == "MouseRight" and endInput.UserInputType == Enum.UserInputType.MouseButton2
 											then
-												i = false
-												k.Text = p
-												h.Value = p
-												g:SafeCallback(h.ChangedCallback, t.KeyCode or t.UserInputType)
-												g:SafeCallback(h.Changed, t.KeyCode or t.UserInputType)
-												n:Disconnect()
-												s:Disconnect()
+												picking = false
+												keybindDisplayLabel.Text = key
+												Keybind.Value = key
+												Library:SafeCallback(Keybind.ChangedCallback, endInput.KeyCode or endInput.UserInputType)
+												Library:SafeCallback(Keybind.Changed, endInput.KeyCode or endInput.UserInputType)
+												beganConnection:Disconnect()
+												endedConnection:Disconnect()
 											end
 										end
 									)
@@ -9654,83 +9654,83 @@ local moduleFunctions = {
 					end
 				end
 			)
-			ah.AddSignal(
-				af.InputBegan,
-				function(m)
-					if not i and not af:GetFocusedTextBox() then
-						if h.Mode == "Toggle" then
-							local n = h.Value
-							if n == "MouseLeft" or n == "MouseRight" then
+			Creator.AddSignal(
+				UserInputService.InputBegan,
+				function(input)
+					if not picking and not UserInputService:GetFocusedTextBox() then
+						if Keybind.Mode == "Toggle" then
+							local key = Keybind.Value
+							if key == "MouseLeft" or key == "MouseRight" then
 								if
-									n == "MouseLeft" and m.UserInputType == Enum.UserInputType.MouseButton1 or
-									n == "MouseRight" and m.UserInputType == Enum.UserInputType.MouseButton2
+									key == "MouseLeft" and input.UserInputType == Enum.UserInputType.MouseButton1 or
+									key == "MouseRight" and input.UserInputType == Enum.UserInputType.MouseButton2
 								then
-									h.Toggled = not h.Toggled
-									h:DoClick()
+									Keybind.Toggled = not Keybind.Toggled
+									Keybind:DoClick()
 								end
-							elseif m.UserInputType == Enum.UserInputType.Keyboard then
-								if m.KeyCode.Name == n then
-									h.Toggled = not h.Toggled
-									h:DoClick()
+							elseif input.UserInputType == Enum.UserInputType.Keyboard then
+								if input.KeyCode.Name == key then
+									Keybind.Toggled = not Keybind.Toggled
+									Keybind:DoClick()
 								end
 							end
 						end
 					end
 				end
 			)
-			g.Options[e] = h
-			return h
+			Library.Options[idx] = Keybind
+			return Keybind
 		end
-		return c
+		return Element
 	end,
 	[25] = function()
-		local aa, ab, ac, ad, ae = moduleContext(25)
-		local af = ab.Parent.Parent
-		local ag, ah, ai, aj = af.Components, ac(af.Packages.Flipper), ac(af.Creator), {}
-		aj.__index = aj
-		aj.__type = "Paragraph"
-		function aj.New(c, d)
-			assert(d.Title, "Paragraph - Missing Title")
-			d.Content = d.Content or ""
-			local e = ac(ag.Element)(d.Title, d.Content, aj.Container, false)
-			e.Frame.BackgroundTransparency = 0.92
-			e.Border.Transparency = 0.6
-			return e
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(25)
+		local Root = moduleScript.Parent.Parent
+		local Components, Flipper, Creator, Paragraph = Root.Components, requireModule(Root.Packages.Flipper), requireModule(Root.Creator), {}
+		Paragraph.__index = Paragraph
+		Paragraph.__type = "Paragraph"
+		function Paragraph.New(_self, config)
+			assert(config.Title, "Paragraph - Missing Title")
+			config.Content = config.Content or ""
+			local paragraph = requireModule(Components.Element)(config.Title, config.Content, Paragraph.Container, false)
+			paragraph.Frame.BackgroundTransparency = 0.92
+			paragraph.Border.Transparency = 0.6
+			return paragraph
 		end
-		return aj
+		return Paragraph
 	end,
 	[26] = function()
-		local aa, ab, ac, ad, ae = moduleContext(26)
-		local af, ag = game:GetService "UserInputService", ab.Parent.Parent
-		local ah = ac(ag.Creator)
-		local ai, aj, c = ah.New, ag.Components, {}
-		c.__index = c
-		c.__type = "Slider"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "Slider - Missing Title.")
-			assert(f.Default, "Slider - Missing default value.")
-			assert(f.Min, "Slider - Missing minimum value.")
-			assert(f.Max, "Slider - Missing maximum value.")
-			assert(f.Rounding, "Slider - Missing rounding value.")
-			local h, i, j =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(26)
+		local UserInputService, Root = game:GetService "UserInputService", moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Slider"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Slider - Missing Title.")
+			assert(config.Default, "Slider - Missing default value.")
+			assert(config.Min, "Slider - Missing minimum value.")
+			assert(config.Max, "Slider - Missing maximum value.")
+			assert(config.Rounding, "Slider - Missing rounding value.")
+			local Slider, dragging, sliderFrame =
 				{
 					Value = nil,
-					Min = f.Min,
-					Max = f.Max,
-					Rounding = f.Rounding,
-					Callback = f.Callback or function(h)
+					Min = config.Min,
+					Max = config.Max,
+					Rounding = config.Rounding,
+					Callback = config.Callback or function(_value)
 					end,
 					Type = "Slider"
 				},
 			false,
-			ac(aj.Element)(f.Title, f.Description, d.Container, false)
-			j.DescLabel.Size = UDim2.new(1, -170, 0, 14)
-			h.SetTitle = j.SetTitle
-			h.SetDesc = j.SetDesc
-			h.Frame = j.Frame
-			local k =
-				ai(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			sliderFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+			Slider.SetTitle = sliderFrame.SetTitle
+			Slider.SetDesc = sliderFrame.SetDesc
+			Slider.Frame = sliderFrame.Frame
+			local sliderDot =
+				New(
 					"ImageLabel",
 					{
 						AnchorPoint = Vector2.new(0, 0.5),
@@ -9742,18 +9742,18 @@ local moduleFunctions = {
 				)
 
 			-- แก้ตรงนี้: เปลี่ยนจาก TextLabel -> TextBox เพื่อให้พิมพ์ค่าได้
-			local l, m, n =
-				ai(
+			local sliderRail, sliderFill, sliderDisplay =
+				New(
 					"Frame",
 					{BackgroundTransparency = 1, Position = UDim2.fromOffset(7, 0), Size = UDim2.new(1, -14, 1, 0)},
-					{k}
+					{sliderDot}
 				),
-			ai(
+			New(
 				"Frame",
 				{Size = UDim2.new(0, 0, 1, 0), ThemeTag = {BackgroundColor3 = "Accent"}},
-				{ai("UICorner", {CornerRadius = UDim.new(1, 0)})}
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
 			),
-			ai(
+			New(
 				"TextBox",
 				{
 					FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
@@ -9776,23 +9776,23 @@ local moduleFunctions = {
 				}
 			)
 
-			local o =
-				ai(
+			local sliderInner =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 0, 4),
 						AnchorPoint = Vector2.new(1, 0.5),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						BackgroundTransparency = 0.4,
-						Parent = j.Frame,
+						Parent = sliderFrame.Frame,
 						ThemeTag = {BackgroundColor3 = "SliderRail"}
 					},
 					{
-						ai("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						ai("UISizeConstraint", {MaxSize = Vector2.new(150, math.huge)}),
-						n,
-						m,
-						l
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New("UISizeConstraint", {MaxSize = Vector2.new(150, math.huge)}),
+						sliderDisplay,
+						sliderFill,
+						sliderRail
 					}
 				)
 
@@ -9800,117 +9800,117 @@ local moduleFunctions = {
 			local editingNumber = false
 
 			-- ถ้าคลิกที่ไอคอน จะเริ่ม drag (เหมือนเดิม)
-			ah.AddSignal(
-				k.InputBegan,
-				function(p)
-					if p.UserInputType == Enum.UserInputType.MouseButton1 or p.UserInputType == Enum.UserInputType.Touch then
-						i = true
+			Creator.AddSignal(
+				sliderDot.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = true
 					end
 				end
 			)
-			ah.AddSignal(
-				k.InputEnded,
-				function(p)
-					if p.UserInputType == Enum.UserInputType.MouseButton1 or p.UserInputType == Enum.UserInputType.Touch then
-						i = false
+			Creator.AddSignal(
+				sliderDot.InputEnded,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = false
 					end
 				end
 			)
 
 			-- ขณะพิมพ์ หยุดตอบสนองการลาก
-			n.Focused:Connect(
+			sliderDisplay.Focused:Connect(
 				function()
 					editingNumber = true
 					-- ป้องกันค่า i (drag) ขณะพิมพ์
-					i = false
+					dragging = false
 				end
 			)
 
-			n.FocusLost:Connect(
+			sliderDisplay.FocusLost:Connect(
 				function(enterPressed)
 					editingNumber = false
 					-- ถ้ากด Enter หรือคลิกออก ให้อ่านค่าและอัปเดต slider
-					local text = n.Text
+					local text = sliderDisplay.Text
 					-- support comma เป็นจุดทศนิยมด้วย (เช่น "1,5")
 					text = tostring(text):gsub(",", ".")
 					local num = tonumber(text)
 					if num then
-						local newVal = g:Round(math.clamp(num, h.Min, h.Max), h.Rounding)
-						h:SetValue(newVal)
+						local newVal = Library:Round(math.clamp(num, Slider.Min, Slider.Max), Slider.Rounding)
+						Slider:SetValue(newVal)
 					else
 						-- revert to current value
-						if h.Value ~= nil then
-							n.Text = tostring(h.Value)
+						if Slider.Value ~= nil then
+							sliderDisplay.Text = tostring(Slider.Value)
 						else
-							n.Text = tostring(f.Default)
+							sliderDisplay.Text = tostring(config.Default)
 						end
 					end
 				end
 			)
 
-			ah.AddSignal(
-				af.InputChanged,
-				function(p)
+			Creator.AddSignal(
+				UserInputService.InputChanged,
+				function(input)
 					if editingNumber then
 						return
 					end
 					if
-						i and
-						(p.UserInputType == Enum.UserInputType.MouseMovement or
-							p.UserInputType == Enum.UserInputType.Touch)
+						dragging and
+						(input.UserInputType == Enum.UserInputType.MouseMovement or
+							input.UserInputType == Enum.UserInputType.Touch)
 					then
-						local s = math.clamp((p.Position.X - l.AbsolutePosition.X) / l.AbsoluteSize.X, 0, 1)
-						h:SetValue(h.Min + ((h.Max - h.Min) * s))
+						local ratio = math.clamp((input.Position.X - sliderRail.AbsolutePosition.X) / sliderRail.AbsoluteSize.X, 0, 1)
+						Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
 					end
 				end
 			)
-			function h.OnChanged(p, s)
-				h.Changed = s
-				s(h.Value)
+			function Slider.OnChanged(_self, callback)
+				Slider.Changed = callback
+				callback(Slider.Value)
 			end
-			function h.SetValue(p, s)
-				p.Value = g:Round(math.clamp(s, h.Min, h.Max), h.Rounding)
-				k.Position = UDim2.new((p.Value - h.Min) / (h.Max - h.Min), -7, 0.5, 0)
-				m.Size = UDim2.fromScale((p.Value - h.Min) / (h.Max - h.Min), 1)
+			function Slider.SetValue(target, value)
+				target.Value = Library:Round(math.clamp(value, Slider.Min, Slider.Max), Slider.Rounding)
+				sliderDot.Position = UDim2.new((target.Value - Slider.Min) / (Slider.Max - Slider.Min), -7, 0.5, 0)
+				sliderFill.Size = UDim2.fromScale((target.Value - Slider.Min) / (Slider.Max - Slider.Min), 1)
 				-- อัปเดตข้อความใน TextBox ให้ตรงค่า
-				n.Text = tostring(p.Value)
-				g:SafeCallback(h.Callback, p.Value)
-				g:SafeCallback(h.Changed, p.Value)
+				sliderDisplay.Text = tostring(target.Value)
+				Library:SafeCallback(Slider.Callback, target.Value)
+				Library:SafeCallback(Slider.Changed, target.Value)
 			end
-			function h.Destroy(p)
-				j:Destroy()
-				g.Options[e] = nil
+			function Slider.Destroy(_self)
+				sliderFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			h:SetValue(f.Default)
-			g.Options[e] = h
-			return h
+			Slider:SetValue(config.Default)
+			Library.Options[idx] = Slider
+			return Slider
 		end
-		return c
+		return Element
 	end,
 	[27] = function()
-		local aa, ab, ac, ad, ae = moduleContext(27)
-		local af, ag = game:GetService "TweenService", ab.Parent.Parent
-		local ah = ac(ag.Creator)
-		local ai, aj, c = ah.New, ag.Components, {}
-		c.__index = c
-		c.__type = "Toggle"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "Toggle - Missing Title")
-			local h, i =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(27)
+		local TweenService, Root = game:GetService "TweenService", moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Toggle"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Toggle - Missing Title")
+			local Toggle, toggleFrame =
 				{
-					Value = f.Default or false,
-					Callback = f.Callback or function(h)
+					Value = config.Default or false,
+					Callback = config.Callback or function(_value)
 					end,
 					Type = "Toggle"
 				},
-			ac(aj.Element)(f.Title, f.Description, d.Container, true)
-			i.DescLabel.Size = UDim2.new(1, -54, 0, 14)
-			h.SetTitle = i.SetTitle
-			h.SetDesc = i.SetDesc
-			h.Frame = i.Frame
-			local j, k =
-				ai(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			toggleFrame.DescLabel.Size = UDim2.new(1, -54, 0, 14)
+			Toggle.SetTitle = toggleFrame.SetTitle
+			Toggle.SetDesc = toggleFrame.SetDesc
+			Toggle.Frame = toggleFrame.Frame
+			local toggleCircle, toggleBorder =
+				New(
 					"ImageLabel",
 					{
 						AnchorPoint = Vector2.new(0, 0.5),
@@ -9921,58 +9921,58 @@ local moduleFunctions = {
 						ThemeTag = {ImageColor3 = "ToggleSlider"}
 					}
 				),
-			ai("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "ToggleSlider"}})
-			local l =
-				ai(
+			New("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "ToggleSlider"}})
+			local toggleSlider =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromOffset(36, 18),
 						AnchorPoint = Vector2.new(1, 0.5),
 						Position = UDim2.new(1, -10, 0.5, 0),
-						Parent = i.Frame,
+						Parent = toggleFrame.Frame,
 						BackgroundTransparency = 1,
 						ThemeTag = {BackgroundColor3 = "Accent"}
 					},
-					{ai("UICorner", {CornerRadius = UDim.new(0, 9)}), k, j}
+					{New("UICorner", {CornerRadius = UDim.new(0, 9)}), toggleBorder, toggleCircle}
 				)
-			function h.OnChanged(m, n)
-				h.Changed = n
-				n(h.Value)
+			function Toggle.OnChanged(_self, callback)
+				Toggle.Changed = callback
+				callback(Toggle.Value)
 			end
-			function h.SetValue(m, n)
-				n = not (not n)
-				h.Value = n
-				ah.OverrideTag(k, {Color = h.Value and "Accent" or "ToggleSlider"})
-				ah.OverrideTag(j, {ImageColor3 = h.Value and "ToggleToggled" or "ToggleSlider"})
-				af:Create(
-					j,
+			function Toggle.SetValue(_self, value)
+				value = not (not value)
+				Toggle.Value = value
+				Creator.OverrideTag(toggleBorder, {Color = Toggle.Value and "Accent" or "ToggleSlider"})
+				Creator.OverrideTag(toggleCircle, {ImageColor3 = Toggle.Value and "ToggleToggled" or "ToggleSlider"})
+				TweenService:Create(
+					toggleCircle,
 					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{Position = UDim2.new(0, h.Value and 19 or 2, 0.5, 0)}
+					{Position = UDim2.new(0, Toggle.Value and 19 or 2, 0.5, 0)}
 				):Play()
-				af:Create(
-					l,
+				TweenService:Create(
+					toggleSlider,
 					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{BackgroundTransparency = h.Value and 0 or 1}
+					{BackgroundTransparency = Toggle.Value and 0 or 1}
 				):Play()
-				j.ImageTransparency = h.Value and 0 or 0.5
-				g:SafeCallback(h.Callback, h.Value)
-				g:SafeCallback(h.Changed, h.Value)
+				toggleCircle.ImageTransparency = Toggle.Value and 0 or 0.5
+				Library:SafeCallback(Toggle.Callback, Toggle.Value)
+				Library:SafeCallback(Toggle.Changed, Toggle.Value)
 			end
-			function h.Destroy(m)
-				i:Destroy()
-				g.Options[e] = nil
+			function Toggle.Destroy(_self)
+				toggleFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			ah.AddSignal(
-				i.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				toggleFrame.Frame.MouseButton1Click,
 				function()
-					h:SetValue(not h.Value)
+					Toggle:SetValue(not Toggle.Value)
 				end
 			)
-			h:SetValue(h.Value)
-			g.Options[e] = h
-			return h
+			Toggle:SetValue(Toggle.Value)
+			Library.Options[idx] = Toggle
+			return Toggle
 		end
-		return c
+		return Element
 	end,
 	[28] = function()
 		local aa, ab, ac, ad, ae = moduleContext(28)
