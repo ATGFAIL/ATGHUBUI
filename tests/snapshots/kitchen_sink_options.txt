@@ -18,7 +18,7 @@ InterfaceLanguagePackUrl Input string:
 InterfaceTemplateLocale Input string:
 InterfaceTheme Dropdown string:Dark
 InterfaceTranslationEnabled Toggle boolean:true
-InterfaceTranslationMode Dropdown string:Auto
+InterfaceTranslationMode Dropdown string:JSON pack
 Keybind Keybind string:K
 MenuKeybind Keybind string:LeftControl
 MultiDropdown Dropdown table{One=true,Three=true}

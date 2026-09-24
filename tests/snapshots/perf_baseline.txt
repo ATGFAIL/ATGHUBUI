@@ -3,4 +3,4 @@ toggles 100: build writes=10900 click writes=5 peak RS=2 idle RS=1
 dropdown 40 items, 20 searches: retained destroyed instances=6
 10 notifications closed: retained destroyed instances=0
 layout bump with 30 closed dropdowns: writes=0
-build 10 toggles in th (mode auto): requests=24
+build 10 toggles in th (mode community): requests=0

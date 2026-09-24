@@ -26,7 +26,11 @@ do
 
         Language = "en",
         TranslationEnabled = true,
-        TranslationMode = "auto",
+        -- Language packs only. Modes that send text out ask first.
+        TranslationMode = "community",
+        MachineTranslationConsent = false,
+        -- 2: "auto" is no longer the default (migrated once on load).
+        SettingsVersion = 2,
         LanguagePackUrl = "",
         LanguagePack = "",
         TemplateLocale = "",
@@ -67,6 +71,8 @@ do
         "Language",
         "TranslationEnabled",
         "TranslationMode",
+        "MachineTranslationConsent",
+        "SettingsVersion",
         "LanguagePackUrl",
         "LanguagePack",
         "TemplateLocale",
@@ -214,7 +220,21 @@ do
                 return display
             end
         end
-        return "Auto"
+        return "JSON pack"
+    end
+
+    -- Modes that may send interface text to the translation server.
+    local function sendsTextOut(mode)
+        return mode == "auto" or mode == "machine"
+    end
+
+    local function translationHost(library)
+        local translation = type(library) == "table" and library.Translation
+        local url = type(translation) == "table" and translation.API_URL
+        if type(url) ~= "string" or url == "" then
+            return "the translation server"
+        end
+        return url:match("^%a+://([^/%?#]+)") or url
     end
 
     local function getCustomization(library)
@@ -434,6 +454,21 @@ do
             copySettingKeys(self.Settings, scoped, SCOPED_SETTING_KEYS)
         end
 
+        -- One-time migration of settings saved before version 2: "auto" was
+        -- the default and sent text out without asking, so it becomes
+        -- "community". An explicit "machine" choice is kept as consent.
+        local saved = scoped or decoded
+        local savedVersion = saved and saved.SettingsVersion
+        local migrate = saved ~= nil and (type(savedVersion) ~= "number" or savedVersion < 2)
+        if migrate then
+            if self.Settings.TranslationMode == "auto" then
+                self.Settings.TranslationMode = "community"
+            elseif self.Settings.TranslationMode == "machine" then
+                self.Settings.MachineTranslationConsent = true
+            end
+            self.Settings.SettingsVersion = 2
+        end
+
         local validModes = {
             auto = true,
             community = true,
@@ -482,6 +517,9 @@ do
         )
         if type(self.Settings.AdvancedTools) ~= "boolean" then
             self.Settings.AdvancedTools = DEFAULT_SETTINGS.AdvancedTools
+        end
+        if migrate then
+            self:SaveSettings()
         end
         return true
     end
@@ -860,20 +898,63 @@ do
             table.insert(modeValues, display)
         end
         table.sort(modeValues)
-        local modeDropdown = languageTools:AddDropdown("InterfaceTranslationMode", {
+        local modeDropdown
+        local function applyMode(mode)
+            settings.TranslationMode = mode
+            if mode == "machine" and not capabilities.MachineTranslation then
+                safeNotify(library, "Machine translation", "Unsupported executor", "Original text will be used.")
+            elseif mode == "roblox" and not capabilities.RobloxTranslation then
+                safeNotify(library, "Roblox translation", "Unavailable here", "Original text will be used.")
+            end
+            i18n:SetMode(mode)
+            self:SaveSettings()
+        end
+        -- Asks once per script scope before any text is sent out.
+        local function askMachineConsent(onAnswer)
+            local asked = pcall(function()
+                library.Window:Dialog({
+                    Title = "Machine translation",
+                    Content = "Interface text will be sent to " .. translationHost(library)
+                        .. " to be translated. Some executors add an ID of your device to web requests."
+                        .. " Status text and notifications are never sent.",
+                    Buttons = {
+                        {Title = "Allow", Callback = function()
+                            onAnswer(true)
+                        end},
+                        {Title = "Cancel", Callback = function()
+                            onAnswer(false)
+                        end}
+                    }
+                })
+            end)
+            if not asked then
+                onAnswer(false)
+            end
+        end
+        modeDropdown = languageTools:AddDropdown("InterfaceTranslationMode", {
             Title = "Translate by",
             Description = "Pick a source.",
             Values = modeValues,
             Default = modeDisplay(settings.TranslationMode),
             Callback = function(value)
-                settings.TranslationMode = MODE_VALUES[value] or "auto"
-                if settings.TranslationMode == "machine" and not capabilities.MachineTranslation then
-                    safeNotify(library, "Machine translation", "Unsupported executor", "Original text will be used.")
-                elseif settings.TranslationMode == "roblox" and not capabilities.RobloxTranslation then
-                    safeNotify(library, "Roblox translation", "Unavailable here", "Original text will be used.")
+                local mode = MODE_VALUES[value] or "community"
+                if sendsTextOut(mode) and mode ~= settings.TranslationMode and not settings.MachineTranslationConsent then
+                    local previousMode = settings.TranslationMode
+                    askMachineConsent(function(accepted)
+                        if accepted then
+                            settings.MachineTranslationConsent = true
+                            applyMode(mode)
+                        else
+                            -- Show the previous choice again; its callback
+                            -- re-applies the unchanged mode.
+                            pcall(function()
+                                modeDropdown:SetValue(modeDisplay(previousMode))
+                            end)
+                        end
+                    end)
+                    return
                 end
-                i18n:SetMode(settings.TranslationMode)
-                self:SaveSettings()
+                applyMode(mode)
             end
         })
         pcall(function()

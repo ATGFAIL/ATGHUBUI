@@ -742,8 +742,16 @@ do
             return nil, "Only HTTPS URLs are accepted."
         end
 
-        local host = (url:match("^https://([^/%?#:]+)") or ""):lower()
-        if host == "" or host == "localhost" or host:match("^127%.") or host:match("^10%.")
+        -- A basic guard against addresses inside the user's network. It cannot
+        -- catch a public name that resolves to a private address.
+        local authority = url:match("^https://([^/%?#]*)") or ""
+        if authority:find("@", 1, true) or authority:find("[", 1, true) then
+            return nil, "URLs with credentials or IPv6 addresses are not allowed."
+        end
+        local host = (authority:match("^([^:]*)") or ""):lower():gsub("%.$", "")
+        if host == "" or host == "localhost" or host:match("%.localhost$") or host:match("%.local$")
+            or host:match("^%d+$") or host:match("^0x") or host:match("^0")
+            or host:match("^127%.") or host:match("^10%.") or host:match("^169%.254%.")
             or host:match("^192%.168%.") or host:match("^172%.1[6-9]%.")
             or host:match("^172%.2[0-9]%.") or host:match("^172%.3[0-1]%.") then
             return nil, "Local-network URLs are not allowed."
@@ -858,8 +866,10 @@ do
         MachineQueue = {},
         MachineActive = 0,
         MachineMaxConcurrent = 2,
-        MachineRequestLimit = 80,
+        -- Machine requests allowed per target language per session.
+        MachineRequestLimit = 200,
         MachineRequests = 0,
+        MachineRequestsByLocale = {},
         RobloxCache = {},
         RobloxCacheOrder = {},
         RobloxPending = {},
@@ -867,7 +877,8 @@ do
         RobloxTranslatorPending = {},
         CurrentLocale = "en",
         SourceLocale = "en",
-        Mode = "auto",
+        -- Language packs only. Roblox and machine translation are opt-in.
+        Mode = "community",
         Enabled = true,
         Scope = "shared",
         Revision = 0,
@@ -900,6 +911,23 @@ do
             local oldest = table.remove(order, 1)
             cache[oldest] = nil
         end
+    end
+
+    -- A translation shown in a RichText label is escaped unless the source
+    -- text already uses markup, so a pack or server cannot inject tags.
+    local function forDisplay(entry, translated)
+        local source = entry.OriginalText
+        if type(translated) ~= "string" or source:find("<", 1, true) or source:find("&[%w#]+;") then
+            return translated
+        end
+        local richText = false
+        pcall(function()
+            richText = entry.Object.RichText == true
+        end)
+        if not richText then
+            return translated
+        end
+        return (translated:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
     end
 
     local function setEntryText(entry, text, expectedRevision)
@@ -1143,12 +1171,20 @@ do
     function I18n:GetManualTranslation(entry, locale)
         local requested = normalizeLocale(locale)
         local requestedBase = localeBase(requested)
-        for index = #self.PackOrder, 1, -1 do
-            local pack = self.Packs[self.PackOrder[index]]
-            if pack and (normalizeLocale(pack.Locale) == requested or localeBase(pack.Locale) == requestedBase) then
-                local translated = pack.Translations[entry.Key] or pack.Translations[entry.OriginalText]
-                if type(translated) == "string" and translated ~= "" then
-                    return translated, pack
+        -- Packs for the exact locale (th-th) win over packs that only share
+        -- the base language (th); within each pass the newest pack wins.
+        for pass = 1, 2 do
+            for index = #self.PackOrder, 1, -1 do
+                local pack = self.Packs[self.PackOrder[index]]
+                local matches = pack and (
+                    (pass == 1 and normalizeLocale(pack.Locale) == requested)
+                    or (pass == 2 and localeBase(pack.Locale) == requestedBase)
+                )
+                if matches then
+                    local translated = pack.Translations[entry.Key] or pack.Translations[entry.OriginalText]
+                    if type(translated) == "string" and translated ~= "" then
+                        return translated, pack
+                    end
                 end
             end
         end
@@ -1182,8 +1218,10 @@ do
                 normalized = normalizeLocale(code)
             end
             -- Permit a valid BCP-47-like locale before a pack has been
-            -- installed (for example th-TH, ja-JP, id-ID).
-            if normalized:match("^[a-z][a-z][a-z]?(-[a-z0-9]+)*$") then
+            -- installed (for example th-TH, ja-JP, id-ID). Lua patterns have
+            -- no repeated groups, so the subtags are checked separately.
+            local base, subtags = normalized:match("^([a-z][a-z][a-z]?)(.*)$")
+            if base and (subtags == "" or (subtags:gsub("%-[a-z0-9]+", "")) == "") then
                 return normalized
             end
         end
@@ -1206,8 +1244,7 @@ do
         -- result is still valid. Clearing them here creates a race where an
         -- old completion can consume callbacks from a newly queued same-key
         -- request. Prune only jobs which have not started and target a locale
-        -- that is no longer current.
-        self.MachineRequests = 0
+        -- that is no longer current. The machine quota is not reset here.
         local retainedQueue = {}
         for _, job in ipairs(self.MachineQueue) do
             if job.SourceLocale == self.SourceLocale and job.TargetLocale == self.CurrentLocale then
@@ -1249,7 +1286,7 @@ do
             source = true
         }
         if not accepted[mode] then
-            mode = "auto"
+            mode = "community"
         end
         if self.Mode == mode then
             return
@@ -1315,7 +1352,11 @@ do
             Property = propertyName,
             Key = getEntryKey(originalText, options.Key),
             Context = options.Context or "",
-            Skip = options.Skip == true
+            Skip = options.Skip == true,
+            -- Runtime text (status lines, notifications, SetTitle/SetDesc
+            -- after creation) may contain player data: packs and Roblox
+            -- only, never machine translation.
+            Dynamic = options.Dynamic == true
         }
         self.Registry[textObject] = entry
         FontManager:Track(textObject, options.FontRole)
@@ -1335,7 +1376,8 @@ do
         self:Register(textObject, properties.Text, "Text", {
             Key = properties.I18nKey,
             Context = properties.I18nContext,
-            FontRole = properties.FontRole
+            FontRole = properties.FontRole,
+            Dynamic = properties.I18nDynamic == true
         })
     end
 
@@ -1456,14 +1498,15 @@ do
         end
     end
 
-    function I18n:TryMachine(entry, revision, callback)
+    function I18n:TryMachine(entry, revision, callback, targetLocale)
         local endpoint = TranslationSystem.API_URL
         if type(Capabilities.Request) ~= "function" or type(endpoint) ~= "string" or endpoint == "" then
             callback(nil)
             return
         end
 
-        local cacheKey = self.SourceLocale .. "|" .. self.CurrentLocale .. "|" .. entry.OriginalText
+        targetLocale = normalizeLocale(targetLocale or self.CurrentLocale)
+        local cacheKey = self.SourceLocale .. "|" .. targetLocale .. "|" .. entry.OriginalText
         if self.MachineCache[cacheKey] then
             callback(self.MachineCache[cacheKey])
             return
@@ -1474,18 +1517,20 @@ do
             table.insert(waiting, callback)
             return
         end
-        if self.MachineRequests >= self.MachineRequestLimit then
+        local used = self.MachineRequestsByLocale[targetLocale] or 0
+        if used >= (tonumber(self.MachineRequestLimit) or 0) then
             callback(nil)
             return
         end
 
+        self.MachineRequestsByLocale[targetLocale] = used + 1
         self.MachineRequests = self.MachineRequests + 1
         self.MachinePending[cacheKey] = {callback}
         table.insert(self.MachineQueue, {
             Key = cacheKey,
             Text = entry.OriginalText,
             SourceLocale = self.SourceLocale,
-            TargetLocale = self.CurrentLocale,
+            TargetLocale = targetLocale,
             Endpoint = endpoint
         })
         self:DrainMachineQueue()
@@ -1506,7 +1551,7 @@ do
 
         local manual = self:GetManualTranslation(entry, self.CurrentLocale)
         if manual then
-            setEntryText(entry, manual, revision)
+            setEntryText(entry, forDisplay(entry, manual), revision)
             return
         end
 
@@ -1515,18 +1560,18 @@ do
             return
         end
 
-        local tryMachine = self.Mode == "machine" or self.Mode == "auto"
+        local tryMachine = (self.Mode == "machine" or self.Mode == "auto") and not entry.Dynamic
         local tryRoblox = self.Mode == "roblox" or self.Mode == "auto"
         local function afterRoblox(translated)
             if revision ~= self.Revision then
                 return
             end
             if translated then
-                setEntryText(entry, translated, revision)
+                setEntryText(entry, forDisplay(entry, translated), revision)
             elseif tryMachine then
                 self:TryMachine(entry, revision, function(machineTranslated)
                     if machineTranslated then
-                        setEntryText(entry, machineTranslated, revision)
+                        setEntryText(entry, forDisplay(entry, machineTranslated), revision)
                     end
                 end)
             end
@@ -1537,7 +1582,7 @@ do
         elseif tryMachine then
             self:TryMachine(entry, revision, function(machineTranslated)
                 if machineTranslated then
-                    setEntryText(entry, machineTranslated, revision)
+                    setEntryText(entry, forDisplay(entry, machineTranslated), revision)
                 end
             end)
         end
@@ -1593,7 +1638,7 @@ do
             Key = getEntryKey(sourceText),
             Property = "Text"
         }
-        local manual = self:GetManualTranslation(entry, targetLocale)
+        local manual = self.Mode ~= "source" and self:GetManualTranslation(entry, targetLocale)
         if manual then
             if callback then
                 callback(manual)
@@ -1601,51 +1646,26 @@ do
             return manual
         end
 
-        local endpoint = TranslationSystem.API_URL
-        local cacheKey = self.SourceLocale .. "|" .. targetLocale .. "|" .. sourceText
-        if self.MachineCache[cacheKey] then
-            if callback then
-                callback(self.MachineCache[cacheKey])
-            end
-            return self.MachineCache[cacheKey]
-        end
-        if type(Capabilities.Request) ~= "function" or type(endpoint) ~= "string" or endpoint == "" then
+        -- Only the modes that allow it send text out, through the same queue
+        -- and quota as interface text.
+        if self.Mode ~= "machine" and self.Mode ~= "auto" then
             if callback then
                 callback(sourceText)
             end
             return sourceText
         end
-
-        task.spawn(function()
-            local translated
-            local body = jsonEncode({
-                q = sourceText,
-                source = self.SourceLocale,
-                target = targetLocale
-            })
-            if body then
-                local ok, response = pcall(Capabilities.Request, {
-                    Url = endpoint:gsub("/$", "") .. "/translate",
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = body
-                })
-                local rawResponse
-                if ok and type(response) == "string" then
-                    rawResponse = response
-                elseif ok and type(response) == "table" and response.Success ~= false then
-                    rawResponse = response.Body or response.body
-                end
-                local decoded = type(rawResponse) == "string" and jsonDecode(rawResponse)
-                if decoded and type(decoded.translatedText) == "string" and decoded.translatedText ~= "" then
-                    translated = decoded.translatedText
-                    cacheTranslation(self, "MachineCache", "MachineCacheOrder", cacheKey, translated)
-                end
+        local cached = self.MachineCache[self.SourceLocale .. "|" .. targetLocale .. "|" .. sourceText]
+        if cached then
+            if callback then
+                callback(cached)
             end
+            return cached
+        end
+        self:TryMachine(entry, self.Revision, function(translated)
             if callback then
                 callback(translated or sourceText)
             end
-        end)
+        end, targetLocale)
         return sourceText
     end
 
@@ -5740,10 +5760,13 @@ local moduleFunctions = {
 					},
 					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), Element.Border, Element.LabelHolder}
 				)
+			-- Text set after the element is built is runtime text (status, counters,
+			-- player names), so it is registered as dynamic.
+			local built = false
 			function Element.SetTitle(_self, text)
 				Element.TitleLabel.Text = text
 				-- Register with Translation System
-				TranslationSystem:Register(Element.TitleLabel, text, "Text")
+				TranslationSystem:Register(Element.TitleLabel, text, "Text", {Dynamic = built})
 			end
 			function Element.SetDesc(_self, text)
 				if text == nil then
@@ -5757,7 +5780,7 @@ local moduleFunctions = {
 				Element.DescLabel.Text = text
 				-- Register with Translation System
 				if text ~= "" then
-					TranslationSystem:Register(Element.DescLabel, text, "Text")
+					TranslationSystem:Register(Element.DescLabel, text, "Text", {Dynamic = built})
 				end
 			end
 			function Element.Destroy(_self)
@@ -5765,6 +5788,7 @@ local moduleFunctions = {
 			end
 			Element:SetTitle(title)
 			Element:SetDesc(desc)
+			built = true
 			if hover then
 				local _themes, motor, setTransparency =
 					Root.Themes,
@@ -5910,6 +5934,7 @@ local moduleFunctions = {
 					{
 						Position = UDim2.new(0, 58, 0, 12),
 						Text = config.Title,
+						I18nDynamic = true,
 						RichText = true,
 						TextTransparency = 0,
 						FontFace = Font.new(
@@ -5926,8 +5951,8 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			-- Register Title for translation
-			TranslationSystem:Register(NewNotification.Title, originalTitle, "Text")
+			-- Register Title for translation (notification text is dynamic)
+			TranslationSystem:Register(NewNotification.Title, originalTitle, "Text", {Dynamic = true})
 
 			NewNotification.ContentLabel =
 				New(
@@ -5939,6 +5964,7 @@ local moduleFunctions = {
 							Enum.FontStyle.Normal
 						),
 						Text = config.Content,
+						I18nDynamic = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 12,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -5950,7 +5976,7 @@ local moduleFunctions = {
 					}
 				)
 			-- Register Content for translation
-			TranslationSystem:Register(NewNotification.ContentLabel, originalContent, "Text")
+			TranslationSystem:Register(NewNotification.ContentLabel, originalContent, "Text", {Dynamic = true})
 
 			NewNotification.SubContentLabel =
 				New(
@@ -5958,6 +5984,7 @@ local moduleFunctions = {
 					{
 						FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
 						Text = config.SubContent,
+						I18nDynamic = true,
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -5970,7 +5997,7 @@ local moduleFunctions = {
 				)
 			-- Register SubContent for translation
 			if originalSubContent ~= "" then
-				TranslationSystem:Register(NewNotification.SubContentLabel, originalSubContent, "Text")
+				TranslationSystem:Register(NewNotification.SubContentLabel, originalSubContent, "Text", {Dynamic = true})
 			end
 
 			NewNotification.LabelHolder =
@@ -7773,7 +7800,7 @@ local moduleFunctions = {
 				-- These are creation metadata for the customization layer, not
 				-- Roblox Instance properties.
 				if name ~= "ThemeTag" and name ~= "I18nKey" and name ~= "I18nContext" and name ~= "I18nSkip"
-					and name ~= "FontRole" then
+					and name ~= "I18nDynamic" and name ~= "FontRole" then
 					object[name] = value
 				end
 			end
