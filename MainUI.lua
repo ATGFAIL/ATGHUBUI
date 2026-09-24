@@ -10803,58 +10803,58 @@ local moduleFunctions = {
 		}
 	end,
 	[30] = function()
-		local aa, ab, ac, ad, ae = moduleContext(30)
-		local af = {
-			SingleMotor = ac(ab.SingleMotor),
-			GroupMotor = ac(ab.GroupMotor),
-			Instant = ac(ab.Instant),
-			Linear = ac(ab.Linear),
-			Spring = ac(ab.Spring),
-			isMotor = ac(ab.isMotor)
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(30)
+		local Flipper = {
+			SingleMotor = requireModule(moduleScript.SingleMotor),
+			GroupMotor = requireModule(moduleScript.GroupMotor),
+			Instant = requireModule(moduleScript.Instant),
+			Linear = requireModule(moduleScript.Linear),
+			Spring = requireModule(moduleScript.Spring),
+			isMotor = requireModule(moduleScript.isMotor)
 		}
-		return af
+		return Flipper
 	end,
 	[31] = function()
-		local aa, ab, ac, ad, ae = moduleContext(31)
-		local af, ag, ah, ai = game:GetService "RunService", ac(ab.Parent.Signal), function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(31)
+		local RunService, Signal, noop, BaseMotor = game:GetService "RunService", requireModule(moduleScript.Parent.Signal), function()
 		end, {}
-		ai.__index = ai
-		function ai.new()
-			return setmetatable({_onStep = ag.new(), _onStart = ag.new(), _onComplete = ag.new()}, ai)
+		BaseMotor.__index = BaseMotor
+		function BaseMotor.new()
+			return setmetatable({_onStep = Signal.new(), _onStart = Signal.new(), _onComplete = Signal.new()}, BaseMotor)
 		end
-		function ai.onStep(aj, c)
-			return aj._onStep:connect(c)
+		function BaseMotor.onStep(motor, handler)
+			return motor._onStep:connect(handler)
 		end
-		function ai.onStart(aj, c)
-			return aj._onStart:connect(c)
+		function BaseMotor.onStart(motor, handler)
+			return motor._onStart:connect(handler)
 		end
-		function ai.onComplete(aj, c)
-			return aj._onComplete:connect(c)
+		function BaseMotor.onComplete(motor, handler)
+			return motor._onComplete:connect(handler)
 		end
-		function ai.start(aj)
-			if not aj._connection then
-				aj._connection =
-					af.RenderStepped:Connect(
-						function(c)
-							aj:step(c)
+		function BaseMotor.start(motor)
+			if not motor._connection then
+				motor._connection =
+					RunService.RenderStepped:Connect(
+						function(deltaTime)
+							motor:step(deltaTime)
 						end
 					)
 			end
 		end
-		function ai.stop(aj)
-			if aj._connection then
-				aj._connection:Disconnect()
-				aj._connection = nil
+		function BaseMotor.stop(motor)
+			if motor._connection then
+				motor._connection:Disconnect()
+				motor._connection = nil
 			end
 		end
-		ai.destroy = ai.stop
-		ai.step = ah
-		ai.getValue = ah
-		ai.setGoal = ah
-		function ai.__tostring(aj)
+		BaseMotor.destroy = BaseMotor.stop
+		BaseMotor.step = noop
+		BaseMotor.getValue = noop
+		BaseMotor.setGoal = noop
+		function BaseMotor.__tostring(_motor)
 			return "Motor"
 		end
-		return ai
+		return BaseMotor
 	end,
 	[32] = function()
 		local aa, ab, ac, ad, ae = moduleContext(32)
@@ -10898,89 +10898,89 @@ local moduleFunctions = {
 		end
 	end,
 	[33] = function()
-		local aa, ab, ac, ad, ae = moduleContext(33)
-		local af, ag, ah = ac(ab.Parent.BaseMotor), ac(ab.Parent.SingleMotor), ac(ab.Parent.isMotor)
-		local ai = setmetatable({}, af)
-		ai.__index = ai
-		local aj = function(aj)
-			if ah(aj) then
-				return aj
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(33)
+		local BaseMotor, SingleMotor, isMotor = requireModule(moduleScript.Parent.BaseMotor), requireModule(moduleScript.Parent.SingleMotor), requireModule(moduleScript.Parent.isMotor)
+		local GroupMotor = setmetatable({}, BaseMotor)
+		GroupMotor.__index = GroupMotor
+		local toMotor = function(value)
+			if isMotor(value) then
+				return value
 			end
-			local c = typeof(aj)
-			if c == "number" then
-				return ag.new(aj, false)
-			elseif c == "table" then
-				return ai.new(aj, false)
+			local valueType = typeof(value)
+			if valueType == "number" then
+				return SingleMotor.new(value, false)
+			elseif valueType == "table" then
+				return GroupMotor.new(value, false)
 			end
-			error(("Unable to convert %q to motor; type %s is unsupported"):format(aj, c), 2)
+			error(("Unable to convert %q to motor; type %s is unsupported"):format(value, valueType), 2)
 		end
-		function ai.new(c, d)
-			assert(c, "Missing argument #1: initialValues")
-			assert(typeof(c) == "table", "initialValues must be a table!")
+		function GroupMotor.new(initialValues, useImplicitConnections)
+			assert(initialValues, "Missing argument #1: initialValues")
+			assert(typeof(initialValues) == "table", "initialValues must be a table!")
 			assert(
-				not c.step,
+				not initialValues.step,
 				[[initialValues contains disallowed property "step". Did you mean to put a table of values here?]]
 			)
-			local e = setmetatable(af.new(), ai)
-			if d ~= nil then
-				e._useImplicitConnections = d
+			local motor = setmetatable(BaseMotor.new(), GroupMotor)
+			if useImplicitConnections ~= nil then
+				motor._useImplicitConnections = useImplicitConnections
 			else
-				e._useImplicitConnections = true
+				motor._useImplicitConnections = true
 			end
-			e._complete = true
-			e._motors = {}
-			for f, g in pairs(c) do
-				e._motors[f] = aj(g)
+			motor._complete = true
+			motor._motors = {}
+			for key, value in pairs(initialValues) do
+				motor._motors[key] = toMotor(value)
 			end
-			return e
+			return motor
 		end
-		function ai.step(c, d)
-			if c._complete then
+		function GroupMotor.step(motor, deltaTime)
+			if motor._complete then
 				return true
 			end
-			local e = true
-			for f, g in pairs(c._motors) do
-				local h = g:step(d)
-				if not h then
-					e = false
+			local allComplete = true
+			for _, childMotor in pairs(motor._motors) do
+				local complete = childMotor:step(deltaTime)
+				if not complete then
+					allComplete = false
 				end
 			end
-			c._onStep:fire(c:getValue())
-			if e then
-				if c._useImplicitConnections then
-					c:stop()
+			motor._onStep:fire(motor:getValue())
+			if allComplete then
+				if motor._useImplicitConnections then
+					motor:stop()
 				end
-				c._complete = true
-				c._onComplete:fire()
+				motor._complete = true
+				motor._onComplete:fire()
 			end
-			return e
+			return allComplete
 		end
-		function ai.setGoal(c, d)
+		function GroupMotor.setGoal(motor, goals)
 			assert(
-				not d.step,
+				not goals.step,
 				[[goals contains disallowed property "step". Did you mean to put a table of goals here?]]
 			)
-			c._complete = false
-			c._onStart:fire()
-			for e, f in pairs(d) do
-				local g = assert(c._motors[e], ("Unknown motor for key %s"):format(e))
-				g:setGoal(f)
+			motor._complete = false
+			motor._onStart:fire()
+			for key, goal in pairs(goals) do
+				local childMotor = assert(motor._motors[key], ("Unknown motor for key %s"):format(key))
+				childMotor:setGoal(goal)
 			end
-			if c._useImplicitConnections then
-				c:start()
+			if motor._useImplicitConnections then
+				motor:start()
 			end
 		end
-		function ai.getValue(c)
-			local d = {}
-			for e, f in pairs(c._motors) do
-				d[e] = f:getValue()
+		function GroupMotor.getValue(motor)
+			local values = {}
+			for key, childMotor in pairs(motor._motors) do
+				values[key] = childMotor:getValue()
 			end
-			return d
+			return values
 		end
-		function ai.__tostring(c)
+		function GroupMotor.__tostring(_motor)
 			return "Motor(Group)"
 		end
-		return ai
+		return GroupMotor
 	end,
 	[34] = function()
 		local aa, ab, ac, ad, ae = moduleContext(34)
@@ -11052,16 +11052,16 @@ local moduleFunctions = {
 		end
 	end,
 	[35] = function()
-		local aa, ab, ac, ad, ae = moduleContext(35)
-		local af = {}
-		af.__index = af
-		function af.new(ag)
-			return setmetatable({_targetValue = ag}, af)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(35)
+		local Instant = {}
+		Instant.__index = Instant
+		function Instant.new(targetValue)
+			return setmetatable({_targetValue = targetValue}, Instant)
 		end
-		function af.step(ag)
-			return {complete = true, value = ag._targetValue}
+		function Instant.step(instant)
+			return {complete = true, value = instant._targetValue}
 		end
-		return af
+		return Instant
 	end,
 	[36] = function()
 		local aa, ab, ac, ad, ae = moduleContext(36)
@@ -11079,26 +11079,26 @@ local moduleFunctions = {
 		end
 	end,
 	[37] = function()
-		local aa, ab, ac, ad, ae = moduleContext(37)
-		local af = {}
-		af.__index = af
-		function af.new(ag, ah)
-			assert(ag, "Missing argument #1: targetValue")
-			ah = ah or {}
-			return setmetatable({_targetValue = ag, _velocity = ah.velocity or 1}, af)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(37)
+		local Linear = {}
+		Linear.__index = Linear
+		function Linear.new(targetValue, options)
+			assert(targetValue, "Missing argument #1: targetValue")
+			options = options or {}
+			return setmetatable({_targetValue = targetValue, _velocity = options.velocity or 1}, Linear)
 		end
-		function af.step(ag, ah, ai)
-			local aj, c, d = ah.value, ag._velocity, ag._targetValue
-			local e = ai * c
-			local f = e >= math.abs(d - aj)
-			aj = aj + e * (d > aj and 1 or -1)
-			if f then
-				aj = ag._targetValue
-				c = 0
+		function Linear.step(linear, state, dt)
+			local position, velocity, goal = state.value, linear._velocity, linear._targetValue
+			local delta = dt * velocity
+			local complete = delta >= math.abs(goal - position)
+			position = position + delta * (goal > position and 1 or -1)
+			if complete then
+				position = linear._targetValue
+				velocity = 0
 			end
-			return {complete = f, value = aj, velocity = c}
+			return {complete = complete, value = position, velocity = velocity}
 		end
-		return af
+		return Linear
 	end,
 	[38] = function()
 		local aa, ab, ac, ad, ae = moduleContext(38)
@@ -11167,47 +11167,47 @@ local moduleFunctions = {
 		end
 	end,
 	[39] = function()
-		local aa, ab, ac, ad, ae = moduleContext(39)
-		local af = {}
-		af.__index = af
-		function af.new(ag, ah)
-			return setmetatable({signal = ag, connected = true, _handler = ah}, af)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(39)
+		local Connection = {}
+		Connection.__index = Connection
+		function Connection.new(signal, handler)
+			return setmetatable({signal = signal, connected = true, _handler = handler}, Connection)
 		end
-		function af.disconnect(ag)
-			if ag.connected then
-				ag.connected = false
-				for ah, ai in pairs(ag.signal._connections) do
-					if ai == ag then
-						table.remove(ag.signal._connections, ah)
+		function Connection.disconnect(connection)
+			if connection.connected then
+				connection.connected = false
+				for index, other in pairs(connection.signal._connections) do
+					if other == connection then
+						table.remove(connection.signal._connections, index)
 						return
 					end
 				end
 			end
 		end
-		local ag = {}
-		ag.__index = ag
-		function ag.new()
-			return setmetatable({_connections = {}, _threads = {}}, ag)
+		local Signal = {}
+		Signal.__index = Signal
+		function Signal.new()
+			return setmetatable({_connections = {}, _threads = {}}, Signal)
 		end
-		function ag.fire(ah, ...)
-			for ai, aj in pairs(ah._connections) do
-				aj._handler(...)
+		function Signal.fire(signal, ...)
+			for _, connection in pairs(signal._connections) do
+				connection._handler(...)
 			end
-			for c, d in pairs(ah._threads) do
-				coroutine.resume(d, ...)
+			for _, thread in pairs(signal._threads) do
+				coroutine.resume(thread, ...)
 			end
-			ah._threads = {}
+			signal._threads = {}
 		end
-		function ag.connect(ah, aj)
-			local c = af.new(ah, aj)
-			table.insert(ah._connections, c)
-			return c
+		function Signal.connect(signal, handler)
+			local connection = Connection.new(signal, handler)
+			table.insert(signal._connections, connection)
+			return connection
 		end
-		function ag.wait(ah)
-			table.insert(ah._threads, coroutine.running())
+		function Signal.wait(signal)
+			table.insert(signal._threads, coroutine.running())
 			return coroutine.yield()
 		end
-		return ag
+		return Signal
 	end,
 	[40] = function()
 		local aa, ab, ac, ad, ae = moduleContext(40)
@@ -11264,53 +11264,53 @@ local moduleFunctions = {
 		end
 	end,
 	[41] = function()
-		local aa, ab, ac, ad, ae = moduleContext(41)
-		local af = ac(ab.Parent.BaseMotor)
-		local ag = setmetatable({}, af)
-		ag.__index = ag
-		function ag.new(ah, aj)
-			assert(ah, "Missing argument #1: initialValue")
-			assert(typeof(ah) == "number", "initialValue must be a number!")
-			local c = setmetatable(af.new(), ag)
-			if aj ~= nil then
-				c._useImplicitConnections = aj
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(41)
+		local BaseMotor = requireModule(moduleScript.Parent.BaseMotor)
+		local SingleMotor = setmetatable({}, BaseMotor)
+		SingleMotor.__index = SingleMotor
+		function SingleMotor.new(initialValue, useImplicitConnections)
+			assert(initialValue, "Missing argument #1: initialValue")
+			assert(typeof(initialValue) == "number", "initialValue must be a number!")
+			local motor = setmetatable(BaseMotor.new(), SingleMotor)
+			if useImplicitConnections ~= nil then
+				motor._useImplicitConnections = useImplicitConnections
 			else
-				c._useImplicitConnections = true
+				motor._useImplicitConnections = true
 			end
-			c._goal = nil
-			c._state = {complete = true, value = ah}
-			return c
+			motor._goal = nil
+			motor._state = {complete = true, value = initialValue}
+			return motor
 		end
-		function ag.step(ah, aj)
-			if ah._state.complete then
+		function SingleMotor.step(motor, deltaTime)
+			if motor._state.complete then
 				return true
 			end
-			local c = ah._goal:step(ah._state, aj)
-			ah._state = c
-			ah._onStep:fire(c.value)
-			if c.complete then
-				if ah._useImplicitConnections then
-					ah:stop()
+			local newState = motor._goal:step(motor._state, deltaTime)
+			motor._state = newState
+			motor._onStep:fire(newState.value)
+			if newState.complete then
+				if motor._useImplicitConnections then
+					motor:stop()
 				end
-				ah._onComplete:fire()
+				motor._onComplete:fire()
 			end
-			return c.complete
+			return newState.complete
 		end
-		function ag.getValue(ah)
-			return ah._state.value
+		function SingleMotor.getValue(motor)
+			return motor._state.value
 		end
-		function ag.setGoal(ah, aj)
-			ah._state.complete = false
-			ah._goal = aj
-			ah._onStart:fire()
-			if ah._useImplicitConnections then
-				ah:start()
+		function SingleMotor.setGoal(motor, goal)
+			motor._state.complete = false
+			motor._goal = goal
+			motor._onStart:fire()
+			if motor._useImplicitConnections then
+				motor:start()
 			end
 		end
-		function ag.__tostring(ah)
+		function SingleMotor.__tostring(_motor)
 			return "Motor(Single)"
 		end
-		return ag
+		return SingleMotor
 	end,
 	[42] = function()
 		local aa, ab, ac, ad, ae = moduleContext(42)
@@ -11358,54 +11358,54 @@ local moduleFunctions = {
 		end
 	end,
 	[43] = function()
-		local aa, ab, ac, ad, ae = moduleContext(43)
-		local af, ag, ah, aj = 0.001, 0.001, 0.0001, {}
-		aj.__index = aj
-		function aj.new(c, d)
-			assert(c, "Missing argument #1: targetValue")
-			d = d or {}
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(43)
+		local VELOCITY_THRESHOLD, POSITION_THRESHOLD, EPS, Spring = 0.001, 0.001, 0.0001, {}
+		Spring.__index = Spring
+		function Spring.new(targetValue, options)
+			assert(targetValue, "Missing argument #1: targetValue")
+			options = options or {}
 			return setmetatable(
-				{_targetValue = c, _frequency = d.frequency or 4, _dampingRatio = d.dampingRatio or 1},
-				aj
+				{_targetValue = targetValue, _frequency = options.frequency or 4, _dampingRatio = options.dampingRatio or 1},
+				Spring
 			)
 		end
-		function aj.step(c, d, e)
-			local f, g, h, i, j = c._dampingRatio, c._frequency * 2 * math.pi, c._targetValue, d.value, d.velocity or 0
-			local k, l, m, n = i - h, (math.exp(-f * g * e))
-			if f == 1 then
-				m = (k * (1 + g * e) + j * e) * l + h
-				n = (j * (1 - g * e) - k * (g * g * e)) * l
-			elseif f < 1 then
-				local o = math.sqrt(1 - f * f)
-				local p, s, t = math.cos(g * o * e), (math.sin(g * o * e))
-				if o > ah then
-					t = s / o
+		function Spring.step(spring, state, dt)
+			local damping, frequency, goal, p0, v0 = spring._dampingRatio, spring._frequency * 2 * math.pi, spring._targetValue, state.value, state.velocity or 0
+			local offset, decay, p1, v1 = p0 - goal, (math.exp(-damping * frequency * dt))
+			if damping == 1 then
+				p1 = (offset * (1 + frequency * dt) + v0 * dt) * decay + goal
+				v1 = (v0 * (1 - frequency * dt) - offset * (frequency * frequency * dt)) * decay
+			elseif damping < 1 then
+				local dampedRoot = math.sqrt(1 - damping * damping)
+				local cosTerm, sinTerm, sinOverRoot = math.cos(frequency * dampedRoot * dt), (math.sin(frequency * dampedRoot * dt))
+				if dampedRoot > EPS then
+					sinOverRoot = sinTerm / dampedRoot
 				else
-					local u = e * g
-					t = u + ((u * u) * (o * o) * (o * o) / 20 - o * o) * (u * u * u) / 6
+					local angle = dt * frequency
+					sinOverRoot = angle + ((angle * angle) * (dampedRoot * dampedRoot) * (dampedRoot * dampedRoot) / 20 - dampedRoot * dampedRoot) * (angle * angle * angle) / 6
 				end
-				local u
-				if g * o > ah then
-					u = s / (g * o)
+				local sinOverFreqRoot
+				if frequency * dampedRoot > EPS then
+					sinOverFreqRoot = sinTerm / (frequency * dampedRoot)
 				else
-					local v = g * o
-					u = e + ((e * e) * (v * v) * (v * v) / 20 - v * v) * (e * e * e) / 6
+					local freqRoot = frequency * dampedRoot
+					sinOverFreqRoot = dt + ((dt * dt) * (freqRoot * freqRoot) * (freqRoot * freqRoot) / 20 - freqRoot * freqRoot) * (dt * dt * dt) / 6
 				end
-				m = (k * (p + f * t) + j * u) * l + h
-				n = (j * (p - t * f) - k * (t * g)) * l
+				p1 = (offset * (cosTerm + damping * sinOverRoot) + v0 * sinOverFreqRoot) * decay + goal
+				v1 = (v0 * (cosTerm - sinOverRoot * damping) - offset * (sinOverRoot * frequency)) * decay
 			else
-				local o = math.sqrt(f * f - 1)
-				local p, s = -g * (f - o), -g * (f + o)
-				local t = (j - k * p) / (2 * g * o)
-				local u = k - t
-				local v, w = u * math.exp(p * e), t * math.exp(s * e)
-				m = v + w + h
-				n = v * p + w * s
+				local dampedRoot = math.sqrt(damping * damping - 1)
+				local r1, r2 = -frequency * (damping - dampedRoot), -frequency * (damping + dampedRoot)
+				local co2 = (v0 - offset * r1) / (2 * frequency * dampedRoot)
+				local co1 = offset - co2
+				local e1, e2 = co1 * math.exp(r1 * dt), co2 * math.exp(r2 * dt)
+				p1 = e1 + e2 + goal
+				v1 = e1 * r1 + e2 * r2
 			end
-			local o = math.abs(n) < af and math.abs(m - h) < ag
-			return {complete = o, value = o and h or m, velocity = n}
+			local complete = math.abs(v1) < VELOCITY_THRESHOLD and math.abs(p1 - goal) < POSITION_THRESHOLD
+			return {complete = complete, value = complete and goal or p1, velocity = v1}
 		end
-		return aj
+		return Spring
 	end,
 	[44] = function()
 		local aa, ab, ac, ad, ae = moduleContext(44)
@@ -11447,16 +11447,16 @@ local moduleFunctions = {
 		end
 	end,
 	[45] = function()
-		local aa, ab, ac, ad, ae = moduleContext(45)
-		local af = function(af)
-			local ag = tostring(af):match "^Motor%((.+)%)$"
-			if ag then
-				return true, ag
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(45)
+		local isMotor = function(value)
+			local motorType = tostring(value):match "^Motor%((.+)%)$"
+			if motorType then
+				return true, motorType
 			else
 				return false
 			end
 		end
-		return af
+		return isMotor
 	end,
 	[46] = function()
 		local aa, ab, ac, ad, ae = moduleContext(46)
