@@ -3290,6 +3290,13 @@ local moduleFunctions = {
 			Customization = CustomizationSystem,
 			CurrentLanguage = "en"
 		}
+		-- Dropdowns currently open; closed on minimize, tab change and unload.
+		Library._OpenDropdowns = {}
+		function Library._CloseDropdowns()
+			for dropdown in pairs(Library._OpenDropdowns) do
+				pcall(dropdown.Close, dropdown)
+			end
+		end
 		-- Library.OnUnload:Connect(fn) runs fn once, first thing in Destroy.
 		local unloadHandlers = {}
 		Library.OnUnload = {}
@@ -3308,6 +3315,7 @@ local moduleFunctions = {
 			end
 			local ok, err = pcall(callback, ...)
 			if not ok then
+				err = tostring(err)
 				local _, matchEnd = err:find ":%d+: "
 				if not matchEnd then
 					return Library:Notify {Title = "Interface", Content = "Callback error", SubContent = err, Duration = 5}
@@ -3449,8 +3457,11 @@ local moduleFunctions = {
 				return Color3.new(tonumber(value.R) or 1, tonumber(value.G) or 1, tonumber(value.B) or 1)
 			end
 			if value.__atg == "Enum" and type(value.Type) == "string" and type(value.Name) == "string" then
-				local enum = Enum[value.Type]
-				return enum and enum[value.Name] or value.Name
+				local item
+				pcall(function()
+					item = Enum[value.Type][value.Name]
+				end)
+				return item or value.Name
 			end
 			local decoded = {}
 			for key, item in pairs(value) do
@@ -3999,8 +4010,8 @@ local moduleFunctions = {
 			for key, saved in pairs(profile) do
 				local option = Library.Options[key]
 				if type(option) == "table" then
-					local value = workspaceDecodeValue(saved.Value)
 					pcall(function()
+						local value = workspaceDecodeValue(saved.Value)
 						if saved.Type == "Colorpicker" and type(option.SetValueRGB) == "function" and typeof(value) == "Color3" then
 							option:SetValueRGB(value, saved.Transparency)
 						elseif type(option.SetValue) == "function" then
@@ -4683,13 +4694,7 @@ local moduleFunctions = {
 			end
 			local config = mergeFloatingToggleConfig(mergeFloatingToggleConfig(FloatingToggleDefaults, globalConfig), overrides)
 			local function keyCodeOrDefault(value, fallback)
-				if typeof(value) == "EnumItem" then
-					return value
-				end
-				if type(value) == "string" and Enum.KeyCode[value] then
-					return Enum.KeyCode[value]
-				end
-				return fallback
+				return safeEnumItem(Enum.KeyCode, value) or fallback
 			end
 			config.Keybind.Key = keyCodeOrDefault(config.Keybind.Key, FloatingToggleDefaults.Keybind.Key)
 			config.Keybind.Modifier = keyCodeOrDefault(config.Keybind.Modifier, FloatingToggleDefaults.Keybind.Modifier)
@@ -5128,6 +5133,7 @@ local moduleFunctions = {
 				Library.FloatingToggle:Destroy()
 			end
 			removeLegacyFloatingToggles()
+			Library._CloseDropdowns()
 			if Library.UseAcrylic then
 				-- Acrylic.Disable only exists after Acrylic.init; it removes the
 				-- DepthOfFieldEffect the blur added to Lighting.
@@ -6597,6 +6603,10 @@ local moduleFunctions = {
 		end
 		function TabModule.SelectTab(_self, tabIndex)
 			local window = TabModule.Window
+			local library = requireModule(Root)
+			if type(library._CloseDropdowns) == "function" then
+				library._CloseDropdowns()
+			end
 			TabModule.SelectedTab = tabIndex
 			for _, tab in next, TabModule.Tabs do
 				tab.SetTransparency(1)
@@ -7561,6 +7571,9 @@ local moduleFunctions = {
 			)
 			function Window.Minimize(_self)
 				Window.Minimized = not Window.Minimized
+				if Window.Minimized and type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
 				Window.Root.Visible = not Window.Minimized
 				if not minimizeNotified then
 					minimizeNotified = true
@@ -9072,6 +9085,7 @@ local moduleFunctions = {
 					return
 				end
 				Dropdown.Opened = true
+				Library._OpenDropdowns[Dropdown] = true
 				connectWhileOpen()
 				scrollFrame.ScrollingEnabled = false
 				dropdownHolderCanvas.Visible = true
@@ -9101,6 +9115,7 @@ local moduleFunctions = {
 					return
 				end
 				Dropdown.Opened = false
+				Library._OpenDropdowns[Dropdown] = nil
 				disconnectWhileOpen()
 				scrollFrame.ScrollingEnabled = true
 
@@ -9686,14 +9701,17 @@ local moduleFunctions = {
 						return key == "MouseLeft" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or
 							key == "MouseRight" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
 					else
-						return UserInputService:IsKeyDown(Enum.KeyCode[Keybind.Value])
+						local found, keyCode = pcall(function()
+							return Enum.KeyCode[key]
+						end)
+						return found and keyCode ~= nil and UserInputService:IsKeyDown(keyCode)
 					end
 				else
 					return Keybind.Toggled
 				end
 			end
 			function Keybind.SetValue(_self, key, mode)
-				key = key or Keybind.Key
+				key = key or Keybind.Value
 				mode = mode or Keybind.Mode
 				keybindDisplayLabel.Text = key
 				Keybind.Value = key
@@ -9717,10 +9735,14 @@ local moduleFunctions = {
 			Creator.AddSignal(
 				keybindDisplayFrame.InputBegan,
 				function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
+						and not picking then
 						picking = true
 						keybindDisplayLabel.Text = "..."
-						wait(0.2)
+						task.wait(0.2)
+						-- The first key or mouse button pressed is picked when it is
+						-- released. Touch and gamepad input cannot be bound, so they
+						-- cancel picking and keep the current key.
 						local beganConnection
 						beganConnection =
 							UserInputService.InputBegan:Connect(
@@ -9732,6 +9754,12 @@ local moduleFunctions = {
 										key = "MouseLeft"
 									elseif keyInput.UserInputType == Enum.UserInputType.MouseButton2 then
 										key = "MouseRight"
+									end
+									beganConnection:Disconnect()
+									if key == nil then
+										picking = false
+										keybindDisplayLabel.Text = Keybind.Value
+										return
 									end
 									local endedConnection
 									endedConnection =
@@ -9747,7 +9775,6 @@ local moduleFunctions = {
 												Keybind.Value = key
 												Library:SafeCallback(Keybind.ChangedCallback, endInput.KeyCode or endInput.UserInputType)
 												Library:SafeCallback(Keybind.Changed, endInput.KeyCode or endInput.UserInputType)
-												beganConnection:Disconnect()
 												endedConnection:Disconnect()
 											end
 										end
