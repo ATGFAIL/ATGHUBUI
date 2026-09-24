@@ -7,6 +7,6 @@ mouse bind idle: false
 after SetValue: F Hold
 numeric value: 12
 limited value: abc
-slider after drag right: string:100
+slider after drag right: number:100
 slider after typing: number:42.5
 options after destroy: Numeric=nil

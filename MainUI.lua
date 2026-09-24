@@ -3226,6 +3226,19 @@ local moduleFunctions = {
 		local gui = New("ScreenGui", {Parent = RunService:IsStudio() and localPlayer.PlayerGui or game:GetService "CoreGui"})
 		protectGui(gui)
 		Notification:Init(gui)
+		-- Indexing an Enum with an unknown name throws; return nil instead.
+		local function safeEnumItem(enumType, name)
+			if typeof(name) == "EnumItem" then
+				return name
+			end
+			if type(name) ~= "string" then
+				return nil
+			end
+			local ok, item = pcall(function()
+				return enumType[name]
+			end)
+			return ok and item or nil
+		end
 		local Library = {
 			Version = "1.6.0",
 			OpenFrames = {},
@@ -3251,6 +3264,18 @@ local moduleFunctions = {
 			Customization = CustomizationSystem,
 			CurrentLanguage = "en"
 		}
+		-- Library.OnUnload:Connect(fn) runs fn once, first thing in Destroy.
+		local unloadHandlers = {}
+		Library.OnUnload = {}
+		function Library.OnUnload.Connect(_, callback)
+			assert(type(callback) == "function", "OnUnload:Connect expects a function")
+			local handler = {Callback = callback, Connected = true}
+			function handler.Disconnect()
+				handler.Connected = false
+			end
+			table.insert(unloadHandlers, handler)
+			return handler
+		end
 		function Library.SafeCallback(_, callback, ...)
 			if not callback then
 				return
@@ -3270,11 +3295,13 @@ local moduleFunctions = {
 			end
 		end
 		function Library.Round(_, value, decimals)
-			if decimals == 0 then
-				return math.floor(value)
+			-- Always returns a number, rounded half up to `decimals` places.
+			local number = tonumber(value)
+			if number == nil then
+				return value
 			end
-			value = tostring(value)
-			return value:find "%." and tonumber(value:sub(1, value:find "%." + decimals)) or value
+			local factor = 10 ^ (tonumber(decimals) or 0)
+			return math.floor(number * factor + 0.5) / factor
 		end
 		local iconAssets = requireModule(libraryRoot.Icons).assets
 		function Library.GetIcon(_, name)
@@ -4691,6 +4718,27 @@ local moduleFunctions = {
 			end)
 			return parents
 		end
+		-- Removes floating toggles left by older ATG scripts. Only exact names in
+		-- LegacyFloatingToggleNames are removed, never other scripts' GUIs.
+		local function removeLegacyFloatingToggles()
+			for _, parent in ipairs(getLegacyFloatingToggleParents()) do
+				for _, child in ipairs(parent:GetChildren()) do
+					if isLegacyFloatingToggle(child) then
+						pcall(function()
+							child:Destroy()
+						end)
+					end
+				end
+			end
+			if getgenv then
+				pcall(function()
+					local environment = getgenv()
+					environment.ATGButtonUI = nil
+					environment.FluentToggleGui = nil
+					environment.ATGButtonUI_Running = false
+				end)
+			end
+		end
 		local function hasLegacyFloatingToggle()
 			for _, parent in ipairs(getLegacyFloatingToggleParents()) do
 				for name in pairs(LegacyFloatingToggleNames) do
@@ -4892,42 +4940,12 @@ local moduleFunctions = {
 				)
 			end
 			if config.Keybind.Enabled ~= false and UserInputService.KeyboardEnabled then
-				local modifierAlreadyToggledWindow = false
-				local function modifierMatchesWindowMinimizeKey()
-					local activeKey = Library.MinimizeKey
-					if type(Library.MinimizeKeybind) == "table" and Library.MinimizeKeybind.Type == "Keybind" then
-						activeKey = Library.MinimizeKeybind.Value
-					end
-					if activeKey == config.Keybind.Modifier then
-						return true
-					end
-					local modifierName
-					pcall(function()
-						modifierName = config.Keybind.Modifier.Name
-					end)
-					return type(activeKey) == "string" and activeKey == modifierName
-				end
 				track(
 					UserInputService.InputBegan:Connect(function(input, gameProcessed)
-						if not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard then
-							if input.KeyCode == config.Keybind.Modifier then
-								-- Fluent's legacy default minimize bind is LeftControl.
-								-- It has already toggled the window before Ctrl+M arrives,
-								-- so suppress the second toggle from this handler.
-								modifierAlreadyToggledWindow = modifierMatchesWindowMinimizeKey() and not UserInputService:GetFocusedTextBox()
-							elseif input.KeyCode == config.Keybind.Key and not UserInputService:GetFocusedTextBox() and
-								UserInputService:IsKeyDown(config.Keybind.Modifier) then
-								if not modifierAlreadyToggledWindow then
-									toggle.Toggle()
-								end
-							end
-						end
-					end)
-				)
-				track(
-					UserInputService.InputEnded:Connect(function(input)
-						if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == config.Keybind.Modifier then
-							modifierAlreadyToggledWindow = false
+						if not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard and
+							input.KeyCode == config.Keybind.Key and not UserInputService:GetFocusedTextBox() and
+							UserInputService:IsKeyDown(config.Keybind.Modifier) then
+							toggle.Toggle()
 						end
 					end)
 				)
@@ -4985,9 +5003,13 @@ local moduleFunctions = {
 		Library.Elements = Elements
 		function Library.CreateWindow(_, config)
 			assert(config.Title, "Window - Missing Title")
+			if Library.Unloaded then
+				warn "CreateWindow: the interface was destroyed; load the library again to create a new window."
+				return nil
+			end
 			if Library.Window then
-				print "You cannot create more than one window."
-				return
+				warn "CreateWindow: a window already exists; returning it."
+				return Library.Window
 			end
 			-- Optional and additive: old CreateWindow calls continue to work.
 			-- InterfaceManager normally configures this later, but accepting it
@@ -5007,7 +5029,9 @@ local moduleFunctions = {
 				}
 			end
 			Library.CurrentLanguage = CustomizationSystem.I18n.CurrentLocale
-			Library.MinimizeKey = config.MinimizeKey
+			if config.MinimizeKey ~= nil then
+				Library.MinimizeKey = safeEnumItem(Enum.KeyCode, config.MinimizeKey) or Library.MinimizeKey
+			end
 			Library.UseAcrylic = config.Acrylic
 			if config.Acrylic then
 				Acrylic.init()
@@ -5055,24 +5079,39 @@ local moduleFunctions = {
 			end
 		end
 		function Library.Destroy(_)
-			if Library.Window then
-				Library.Unloaded = true
-				-- Invalidates and detaches any in-flight/queued translation work.
-				CustomizationSystem.I18n:CancelPending()
-				CustomizationSystem.I18n:ClearRegistry()
-				CustomizationSystem.Fonts:ClearRegistry()
-				if Library.Workspace then
-					Library.Workspace:Destroy()
-				end
-				if Library.FloatingToggle then
-					Library.FloatingToggle:Destroy()
-				end
-				if Library.UseAcrylic then
-					Library.Window.AcrylicPaint.Model:Destroy()
-				end
-				Creator.Disconnect()
-				Library.GUI:Destroy()
+			if not Library.Window or Library.Unloaded then
+				return
 			end
+			Library.Unloaded = true
+			for _, handler in ipairs(unloadHandlers) do
+				if handler.Connected then
+					local ok, err = pcall(handler.Callback)
+					if not ok then
+						warn("OnUnload callback error:", err)
+					end
+				end
+			end
+			-- Invalidates and detaches any in-flight/queued translation work.
+			CustomizationSystem.I18n:CancelPending()
+			CustomizationSystem.I18n:ClearRegistry()
+			CustomizationSystem.Fonts:ClearRegistry()
+			if Library.Workspace then
+				Library.Workspace:Destroy()
+			end
+			if Library.FloatingToggle then
+				Library.FloatingToggle:Destroy()
+			end
+			removeLegacyFloatingToggles()
+			if Library.UseAcrylic then
+				-- Acrylic.Disable only exists after Acrylic.init; it removes the
+				-- DepthOfFieldEffect the blur added to Lighting.
+				if type(Acrylic.Disable) == "function" then
+					pcall(Acrylic.Disable)
+				end
+				Library.Window.AcrylicPaint.Model:Destroy()
+			end
+			Creator.Disconnect()
+			Library.GUI:Destroy()
 		end
 		function Library.ToggleAcrylic(_, enabled)
 			if Library.Window then
@@ -5572,8 +5611,9 @@ local moduleFunctions = {
 				setRootTransparency(1)
 				setScale(1.1)
 				NewDialog.Root.UIStroke:Destroy()
-				task.wait(0.15)
-				NewDialog.TintFrame:Destroy()
+				task.delay(0.15, function()
+					NewDialog.TintFrame:Destroy()
+				end)
 			end
 			function NewDialog.Button(_self, title, callback)
 				NewDialog.Buttons = NewDialog.Buttons + 1
@@ -6205,13 +6245,13 @@ local moduleFunctions = {
 
 				-- Icon bounce animation - smoother and smaller
 				NewNotification.IconFrame.Size = UDim2.fromOffset(0, 0)
+				-- Runs on its own thread so Notify returns without yielding.
 				local TweenService = game:GetService("TweenService")
 				local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-				task.wait(0.15)
-				TweenService:Create(NewNotification.IconFrame, tweenInfo, {Size = UDim2.fromOffset(40, 40)}):Play()
+				task.delay(0.15, function()
+					TweenService:Create(NewNotification.IconFrame, tweenInfo, {Size = UDim2.fromOffset(40, 40)}):Play()
 
-				-- Subtle glow effect on icon
-				task.spawn(function()
+					-- Subtle glow effect on icon
 					task.wait(0.2)
 					local iconFrame = NewNotification.IconFrame
 					TweenService:Create(iconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -7112,7 +7152,7 @@ local moduleFunctions = {
 					}
 				)
 
-			-- Close: now does a full cleanup + destroy related UI
+			-- Close: asks, then unloads the interface.
 			TitleBar.CloseButton =
 				BarButton(
 					Assets.Close,
@@ -7126,83 +7166,9 @@ local moduleFunctions = {
 								{
 									Title = "Yes",
 									Callback = function()
-										-- 1) Destroy the primary window/object (p)
-										pcall(
-											function()
-												if Library and type(Library.Destroy) == "function" then
-													Library:Destroy()
-												end
-											end
-										)
-
-										-- 2) Try to destroy global Window if present
-										pcall(
-											function()
-												if Window and type(Window.Destroy) == "function" then
-													Window:Destroy()
-												end
-											end
-										)
-										pcall(
-											function()
-												Window = nil
-											end
-										)
-
-										-- 3) Remove any toggle UI or helper GUIs we created (search CoreGui and PlayerGui)
-										local function destroyMarked(parent)
-											for _, gui in ipairs(parent:GetChildren()) do
-												if gui:IsA("ScreenGui") then
-													local name = (gui.Name or ""):lower()
-													if
-														name:find("fluent") or name:find("atg") or name:find("fluenttoggle") or
-														name:find("fluenttogglegui")
-													then
-														pcall(
-															function()
-																gui:Destroy()
-															end
-														)
-													end
-												end
-											end
-										end
-										pcall(
-											function()
-												destroyMarked(game:GetService("CoreGui"))
-											end
-										)
-										pcall(
-											function()
-												destroyMarked(playerGui)
-											end
-										)
-
-										-- 4) Clear getgenv config / flags that might keep loops running
-										if getgenv then
-											pcall(
-												function()
-													getgenv().ATGButtonUI = nil
-												end
-											)
-											pcall(
-												function()
-													getgenv().FluentToggleGui = nil
-												end
-											)
-											pcall(
-												function()
-													getgenv().ATGButtonUI_Running = false
-												end
-											)
-										end
-
-										-- 5) Try to force-garbage collect some global resources (best-effort)
-										pcall(
-											function()
-												collectgarbage("collect")
-											end
-										)
+										-- Library:Destroy does all cleanup, the same as a
+										-- script calling Fluent:Destroy().
+										Library:Destroy()
 									end
 								},
 								{Title = "No"}
@@ -7501,32 +7467,63 @@ local moduleFunctions = {
 					Window.TabHolder.CanvasSize = UDim2.new(0, 0, 0, Window.TabHolder.UIListLayout.AbsoluteContentSize.Y)
 				end
 			)
+			-- Minimize key. A modifier key (Ctrl, Shift, Alt) minimizes when it is
+			-- released, and only if nothing else was pressed while it was held, so
+			-- Ctrl+K, Ctrl+M, Ctrl+W or Ctrl+click never minimize. Other keys
+			-- minimize as soon as they are pressed. Keys are compared by name.
+			local modifierKeyNames = {
+				LeftControl = true,
+				RightControl = true,
+				LeftShift = true,
+				RightShift = true,
+				LeftAlt = true,
+				RightAlt = true
+			}
+			local function isMinimizeKey(input)
+				local keybind = Library.MinimizeKeybind
+				if type(keybind) == "table" and keybind.Type == "Keybind" then
+					return input.KeyCode.Name == keybind.Value
+				end
+				local key = Library.MinimizeKey
+				if type(key) == "string" then
+					return input.KeyCode.Name == key
+				end
+				return key ~= nil and input.KeyCode == key
+			end
+			local heldModifier, heldChord = nil, false
 			Creator.AddSignal(
 				UserInputService.InputBegan,
 				function(input)
-					local function toggleMinimize()
-						-- Ctrl is Fluent's legacy default.  Give Ctrl+K one short
-						-- chord window so command search does not minimize first.
-						if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
-							task.delay(0.16, function()
-								if UserInputService:IsKeyDown(input.KeyCode) and not UserInputService:IsKeyDown(Enum.KeyCode.K) and not UserInputService:GetFocusedTextBox() then
-									Window:Minimize()
-								end
-							end)
-						else
-							Window:Minimize()
-						end
+					if heldModifier and input.KeyCode.Name ~= heldModifier and input.UserInputType ~= Enum.UserInputType.Focus then
+						heldChord = true
 					end
-					if
-						type(Library.MinimizeKeybind) == "table" and Library.MinimizeKeybind.Type == "Keybind" and
-						not UserInputService:GetFocusedTextBox()
-					then
-						if input.KeyCode.Name == Library.MinimizeKeybind.Value then
-							toggleMinimize()
-						end
-					elseif input.KeyCode == Library.MinimizeKey and not UserInputService:GetFocusedTextBox() then
-						toggleMinimize()
+					if not isMinimizeKey(input) or UserInputService:GetFocusedTextBox() then
+						return
 					end
+					if modifierKeyNames[input.KeyCode.Name] then
+						heldModifier, heldChord = input.KeyCode.Name, false
+					else
+						Window:Minimize()
+					end
+				end
+			)
+			Creator.AddSignal(
+				UserInputService.InputEnded,
+				function(input)
+					if heldModifier == nil or input.KeyCode.Name ~= heldModifier then
+						return
+					end
+					local chord = heldChord
+					heldModifier, heldChord = nil, false
+					if not chord and not UserInputService:GetFocusedTextBox() then
+						Window:Minimize()
+					end
+				end
+			)
+			Creator.AddSignal(
+				UserInputService.WindowFocusReleased,
+				function()
+					heldModifier, heldChord = nil, false
 				end
 			)
 			function Window.Minimize(_self)
@@ -7534,8 +7531,11 @@ local moduleFunctions = {
 				Window.Root.Visible = not Window.Minimized
 				if not minimizeNotified then
 					minimizeNotified = true
-					local key = Library.MinimizeKeybind and Library.MinimizeKeybind.Value or Library.MinimizeKey.Name
-					Library:Notify {Title = "Interface", Content = "Press " .. key .. " to toggle the inteface.", Duration = 6}
+					local key = Library.MinimizeKeybind and Library.MinimizeKeybind.Value or Library.MinimizeKey
+					if typeof(key) == "EnumItem" then
+						key = key.Name
+					end
+					Library:Notify {Title = "Interface", Content = "Press " .. tostring(key) .. " to toggle the interface.", Duration = 6}
 				end
 			end
 			function Window.Destroy(_self)
@@ -7682,8 +7682,30 @@ local moduleFunctions = {
 				Creator.AddThemeObject(object, props.ThemeTag)
 			end
 		end
+		-- Connections to destroyed instances are already disconnected; drop them
+		-- whenever the list has doubled so it stays proportional to live ones.
+		local nextSignalPrune = 64
+		local function pruneSignals()
+			local signals, kept = Creator.Signals, 0
+			for index = 1, #signals do
+				local connection = signals[index]
+				if connection.Connected ~= false then
+					kept = kept + 1
+					signals[kept] = connection
+				end
+			end
+			for index = #signals, kept + 1, -1 do
+				signals[index] = nil
+			end
+			nextSignalPrune = math.max(64, kept * 2)
+		end
 		function Creator.AddSignal(signal, callback)
-			table.insert(Creator.Signals, signal:Connect(callback))
+			local connection = signal:Connect(callback)
+			table.insert(Creator.Signals, connection)
+			if #Creator.Signals >= nextSignalPrune then
+				pruneSignals()
+			end
+			return connection
 		end
 		function Creator.Disconnect()
 			for index = #Creator.Signals, 1, -1 do
@@ -7710,6 +7732,12 @@ local moduleFunctions = {
 		function Creator.AddThemeObject(object, properties)
 			local idx = #Creator.Registry + 1
 			local data = {Object = object, Properties = properties, Idx = idx}
+			if Creator.Registry[object] == nil then
+				-- Forget destroyed objects so the registry does not keep them alive.
+				object.Destroying:Connect(function()
+					Creator.Registry[object] = nil
+				end)
+			end
 			Creator.Registry[object] = data
 			for property, themeKey in next, properties do
 				object[property] = Creator.GetThemeProperty(themeKey)
@@ -7757,6 +7785,12 @@ local moduleFunctions = {
 			)
 			if resetOnThemeChange then
 				table.insert(Creator.TransparencyMotors, motor)
+				instance.Destroying:Connect(function()
+					local index = table.find(Creator.TransparencyMotors, motor)
+					if index then
+						table.remove(Creator.TransparencyMotors, index)
+					end
+				end)
 			end
 			local setValue = function(value, ignore)
 				ignore = ignore or false
@@ -8316,7 +8350,7 @@ local moduleFunctions = {
 				parent.Library,
 			{
 				Values = config.Values,
-				Value = config.Default,
+				Value = (config.Multi and {}) or config.Default,
 				Multi = config.Multi,
 				Buttons = {},
 				Opened = false,
@@ -8776,6 +8810,42 @@ local moduleFunctions = {
 				end
 			)
 
+			-- Parse color code from text
+			local function parseColorCode(text)
+				-- ตรวจสอบว่า text เป็น string หรือไม่
+				if type(text) ~= "string" then
+					return nil, tostring(text)
+				end
+
+				local colorPattern = "^%[COLOR:(%d+),(%d+),(%d+)%](.+)$"
+				local r, g, b, cleanText = text:match(colorPattern)
+				if r and g and b and cleanText then
+					return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b)), cleanText
+				end
+				return nil, text
+			end
+
+			-- Multi values arrive as a list {"A", "B"} or as a set {A = true}
+			-- (SaveManager). Returns a set of the entries that are in Values.
+			local function toSelectionSet(value)
+				local set = {}
+				if type(value) == "table" then
+					for key, item in next, value do
+						local candidate = item
+						if type(item) == "boolean" then
+							candidate = item and key or nil
+						end
+						if candidate ~= nil and table.find(Dropdown.Values, candidate) then
+							set[candidate] = true
+						end
+					end
+				end
+				return set
+			end
+
+			-- A single-choice dropdown can only become empty with AllowNull.
+			local canClear = config.Multi or config.AllowNull
+
 			-- Clear button functionality with hover effects
 			local _, clearBgTransparency = Creator.SpringMotor(0.9, clearButton, "BackgroundTransparency")
 
@@ -8808,6 +8878,9 @@ local moduleFunctions = {
 			Creator.AddSignal(
 				clearButton.MouseButton1Click,
 				function()
+					if not canClear then
+						return
+					end
 					-- Bounce animation on click
 					local bounceSequence = TweenService:Create(
 						clearButton,
@@ -8863,7 +8936,8 @@ local moduleFunctions = {
 					function()
 						-- Get all visible values (filtered by search)
 						for _, value in pairs(Dropdown.Values) do
-							if Dropdown.SearchText == "" or value:lower():find(Dropdown.SearchText, 1, true) then
+							local _, cleanText = parseColorCode(value)
+							if Dropdown.SearchText == "" or cleanText:lower():find(Dropdown.SearchText, 1, true) then
 								Dropdown.Value[value] = true
 							end
 						end
@@ -8947,20 +9021,6 @@ local moduleFunctions = {
 				end)
 			end
 
-			-- Parse color code from text
-			local function parseColorCode(text)
-				-- ตรวจสอบว่า text เป็น string หรือไม่
-				if type(text) ~= "string" then
-					return nil, tostring(text)
-				end
-
-				local colorPattern = "^%[COLOR:(%d+),(%d+),(%d+)%](.+)$"
-				local r, g, b, cleanText = text:match(colorPattern)
-				if r and g and b and cleanText then
-					return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b)), cleanText
-				end
-				return nil, text
-			end
 
 			local scrollFrame = parent.ScrollFrame
 			function Dropdown.Open(_self)
@@ -9042,7 +9102,7 @@ local moduleFunctions = {
 				dropdownDisplay.Text = (text == "" and "--" or text)
 
 				-- Animate clear button visibility
-				if hasSelection then
+				if hasSelection and canClear then
 					showClearButton()
 				else
 					hideClearButton()
@@ -9351,15 +9411,7 @@ local moduleFunctions = {
 			end
 			function Dropdown.SetValue(_self, value)
 				if Dropdown.Multi then
-					local newValue = {}
-					if type(value) == "table" then
-						for key, enabled in next, value do
-							if enabled and table.find(Dropdown.Values, key) then
-								newValue[key] = true
-							end
-						end
-					end
-					Dropdown.Value = newValue
+					Dropdown.Value = toSelectionSet(value)
 				else
 					if not value then
 						Dropdown.Value = nil
@@ -9387,8 +9439,13 @@ local moduleFunctions = {
 					table.insert(defaultIndexes, index)
 				end
 			elseif type(config.Default) == "table" then
-				for _, defaultValue in next, config.Default do
-					local index = table.find(Dropdown.Values, defaultValue)
+				for key, defaultValue in next, config.Default do
+					-- Accept both {"A", "B"} and {A = true}.
+					local item = defaultValue
+					if type(defaultValue) == "boolean" then
+						item = defaultValue and key or nil
+					end
+					local index = item ~= nil and table.find(Dropdown.Values, item)
 					if index then
 						table.insert(defaultIndexes, index)
 					end

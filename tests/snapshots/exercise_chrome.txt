@@ -1,10 +1,10 @@
-quick tap ctrl: visible=true
-hold ctrl: visible=false
-hold ctrl again: visible=true
+quick tap ctrl: visible=false
+hold ctrl: visible=true
+hold ctrl again: visible=false
 floating toggle exists: true
-floating click: visible=false
-floating click again: visible=true
-ctrl+m: visible=false
+floating click: visible=true
+floating click again: visible=false
+ctrl+m: visible=true
 maximized size: 0, 1280, 0, 720
 restored size: 0, 580, 0, 460
 dragged position: 0, 350, 0, 130

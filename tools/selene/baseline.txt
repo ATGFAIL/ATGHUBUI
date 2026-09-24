@@ -1,5 +1,4 @@
 MainUI.lua: error[duplicate_keys]: key `ClearTextOnFocus` is already declared
-MainUI.lua: error[incorrect_standard_library_use]: use of standard_library function `collectgarbage` is incorrect
 MainUI.lua: error[undefined_variable]: `describe` is not defined
 MainUI.lua: error[undefined_variable]: `describe` is not defined
 MainUI.lua: error[undefined_variable]: `describe` is not defined
@@ -70,6 +69,3 @@ MainUI.lua: error[undefined_variable]: `it` is not defined
 MainUI.lua: error[undefined_variable]: `it` is not defined
 MainUI.lua: error[undefined_variable]: `it` is not defined
 MainUI.lua: error[undefined_variable]: `it` is not defined
-MainUI.lua: error[undefined_variable]: `playerGui` is not defined
-MainUI.lua: warning[must_use]: unused return value of `collectgarbage` must be used
-MainUI.lua: warning[unscoped_variables]: `Window` is not declared locally, and will be available in every scope
