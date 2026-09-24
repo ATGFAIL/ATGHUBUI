@@ -80,6 +80,9 @@ function KitchenSink.build(context, options)
 		Acrylic = false,
 		Theme = "Dark",
 		MinimizeKey = env.Enum.KeyCode.LeftControl,
+		-- Opt-in features, enabled so the fixture keeps covering them.
+		Search = true,
+		SmartConfirm = true,
 	})
 
 	local tabs = {

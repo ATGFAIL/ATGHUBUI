@@ -1,6 +1,6 @@
 closing notification destroyed: true
 manual notification destroyed: true
 close dialog shown: true
-CoreGui after close: ChatGui,CombatGui,CoreSplash,OtherHub,StatGui
+CoreGui after close: ChatGui,CombatGui,OtherHub,StatGui
 unloaded: true
 gui destroyed: true

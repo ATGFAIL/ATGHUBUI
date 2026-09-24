@@ -36,7 +36,7 @@ return function(t)
 	t.test("workspace search, favorites, profiles and modes", function()
 		local context = Boot.new()
 		local world = context.world
-		local window = newWindow(context)
+		local window = newWindow(context, { Search = true })
 		local main = window:AddTab({ Title = "Main", Icon = "home" })
 		local combat = window:AddTab({ Title = "Combat", Icon = "sword" })
 		local toggle = main:AddToggle("AutoFarm", { Title = "Auto farm", Default = false })

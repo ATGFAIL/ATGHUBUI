@@ -1,242 +1,202 @@
-do
-    local TweenService = game:GetService("TweenService")
-    local ContentProvider = game:GetService("ContentProvider")
-    local CoreGui = game:GetService("CoreGui")
-    local Lighting = game:GetService("Lighting")
-    local RunService = game:GetService("RunService")
-    local Players = game:GetService("Players")
-    local localPlayer = Players.LocalPlayer
-    local camera = workspace.CurrentCamera
-    local logoImage = "rbxassetid://90989180960460"
-    local showTitle = true
-    local titleText = "ATG HUB"
-    local titleFont = Enum.Font.GothamBold
-    local fadeInTime = 0.35
-    local holdTime = 0.8
-    local fadeOutTime = 0.35
-    local startScale = 0.82
-    local endScale = 1.12
-    local baseImageScale = 0.6
-    local pulseScale = 0.9
-    local blurSize = 8
-    local destroyWhenDone = true
-    if CoreGui:FindFirstChild("CoreSplash") then
-        CoreGui.CoreSplash:Destroy()
+-- Splash screen. Opt-in: set getgenv().ATGSplash = true before loading,
+-- pass CreateWindow{Splash = true}, or call Library:ShowSplash(). Shown once.
+local splashShown = false
+local function showSplash()
+    if splashShown then
+        return
     end
-    pcall(
-        function()
-            ContentProvider:PreloadAsync({logoImage})
+    splashShown = true
+    -- Runs on its own thread: PreloadAsync yields, and callers such as
+    -- CreateWindow must not.
+    task.spawn(function()
+        local TweenService = game:GetService("TweenService")
+        local ContentProvider = game:GetService("ContentProvider")
+        local CoreGui = game:GetService("CoreGui")
+        local Lighting = game:GetService("Lighting")
+        local RunService = game:GetService("RunService")
+        local Players = game:GetService("Players")
+        local localPlayer = Players.LocalPlayer
+        local camera = workspace.CurrentCamera
+        local logoImage = "rbxassetid://90989180960460"
+        local showTitle = true
+        local titleText = "ATG HUB"
+        local titleFont = Enum.Font.GothamBold
+        local fadeInTime = 0.35
+        local holdTime = 0.8
+        local fadeOutTime = 0.35
+        local startScale = 0.82
+        local endScale = 1.12
+        local baseImageScale = 0.6
+        local pulseScale = 0.9
+        local blurSize = 8
+        if CoreGui:FindFirstChild("CoreSplash") then
+            CoreGui.CoreSplash:Destroy()
         end
-    )
-    local function tween(instance, goals, duration, easingStyle, easingDirection)
-        local info = TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Sine, easingDirection or Enum.EasingDirection.Out)
-        local playing = TweenService:Create(instance, info, goals)
-        playing:Play()
-        return playing
-    end
-    local splashGui = Instance.new("ScreenGui")
-    splashGui.Name = "CoreSplash"
-    splashGui.IgnoreGuiInset = true
-    splashGui.ResetOnSpawn = false
-    splashGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    splashGui.DisplayOrder = 999999999
-    splashGui.Parent = CoreGui
-    local function getViewportSize()
-        return camera and camera.ViewportSize or Vector2.new(1280, 720)
-    end
-    local function getLayoutMetrics()
-        local viewport = getViewportSize()
-        local shortestSide = math.min(viewport.X, viewport.Y)
-        local scaleFactor = shortestSide / 1080
-        local imageScale = math.clamp(baseImageScale * scaleFactor, 0.18, 0.72)
-        return {imageScale = imageScale, textSize = math.clamp(26 * scaleFactor, 14, 56)}
-    end
-    local overlay = Instance.new("Frame")
-    overlay.Name = "Overlay"
-    overlay.Size = UDim2.fromScale(1, 1)
-    overlay.Position = UDim2.fromScale(0, 0)
-    overlay.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
-    overlay.BackgroundTransparency = 1
-    overlay.BorderSizePixel = 0
-    overlay.ZIndex = 99999999
-    overlay.Parent = splashGui
-    local function createEdgeShade(side)
-        local shade = Instance.new("Frame")
-        shade.Size = UDim2.fromScale(1, 0.18)
-        if side == "top" then
-            shade.AnchorPoint = Vector2.new(0, 0)
-            shade.Position = UDim2.fromScale(0, 0)
-        elseif side == "bottom" then
-            shade.AnchorPoint = Vector2.new(0, 1)
-            shade.Position = UDim2.fromScale(0, 1)
+        pcall(
+            function()
+                ContentProvider:PreloadAsync({logoImage})
+            end
+        )
+        local function tween(instance, goals, duration, easingStyle, easingDirection)
+            local info = TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Sine, easingDirection or Enum.EasingDirection.Out)
+            local playing = TweenService:Create(instance, info, goals)
+            playing:Play()
+            return playing
         end
-        shade.BackgroundTransparency = 1
-        shade.ZIndex = 99999998
-        shade.Parent = splashGui
-        local gradient = Instance.new("UIGradient", shade)
-        gradient.Transparency = NumberSequence.new {NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 1)}
-        return shade
-    end
-    local topShade = createEdgeShade("top")
-    local bottomShade = createEdgeShade("bottom")
-    local blur
-    do
-        blur = Lighting:FindFirstChild("CoreSplashBlur") or Instance.new("BlurEffect")
-        blur.Name = "CoreSplashBlur"
-        blur.Parent = Lighting
-        blur.Size = 0
-        blur.Enabled = true
-    end
-    local center = Instance.new("Frame")
-    center.Name = "Center"
-    center.AnchorPoint = Vector2.new(0.5, 0.5)
-    center.Position = UDim2.fromScale(0.5, 0.5)
-    center.Size = UDim2.fromOffset(0, 0)
-    center.BackgroundTransparency = 1
-    center.ZIndex = 99999999
-    center.Parent = splashGui
-    local logo = Instance.new("ImageLabel")
-    logo.Name = "Logo"
-    logo.AnchorPoint = Vector2.new(0.5, 0.5)
-    logo.Position = UDim2.fromScale(0.5, 0.5)
-    logo.Size = UDim2.fromScale(0.4, 0.4)
-    logo.BackgroundTransparency = 1
-    logo.Image = logoImage
-    logo.ImageTransparency = 1
-    logo.ScaleType = Enum.ScaleType.Fit
-    logo.ZIndex = 99999999
-    logo.Parent = center
-    local rim = Instance.new("ImageLabel")
-    rim.Name = "Rim"
-    rim.AnchorPoint = Vector2.new(0.5, 0.5)
-    rim.Position = UDim2.fromScale(0.5, 0.5)
-    rim.Size = UDim2.fromScale(1, 1)
-    rim.BackgroundTransparency = 1
-    rim.Image = logoImage
-    rim.ImageTransparency = 0.985
-    rim.ScaleType = Enum.ScaleType.Fit
-    rim.ZIndex = 99999999
-    rim.Parent = logo
-    local titleShadow = Instance.new("TextLabel")
-    titleShadow.Name = "TextShadow"
-    titleShadow.AnchorPoint = Vector2.new(0.5, 0)
-    titleShadow.Position = UDim2.new(0.5, 1, 0, 16)
-    titleShadow.Size = UDim2.new(0.9, 0, 0, 30)
-    titleShadow.BackgroundTransparency = 1
-    titleShadow.ZIndex = 99999999
-    titleShadow.Text = showTitle and titleText or ""
-    titleShadow.TextColor3 = Color3.fromRGB(10, 10, 10)
-    titleShadow.TextTransparency = 0.35
-    titleShadow.Font = titleFont
-    titleShadow.TextSize = 18
-    titleShadow.Parent = center
-    local title = Instance.new("TextLabel")
-    title.Name = "Text"
-    title.AnchorPoint = Vector2.new(0.5, 0)
-    title.Position = titleShadow.Position
-    title.Size = titleShadow.Size
-    title.BackgroundTransparency = 1
-    title.ZIndex = 99999999
-    title.Text = showTitle and titleText or ""
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextStrokeTransparency = 0.7
-    title.Font = titleFont
-    title.TextSize = 18
-    title.Parent = center
-    local function applyLayout()
-        local metrics = getLayoutMetrics()
-        local imageScale = metrics.imageScale
-        logo.Size = UDim2.fromScale(imageScale, imageScale)
+        local splashGui = Instance.new("ScreenGui")
+        splashGui.Name = "CoreSplash"
+        splashGui.IgnoreGuiInset = true
+        splashGui.ResetOnSpawn = false
+        splashGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        splashGui.DisplayOrder = 999999999
+        splashGui.Parent = CoreGui
+        local function getViewportSize()
+            return camera and camera.ViewportSize or Vector2.new(1280, 720)
+        end
+        local function getLayoutMetrics()
+            local viewport = getViewportSize()
+            local shortestSide = math.min(viewport.X, viewport.Y)
+            local scaleFactor = shortestSide / 1080
+            local imageScale = math.clamp(baseImageScale * scaleFactor, 0.18, 0.72)
+            return {imageScale = imageScale, textSize = math.clamp(26 * scaleFactor, 14, 56)}
+        end
+        local overlay = Instance.new("Frame")
+        overlay.Name = "Overlay"
+        overlay.Size = UDim2.fromScale(1, 1)
+        overlay.Position = UDim2.fromScale(0, 0)
+        overlay.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
+        overlay.BackgroundTransparency = 1
+        overlay.BorderSizePixel = 0
+        overlay.ZIndex = 99999999
+        overlay.Parent = splashGui
+        local blur
+        do
+            blur = Lighting:FindFirstChild("CoreSplashBlur") or Instance.new("BlurEffect")
+            blur.Name = "CoreSplashBlur"
+            blur.Parent = Lighting
+            blur.Size = 0
+            blur.Enabled = true
+        end
+        local center = Instance.new("Frame")
+        center.Name = "Center"
+        center.AnchorPoint = Vector2.new(0.5, 0.5)
+        center.Position = UDim2.fromScale(0.5, 0.5)
+        center.Size = UDim2.fromOffset(0, 0)
+        center.BackgroundTransparency = 1
+        center.ZIndex = 99999999
+        center.Parent = splashGui
+        local logo = Instance.new("ImageLabel")
+        logo.Name = "Logo"
+        logo.AnchorPoint = Vector2.new(0.5, 0.5)
+        logo.Position = UDim2.fromScale(0.5, 0.5)
+        logo.Size = UDim2.fromScale(0.4, 0.4)
+        logo.BackgroundTransparency = 1
+        logo.Image = logoImage
+        logo.ImageTransparency = 1
+        logo.ScaleType = Enum.ScaleType.Fit
+        logo.ZIndex = 99999999
+        logo.Parent = center
+        local rim = Instance.new("ImageLabel")
+        rim.Name = "Rim"
+        rim.AnchorPoint = Vector2.new(0.5, 0.5)
+        rim.Position = UDim2.fromScale(0.5, 0.5)
         rim.Size = UDim2.fromScale(1, 1)
-        local viewport = getViewportSize()
-        center.Size = UDim2.fromOffset(math.max(400, viewport.X * imageScale * 0.95), math.max(300, viewport.Y * imageScale * 0.8))
-        title.TextSize = metrics.textSize
-        titleShadow.TextSize = metrics.textSize
-        local logoHeight = logo.AbsoluteSize.Y
-        local titleOffset = math.clamp(logoHeight / 2 + metrics.textSize * 0.9 + 18, 48, 420)
-        title.Position = UDim2.new(0.5, 0, 0.5, titleOffset)
-        titleShadow.Position = UDim2.new(0.5, 2, 0.5, titleOffset + 2)
-    end
-    local shimmer = Instance.new("Frame")
-    shimmer.Name = "Shimmer"
-    shimmer.AnchorPoint = Vector2.new(0.5, 0.5)
-    shimmer.Position = UDim2.fromScale(0.5, 0.5)
-    shimmer.Size = UDim2.fromScale(0.95, 0.95)
-    shimmer.BackgroundTransparency = 1
-    shimmer.ZIndex = 99999999
-    shimmer.Parent = logo
-    local shimmerGlint = Instance.new("ImageLabel")
-    shimmerGlint.Size = UDim2.fromScale(1.6, 0.35)
-    shimmerGlint.AnchorPoint = Vector2.new(0.5, 0.5)
-    shimmerGlint.Position = UDim2.fromScale(0.5, 0.5)
-    shimmerGlint.BackgroundTransparency = 1
-    shimmerGlint.ImageTransparency = 1
-    shimmerGlint.Image = logoImage
-    shimmerGlint.ScaleType = Enum.ScaleType.Slice
-    shimmerGlint.SliceCenter = Rect.new(8, 8, 8, 8)
-    shimmerGlint.ZIndex = 99999999
-    shimmerGlint.Parent = shimmer
-    applyLayout()
-    local viewportConnection
-    viewportConnection =
-        camera:GetPropertyChangedSignal("ViewportSize"):Connect(
-        function()
-            applyLayout()
-        end
-    )
-    task.spawn(
-        function()
-            tween(overlay, {BackgroundTransparency = 0.45}, 0.35, Enum.EasingStyle.Quad)
-            tween(blur, {Size = blurSize}, 0.45, Enum.EasingStyle.Quad)
+        rim.BackgroundTransparency = 1
+        rim.Image = logoImage
+        rim.ImageTransparency = 0.985
+        rim.ScaleType = Enum.ScaleType.Fit
+        rim.ZIndex = 99999999
+        rim.Parent = logo
+        local titleShadow = Instance.new("TextLabel")
+        titleShadow.Name = "TextShadow"
+        titleShadow.AnchorPoint = Vector2.new(0.5, 0)
+        titleShadow.Position = UDim2.new(0.5, 1, 0, 16)
+        titleShadow.Size = UDim2.new(0.9, 0, 0, 30)
+        titleShadow.BackgroundTransparency = 1
+        titleShadow.ZIndex = 99999999
+        titleShadow.Text = showTitle and titleText or ""
+        titleShadow.TextColor3 = Color3.fromRGB(10, 10, 10)
+        titleShadow.TextTransparency = 0.35
+        titleShadow.Font = titleFont
+        titleShadow.TextSize = 18
+        titleShadow.Parent = center
+        local title = Instance.new("TextLabel")
+        title.Name = "Text"
+        title.AnchorPoint = Vector2.new(0.5, 0)
+        title.Position = titleShadow.Position
+        title.Size = titleShadow.Size
+        title.BackgroundTransparency = 1
+        title.ZIndex = 99999999
+        title.Text = showTitle and titleText or ""
+        title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        title.TextStrokeTransparency = 0.7
+        title.Font = titleFont
+        title.TextSize = 18
+        title.Parent = center
+        local function applyLayout()
             local metrics = getLayoutMetrics()
-            logo.Size = UDim2.fromScale(metrics.imageScale * startScale, metrics.imageScale * startScale)
-            tween(logo, {ImageTransparency = 0}, fadeInTime, Enum.EasingStyle.Sine)
-            tween(logo, {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)}, fadeInTime, Enum.EasingStyle.Quart)
-            task.spawn(
-                function()
-                    while logo.Parent and logo.ImageTransparency == 0 do
-                        shimmerGlint.Rotation = (math.random() - 0.5) * 30
-                        shimmerGlint.ImageTransparency = 0.85
-                        tween(shimmerGlint, {ImageTransparency = 1}, 0.7, Enum.EasingStyle.Sine)
-                        task.wait(0.12 + math.random() * 0.3)
+            local imageScale = metrics.imageScale
+            logo.Size = UDim2.fromScale(imageScale, imageScale)
+            rim.Size = UDim2.fromScale(1, 1)
+            local viewport = getViewportSize()
+            center.Size = UDim2.fromOffset(math.max(400, viewport.X * imageScale * 0.95), math.max(300, viewport.Y * imageScale * 0.8))
+            title.TextSize = metrics.textSize
+            titleShadow.TextSize = metrics.textSize
+            local logoHeight = logo.AbsoluteSize.Y
+            local titleOffset = math.clamp(logoHeight / 2 + metrics.textSize * 0.9 + 18, 48, 420)
+            title.Position = UDim2.new(0.5, 0, 0.5, titleOffset)
+            titleShadow.Position = UDim2.new(0.5, 2, 0.5, titleOffset + 2)
+        end
+        applyLayout()
+        local viewportConnection
+        viewportConnection =
+            camera:GetPropertyChangedSignal("ViewportSize"):Connect(
+            function()
+                applyLayout()
+            end
+        )
+        task.spawn(
+            function()
+                tween(overlay, {BackgroundTransparency = 0.45}, 0.35, Enum.EasingStyle.Quad)
+                tween(blur, {Size = blurSize}, 0.45, Enum.EasingStyle.Quad)
+                local metrics = getLayoutMetrics()
+                logo.Size = UDim2.fromScale(metrics.imageScale * startScale, metrics.imageScale * startScale)
+                tween(logo, {ImageTransparency = 0}, fadeInTime, Enum.EasingStyle.Sine)
+                tween(logo, {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)}, fadeInTime, Enum.EasingStyle.Quart)
+                task.wait(fadeInTime * 0.9)
+                local growTween =
+                    tween(
+                    logo,
+                    {Size = UDim2.fromScale(metrics.imageScale * 1.06, metrics.imageScale * 1.06)},
+                    0.9,
+                    Enum.EasingStyle.Quad,
+                    Enum.EasingDirection.InOut
+                )
+                growTween.Completed:Connect(
+                    function()
+                        if logo and logo.Parent then
+                            tween(
+                                logo,
+                                {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)},
+                                0.9,
+                                Enum.EasingStyle.Quad,
+                                Enum.EasingDirection.InOut
+                            )
+                        end
                     end
-                end
-            )
-            task.wait(fadeInTime * 0.9)
-            local growTween =
+                )
+                task.wait(fadeInTime + holdTime)
+                tween(overlay, {BackgroundTransparency = 1}, fadeOutTime, Enum.EasingStyle.Quad)
+                tween(blur, {Size = 0}, fadeOutTime, Enum.EasingStyle.Quad)
                 tween(
-                logo,
-                {Size = UDim2.fromScale(metrics.imageScale * 1.06, metrics.imageScale * 1.06)},
-                0.9,
-                Enum.EasingStyle.Quad,
-                Enum.EasingDirection.InOut
-            )
-            growTween.Completed:Connect(
-                function()
-                    if logo and logo.Parent then
-                        tween(
-                            logo,
-                            {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)},
-                            0.9,
-                            Enum.EasingStyle.Quad,
-                            Enum.EasingDirection.InOut
-                        )
-                    end
-                end
-            )
-            task.wait(fadeInTime + holdTime)
-            tween(overlay, {BackgroundTransparency = 1}, fadeOutTime, Enum.EasingStyle.Quad)
-            tween(blur, {Size = 0}, fadeOutTime, Enum.EasingStyle.Quad)
-            tween(
-                logo,
-                {ImageTransparency = 1, Size = UDim2.fromScale(metrics.imageScale * endScale, metrics.imageScale * endScale)},
-                fadeOutTime,
-                Enum.EasingStyle.Quad
-            )
-            tween(title, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
-            tween(titleShadow, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
-            task.wait(fadeOutTime + 0.05)
-            if destroyWhenDone then
+                    logo,
+                    {ImageTransparency = 1, Size = UDim2.fromScale(metrics.imageScale * endScale, metrics.imageScale * endScale)},
+                    fadeOutTime,
+                    Enum.EasingStyle.Quad
+                )
+                tween(title, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
+                tween(titleShadow, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
+                task.wait(fadeOutTime + 0.05)
                 if viewportConnection then
                     viewportConnection:Disconnect()
                 end
@@ -248,11 +208,18 @@ do
                         end
                     end
                 )
-            else
-                splashGui.Parent = splashGui.Parent
             end
-        end
-    )
+        )
+    end)
+end
+do
+    local requested = false
+    pcall(function()
+        requested = type(getgenv) == "function" and getgenv().ATGSplash == true
+    end)
+    if requested then
+        showSplash()
+    end
 end
 
 local TranslationSystem = {}
@@ -3337,6 +3304,17 @@ local moduleFunctions = {
 			local factor = 10 ^ (tonumber(decimals) or 0)
 			return math.floor(number * factor + 0.5) / factor
 		end
+		function Library.ShowSplash(_)
+			showSplash()
+		end
+		-- Adds an element to Workspace Recent. Elements call this from user
+		-- input only, so values set by scripts or loaded configs stay out.
+		function Library._TouchElement(element)
+			local workspace = Library.Workspace
+			if workspace and type(element) == "table" and element._ATGEntry then
+				workspace:TouchEntry(element._ATGEntry)
+			end
+		end
 		local iconAssets = requireModule(libraryRoot.Icons).assets
 		function Library.GetIcon(_, name)
 			if name ~= nil and iconAssets["lucide-" .. name] then
@@ -3635,15 +3613,8 @@ local moduleFunctions = {
 			}
 			self.EntryById[entry.Id] = entry
 			table.insert(self.Entries, entry)
-			if type(element.SetValue) == "function" and not element._ATGWorkspaceValueWrapped then
-				element._ATGWorkspaceValueWrapped = true
-				local originalSetValue = element.SetValue
-				element.SetValue = function(receiver, ...)
-					local results = {originalSetValue(receiver, ...)}
-					self:TouchEntry(entry)
-					return unpack(results)
-				end
-			end
+			-- Elements report user changes through Library._TouchElement.
+			element._ATGEntry = entry
 			return entry
 		end
 		function Workspace:ApplyTabOrder()
@@ -3782,8 +3753,10 @@ local moduleFunctions = {
 				self.SidebarSearch.Visible = not enabled
 			end
 			if self.Window and self.Window.TabArea then
-				self.Window.TabArea.Position = UDim2.new(0, 12, 0, enabled and 54 or 88)
-				self.Window.TabArea.Size = UDim2.new(0, enabled and 54 or self.OriginalTabWidth, 1, enabled and -66 or -100)
+				-- Tabs start at Fluent's 54px, or below the search box when shown.
+				local top = self.Sidebar and 88 or 54
+				self.Window.TabArea.Position = UDim2.new(0, 12, 0, enabled and 54 or top)
+				self.Window.TabArea.Size = UDim2.new(0, enabled and 54 or self.OriginalTabWidth, 1, enabled and -66 or -(top + 12))
 			end
 			if self.Panel then
 				self.Panel.Size = UDim2.new(0, enabled and 230 or self.OriginalTabWidth, 0, 260)
@@ -4592,13 +4565,18 @@ local moduleFunctions = {
 			self.Window = window
 			self.OriginalTabWidth = tonumber(window.TabWidth) or 180
 			self:Load()
-			self:CreateChrome()
+			-- Tabs and elements are always registered for the API; the search
+			-- box, its panel and Ctrl+K are opt-in with CreateWindow{Search = true}.
+			self.SearchEnabled = Library.SearchEnabled == true
+			if self.SearchEnabled then
+				self:CreateChrome()
+			end
 			self:SetCompact(self.State.CompactMode)
 			self:SetFocus(self.State.FocusMode)
 			self:Connect(UserInputService.InputBegan, function(input, gameProcessed)
 				if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 				if input.KeyCode == Enum.KeyCode.Escape and self.Palette and self.Palette.Visible then self:ClosePalette(); return end
-				if not gameProcessed and input.KeyCode == Enum.KeyCode.K and not UserInputService:GetFocusedTextBox() and
+				if self.SearchEnabled and not gameProcessed and input.KeyCode == Enum.KeyCode.K and not UserInputService:GetFocusedTextBox() and
 					(UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
 					self:OpenPalette()
 				end
@@ -4993,6 +4971,17 @@ local moduleFunctions = {
 			end
 			return Library:CreateFloatingToggle(config)
 		end
+		-- Button titles that ask for confirmation with CreateWindow{SmartConfirm = true}.
+		local DestructiveWords = {"delete", "remove", "reset", "clear", "wipe", "shutdown", "rejoin", "leave"}
+		local function looksDestructive(title)
+			title = tostring(title or ""):lower()
+			for _, word in ipairs(DestructiveWords) do
+				if title:find("%f[%w]" .. word .. "%f[%W]") then
+					return true
+				end
+			end
+			return false
+		end
 		local Elements = {}
 		Elements.__index = Elements
 		Elements.__namecall = function(_, methodName, ...)
@@ -5005,17 +4994,14 @@ local moduleFunctions = {
 				elementModule.ScrollFrame = parent.ScrollFrame
 				elementModule.Library = Library
 				local options = type(config) == "table" and config or (type(key) == "table" and key or nil)
-				-- Smart confirmation can be explicit (Confirm = true/string/table),
-				-- or inferred only for obvious destructive labels. Scripts may use
-				-- SmartConfirm = false to opt a button out.
+				-- Confirmation is explicit (Confirm = true/string/table). Guessing it
+				-- from a destructive word in the title is opt-in with
+				-- CreateWindow{SmartConfirm = true}; SmartConfirm = false on a
+				-- button opts that button out.
 				local confirm = options and options.Confirm
-				if elementModule.__type == "Button" and options and confirm == nil and options.SmartConfirm ~= false then
-					local title = tostring(options.Title or ""):lower()
-					if title:find("delete", 1, true) or title:find("remove", 1, true) or title:find("reset", 1, true) or
-						title:find("clear", 1, true) or title:find("wipe", 1, true) or title:find("shutdown", 1, true) or
-						title:find("rejoin", 1, true) or title:find("leave", 1, true) then
-						confirm = {Title = "Please confirm", Content = "Continue with " .. tostring(options.Title) .. "?"}
-					end
+				if elementModule.__type == "Button" and options and confirm == nil and Library.SmartConfirm == true
+					and options.SmartConfirm ~= false and looksDestructive(options.Title) then
+					confirm = {Title = "Please confirm", Content = "Continue with " .. tostring(options.Title) .. "?"}
 				end
 				if elementModule.__type == "Button" and options and confirm and type(options.Callback) == "function" and not options._ATGConfirmWrapped then
 					options._ATGConfirmWrapped = true
@@ -5062,6 +5048,12 @@ local moduleFunctions = {
 			Library.CurrentLanguage = CustomizationSystem.I18n.CurrentLocale
 			if config.MinimizeKey ~= nil then
 				Library.MinimizeKey = safeEnumItem(Enum.KeyCode, config.MinimizeKey) or Library.MinimizeKey
+			end
+			-- Opt-in extras (all off for scripts written before they existed).
+			Library.SmartConfirm = config.SmartConfirm == true
+			Library.SearchEnabled = config.Search == true
+			if config.Splash == true then
+				showSplash()
 			end
 			Library.UseAcrylic = config.Acrylic
 			if config.Acrylic then
@@ -7895,6 +7887,7 @@ local moduleFunctions = {
 			Creator.AddSignal(
 				buttonFrame.Frame.MouseButton1Click,
 				function()
+					parent.Library._TouchElement(buttonFrame)
 					parent.Library:SafeCallback(config.Callback)
 				end
 			)
@@ -8342,6 +8335,7 @@ local moduleFunctions = {
 					"Done",
 					function()
 						Colorpicker:SetValue({hue, sat, vib}, transparency)
+						Library._TouchElement(Colorpicker)
 					end
 				)
 				dialog:Button "Cancel"
@@ -8967,6 +8961,7 @@ local moduleFunctions = {
 					Dropdown:Display()
 					Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 					Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+					Library._TouchElement(Dropdown)
 				end
 			)
 
@@ -9007,6 +9002,7 @@ local moduleFunctions = {
 						Dropdown:Display()
 						Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 						Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+						Library._TouchElement(Dropdown)
 					end
 				)
 			end
@@ -9436,6 +9432,7 @@ local moduleFunctions = {
 										Dropdown:Display()
 										Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 										Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+										Library._TouchElement(Dropdown)
 									end
 								end
 							end
@@ -9587,6 +9584,7 @@ local moduleFunctions = {
 						-- Roblox only sets this event argument for Enter, so requiring it
 						-- made clicks/taps outside the field silently discard the value.
 						Input:SetValue(inputBox.Text)
+						Library._TouchElement(Input)
 					end
 				)
 			else
@@ -9594,6 +9592,10 @@ local moduleFunctions = {
 					inputBox:GetPropertyChangedSignal "Text",
 					function()
 						Input:SetValue(inputBox.Text)
+						-- Text also changes when a script calls SetValue.
+						if inputBox:IsFocused() then
+							Library._TouchElement(Input)
+						end
 					end
 				)
 			end
@@ -9773,6 +9775,7 @@ local moduleFunctions = {
 												picking = false
 												keybindDisplayLabel.Text = key
 												Keybind.Value = key
+												Library._TouchElement(Keybind)
 												Library:SafeCallback(Keybind.ChangedCallback, endInput.KeyCode or endInput.UserInputType)
 												Library:SafeCallback(Keybind.Changed, endInput.KeyCode or endInput.UserInputType)
 												endedConnection:Disconnect()
@@ -9935,6 +9938,7 @@ local moduleFunctions = {
 				function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 						dragging = true
+						Library._TouchElement(Slider)
 					end
 				end
 			)
@@ -9967,6 +9971,7 @@ local moduleFunctions = {
 					if num then
 						local newVal = Library:Round(math.clamp(num, Slider.Min, Slider.Max), Slider.Rounding)
 						Slider:SetValue(newVal)
+						Library._TouchElement(Slider)
 					else
 						-- revert to current value
 						if Slider.Value ~= nil then
@@ -10096,6 +10101,7 @@ local moduleFunctions = {
 				toggleFrame.Frame.MouseButton1Click,
 				function()
 					Toggle:SetValue(not Toggle.Value)
+					Library._TouchElement(Toggle)
 				end
 			)
 			Toggle:SetValue(Toggle.Value)

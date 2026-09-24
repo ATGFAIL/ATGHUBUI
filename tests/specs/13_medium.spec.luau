@@ -139,4 +139,112 @@ return function(t)
 		t.equal(keybind.Value, "A", "a second key released later does not replace it")
 		assertNoErrors(t, world)
 	end)
+	t.test("2.6 guessing confirmations from button titles is opt-in and whole-word", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		local clicks = 0
+		local button = tab:AddButton({ Title = "Reset stats", Callback = function()
+			clicks += 1
+		end })
+		world:click(button.Frame)
+		task.wait(0.1)
+		t.equal(clicks, 1, "runs without a dialog by default")
+		local explicit = tab:AddButton({ Title = "Save", Confirm = true, Callback = function()
+			clicks += 1
+		end })
+		world:click(explicit.Frame)
+		task.wait(0.1)
+		t.equal(clicks, 1, "an explicit Confirm still asks")
+		local continue = KitchenSink.findTextButton(world, window.Root, "Continue")
+		t.truthy(continue, "confirm dialog shown")
+		world:click(continue)
+		task.wait(0.1)
+		t.equal(clicks, 2, "runs after confirming")
+		assertNoErrors(t, world)
+
+		local opted = Boot.new()
+		local optedWindow = newWindow(opted, { SmartConfirm = true })
+		local optedTab = optedWindow:AddTab({ Title = "Main" })
+		local guessed = 0
+		local reset = optedTab:AddButton({ Title = "Reset stats", Callback = function()
+			guessed += 1
+		end })
+		local clearance = optedTab:AddButton({ Title = "Clearance sale", Callback = function()
+			guessed += 10
+		end })
+		opted.world:click(clearance.Frame)
+		task.wait(0.1)
+		t.equal(guessed, 10, "a word inside another word does not ask")
+		opted.world:click(reset.Frame)
+		task.wait(0.1)
+		t.equal(guessed, 10, "a destructive word asks when SmartConfirm is on")
+		assertNoErrors(t, opted.world)
+	end)
+
+	t.test("2.7 sidebar search is opt-in; the Workspace API still works", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		tab:AddToggle("Farm", { Title = "Auto farm" })
+		local workspace = context.Library.Workspace
+		t.equal(workspace.SidebarSearch, nil, "no search box by default")
+		t.equal(window.TabArea.Position, world.env.UDim2.new(0, 12, 0, 54), "tabs keep Fluent's position")
+		t.equal(#workspace:FindEntries("farm"), 1, "entries are still registered")
+		world:pressKey("LeftControl")
+		world:tapKey("K")
+		world:releaseKey("LeftControl")
+		task.wait(0.1)
+		workspace:SetCompact(true)
+		workspace:SetCompact(false)
+		t.equal(window.TabArea.Position, world.env.UDim2.new(0, 12, 0, 54), "leaving compact mode restores the same position")
+		workspace:RenderFavorites()
+		assertNoErrors(t, world)
+
+		local opted = Boot.new()
+		local optedWindow = newWindow(opted, { Search = true })
+		optedWindow:AddTab({ Title = "Main" })
+		t.truthy(opted.Library.Workspace.SidebarSearch, "search box with Search = true")
+		t.equal(optedWindow.TabArea.Position, opted.world.env.UDim2.new(0, 12, 0, 88), "tabs move below the search box")
+		assertNoErrors(t, opted.world)
+	end)
+
+	t.test("2.8 the splash screen is opt-in", function()
+		local context = Boot.new()
+		local world = context.world
+		t.equal(world.CoreGui:FindFirstChild("CoreSplash"), nil, "no splash by default")
+		t.equal(world.Lighting:FindFirstChild("CoreSplashBlur"), nil, "no splash blur by default")
+		newWindow(context, { Splash = true })
+		t.truthy(world.CoreGui:FindFirstChild("CoreSplash"), "CreateWindow{Splash = true} shows it")
+		context.Library:ShowSplash()
+		local count = 0
+		for _, child in world.CoreGui:GetChildren() do
+			if child.Name == "CoreSplash" then
+				count += 1
+			end
+		end
+		t.equal(count, 1, "shown once")
+
+		local early = Boot.new({ genv = { ATGSplash = true } })
+		t.truthy(early.world.CoreGui:FindFirstChild("CoreSplash"), "getgenv().ATGSplash = true shows it on load")
+		assertNoErrors(t, world)
+	end)
+
+	t.test("2.9 Recent lists controls the user changed, not values set by scripts", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		local toggle = tab:AddToggle("Farm", { Title = "Farm" })
+		local slider = tab:AddSlider("Speed", { Title = "Speed", Default = 1, Min = 0, Max = 10, Rounding = 0 })
+		local workspace = context.Library.Workspace
+		toggle:SetValue(true)
+		slider:SetValue(5)
+		t.equal(#workspace.State.Recent, 0, "script SetValue is not recent")
+		world:click(toggle.Frame)
+		t.equal(workspace.State.Recent[1], "option:Farm", "a click is recent")
+		assertNoErrors(t, world)
+	end)
 end

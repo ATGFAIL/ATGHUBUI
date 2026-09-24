@@ -1104,6 +1104,7 @@ do
         languageTools:AddButton({
             Title = "Remove pack",
             Description = "Delete this pack.",
+            Confirm = {Title = "Remove pack", Content = "Delete the selected language pack?"},
             Callback = function()
                 local removed, removeError = assets:RemoveLanguage(settings.LanguagePack)
                 if not removed then
@@ -1182,6 +1183,7 @@ do
         typography:AddButton({
             Title = "Remove font",
             Description = "Remove this profile.",
+            Confirm = {Title = "Remove font", Content = "Remove the selected font profile?"},
             Callback = function()
                 local removed, removeError = assets:RemoveFont(settings.FontProfile)
                 if not removed then
