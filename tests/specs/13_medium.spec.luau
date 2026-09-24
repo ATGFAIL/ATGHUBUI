@@ -247,4 +247,39 @@ return function(t)
 		t.equal(workspace.State.Recent[1], "option:Farm", "a click is recent")
 		assertNoErrors(t, world)
 	end)
+	t.test("2.5 scrolling a dropdown list does not pick the row under the finger", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		local values = {}
+		for index = 1, 30 do
+			values[index] = "Item " .. index
+		end
+		local dropdown = tab:AddDropdown("Long", { Title = "Long", Values = values, Default = 1 })
+		openDropdown(world, dropdown)
+		task.wait(0.2)
+		local function rowFor(text)
+			local label = KitchenSink.findDescendant(world, context.Library.GUI, function(_, state)
+				return state.class == "TextLabel" and state.props.Name == "ButtonLabel" and state.props.Text == text
+			end)
+			return label and label.Parent.Parent
+		end
+		local row = rowFor("Item 3")
+		t.truthy(row, "row found")
+		local label = KitchenSink.findDescendant(world, row, function(_, state)
+			return state.props.Name == "ButtonLabel"
+		end)
+		local scroll = row.Parent
+		-- A finger lands on the row's label, drags the list, and lifts.
+		local input = world:mouseDown(label)
+		t.equal(dropdown.Value, "Item 1", "pressing does not select")
+		scroll.CanvasPosition = world.env.Vector2.new(0, 60)
+		world:mouseUp(row, input)
+		t.equal(dropdown.Value, "Item 1", "a press that scrolled the list selects nothing")
+		input = world:mouseDown(label)
+		world:mouseUp(row, input)
+		t.equal(dropdown.Value, "Item 3", "a tap selects on release")
+		assertNoErrors(t, world)
+	end)
 end

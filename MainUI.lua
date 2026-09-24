@@ -9409,12 +9409,25 @@ local moduleFunctions = {
 							selectorSizeMotor:setGoal(Flipper.Spring.new(selected and 16 or 6, {frequency = 6, dampingRatio = 0.8}))
 							setSelTransparency(selected and 0 or 1)
 						end
-						buttonLabel.InputBegan:Connect(
-							function(input)
-								if
-									input.UserInputType == Enum.UserInputType.MouseButton1 or
-									input.UserInputType == Enum.UserInputType.Touch
-								then
+						-- Select on Activated (release), not on press, so a finger that
+						-- starts a scroll on a row does not pick it. Activated still
+						-- fires after a scroll, so it is ignored when the list moved
+						-- between press and release. The press is recorded from the
+						-- row and from its label, whichever receives it.
+						local canvasAtPress = nil
+						local function recordPress(input)
+							if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+								canvasAtPress = dropdownScrollFrame.CanvasPosition
+							end
+						end
+						button.InputBegan:Connect(recordPress)
+						buttonLabel.InputBegan:Connect(recordPress)
+						button.Activated:Connect(
+							function()
+								local pressedAt = canvasAtPress
+								canvasAtPress = nil
+								local scrolled = pressedAt ~= nil and (dropdownScrollFrame.CanvasPosition - pressedAt).Magnitude > 4
+								if not scrolled then
 									local newSelected = not selected
 									if Dropdown:GetActiveValues() == 1 and not newSelected and not config.AllowNull then
 									else

@@ -204,8 +204,8 @@ function KitchenSink.build(context, options)
 		return state.class == "TextLabel" and state.props.Name == "ButtonLabel" and state.props.Text == "Beta"
 	end)
 	if betaLabel then
-		local pressed = world:mouseDown(betaLabel)
-		world:mouseUp(betaLabel, pressed)
+		-- The row is the TextButton that holds the label (label -> clip -> row).
+		world:click(betaLabel.Parent.Parent)
 	else
 		record("missing Beta row")
 	end
