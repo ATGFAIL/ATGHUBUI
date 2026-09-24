@@ -13,7 +13,7 @@
 ]]
 
 local CONFIG = {
-	Url = "https://raw.githubusercontent.com/atgfail/atghubui/claude/visible-files-wq5mqr/MainUI.lua",
+	Url = "https://raw.githubusercontent.com/ATGFAIL/ATGHUBUI/claude/visible-files-wq5mqr/MainUI.lua",
 	LocalFile = nil,
 	Label = "run",
 	Rounds = 3,

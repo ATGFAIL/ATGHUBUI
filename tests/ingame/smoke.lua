@@ -14,7 +14,7 @@
 
 local CONFIG = {
 	-- Raw URL of the MainUI.lua to test. Ignored when LocalFile is set.
-	Url = "https://raw.githubusercontent.com/atgfail/atghubui/claude/visible-files-wq5mqr/MainUI.lua",
+	Url = "https://raw.githubusercontent.com/ATGFAIL/ATGHUBUI/claude/visible-files-wq5mqr/MainUI.lua",
 	-- Path inside the executor workspace folder, e.g. "MainUI.lua".
 	LocalFile = nil,
 	-- Label printed with the results ("baseline" or "new").
