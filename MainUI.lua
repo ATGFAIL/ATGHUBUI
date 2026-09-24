@@ -3766,7 +3766,9 @@ local moduleFunctions = {
 		end
 		function Workspace:UpdateSearchHint()
 			if self.SidebarSearch then
-				self.SidebarSearch.PlaceholderText = self.State.FocusMode and "Focus mode on  •  Ctrl+K to exit" or "Search...  Ctrl+K"
+				local hint = self.State.FocusMode and "Focus mode on  •  Ctrl+K to exit" or "Search...  Ctrl+K"
+				self.SidebarSearch.PlaceholderText = hint
+				TranslationSystem:Register(self.SidebarSearch, hint, "PlaceholderText")
 			end
 		end
 		function Workspace:SetFocus(enabled)
@@ -5654,6 +5656,7 @@ local moduleFunctions = {
 				end
 				local button = requireModule(Root.Components.Button)("", NewDialog.ButtonHolder, true)
 				button.Title.Text = title
+				TranslationSystem:Register(button.Title, title, "Text")
 				for _, child in next, NewDialog.ButtonHolder:GetChildren() do
 					if child:IsA "TextButton" then
 						child.Size = UDim2.new(1 / NewDialog.Buttons, -(((NewDialog.Buttons - 1) * 10) / NewDialog.Buttons), 0, 32)
@@ -5840,18 +5843,22 @@ local moduleFunctions = {
 		local Spring, Instant, New, Notification = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {}
 
 		function Notification.Init(_self, gui)
-			-- Responsive width: smaller on mobile
-			local viewportSize = workspace.CurrentCamera.ViewportSize
-			local isMobile = viewportSize.X < 600
-			local notifWidth = isMobile and 280 or 340
-			local sideMargin = isMobile and 10 or 30
+			-- Responsive width: smaller on mobile, recomputed when the screen
+			-- rotates or the window is resized.
+			local camera = workspace.CurrentCamera
+			local function layout()
+				local isMobile = camera.ViewportSize.X < 600
+				local sideMargin = isMobile and 10 or 30
+				return UDim2.new(1, -sideMargin, 1, -sideMargin), UDim2.new(0, isMobile and 280 or 340, 1, -sideMargin)
+			end
+			local position, size = layout()
 
 			Notification.Holder =
 				New(
 					"Frame",
 					{
-						Position = UDim2.new(1, -sideMargin, 1, -sideMargin),
-						Size = UDim2.new(0, notifWidth, 1, -sideMargin),
+						Position = position,
+						Size = size,
 						AnchorPoint = Vector2.new(1, 1),
 						BackgroundTransparency = 1,
 						Parent = gui
@@ -5868,6 +5875,9 @@ local moduleFunctions = {
 						)
 					}
 				)
+			Creator.AddSignal(camera:GetPropertyChangedSignal("ViewportSize"), function()
+				Notification.Holder.Position, Notification.Holder.Size = layout()
+			end)
 		end
 
 		function Notification.New(_self, config)
@@ -8658,6 +8668,7 @@ local moduleFunctions = {
 						searchBoxStroke
 					}
 				)
+			TranslationSystem:Register(searchBox, "🔍 Search...", "PlaceholderText")
 
 			-- Clear Button (X)
 			local clearButton =
