@@ -97,6 +97,42 @@ return function(t)
 		t.equal(#world.errors, 0, "engine errors")
 	end)
 
+	t.test("P6 switching language with the default font profile writes only Text", function()
+		local context = Boot.new()
+		local world = context.world
+		local Library = context.Library
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		for index = 1, 10 do
+			tab:AddToggle("L" .. index, { Title = "Auto farm " .. index, Description = "Farms automatically" })
+		end
+		tab:AddToggle("Farm", { Title = "Auto farm" })
+		task.wait(0.4)
+		world:settle(2)
+		Library.RemoteAssets:ImportLanguage(
+			'{"meta":{"locale":"th","id":"test-th","name":"Test TH"},"translations":{"Auto farm":"ฟาร์มอัตโนมัติ"}}'
+		)
+		Library.I18n:SetMode("community")
+		-- Measured around the call only: the splash screen animates meanwhile.
+		-- Community packs are applied synchronously.
+		local before = table.clone(world.counters.writesByProperty)
+		Library.I18n:SetLanguage("th")
+		local written = {}
+		for property, count in world.counters.writesByProperty do
+			if count ~= (before[property] or 0) then
+				table.insert(written, property)
+			end
+		end
+		table.sort(written)
+		t.equal(table.concat(written, ","), "Text", "properties written by SetLanguage")
+		local translated = false
+		for _, label in Library.GUI:GetDescendants() do
+			translated = translated or (label:IsA("TextLabel") and label.Text == "ฟาร์มอัตโนมัติ")
+		end
+		t.truthy(translated, "the pack translation was applied")
+		t.equal(#world.errors, 0, "engine errors")
+	end)
+
 	t.test("P4 closed dropdowns do not react to layout changes", function()
 		local context = Boot.new()
 		local world = context.world

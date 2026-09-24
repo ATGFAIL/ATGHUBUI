@@ -873,6 +873,8 @@ InstanceMT.__newindex = function(self, key, value)
 	end
 	value = coerceProperty(self, key, value, descriptor)
 	state.world.counters.propertyWrites += 1
+	local byProperty = state.world.counters.writesByProperty
+	byProperty[key] = (byProperty[key] or 0) + 1
 	local previous = state.props[key]
 	if previous == nil then
 		previous = defaultValue(state.class, key)
@@ -1009,6 +1011,8 @@ function Engine.new(options: WorldOptions?)
 		instancesDestroyed = 0,
 		connectionsCreated = 0,
 		connectionsActive = 0,
+		-- property name -> number of writes (Parent writes are not included)
+		writesByProperty = {},
 	}
 	self.allInstances = setmetatable({}, { __mode = "k" })
 	self.now = 0

@@ -584,11 +584,11 @@ do
         return aliases[normalized] or normalized
     end
 
+    -- Called for every instance the library creates, so it avoids pcall and
+    -- IsA. These three classes have no subclasses.
+    local TEXT_CLASSES = {TextLabel = true, TextButton = true, TextBox = true}
     local function isTextObject(object)
-        local ok, result = pcall(function()
-            return object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")
-        end)
-        return ok and result
+        return typeof(object) == "Instance" and TEXT_CLASSES[object.ClassName] == true
     end
 
     local nestedHttpRequest = type(http) == "table" and type(http.request) == "function" and http.request or nil
@@ -916,7 +916,7 @@ do
                 changed = true
             end
         end)
-        if changed then
+        if changed and FontManager:NeedsApply() then
             local fontEntry = FontManager.Registry[entry.Object]
             if fontEntry then
                 FontManager:ApplyObject(fontEntry)
@@ -1276,7 +1276,11 @@ do
             end
         end
         self:UpdateAllText()
-        FontManager:ApplyAll()
+        -- The font depends on the language only when a custom profile or
+        -- text tuning is active; otherwise every label keeps its own font.
+        if FontManager:NeedsApply() then
+            FontManager:ApplyAll()
+        end
     end
 
     function I18n:SetScope(scope, sourceLocale)
@@ -2341,14 +2345,8 @@ do
             local originalFace, originalTextSize, originalLineHeight, originalStrokeTransparency
             pcall(function()
                 originalFace = textObject.FontFace
-            end)
-            pcall(function()
                 originalTextSize = textObject.TextSize
-            end)
-            pcall(function()
                 originalLineHeight = textObject.LineHeight
-            end)
-            pcall(function()
                 originalStrokeTransparency = textObject.TextStrokeTransparency
             end)
             entry = {
@@ -2462,6 +2460,14 @@ do
         end
         self:ApplyTextStyle(entry)
         return false
+    end
+
+    -- True when fonts differ from each label's own font: a custom profile or
+    -- enabled text tuning. With neither, applying a font is a no-op.
+    function FontManager:NeedsApply()
+        local profile = self.Profiles[self.CurrentProfile] or self.Profiles.default
+        local customProfile = profile ~= nil and not profile.UseOriginal
+        return customProfile or (self.TextStyleConfig ~= nil and self.TextStyleConfig.Enabled == true)
     end
 
     function FontManager:ApplyAll()
