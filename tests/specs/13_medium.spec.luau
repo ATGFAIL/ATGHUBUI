@@ -359,4 +359,36 @@ return function(t)
 		world:releaseTextBox(false)
 		assertNoErrors(t, world)
 	end)
+	t.test("2.13 the RGB theme cycles its accent colors and stops when not needed", function()
+		local context = Boot.new()
+		local world = context.world
+		local Library = context.Library
+		local rgb = world.env.Color3.fromRGB
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		local toggle = tab:AddToggle("T", { Title = "T" })
+		local border = toggle.Frame:FindFirstChildOfClass("UIStroke")
+		t.truthy(border, "element border")
+		task.wait(0.4)
+		local idle = world:heartbeatConnections()
+		Library:SetTheme("RGB")
+		world:settle(0.5)
+		local first = border.Color
+		world:settle(1)
+		local second = border.Color
+		t.notEqual(first, rgb(255, 0, 255), "not the static magenta")
+		t.notEqual(first, second, "the color moves")
+		t.equal(world:heartbeatConnections(), idle + 1, "one loop while RGB is active")
+
+		window:Minimize()
+		local frozen = border.Color
+		world:settle(1)
+		t.equal(border.Color, frozen, "no updates while minimized")
+		window:Minimize()
+
+		Library:SetTheme("Dark")
+		t.equal(world:heartbeatConnections(), idle, "loop stopped by another theme")
+		t.equal(border.Color, rgb(35, 35, 35), "Dark border restored")
+		assertNoErrors(t, world)
+	end)
 end

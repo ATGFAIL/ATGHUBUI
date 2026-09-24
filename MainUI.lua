@@ -5142,6 +5142,7 @@ local moduleFunctions = {
 				Library.Window.AcrylicPaint.Model:Destroy()
 			end
 			Creator.Disconnect()
+			Creator.StopRainbow()
 			Library.GUI:Destroy()
 		end
 		function Library.ToggleAcrylic(_, enabled)
@@ -7778,13 +7779,92 @@ local moduleFunctions = {
 				connection:Disconnect()
 			end
 		end
+		-- RGB theme: while it is active, these keys (the accent and border
+		-- colors) cycle through the rainbow about ten times a second.
+		local RAINBOW_KEYS = {
+			Accent = true,
+			AcrylicBorder = true,
+			TitleBarLine = true,
+			ElementBorder = true,
+			InElementBorder = true,
+			DropdownBorder = true,
+			InputIndicator = true,
+			DialogHolderLine = true,
+			DialogButtonBorder = true,
+			DialogBorder = true,
+			DialogInputLine = true
+		}
+		-- Objects with at least one property bound to a rainbow key.
+		local rainbowTargets = {}
+		local rainbowColor = nil
+		local rainbowConnection = nil
+		local function usesRainbowKey(properties)
+			for _, themeKey in next, properties do
+				if RAINBOW_KEYS[themeKey] then
+					return true
+				end
+			end
+			return false
+		end
+		local function rainbowNow()
+			return Color3.fromHSV((os.clock() * 0.1) % 1, 0.85, 1)
+		end
+		local function stepRainbow()
+			rainbowColor = rainbowNow()
+			for object in next, rainbowTargets do
+				local data = Creator.Registry[object]
+				if data then
+					for property, themeKey in next, data.Properties do
+						if RAINBOW_KEYS[themeKey] then
+							object[property] = rainbowColor
+						end
+					end
+				end
+			end
+		end
+		local function stopRainbow()
+			if rainbowConnection then
+				rainbowConnection:Disconnect()
+				rainbowConnection = nil
+			end
+			rainbowColor = nil
+		end
+		local function startRainbow()
+			if rainbowConnection then
+				return
+			end
+			rainbowColor = rainbowNow()
+			local elapsed = 0
+			rainbowConnection = game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
+				elapsed = elapsed + deltaTime
+				if elapsed < 0.1 then
+					return
+				end
+				elapsed = 0
+				local library = requireModule(Root)
+				if library.Window and library.Window.Minimized then
+					return
+				end
+				stepRainbow()
+			end)
+		end
+		Creator.StopRainbow = stopRainbow
 		function Creator.GetThemeProperty(property)
+			if rainbowColor and RAINBOW_KEYS[property] then
+				return rainbowColor
+			end
 			if Themes[requireModule(Root).Theme][property] then
 				return Themes[requireModule(Root).Theme][property]
 			end
 			return Themes.Dark[property]
 		end
 		function Creator.UpdateTheme()
+			local theme = Themes[requireModule(Root).Theme]
+			if theme and theme.IsRGB then
+				startRainbow()
+			else
+				stopRainbow()
+			end
 			for object, data in next, Creator.Registry do
 				for property, themeKey in next, data.Properties do
 					object[property] = Creator.GetThemeProperty(themeKey)
@@ -7801,9 +7881,11 @@ local moduleFunctions = {
 				-- Forget destroyed objects so the registry does not keep them alive.
 				object.Destroying:Connect(function()
 					Creator.Registry[object] = nil
+					rainbowTargets[object] = nil
 				end)
 			end
 			Creator.Registry[object] = data
+			rainbowTargets[object] = usesRainbowKey(properties) or nil
 			for property, themeKey in next, properties do
 				object[property] = Creator.GetThemeProperty(themeKey)
 			end
@@ -7816,6 +7898,7 @@ local moduleFunctions = {
 			local data = Creator.Registry[object]
 			if data then
 				data.Properties = properties
+				rainbowTargets[object] = usesRainbowKey(properties) or nil
 				for property, themeKey in next, properties do
 					object[property] = Creator.GetThemeProperty(themeKey)
 				end
