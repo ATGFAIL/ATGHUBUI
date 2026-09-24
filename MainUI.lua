@@ -5104,141 +5104,141 @@ local moduleFunctions = {
 		return Library
 	end,
 	function()
-		local c, d, e, f, g = moduleContext(2)
-		local h = {AcrylicBlur = e(d.AcrylicBlur), CreateAcrylic = e(d.CreateAcrylic), AcrylicPaint = e(d.AcrylicPaint)}
-		function h.init()
-			local i = Instance.new "DepthOfFieldEffect"
-			i.FarIntensity = 0
-			i.InFocusRadius = 0.1
-			i.NearIntensity = 1
-			local j = {}
-			function h.Enable()
-				for k, l in pairs(j) do
-					l.Enabled = false
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(2)
+		local Acrylic = {AcrylicBlur = requireModule(moduleScript.AcrylicBlur), CreateAcrylic = requireModule(moduleScript.CreateAcrylic), AcrylicPaint = requireModule(moduleScript.AcrylicPaint)}
+		function Acrylic.init()
+			local baseEffect = Instance.new "DepthOfFieldEffect"
+			baseEffect.FarIntensity = 0
+			baseEffect.InFocusRadius = 0.1
+			baseEffect.NearIntensity = 1
+			local depthOfFieldDefaults = {}
+			function Acrylic.Enable()
+				for _, effect in pairs(depthOfFieldDefaults) do
+					effect.Enabled = false
 				end
-				i.Parent = game:GetService "Lighting"
+				baseEffect.Parent = game:GetService "Lighting"
 			end
-			function h.Disable()
-				for k, l in pairs(j) do
-					l.Enabled = l.enabled
+			function Acrylic.Disable()
+				for _, effect in pairs(depthOfFieldDefaults) do
+					effect.Enabled = effect.enabled
 				end
-				i.Parent = nil
+				baseEffect.Parent = nil
 			end
-			local k = function()
-				local k = function(k)
-					if k:IsA "DepthOfFieldEffect" then
-						j[k] = {enabled = k.Enabled}
+			local registerDefaults = function()
+				local register = function(object)
+					if object:IsA "DepthOfFieldEffect" then
+						depthOfFieldDefaults[object] = {enabled = object.Enabled}
 					end
 				end
-				for l, m in pairs(game:GetService "Lighting":GetChildren()) do
-					k(m)
+				for _, child in pairs(game:GetService "Lighting":GetChildren()) do
+					register(child)
 				end
 				if game:GetService "Workspace".CurrentCamera then
-					for n, o in pairs(game:GetService "Workspace".CurrentCamera:GetChildren()) do
-						k(o)
+					for _, child in pairs(game:GetService "Workspace".CurrentCamera:GetChildren()) do
+						register(child)
 					end
 				end
 			end
-			k()
-			h.Enable()
+			registerDefaults()
+			Acrylic.Enable()
 		end
-		return h
+		return Acrylic
 	end,
 	function()
-		local c, d, e, f, g = moduleContext(3)
-		local h, i, j, k = e(d.Parent.Parent.Creator), e(d.Parent.CreateAcrylic), unpack(e(d.Parent.Utils))
-		local l = function(l)
-			local m = {}
-			l = l or 0.001
-			local n, o = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}, i()
-			o.Parent = workspace
-			local p, q = function(p, q)
-				n.topLeft = q
-				n.topRight = q + Vector2.new(p.X, 0)
-				n.bottomRight = q + p
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(3)
+		local Creator, createAcrylic, viewportPointToWorld, getOffset = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.CreateAcrylic), unpack(requireModule(moduleScript.Parent.Utils))
+		local createAcrylicBlur = function(distance)
+			local cleanups = {}
+			distance = distance or 0.001
+			local positions, model = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}, createAcrylic()
+			model.Parent = workspace
+			local updatePositions, render = function(size, position)
+				positions.topLeft = position
+				positions.topRight = position + Vector2.new(size.X, 0)
+				positions.bottomRight = position + size
 			end, function()
-				local p = game:GetService "Workspace".CurrentCamera
-				if p then
-					p = p.CFrame
+				local cameraCFrame = game:GetService "Workspace".CurrentCamera
+				if cameraCFrame then
+					cameraCFrame = cameraCFrame.CFrame
 				end
-				local q = p
-				if not q then
-					q = CFrame.new()
+				local resolvedCFrame = cameraCFrame
+				if not resolvedCFrame then
+					resolvedCFrame = CFrame.new()
 				end
-				local r, s, t, u = q, n.topLeft, n.topRight, n.bottomRight
-				local v, w, x = j(s, l), j(t, l), j(u, l)
-				local y, z = (w - v).Magnitude, (w - x).Magnitude
-				o.CFrame = CFrame.fromMatrix((v + x) / 2, r.XVector, r.YVector, r.ZVector)
-				o.Mesh.Scale = Vector3.new(y, z, 0)
+				local viewCFrame, topLeft, topRight, bottomRight = resolvedCFrame, positions.topLeft, positions.topRight, positions.bottomRight
+				local topLeft3D, topRight3D, bottomRight3D = viewportPointToWorld(topLeft, distance), viewportPointToWorld(topRight, distance), viewportPointToWorld(bottomRight, distance)
+				local width, height = (topRight3D - topLeft3D).Magnitude, (topRight3D - bottomRight3D).Magnitude
+				model.CFrame = CFrame.fromMatrix((topLeft3D + bottomRight3D) / 2, viewCFrame.XVector, viewCFrame.YVector, viewCFrame.ZVector)
+				model.Mesh.Scale = Vector3.new(width, height, 0)
 			end
-			local r, s = function(r)
-				local s = k()
-				local t, u = r.AbsoluteSize - Vector2.new(s, s), r.AbsolutePosition + Vector2.new(s / 2, s / 2)
-				p(t, u)
-				task.spawn(q)
+			local onChange, renderOnChange = function(frame)
+				local offset = getOffset()
+				local size, position = frame.AbsoluteSize - Vector2.new(offset, offset), frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
+				updatePositions(size, position)
+				task.spawn(render)
 			end, function()
-				local r = game:GetService "Workspace".CurrentCamera
-				if not r then
+				local camera = game:GetService "Workspace".CurrentCamera
+				if not camera then
 					return
 				end
-				table.insert(m, r:GetPropertyChangedSignal "CFrame":Connect(q))
-				table.insert(m, r:GetPropertyChangedSignal "ViewportSize":Connect(q))
-				table.insert(m, r:GetPropertyChangedSignal "FieldOfView":Connect(q))
-				task.spawn(q)
+				table.insert(cleanups, camera:GetPropertyChangedSignal "CFrame":Connect(render))
+				table.insert(cleanups, camera:GetPropertyChangedSignal "ViewportSize":Connect(render))
+				table.insert(cleanups, camera:GetPropertyChangedSignal "FieldOfView":Connect(render))
+				task.spawn(render)
 			end
-			o.Destroying:Connect(
+			model.Destroying:Connect(
 				function()
-					for t, u in m do
+					for _, connection in cleanups do
 						pcall(
 							function()
-								u:Disconnect()
+								connection:Disconnect()
 							end
 						)
 					end
 				end
 			)
-			s()
-			return r, o
+			renderOnChange()
+			return onChange, model
 		end
-		return function(m)
-			local n, o, p = {}, l(m)
-			local q = h.New("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
-			h.AddSignal(
-				q:GetPropertyChangedSignal "AbsolutePosition",
+		return function(distance)
+			local Blur, onChange, model = {}, createAcrylicBlur(distance)
+			local frame = Creator.New("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
+			Creator.AddSignal(
+				frame:GetPropertyChangedSignal "AbsolutePosition",
 				function()
-					o(q)
+					onChange(frame)
 				end
 			)
-			h.AddSignal(
-				q:GetPropertyChangedSignal "AbsoluteSize",
+			Creator.AddSignal(
+				frame:GetPropertyChangedSignal "AbsoluteSize",
 				function()
-					o(q)
+					onChange(frame)
 				end
 			)
-			n.AddParent = function(r)
-				h.AddSignal(
-					r:GetPropertyChangedSignal "Visible",
+			Blur.AddParent = function(parentFrame)
+				Creator.AddSignal(
+					parentFrame:GetPropertyChangedSignal "Visible",
 					function()
-						n.SetVisibility(r.Visible)
+						Blur.SetVisibility(parentFrame.Visible)
 					end
 				)
 			end
-			n.SetVisibility = function(r)
-				p.Transparency = r and 0.98 or 1
+			Blur.SetVisibility = function(visible)
+				model.Transparency = visible and 0.98 or 1
 			end
-			n.Frame = q
-			n.Model = p
-			return n
+			Blur.Frame = frame
+			Blur.Model = model
+			return Blur
 		end
 	end,
 	function()
-		local c, d, e, f, g = moduleContext(4)
-		local h, i = e(d.Parent.Parent.Creator), e(d.Parent.AcrylicBlur)
-		local j = h.New
-		return function(k)
-			local l = {}
-			l.Frame =
-				j(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(4)
+		local Creator, AcrylicBlur = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.AcrylicBlur)
+		local New = Creator.New
+		return function(_props)
+			local Paint = {}
+			Paint.Frame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromScale(1, 1),
@@ -5247,7 +5247,7 @@ local moduleFunctions = {
 						BorderSizePixel = 0
 					},
 					{
-						j(
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://8992230677",
@@ -5261,8 +5261,8 @@ local moduleFunctions = {
 								ImageTransparency = 0.7
 							}
 						),
-						j("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						j(
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New(
 							"Frame",
 							{
 								BackgroundTransparency = 0.45,
@@ -5270,9 +5270,9 @@ local moduleFunctions = {
 								Name = "Background",
 								ThemeTag = {BackgroundColor3 = "AcrylicMain"}
 							},
-							{j("UICorner", {CornerRadius = UDim.new(0, 8)})}
+							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 						),
-						j(
+						New(
 							"Frame",
 							{
 								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -5280,11 +5280,11 @@ local moduleFunctions = {
 								Size = UDim2.fromScale(1, 1)
 							},
 							{
-								j("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								j("UIGradient", {Rotation = 90, ThemeTag = {Color = "AcrylicGradient"}})
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								New("UIGradient", {Rotation = 90, ThemeTag = {Color = "AcrylicGradient"}})
 							}
 						),
-						j(
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://9968344105",
@@ -5294,9 +5294,9 @@ local moduleFunctions = {
 								Size = UDim2.fromScale(1, 1),
 								BackgroundTransparency = 1
 							},
-							{j("UICorner", {CornerRadius = UDim.new(0, 8)})}
+							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 						),
-						j(
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://9968344227",
@@ -5307,36 +5307,36 @@ local moduleFunctions = {
 								BackgroundTransparency = 1,
 								ThemeTag = {ImageTransparency = "AcrylicNoise"}
 							},
-							{j("UICorner", {CornerRadius = UDim.new(0, 8)})}
+							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 						),
-						j(
+						New(
 							"Frame",
 							{BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2},
 							{
-								j("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								j("UIStroke", {Transparency = 0.5, Thickness = 1, ThemeTag = {Color = "AcrylicBorder"}})
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								New("UIStroke", {Transparency = 0.5, Thickness = 1, ThemeTag = {Color = "AcrylicBorder"}})
 							}
 						)
 					}
 				)
-			local m
-			if e(d.Parent.Parent).UseAcrylic then
-				m = i()
-				m.Frame.Parent = l.Frame
-				l.Model = m.Model
-				l.AddParent = m.AddParent
-				l.SetVisibility = m.SetVisibility
+			local blur
+			if requireModule(moduleScript.Parent.Parent).UseAcrylic then
+				blur = AcrylicBlur()
+				blur.Frame.Parent = Paint.Frame
+				Paint.Model = blur.Model
+				Paint.AddParent = blur.AddParent
+				Paint.SetVisibility = blur.SetVisibility
 			end
-			return l
+			return Paint
 		end
 	end,
 	function()
-		local c, d, e, f, g = moduleContext(5)
-		local h = d.Parent.Parent
-		local i = e(h.Creator)
-		local j = function()
-			local j =
-				i.New(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(5)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local createAcrylic = function()
+			local part =
+				Creator.New(
 					"Part",
 					{
 						Name = "Body",
@@ -5349,25 +5349,25 @@ local moduleFunctions = {
 						CastShadow = false,
 						Transparency = 0.98
 					},
-					{i.New("SpecialMesh", {MeshType = Enum.MeshType.Brick, Offset = Vector3.new(0, 0, -1E-6)})}
+					{Creator.New("SpecialMesh", {MeshType = Enum.MeshType.Brick, Offset = Vector3.new(0, 0, -1E-6)})}
 				)
-			return j
+			return part
 		end
-		return j
+		return createAcrylic
 	end,
 	function()
-		local c, d, e, f, g = moduleContext(6)
-		local h, i = function(h, i, j, k, l)
-			return (h - i) * (l - k) / (j - i) + k
-		end, function(h, i)
-			local j = game:GetService "Workspace".CurrentCamera:ScreenPointToRay(h.X, h.Y)
-			return j.Origin + j.Direction * i
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(6)
+		local map, viewportPointToWorld = function(value, inMin, inMax, outMin, outMax)
+			return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
+		end, function(location, distance)
+			local ray = game:GetService "Workspace".CurrentCamera:ScreenPointToRay(location.X, location.Y)
+			return ray.Origin + ray.Direction * distance
 		end
-		local j = function()
-			local j = game:GetService "Workspace".CurrentCamera.ViewportSize.Y
-			return h(j, 0, 2560, 8, 56)
+		local getOffset = function()
+			local viewportHeight = game:GetService "Workspace".CurrentCamera.ViewportSize.Y
+			return map(viewportHeight, 0, 2560, 8, 56)
 		end
-		return {i, j}
+		return {viewportPointToWorld, getOffset}
 	end,
 	[8] = function()
 		local c, d, e, f, g = moduleContext(8)
@@ -7611,11 +7611,11 @@ local moduleFunctions = {
 		end
 	end,
 	[18] = function()
-		local c, d, e, f, g = moduleContext(18)
-		local h = d.Parent
-		local i, j, k =
-			e(h.Themes),
-		e(h.Packages.Flipper),
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(18)
+		local Root = moduleScript.Parent
+		local Themes, Flipper, Creator =
+			requireModule(Root.Themes),
+		requireModule(Root.Packages.Flipper),
 		{
 			Registry = {},
 			Signals = {},
@@ -7677,101 +7677,101 @@ local moduleFunctions = {
 				}
 			}
 		}
-		local l = function(l, m)
-			if m.ThemeTag then
-				k.AddThemeObject(l, m.ThemeTag)
+		local applyCustomProps = function(object, props)
+			if props.ThemeTag then
+				Creator.AddThemeObject(object, props.ThemeTag)
 			end
 		end
-		function k.AddSignal(m, n)
-			table.insert(k.Signals, m:Connect(n))
+		function Creator.AddSignal(signal, callback)
+			table.insert(Creator.Signals, signal:Connect(callback))
 		end
-		function k.Disconnect()
-			for m = #k.Signals, 1, -1 do
-				local n = table.remove(k.Signals, m)
-				n:Disconnect()
+		function Creator.Disconnect()
+			for index = #Creator.Signals, 1, -1 do
+				local connection = table.remove(Creator.Signals, index)
+				connection:Disconnect()
 			end
 		end
-		function k.GetThemeProperty(m)
-			if i[e(h).Theme][m] then
-				return i[e(h).Theme][m]
+		function Creator.GetThemeProperty(property)
+			if Themes[requireModule(Root).Theme][property] then
+				return Themes[requireModule(Root).Theme][property]
 			end
-			return i.Dark[m]
+			return Themes.Dark[property]
 		end
-		function k.UpdateTheme()
-			for m, n in next, k.Registry do
-				for o, p in next, n.Properties do
-					m[o] = k.GetThemeProperty(p)
+		function Creator.UpdateTheme()
+			for object, data in next, Creator.Registry do
+				for property, themeKey in next, data.Properties do
+					object[property] = Creator.GetThemeProperty(themeKey)
 				end
 			end
-			for o, p in next, k.TransparencyMotors do
-				p:setGoal(j.Instant.new(k.GetThemeProperty "ElementTransparency"))
+			for _, motor in next, Creator.TransparencyMotors do
+				motor:setGoal(Flipper.Instant.new(Creator.GetThemeProperty "ElementTransparency"))
 			end
 		end
-		function k.AddThemeObject(m, n)
-			local o = #k.Registry + 1
-			local p = {Object = m, Properties = n, Idx = o}
-			k.Registry[m] = p
-			for q, r in next, n do
-				m[q] = k.GetThemeProperty(r)
+		function Creator.AddThemeObject(object, properties)
+			local idx = #Creator.Registry + 1
+			local data = {Object = object, Properties = properties, Idx = idx}
+			Creator.Registry[object] = data
+			for property, themeKey in next, properties do
+				object[property] = Creator.GetThemeProperty(themeKey)
 			end
-			return m
+			return object
 		end
-		function k.OverrideTag(m, n)
-			if k.Registry[m] then
-				k.Registry[m].Properties = n
+		function Creator.OverrideTag(object, properties)
+			if Creator.Registry[object] then
+				Creator.Registry[object].Properties = properties
 			else
-				k.AddThemeObject(m, n)
+				Creator.AddThemeObject(object, properties)
 			end
-			k.UpdateTheme()
+			Creator.UpdateTheme()
 		end
-		function k.New(m, n, o)
-			local p = Instance.new(m)
-			for q, r in next, k.DefaultProperties[m] or {} do
-				p[q] = r
+		function Creator.New(className, properties, children)
+			local object = Instance.new(className)
+			for name, value in next, Creator.DefaultProperties[className] or {} do
+				object[name] = value
 			end
-			for s, t in next, n or {} do
+			for name, value in next, properties or {} do
 				-- These are creation metadata for the customization layer, not
 				-- Roblox Instance properties.
-				if s ~= "ThemeTag" and s ~= "I18nKey" and s ~= "I18nContext" and s ~= "I18nSkip"
-					and s ~= "FontRole" then
-					p[s] = t
+				if name ~= "ThemeTag" and name ~= "I18nKey" and name ~= "I18nContext" and name ~= "I18nSkip"
+					and name ~= "FontRole" then
+					object[name] = value
 				end
 			end
-			for u, v in next, o or {} do
-				v.Parent = p
+			for _, child in next, children or {} do
+				child.Parent = object
 			end
-			l(p, n)
+			applyCustomProps(object, properties)
 			-- Registers only once at creation, then updates only on a real
 			-- language/font change. This avoids expensive descendant scans.
-			CustomizationSystem.I18n:AutoRegister(p, n)
-			return p
+			CustomizationSystem.I18n:AutoRegister(object, properties)
+			return object
 		end
-		function k.SpringMotor(m, n, o, p, s)
-			p = p or false
-			s = s or false
-			local t = j.SingleMotor.new(m)
-			t:onStep(
-				function(u)
-					n[o] = u
+		function Creator.SpringMotor(initial, instance, property, ignoreDialogCheck, resetOnThemeChange)
+			ignoreDialogCheck = ignoreDialogCheck or false
+			resetOnThemeChange = resetOnThemeChange or false
+			local motor = Flipper.SingleMotor.new(initial)
+			motor:onStep(
+				function(value)
+					instance[property] = value
 				end
 			)
-			if s then
-				table.insert(k.TransparencyMotors, t)
+			if resetOnThemeChange then
+				table.insert(Creator.TransparencyMotors, motor)
 			end
-			local u = function(u, v)
-				v = v or false
-				if not p then
-					if not v then
-						if o == "BackgroundTransparency" and e(h).DialogOpen then
+			local setValue = function(value, ignore)
+				ignore = ignore or false
+				if not ignoreDialogCheck then
+					if not ignore then
+						if property == "BackgroundTransparency" and requireModule(Root).DialogOpen then
 							return
 						end
 					end
 				end
-				t:setGoal(j.Spring.new(u, {frequency = 8}))
+				motor:setGoal(Flipper.Spring.new(value, {frequency = 8}))
 			end
-			return t, u
+			return motor, setValue
 		end
-		return k
+		return Creator
 	end,
 	[19] = function()
 		local c, d, e, f, g = moduleContext(19)
