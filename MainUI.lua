@@ -5370,7 +5370,7 @@ local moduleFunctions = {
 		return {viewportPointToWorld, getOffset}
 	end,
 	[8] = function()
-		local c, d, e, f, g = moduleContext(8)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(8)
 		return {
 			Close = "rbxassetid://9886659671",
 			Min = "rbxassetid://9886659276",
@@ -5379,15 +5379,15 @@ local moduleFunctions = {
 		}
 	end,
 	[9] = function()
-		local c, d, e, f, g = moduleContext(9)
-		local h = d.Parent.Parent
-		local i, j = e(h.Packages.Flipper), e(h.Creator)
-		local k, l = j.New, i.Spring.new
-		return function(m, n, o)
-			o = o or false
-			local p = {}
-			p.Title =
-				k(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(9)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New, Spring = Creator.New, Flipper.Spring.new
+		return function(_theme, parent, dialogCheck)
+			dialogCheck = dialogCheck or false
+			local Button = {}
+			Button.Title =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
@@ -5403,19 +5403,19 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			p.HoverFrame =
-				k(
+			Button.HoverFrame =
+				New(
 					"Frame",
 					{Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ThemeTag = {BackgroundColor3 = "Hover"}},
-					{k("UICorner", {CornerRadius = UDim.new(0, 8)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 				)
-			p.Frame =
-				k(
+			Button.Frame =
+				New(
 					"TextButton",
-					{Size = UDim2.new(0, 0, 0, 32), Parent = n, ThemeTag = {BackgroundColor3 = "DialogButton"}},
+					{Size = UDim2.new(0, 0, 0, 32), Parent = parent, ThemeTag = {BackgroundColor3 = "DialogButton"}},
 					{
-						k("UICorner", {CornerRadius = UDim.new(0, 4)}),
-						k(
+						New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+						New(
 							"UIStroke",
 							{
 								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -5423,68 +5423,68 @@ local moduleFunctions = {
 								ThemeTag = {Color = "DialogButtonBorder"}
 							}
 						),
-						p.HoverFrame,
-						p.Title
+						Button.HoverFrame,
+						Button.Title
 					}
 				)
-			local q, r = j.SpringMotor(1, p.HoverFrame, "BackgroundTransparency", o)
-			j.AddSignal(
-				p.Frame.MouseEnter,
+			local motor, setTransparency = Creator.SpringMotor(1, Button.HoverFrame, "BackgroundTransparency", dialogCheck)
+			Creator.AddSignal(
+				Button.Frame.MouseEnter,
 				function()
-					r(0.97)
+					setTransparency(0.97)
 				end
 			)
-			j.AddSignal(
-				p.Frame.MouseLeave,
+			Creator.AddSignal(
+				Button.Frame.MouseLeave,
 				function()
-					r(1)
+					setTransparency(1)
 				end
 			)
-			j.AddSignal(
-				p.Frame.MouseButton1Down,
+			Creator.AddSignal(
+				Button.Frame.MouseButton1Down,
 				function()
-					r(1)
+					setTransparency(1)
 				end
 			)
-			j.AddSignal(
-				p.Frame.MouseButton1Up,
+			Creator.AddSignal(
+				Button.Frame.MouseButton1Up,
 				function()
-					r(0.97)
+					setTransparency(0.97)
 				end
 			)
-			return p
+			return Button
 		end
 	end,
 	[10] = function()
-		local c, d, e, f, g = moduleContext(10)
-		local h, i, j, k =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(10)
+		local UserInputService, mouse, camera, Root =
 			game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
 		game:GetService "Workspace".CurrentCamera,
-		d.Parent.Parent
-		local l, m = e(k.Packages.Flipper), e(k.Creator)
-		local n, o, p, q = l.Spring.new, l.Instant.new, m.New, {Window = nil}
-		function q.Init(r, s)
-			q.Window = s
-			return q
+		moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local Spring, Instant, New, Dialog = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {Window = nil}
+		function Dialog.Init(_self, window)
+			Dialog.Window = window
+			return Dialog
 		end
-		function q.Create(r)
-			local s = {Buttons = 0}
-			s.TintFrame =
-				p(
+		function Dialog.Create(_self)
+			local NewDialog = {Buttons = 0}
+			NewDialog.TintFrame =
+				New(
 					"TextButton",
 					{
 						Text = "",
 						Size = UDim2.fromScale(1, 1),
 						BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 						BackgroundTransparency = 1,
-						Parent = q.Window.Root
+						Parent = Dialog.Window.Root
 					},
-					{p("UICorner", {CornerRadius = UDim.new(0, 8)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 				)
-			local t, u = m.SpringMotor(1, s.TintFrame, "BackgroundTransparency", true)
-			s.ButtonHolder =
-				p(
+			local tintMotor, setTintTransparency = Creator.SpringMotor(1, NewDialog.TintFrame, "BackgroundTransparency", true)
+			NewDialog.ButtonHolder =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, -40, 1, -40),
@@ -5493,7 +5493,7 @@ local moduleFunctions = {
 						BackgroundTransparency = 1
 					},
 					{
-						p(
+						New(
 							"UIListLayout",
 							{
 								Padding = UDim.new(0, 10),
@@ -5504,8 +5504,8 @@ local moduleFunctions = {
 						)
 					}
 				)
-			s.ButtonHolderFrame =
-				p(
+			NewDialog.ButtonHolderFrame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 0, 70),
@@ -5513,12 +5513,12 @@ local moduleFunctions = {
 						ThemeTag = {BackgroundColor3 = "DialogHolder"}
 					},
 					{
-						p("Frame", {Size = UDim2.new(1, 0, 0, 1), ThemeTag = {BackgroundColor3 = "DialogHolderLine"}}),
-						s.ButtonHolder
+						New("Frame", {Size = UDim2.new(1, 0, 0, 1), ThemeTag = {BackgroundColor3 = "DialogHolderLine"}}),
+						NewDialog.ButtonHolder
 					}
 				)
-			s.Title =
-				p(
+			NewDialog.Title =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -5537,82 +5537,82 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			s.Scale = p("UIScale", {Scale = 1})
-			local v, w = m.SpringMotor(1.1, s.Scale, "Scale")
-			s.Root =
-				p(
+			NewDialog.Scale = New("UIScale", {Scale = 1})
+			local scaleMotor, setScale = Creator.SpringMotor(1.1, NewDialog.Scale, "Scale")
+			NewDialog.Root =
+				New(
 					"CanvasGroup",
 					{
 						Size = UDim2.fromOffset(300, 165),
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.fromScale(0.5, 0.5),
 						GroupTransparency = 1,
-						Parent = s.TintFrame,
+						Parent = NewDialog.TintFrame,
 						ThemeTag = {BackgroundColor3 = "Dialog"}
 					},
 					{
-						p("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						p("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "DialogBorder"}}),
-						s.Scale,
-						s.Title,
-						s.ButtonHolderFrame
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "DialogBorder"}}),
+						NewDialog.Scale,
+						NewDialog.Title,
+						NewDialog.ButtonHolderFrame
 					}
 				)
-			local x, y = m.SpringMotor(1, s.Root, "GroupTransparency")
-			function s.Open(z)
-				e(k).DialogOpen = true
-				s.Scale.Scale = 1.1
-				u(0.75)
-				y(0)
-				w(1)
+			local rootMotor, setRootTransparency = Creator.SpringMotor(1, NewDialog.Root, "GroupTransparency")
+			function NewDialog.Open(_self)
+				requireModule(Root).DialogOpen = true
+				NewDialog.Scale.Scale = 1.1
+				setTintTransparency(0.75)
+				setRootTransparency(0)
+				setScale(1)
 			end
-			function s.Close(z)
-				e(k).DialogOpen = false
-				u(1)
-				y(1)
-				w(1.1)
-				s.Root.UIStroke:Destroy()
+			function NewDialog.Close(_self)
+				requireModule(Root).DialogOpen = false
+				setTintTransparency(1)
+				setRootTransparency(1)
+				setScale(1.1)
+				NewDialog.Root.UIStroke:Destroy()
 				task.wait(0.15)
-				s.TintFrame:Destroy()
+				NewDialog.TintFrame:Destroy()
 			end
-			function s.Button(z, A, B)
-				s.Buttons = s.Buttons + 1
-				A = A or "Button"
-				B = B or function()
+			function NewDialog.Button(_self, title, callback)
+				NewDialog.Buttons = NewDialog.Buttons + 1
+				title = title or "Button"
+				callback = callback or function()
 				end
-				local C = e(k.Components.Button)("", s.ButtonHolder, true)
-				C.Title.Text = A
-				for D, E in next, s.ButtonHolder:GetChildren() do
-					if E:IsA "TextButton" then
-						E.Size = UDim2.new(1 / s.Buttons, -(((s.Buttons - 1) * 10) / s.Buttons), 0, 32)
+				local button = requireModule(Root.Components.Button)("", NewDialog.ButtonHolder, true)
+				button.Title.Text = title
+				for _, child in next, NewDialog.ButtonHolder:GetChildren() do
+					if child:IsA "TextButton" then
+						child.Size = UDim2.new(1 / NewDialog.Buttons, -(((NewDialog.Buttons - 1) * 10) / NewDialog.Buttons), 0, 32)
 					end
 				end
-				m.AddSignal(
-					C.Frame.MouseButton1Click,
+				Creator.AddSignal(
+					button.Frame.MouseButton1Click,
 					function()
-						e(k):SafeCallback(B)
+						requireModule(Root):SafeCallback(callback)
 						pcall(
 							function()
-								s:Close()
+								NewDialog:Close()
 							end
 						)
 					end
 				)
-				return C
+				return button
 			end
-			return s
+			return NewDialog
 		end
-		return q
+		return Dialog
 	end,
 	[11] = function()
-		local c, d, e, f, g = moduleContext(11)
-		local h = d.Parent.Parent
-		local i, j = e(h.Packages.Flipper), e(h.Creator)
-		local k, l = j.New, i.Spring.new
-		return function(m, n, o, p)
-			local q = {}
-			q.TitleLabel =
-				k(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(11)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New, Spring = Creator.New, Flipper.Spring.new
+		return function(title, desc, parent, hover)
+			local Element = {}
+			Element.TitleLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -5620,7 +5620,7 @@ local moduleFunctions = {
 							Enum.FontWeight.Medium,
 							Enum.FontStyle.Normal
 						),
-						Text = m,
+						Text = title,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
 						TextWrapped = true,
@@ -5632,12 +5632,12 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			q.DescLabel =
-				k(
+			Element.DescLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-						Text = n,
+						Text = desc,
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
 						TextWrapped = true,
@@ -5649,8 +5649,8 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "SubText"}
 					}
 				)
-			q.LabelHolder =
-				k(
+			Element.LabelHolder =
+				New(
 					"Frame",
 					{
 						AutomaticSize = Enum.AutomaticSize.Y,
@@ -5660,17 +5660,17 @@ local moduleFunctions = {
 						Size = UDim2.new(1, -28, 0, 0)
 					},
 					{
-						k(
+						New(
 							"UIListLayout",
 							{SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center}
 						),
-						k("UIPadding", {PaddingBottom = UDim.new(0, 13), PaddingTop = UDim.new(0, 13)}),
-						q.TitleLabel,
-						q.DescLabel
+						New("UIPadding", {PaddingBottom = UDim.new(0, 13), PaddingTop = UDim.new(0, 13)}),
+						Element.TitleLabel,
+						Element.DescLabel
 					}
 				)
-			q.Border =
-				k(
+			Element.Border =
+				New(
 					"UIStroke",
 					{
 						Transparency = 0.5,
@@ -5679,109 +5679,109 @@ local moduleFunctions = {
 						ThemeTag = {Color = "ElementBorder"}
 					}
 				)
-			q.Frame =
-				k(
+			Element.Frame =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.new(1, 0, 0, 0),
 						BackgroundTransparency = 0.89,
 						BackgroundColor3 = Color3.fromRGB(130, 130, 130),
-						Parent = o,
+						Parent = parent,
 						AutomaticSize = Enum.AutomaticSize.Y,
 						Text = "",
 						LayoutOrder = 7,
 						ThemeTag = {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"}
 					},
-					{k("UICorner", {CornerRadius = UDim.new(0, 4)}), q.Border, q.LabelHolder}
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), Element.Border, Element.LabelHolder}
 				)
-			function q.SetTitle(r, s)
-				q.TitleLabel.Text = s
+			function Element.SetTitle(_self, text)
+				Element.TitleLabel.Text = text
 				-- Register with Translation System
-				TranslationSystem:Register(q.TitleLabel, s, "Text")
+				TranslationSystem:Register(Element.TitleLabel, text, "Text")
 			end
-			function q.SetDesc(r, s)
-				if s == nil then
-					s = ""
+			function Element.SetDesc(_self, text)
+				if text == nil then
+					text = ""
 				end
-				if s == "" then
-					q.DescLabel.Visible = false
+				if text == "" then
+					Element.DescLabel.Visible = false
 				else
-					q.DescLabel.Visible = true
+					Element.DescLabel.Visible = true
 				end
-				q.DescLabel.Text = s
+				Element.DescLabel.Text = text
 				-- Register with Translation System
-				if s ~= "" then
-					TranslationSystem:Register(q.DescLabel, s, "Text")
+				if text ~= "" then
+					TranslationSystem:Register(Element.DescLabel, text, "Text")
 				end
 			end
-			function q.Destroy(r)
-				q.Frame:Destroy()
+			function Element.Destroy(_self)
+				Element.Frame:Destroy()
 			end
-			q:SetTitle(m)
-			q:SetDesc(n)
-			if p then
-				local r, s, t =
-					h.Themes,
-				j.SpringMotor(
-					j.GetThemeProperty "ElementTransparency",
-					q.Frame,
+			Element:SetTitle(title)
+			Element:SetDesc(desc)
+			if hover then
+				local _themes, motor, setTransparency =
+					Root.Themes,
+				Creator.SpringMotor(
+					Creator.GetThemeProperty "ElementTransparency",
+					Element.Frame,
 					"BackgroundTransparency",
 					false,
 					true
 				)
-				j.AddSignal(
-					q.Frame.MouseEnter,
+				Creator.AddSignal(
+					Element.Frame.MouseEnter,
 					function()
-						t(j.GetThemeProperty "ElementTransparency" - j.GetThemeProperty "HoverChange")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency" - Creator.GetThemeProperty "HoverChange")
 					end
 				)
-				j.AddSignal(
-					q.Frame.MouseLeave,
+				Creator.AddSignal(
+					Element.Frame.MouseLeave,
 					function()
-						t(j.GetThemeProperty "ElementTransparency")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency")
 					end
 				)
-				j.AddSignal(
-					q.Frame.MouseButton1Down,
+				Creator.AddSignal(
+					Element.Frame.MouseButton1Down,
 					function()
-						t(j.GetThemeProperty "ElementTransparency" + j.GetThemeProperty "HoverChange")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency" + Creator.GetThemeProperty "HoverChange")
 					end
 				)
-				j.AddSignal(
-					q.Frame.MouseButton1Up,
+				Creator.AddSignal(
+					Element.Frame.MouseButton1Up,
 					function()
-						t(j.GetThemeProperty "ElementTransparency" - j.GetThemeProperty "HoverChange")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency" - Creator.GetThemeProperty "HoverChange")
 					end
 				)
 			end
-			return q
+			return Element
 		end
 	end,
 	[12] = function()
-		local c, d, e, f, g = moduleContext(12)
-		local h = d.Parent.Parent
-		local i, j, k = e(h.Packages.Flipper), e(h.Creator), e(h.Acrylic)
-		local l, m, n, o = i.Spring.new, i.Instant.new, j.New, {}
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(12)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator, Acrylic = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic)
+		local Spring, Instant, New, Notification = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {}
 
-		function o.Init(p, q)
+		function Notification.Init(_self, gui)
 			-- Responsive width: smaller on mobile
 			local viewportSize = workspace.CurrentCamera.ViewportSize
 			local isMobile = viewportSize.X < 600
 			local notifWidth = isMobile and 280 or 340
 			local sideMargin = isMobile and 10 or 30
 
-			o.Holder =
-				n(
+			Notification.Holder =
+				New(
 					"Frame",
 					{
 						Position = UDim2.new(1, -sideMargin, 1, -sideMargin),
 						Size = UDim2.new(0, notifWidth, 1, -sideMargin),
 						AnchorPoint = Vector2.new(1, 1),
 						BackgroundTransparency = 1,
-						Parent = q
+						Parent = gui
 					},
 					{
-						n(
+						New(
 							"UIListLayout",
 							{
 								HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -5794,76 +5794,76 @@ local moduleFunctions = {
 				)
 		end
 
-		function o.New(p, q)
-			q.Title = q.Title or "Notification"
-			q.Content = q.Content or "Content"
-			q.SubContent = q.SubContent or ""
-			q.Duration = q.Duration or nil
-			q.Buttons = q.Buttons or {}
+		function Notification.New(_self, config)
+			config.Title = config.Title or "Notification"
+			config.Content = config.Content or "Content"
+			config.SubContent = config.SubContent or ""
+			config.Duration = config.Duration or nil
+			config.Buttons = config.Buttons or {}
 
 			-- Store originals for translation
-			local originalTitle = q.Title
-			local originalContent = q.Content
-			local originalSubContent = q.SubContent
+			local originalTitle = config.Title
+			local originalContent = config.Content
+			local originalSubContent = config.SubContent
 
-			local r = {Closed = false}
-			r.AcrylicPaint = k.AcrylicPaint()
+			local NewNotification = {Closed = false}
+			NewNotification.AcrylicPaint = Acrylic.AcrylicPaint()
 
 			-- Icon & color mapping
-			local s = "rbxassetid://10723415903"
-			local t = Color3.fromRGB(76, 194, 255)
+			local icon = "rbxassetid://10723415903"
+			local accentColor = Color3.fromRGB(76, 194, 255)
 
-			if q.Title:lower():find("success") or q.Title:lower():find("complete") then
-				s = "rbxassetid://10709790387"
-				t = Color3.fromRGB(50, 205, 50)
-			elseif q.Title:lower():find("error") or q.Title:lower():find("fail") then
-				s = "rbxassetid://10734933655"
-				t = Color3.fromRGB(255, 60, 80)
-			elseif q.Title:lower():find("warn") then
-				s = "rbxassetid://10709753149"
-				t = Color3.fromRGB(255, 180, 0)
+			if config.Title:lower():find("success") or config.Title:lower():find("complete") then
+				icon = "rbxassetid://10709790387"
+				accentColor = Color3.fromRGB(50, 205, 50)
+			elseif config.Title:lower():find("error") or config.Title:lower():find("fail") then
+				icon = "rbxassetid://10734933655"
+				accentColor = Color3.fromRGB(255, 60, 80)
+			elseif config.Title:lower():find("warn") then
+				icon = "rbxassetid://10709753149"
+				accentColor = Color3.fromRGB(255, 180, 0)
 			end
 
-			r.IconFrame =
-				n(
+			NewNotification.IconFrame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromOffset(40, 40),
 						Position = UDim2.fromOffset(10, 10),
-						BackgroundColor3 = t,
+						BackgroundColor3 = accentColor,
 						BackgroundTransparency = 0.88,
 						BorderSizePixel = 0
 					},
 					{
-						n("UICorner", {CornerRadius = UDim.new(0, 10)}),
-						n(
+						New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+						New(
 							"UIStroke",
 							{
-								Color = t,
+								Color = accentColor,
 								Transparency = 0.7,
 								Thickness = 1
 							}
 						),
-						n(
+						New(
 							"ImageLabel",
 							{
 								Size = UDim2.fromOffset(22, 22),
 								Position = UDim2.fromScale(0.5, 0.5),
 								AnchorPoint = Vector2.new(0.5, 0.5),
 								BackgroundTransparency = 1,
-								Image = s,
-								ImageColor3 = t
+								Image = icon,
+								ImageColor3 = accentColor
 							}
 						)
 					}
 				)
 
-			r.Title =
-				n(
+			NewNotification.Title =
+				New(
 					"TextLabel",
 					{
 						Position = UDim2.new(0, 58, 0, 12),
-						Text = q.Title,
+						Text = config.Title,
 						RichText = true,
 						TextTransparency = 0,
 						FontFace = Font.new(
@@ -5881,10 +5881,10 @@ local moduleFunctions = {
 					}
 				)
 			-- Register Title for translation
-			TranslationSystem:Register(r.Title, originalTitle, "Text")
+			TranslationSystem:Register(NewNotification.Title, originalTitle, "Text")
 
-			r.ContentLabel =
-				n(
+			NewNotification.ContentLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -5892,7 +5892,7 @@ local moduleFunctions = {
 							Enum.FontWeight.Regular,
 							Enum.FontStyle.Normal
 						),
-						Text = q.Content,
+						Text = config.Content,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 12,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -5904,14 +5904,14 @@ local moduleFunctions = {
 					}
 				)
 			-- Register Content for translation
-			TranslationSystem:Register(r.ContentLabel, originalContent, "Text")
+			TranslationSystem:Register(NewNotification.ContentLabel, originalContent, "Text")
 
-			r.SubContentLabel =
-				n(
+			NewNotification.SubContentLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
-						Text = q.SubContent,
+						Text = config.SubContent,
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -5924,11 +5924,11 @@ local moduleFunctions = {
 				)
 			-- Register SubContent for translation
 			if originalSubContent ~= "" then
-				TranslationSystem:Register(r.SubContentLabel, originalSubContent, "Text")
+				TranslationSystem:Register(NewNotification.SubContentLabel, originalSubContent, "Text")
 			end
 
-			r.LabelHolder =
-				n(
+			NewNotification.LabelHolder =
+				New(
 					"Frame",
 					{
 						AutomaticSize = Enum.AutomaticSize.Y,
@@ -5937,7 +5937,7 @@ local moduleFunctions = {
 						Size = UDim2.new(1, -68, 0, 0)
 					},
 					{
-						n(
+						New(
 							"UIListLayout",
 							{
 								SortOrder = Enum.SortOrder.LayoutOrder,
@@ -5945,14 +5945,14 @@ local moduleFunctions = {
 								Padding = UDim.new(0, 3)
 							}
 						),
-						r.ContentLabel,
-						r.SubContentLabel
+						NewNotification.ContentLabel,
+						NewNotification.SubContentLabel
 					}
 				)
 
 			-- Buttons container (dynamic)
-			r.ButtonHolder =
-				n(
+			NewNotification.ButtonHolder =
+				New(
 					"Frame",
 					{
 						AutomaticSize = Enum.AutomaticSize.Y,
@@ -5961,7 +5961,7 @@ local moduleFunctions = {
 						Size = UDim2.new(1, -68, 0, 0)
 					},
 					{
-						n(
+						New(
 							"UIListLayout",
 							{
 								SortOrder = Enum.SortOrder.LayoutOrder,
@@ -5974,14 +5974,14 @@ local moduleFunctions = {
 				)
 
 			-- Create each dynamic button
-			if #q.Buttons > 0 then
-				for _, btnData in ipairs(q.Buttons) do
+			if #config.Buttons > 0 then
+				for _, btnData in ipairs(config.Buttons) do
 					local text = btnData.Text or "Button"
 					local color = btnData.Color or Color3.fromRGB(100, 100, 255)
 					-- estimate width (simple): clamp by text length - smaller for mobile
 					local estWidth = math.clamp(#tostring(text) * 7 + 20, 64, 140)
 
-					local btnStroke = n(
+					local btnStroke = New(
 						"UIStroke",
 						{
 							Color = color,
@@ -5992,7 +5992,7 @@ local moduleFunctions = {
 					)
 
 					local btn =
-						n(
+						New(
 							"TextButton",
 							{
 								Text = text,
@@ -6010,23 +6010,23 @@ local moduleFunctions = {
 								AutoButtonColor = false
 							},
 							{
-								n("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
 								btnStroke
 							}
 						)
 
 					-- hover spring with smoother animation
-					local _, btnSet = j.SpringMotor(0.05, btn, "BackgroundTransparency")
-					local _, btnStrokeSet = j.SpringMotor(0.5, btnStroke, "Transparency")
+					local _, btnSet = Creator.SpringMotor(0.05, btn, "BackgroundTransparency")
+					local _, btnStrokeSet = Creator.SpringMotor(0.5, btnStroke, "Transparency")
 
-					j.AddSignal(
+					Creator.AddSignal(
 						btn.MouseEnter,
 						function()
 							btnSet(0)
 							btnStrokeSet(0.2)
 						end
 					)
-					j.AddSignal(
+					Creator.AddSignal(
 						btn.MouseLeave,
 						function()
 							btnSet(0.05)
@@ -6035,7 +6035,7 @@ local moduleFunctions = {
 					)
 
 					-- click behaviour
-					j.AddSignal(
+					Creator.AddSignal(
 						btn.MouseButton1Click,
 						function()
 							-- safe call to callback
@@ -6047,37 +6047,37 @@ local moduleFunctions = {
 							end
 							-- default close unless btnData.KeepOpen == true
 							if not btnData.KeepOpen then
-								r:Close()
+								NewNotification:Close()
 							end
 						end
 					)
 
 					-- parent into holder
-					btn.Parent = r.ButtonHolder
+					btn.Parent = NewNotification.ButtonHolder
 				end
 			end
 
-			r.ProgressBar =
-				n(
+			NewNotification.ProgressBar =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 0, 4),
 						Position = UDim2.new(0, 0, 1, -4),
-						BackgroundColor3 = t,
+						BackgroundColor3 = accentColor,
 						BackgroundTransparency = 0.5,
 						BorderSizePixel = 0
 					},
 					{
-						n("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						n(
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New(
 							"UIGradient",
 							{
 								Color = ColorSequence.new({
-									ColorSequenceKeypoint.new(0, t),
+									ColorSequenceKeypoint.new(0, accentColor),
 									ColorSequenceKeypoint.new(1, Color3.fromRGB(
-										math.min(t.R * 255 * 1.2, 255),
-										math.min(t.G * 255 * 1.2, 255),
-										math.min(t.B * 255 * 1.2, 255)
+										math.min(accentColor.R * 255 * 1.2, 255),
+										math.min(accentColor.G * 255 * 1.2, 255),
+										math.min(accentColor.B * 255 * 1.2, 255)
 										))
 								})
 							}
@@ -6085,8 +6085,8 @@ local moduleFunctions = {
 					}
 				)
 
-			r.CloseButton =
-				n(
+			NewNotification.CloseButton =
+				New(
 					"TextButton",
 					{
 						Text = "",
@@ -6097,8 +6097,8 @@ local moduleFunctions = {
 						ThemeTag = {BackgroundColor3 = "Element"}
 					},
 					{
-						n("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						n(
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://10747384394",
@@ -6112,8 +6112,8 @@ local moduleFunctions = {
 					}
 				)
 
-			r.Shadow =
-				n(
+			NewNotification.Shadow =
+				New(
 					"ImageLabel",
 					{
 						Size = UDim2.new(1, 40, 1, 40),
@@ -6129,175 +6129,175 @@ local moduleFunctions = {
 				)
 
 			-- Include ButtonHolder in Root children so it renders
-			r.Root =
-				n(
+			NewNotification.Root =
+				New(
 					"Frame",
 					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Position = UDim2.fromScale(1, 0)},
 					{
-						r.Shadow,
-						r.AcrylicPaint.Frame,
-						r.IconFrame,
-						r.Title,
-						r.CloseButton,
-						r.LabelHolder,
-						r.ButtonHolder,
-						r.ProgressBar
+						NewNotification.Shadow,
+						NewNotification.AcrylicPaint.Frame,
+						NewNotification.IconFrame,
+						NewNotification.Title,
+						NewNotification.CloseButton,
+						NewNotification.LabelHolder,
+						NewNotification.ButtonHolder,
+						NewNotification.ProgressBar
 					}
 				)
 
-			if q.Content == "" then
-				r.ContentLabel.Visible = false
+			if config.Content == "" then
+				NewNotification.ContentLabel.Visible = false
 			end
-			if q.SubContent == "" then
-				r.SubContentLabel.Visible = false
+			if config.SubContent == "" then
+				NewNotification.SubContentLabel.Visible = false
 			end
 
-			r.Holder =
-				n("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 100), Parent = o.Holder}, {r.Root})
+			NewNotification.Holder =
+				New("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 100), Parent = Notification.Holder}, {NewNotification.Root})
 
-			local u = i.GroupMotor.new({Scale = 1, Offset = 80, Rotation = 8, Opacity = 0})
-			u:onStep(
-				function(v)
-					r.Root.Position = UDim2.new(v.Scale, v.Offset, 0, 0)
-					r.Root.Rotation = v.Rotation
-					r.Root.BackgroundTransparency = v.Opacity
-					if r.AcrylicPaint and r.AcrylicPaint.Frame then
-						r.AcrylicPaint.Frame.BackgroundTransparency = v.Opacity
+			local motor = Flipper.GroupMotor.new({Scale = 1, Offset = 80, Rotation = 8, Opacity = 0})
+			motor:onStep(
+				function(values)
+					NewNotification.Root.Position = UDim2.new(values.Scale, values.Offset, 0, 0)
+					NewNotification.Root.Rotation = values.Rotation
+					NewNotification.Root.BackgroundTransparency = values.Opacity
+					if NewNotification.AcrylicPaint and NewNotification.AcrylicPaint.Frame then
+						NewNotification.AcrylicPaint.Frame.BackgroundTransparency = values.Opacity
 					end
 				end
 			)
 
-			j.AddSignal(
-				r.CloseButton.MouseButton1Click,
+			Creator.AddSignal(
+				NewNotification.CloseButton.MouseButton1Click,
 				function()
-					r:Close()
+					NewNotification:Close()
 				end
 			)
 
-			local w, x = j.SpringMotor(0.92, r.CloseButton, "BackgroundTransparency")
-			j.AddSignal(
-				r.CloseButton.MouseEnter,
+			local closeMotor, setCloseTransparency = Creator.SpringMotor(0.92, NewNotification.CloseButton, "BackgroundTransparency")
+			Creator.AddSignal(
+				NewNotification.CloseButton.MouseEnter,
 				function()
-					x(0.8)
+					setCloseTransparency(0.8)
 				end
 			)
-			j.AddSignal(
-				r.CloseButton.MouseLeave,
+			Creator.AddSignal(
+				NewNotification.CloseButton.MouseLeave,
 				function()
-					x(0.92)
+					setCloseTransparency(0.92)
 				end
 			)
 
-			function r.Open(y)
-				local z = r.LabelHolder.AbsoluteSize.Y
-				local extraForButtons = (#q.Buttons > 0) and 36 or 0
-				r.Holder.Size = UDim2.new(1, 0, 0, math.max(60, 50 + z + extraForButtons))
+			function NewNotification.Open(_self)
+				local labelHeight = NewNotification.LabelHolder.AbsoluteSize.Y
+				local extraForButtons = (#config.Buttons > 0) and 36 or 0
+				NewNotification.Holder.Size = UDim2.new(1, 0, 0, math.max(60, 50 + labelHeight + extraForButtons))
 
 				-- Improved slide-in animation with fade
-				u:setGoal(
+				motor:setGoal(
 					{
-						Scale = l(0, {frequency = 6, dampingRatio = 0.75}),
-						Offset = l(0, {frequency = 6, dampingRatio = 0.75}),
-						Rotation = l(0, {frequency = 7, dampingRatio = 0.85}),
-						Opacity = l(1, {frequency = 8, dampingRatio = 0.9})
+						Scale = Spring(0, {frequency = 6, dampingRatio = 0.75}),
+						Offset = Spring(0, {frequency = 6, dampingRatio = 0.75}),
+						Rotation = Spring(0, {frequency = 7, dampingRatio = 0.85}),
+						Opacity = Spring(1, {frequency = 8, dampingRatio = 0.9})
 					}
 				)
 
 				-- Icon bounce animation - smoother and smaller
-				r.IconFrame.Size = UDim2.fromOffset(0, 0)
-				local A = game:GetService("TweenService")
-				local B = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+				NewNotification.IconFrame.Size = UDim2.fromOffset(0, 0)
+				local TweenService = game:GetService("TweenService")
+				local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 				task.wait(0.15)
-				A:Create(r.IconFrame, B, {Size = UDim2.fromOffset(40, 40)}):Play()
+				TweenService:Create(NewNotification.IconFrame, tweenInfo, {Size = UDim2.fromOffset(40, 40)}):Play()
 
 				-- Subtle glow effect on icon
 				task.spawn(function()
 					task.wait(0.2)
-					local iconFrame = r.IconFrame
-					A:Create(iconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					local iconFrame = NewNotification.IconFrame
+					TweenService:Create(iconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{BackgroundTransparency = 0.75}):Play()
 				end)
 			end
 
-			function r.Close(y)
-				if not r.Closed then
-					r.Closed = true
+			function NewNotification.Close(_self)
+				if not NewNotification.Closed then
+					NewNotification.Closed = true
 					task.spawn(
 						function()
 							-- Improved slide-out with fade and rotation
-							u:setGoal(
+							motor:setGoal(
 								{
-									Scale = l(1, {frequency = 7, dampingRatio = 0.8}),
-									Offset = l(100, {frequency = 7, dampingRatio = 0.8}),
-									Rotation = l(-8, {frequency = 8, dampingRatio = 0.85}),
-									Opacity = l(0, {frequency = 6, dampingRatio = 1})
+									Scale = Spring(1, {frequency = 7, dampingRatio = 0.8}),
+									Offset = Spring(100, {frequency = 7, dampingRatio = 0.8}),
+									Rotation = Spring(-8, {frequency = 8, dampingRatio = 0.85}),
+									Opacity = Spring(0, {frequency = 6, dampingRatio = 1})
 								}
 							)
 
 							-- Icon shrink animation
-							local A = game:GetService("TweenService")
-							A:Create(r.IconFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+							local TweenService = game:GetService("TweenService")
+							TweenService:Create(NewNotification.IconFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 								{Size = UDim2.fromOffset(0, 0)}):Play()
 
 							task.wait(0.6)
-							if e(h).UseAcrylic then
-								if r.AcrylicPaint and r.AcrylicPaint.Model then
-									r.AcrylicPaint.Model:Destroy()
+							if requireModule(Root).UseAcrylic then
+								if NewNotification.AcrylicPaint and NewNotification.AcrylicPaint.Model then
+									NewNotification.AcrylicPaint.Model:Destroy()
 								end
 							end
-							if r.Holder and r.Holder.Destroy then
-								r.Holder:Destroy()
+							if NewNotification.Holder and NewNotification.Holder.Destroy then
+								NewNotification.Holder:Destroy()
 							end
 						end
 					)
 				end
 			end
 
-			r:Open()
+			NewNotification:Open()
 
-			if q.Duration then
-				r.ProgressBar.Size = UDim2.new(1, 0, 0, 4)
-				local A = game:GetService("TweenService")
-				local B = TweenInfo.new(q.Duration, Enum.EasingStyle.Linear)
-				A:Create(r.ProgressBar, B, {Size = UDim2.new(0, 0, 0, 4)}):Play()
+			if config.Duration then
+				NewNotification.ProgressBar.Size = UDim2.new(1, 0, 0, 4)
+				local TweenService = game:GetService("TweenService")
+				local tweenInfo = TweenInfo.new(config.Duration, Enum.EasingStyle.Linear)
+				TweenService:Create(NewNotification.ProgressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 4)}):Play()
 				task.delay(
-					q.Duration,
+					config.Duration,
 					function()
-						r:Close()
+						NewNotification:Close()
 					end
 				)
 			end
 
-			return r
+			return NewNotification
 		end
 
-		return o
+		return Notification
 	end,
 	[13] = function()
-		local c, d, e, f, g = moduleContext(13)
-		local h = d.Parent.Parent
-		local i = e(h.Creator)
-		local j = i.New
-		return function(k, l)
-			local m = {}
-			m.Visible = true
-			m.Layout = j("UIListLayout", {Padding = UDim.new(0, 5)})
-			m.Container =
-				j(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(13)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New = Creator.New
+		return function(title, parent)
+			local Section = {}
+			Section.Visible = true
+			Section.Layout = New("UIListLayout", {Padding = UDim.new(0, 5)})
+			Section.Container =
+				New(
 					"Frame",
 					{Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 24), BackgroundTransparency = 1},
-					{m.Layout}
+					{Section.Layout}
 				)
-			m.Root =
-				j(
+			Section.Root =
+				New(
 					"Frame",
-					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 7, Parent = l},
+					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 7, Parent = parent},
 					{
-						j(
+						New(
 							"TextLabel",
 							{
 								RichText = true,
-								Text = k,
+								Text = title,
 								TextTransparency = 0,
 								FontFace = Font.new(
 									"rbxassetid://12187365364",
@@ -6312,76 +6312,76 @@ local moduleFunctions = {
 								ThemeTag = {TextColor3 = "Text"}
 							}
 						),
-						m.Container
+						Section.Container
 					}
 				)
-			i.AddSignal(
-				m.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
+			Creator.AddSignal(
+				Section.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					m.Container.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y)
-					if m.Visible then
-						m.Root.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y + 25)
+					Section.Container.Size = UDim2.new(1, 0, 0, Section.Layout.AbsoluteContentSize.Y)
+					if Section.Visible then
+						Section.Root.Size = UDim2.new(1, 0, 0, Section.Layout.AbsoluteContentSize.Y + 25)
 					end
 				end
 			)
-			m.SetVisible = function(n)
-				m.Visible = n == true
-				m.Root.Visible = m.Visible
-				m.Root.Size = UDim2.new(1, 0, 0, m.Visible and (m.Layout.AbsoluteContentSize.Y + 25) or 0)
+			Section.SetVisible = function(visible)
+				Section.Visible = visible == true
+				Section.Root.Visible = Section.Visible
+				Section.Root.Size = UDim2.new(1, 0, 0, Section.Visible and (Section.Layout.AbsoluteContentSize.Y + 25) or 0)
 			end
-			return m
+			return Section
 		end
 	end,
 	[14] = function()
-		local c, d, e, f, g = moduleContext(14)
-		local h = d.Parent.Parent
-		local i, j = e(h.Packages.Flipper), e(h.Creator)
-		local k, l, m, n, o =
-			j.New,
-		i.Spring.new,
-		i.Instant.new,
-		h.Components,
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(14)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New, Spring, Instant, Components, TabModule =
+			Creator.New,
+		Flipper.Spring.new,
+		Flipper.Instant.new,
+		Root.Components,
 		{Window = nil, Tabs = {}, Containers = {}, SelectedTab = 0, TabCount = 0}
-		function o.Init(p, q)
-			o.Window = q
-			return o
+		function TabModule.Init(_self, window)
+			TabModule.Window = window
+			return TabModule
 		end
-		function o.GetCurrentTabPos(p)
-			local q, r = o.Window.TabHolder.AbsolutePosition.Y, o.Tabs[o.SelectedTab].Frame.AbsolutePosition.Y
-			return r - q
+		function TabModule.GetCurrentTabPos(_self)
+			local tabHolderY, tabY = TabModule.Window.TabHolder.AbsolutePosition.Y, TabModule.Tabs[TabModule.SelectedTab].Frame.AbsolutePosition.Y
+			return tabY - tabHolderY
 		end
-		function o.New(p, q, r, s)
-			local t, u = e(h), o.Window
-			local v = t.Elements
-			o.TabCount = o.TabCount + 1
-			local w, x = o.TabCount, {Selected = false, Name = q, Type = "Tab", Index = o.TabCount}
-			x.Id = "tab-" .. tostring(w) .. "-" .. tostring(q)
-			if t:GetIcon(r) then
-				r = t:GetIcon(r)
+		function TabModule.New(_self, title, icon, parent)
+			local Library, window = requireModule(Root), TabModule.Window
+			local elements = Library.Elements
+			TabModule.TabCount = TabModule.TabCount + 1
+			local tabIndex, Tab = TabModule.TabCount, {Selected = false, Name = title, Type = "Tab", Index = TabModule.TabCount}
+			Tab.Id = "tab-" .. tostring(tabIndex) .. "-" .. tostring(title)
+			if Library:GetIcon(icon) then
+				icon = Library:GetIcon(icon)
 			end
-			if r == "" or nil then
-				r = nil
+			if icon == "" or nil then
+				icon = nil
 			end
-			x.Frame =
-				k(
+			Tab.Frame =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.new(1, 0, 0, 34),
-						Name = "ATGTab_" .. tostring(w),
-						LayoutOrder = w,
+						Name = "ATGTab_" .. tostring(tabIndex),
+						LayoutOrder = tabIndex,
 						BackgroundTransparency = 1,
-						Parent = s,
+						Parent = parent,
 						ThemeTag = {BackgroundColor3 = "Tab"}
 					},
 					{
-						k("UICorner", {CornerRadius = UDim.new(0, 6)}),
-						k(
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New(
 							"TextLabel",
 							{
 								Name = "TabLabel",
 								AnchorPoint = Vector2.new(0, 0.5),
-								Position = r and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
-								Text = q,
+								Position = icon and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
+								Text = title,
 								RichText = true,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextTransparency = 0,
@@ -6398,7 +6398,7 @@ local moduleFunctions = {
 								ThemeTag = {TextColor3 = "Text"}
 							}
 						),
-						k(
+						New(
 							"ImageLabel",
 							{
 								Name = "TabIcon",
@@ -6406,27 +6406,27 @@ local moduleFunctions = {
 								Size = UDim2.fromOffset(16, 16),
 								Position = UDim2.new(0, 8, 0.5, 0),
 								BackgroundTransparency = 1,
-								Image = r and r or nil,
+								Image = icon and icon or nil,
 								ThemeTag = {ImageColor3 = "Text"}
 							}
 						)
 					}
 				)
-			x.Label = x.Frame:FindFirstChild("TabLabel")
-			x.IconObject = x.Frame:FindFirstChild("TabIcon")
+			Tab.Label = Tab.Frame:FindFirstChild("TabLabel")
+			Tab.IconObject = Tab.Frame:FindFirstChild("TabIcon")
 			-- Translate the sidebar label as well as the large selected-tab title,
 			-- allowing navigation search to match the language users actually see.
-			if x.Label then
-				TranslationSystem:Register(x.Label, q, "Text")
+			if Tab.Label then
+				TranslationSystem:Register(Tab.Label, title, "Text")
 			end
-			local y = k("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
-			x.ContainerFrame =
-				k(
+			local listLayout = New("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
+			Tab.ContainerFrame =
+				New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.fromScale(1, 1),
 						BackgroundTransparency = 1,
-						Parent = u.ContainerHolder,
+						Parent = window.ContainerHolder,
 						Visible = false,
 						BottomImage = "rbxassetid://6889812791",
 						MidImage = "rbxassetid://6889812721",
@@ -6439,8 +6439,8 @@ local moduleFunctions = {
 						ScrollingDirection = Enum.ScrollingDirection.Y
 					},
 					{
-						y,
-						k(
+						listLayout,
+						New(
 							"UIPadding",
 							{
 								PaddingRight = UDim.new(0, 10),
@@ -6451,122 +6451,122 @@ local moduleFunctions = {
 						)
 					}
 				)
-			j.AddSignal(
-				y:GetPropertyChangedSignal "AbsoluteContentSize",
+			Creator.AddSignal(
+				listLayout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					x.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, y.AbsoluteContentSize.Y + 2)
+					Tab.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 2)
 				end
 			)
-			x.Motor, x.SetTransparency = j.SpringMotor(1, x.Frame, "BackgroundTransparency")
-			j.AddSignal(
-				x.Frame.MouseEnter,
+			Tab.Motor, Tab.SetTransparency = Creator.SpringMotor(1, Tab.Frame, "BackgroundTransparency")
+			Creator.AddSignal(
+				Tab.Frame.MouseEnter,
 				function()
-					x.SetTransparency(x.Selected and 0.85 or 0.89)
+					Tab.SetTransparency(Tab.Selected and 0.85 or 0.89)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseLeave,
+			Creator.AddSignal(
+				Tab.Frame.MouseLeave,
 				function()
-					x.SetTransparency(x.Selected and 0.89 or 1)
+					Tab.SetTransparency(Tab.Selected and 0.89 or 1)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseButton1Down,
+			Creator.AddSignal(
+				Tab.Frame.MouseButton1Down,
 				function()
-					x.SetTransparency(0.92)
+					Tab.SetTransparency(0.92)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseButton1Up,
+			Creator.AddSignal(
+				Tab.Frame.MouseButton1Up,
 				function()
-					x.SetTransparency(x.Selected and 0.85 or 0.89)
+					Tab.SetTransparency(Tab.Selected and 0.85 or 0.89)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				Tab.Frame.MouseButton1Click,
 				function()
-					if x.SuppressClick then
-						x.SuppressClick = false
+					if Tab.SuppressClick then
+						Tab.SuppressClick = false
 						return
 					end
-					o:SelectTab(w)
+					TabModule:SelectTab(tabIndex)
 				end
 			)
-			o.Containers[w] = x.ContainerFrame
-			o.Tabs[w] = x
-			x.Container = x.ContainerFrame
-			x.ScrollFrame = x.Container
-			x.Select = function()
-				o:SelectTab(w)
+			TabModule.Containers[tabIndex] = Tab.ContainerFrame
+			TabModule.Tabs[tabIndex] = Tab
+			Tab.Container = Tab.ContainerFrame
+			Tab.ScrollFrame = Tab.Container
+			Tab.Select = function()
+				TabModule:SelectTab(tabIndex)
 			end
-			local function decorateSectionTitle(z)
-				return z
+			local function decorateSectionTitle(sectionTitle)
+				return sectionTitle
 			end
-			function x.AddSection(z, A)
-				local B, C = {Type = "Section"}, e(n.Section)(decorateSectionTitle(A), x.Container)
-				B.Container = C.Container
+			function Tab.AddSection(_self, sectionTitle)
+				local Section, sectionComponent = {Type = "Section"}, requireModule(Components.Section)(decorateSectionTitle(sectionTitle), Tab.Container)
+				Section.Container = sectionComponent.Container
 				-- Expose the section frame as an optional, backwards-compatible
 				-- handle. Addons can use LayoutOrder/Visible without depending on
 				-- private descendants of the tab.
-				B.Root = C.Root
-				B.SetVisible = function(D, E)
-					return C.SetVisible(type(D) == "boolean" and D or E)
+				Section.Root = sectionComponent.Root
+				Section.SetVisible = function(selfOrVisible, visible)
+					return sectionComponent.SetVisible(type(selfOrVisible) == "boolean" and selfOrVisible or visible)
 				end
-				B.ScrollFrame = x.Container
-				B.Tab = x
-				B.TabId = x.Id
-				B.TabTitle = x.Name
-				setmetatable(B, v)
-				return B
+				Section.ScrollFrame = Tab.Container
+				Section.Tab = Tab
+				Section.TabId = Tab.Id
+				Section.TabTitle = Tab.Name
+				setmetatable(Section, elements)
+				return Section
 			end
-			setmetatable(x, v)
-			return x
+			setmetatable(Tab, elements)
+			return Tab
 		end
-		function o.SelectTab(p, q)
-			local r = o.Window
-			o.SelectedTab = q
-			for s, t in next, o.Tabs do
-				t.SetTransparency(1)
-				t.Selected = false
+		function TabModule.SelectTab(_self, tabIndex)
+			local window = TabModule.Window
+			TabModule.SelectedTab = tabIndex
+			for _, tab in next, TabModule.Tabs do
+				tab.SetTransparency(1)
+				tab.Selected = false
 			end
-			o.Tabs[q].SetTransparency(0.89)
-			o.Tabs[q].Selected = true
-			local w = e(h)
-			if w.Workspace and type(w.Workspace.TouchTab) == "function" then
-				w.Workspace:TouchTab(o.Tabs[q])
+			TabModule.Tabs[tabIndex].SetTransparency(0.89)
+			TabModule.Tabs[tabIndex].Selected = true
+			local Library = requireModule(Root)
+			if Library.Workspace and type(Library.Workspace.TouchTab) == "function" then
+				Library.Workspace:TouchTab(TabModule.Tabs[tabIndex])
 			end
-			r.TabDisplay.Text = o.Tabs[q].Name
-			TranslationSystem:Register(r.TabDisplay, o.Tabs[q].Name, "Text")
-			r.SelectorPosMotor:setGoal(l(o:GetCurrentTabPos(), {frequency = 6}))
+			window.TabDisplay.Text = TabModule.Tabs[tabIndex].Name
+			TranslationSystem:Register(window.TabDisplay, TabModule.Tabs[tabIndex].Name, "Text")
+			window.SelectorPosMotor:setGoal(Spring(TabModule:GetCurrentTabPos(), {frequency = 6}))
 			task.spawn(
 				function()
-					r.ContainerPosMotor:setGoal(l(110, {frequency = 10}))
-					r.ContainerBackMotor:setGoal(l(1, {frequency = 10}))
+					window.ContainerPosMotor:setGoal(Spring(110, {frequency = 10}))
+					window.ContainerBackMotor:setGoal(Spring(1, {frequency = 10}))
 					task.wait(0.15)
-					for u, v in next, o.Containers do
-						v.Visible = false
+					for _, container in next, TabModule.Containers do
+						container.Visible = false
 					end
-					o.Containers[q].Visible = true
-					r.ContainerPosMotor:setGoal(l(94, {frequency = 5}))
-					r.ContainerBackMotor:setGoal(l(0, {frequency = 8}))
+					TabModule.Containers[tabIndex].Visible = true
+					window.ContainerPosMotor:setGoal(Spring(94, {frequency = 5}))
+					window.ContainerBackMotor:setGoal(Spring(0, {frequency = 8}))
 				end
 			)
 		end
-		return o
+		return TabModule
 	end,
 	[15] = function()
-		local c, d, e, f, g = moduleContext(15)
-		local TextService, i = game:GetService("TextService"), d.Parent.Parent
-		local j, k = e(i.Packages.Flipper), e(i.Creator)
-		local New = k.New
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(15)
+		local TextService, Root = game:GetService("TextService"), moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New = Creator.New
 		local TweenService = game:GetService("TweenService")
 
-		return function(parent, n)
-			n = n or false
-			local o = {}
+		return function(parent, acrylic)
+			acrylic = acrylic or false
+			local Textbox = {}
 
 			-- Input (TextBox) - font size 16 to match CSS
-			o.Input =
+			Textbox.Input =
 				New(
 					"TextBox",
 					{
@@ -6591,7 +6591,7 @@ local moduleFunctions = {
 				)
 
 			-- Container frame (clips descendants)
-			o.Container =
+			Textbox.Container =
 				New(
 					"Frame",
 					{
@@ -6601,7 +6601,7 @@ local moduleFunctions = {
 						Size = UDim2.new(1, -16, 1, 0),
 						ZIndex = 1
 					},
-					{o.Input}
+					{Textbox.Input}
 				)
 
 			-- Main frame stroke & corner radius (we'll reuse corner radius for the lines)
@@ -6612,8 +6612,8 @@ local moduleFunctions = {
 				{
 					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					Thickness = 1.2,
-					Transparency = n and 0.5 or 0.65,
-					ThemeTag = {Color = n and "InElementBorder" or "DialogButtonBorder"},
+					Transparency = acrylic and 0.5 or 0.65,
+					ThemeTag = {Color = acrylic and "InElementBorder" or "DialogButtonBorder"},
 					ZIndex = 1
 				}
 			)
@@ -6622,26 +6622,26 @@ local moduleFunctions = {
 			local originalStrokeColor = frameStroke.Color
 
 			-- Main frame
-			o.Frame =
+			Textbox.Frame =
 				New(
 					"Frame",
 					{
 						Size = UDim2.new(0, 0, 0, 36),
-						BackgroundTransparency = n and 0.92 or 0,
+						BackgroundTransparency = acrylic and 0.92 or 0,
 						Parent = parent,
-						ThemeTag = {BackgroundColor3 = n and "Input" or "DialogInput"},
+						ThemeTag = {BackgroundColor3 = acrylic and "Input" or "DialogInput"},
 						ZIndex = 0
 					},
 					{
 						New("UICorner", {CornerRadius = frameCornerRadius}),
 						frameStroke,
-						o.Container
+						Textbox.Container
 					}
 				)
 
 			-- Base line (จาง ๆ) — now inset and with UICorner soปลายโค้งตามกล่องหลัก
 			local inset = 3 -- same inset we use for highlight, so ends line up
-			o.BaseLine =
+			Textbox.BaseLine =
 				New(
 					"Frame",
 					{
@@ -6656,10 +6656,10 @@ local moduleFunctions = {
 						New("UICorner", {CornerRadius = frameCornerRadius}) -- ทำให้ปลายโค้งตามกล่องหลัก
 					}
 				)
-			o.BaseLine.Parent = o.Frame
+			Textbox.BaseLine.Parent = Textbox.Frame
 
 			-- Highlight / underline (ไฮไลต์สีน้ำเงิน) - starts width 0, also rounded
-			o.Highlight =
+			Textbox.Highlight =
 				New(
 					"Frame",
 					{
@@ -6674,10 +6674,10 @@ local moduleFunctions = {
 						New("UICorner", {CornerRadius = frameCornerRadius}) -- ปลายโค้ง
 					}
 				)
-			o.Highlight.Parent = o.Frame
+			Textbox.Highlight.Parent = Textbox.Frame
 
 			-- Floating label (input-label)
-			o.Label =
+			Textbox.Label =
 				New(
 					"TextLabel",
 					{
@@ -6695,7 +6695,7 @@ local moduleFunctions = {
 						TextYAlignment = Enum.TextYAlignment.Center
 					}
 				)
-			o.Label.Parent = o.Frame
+			Textbox.Label.Parent = Textbox.Frame
 
 			-- Helper tweens to match CSS transitions: duration 0.3, easing "ease" -> use Sine Out
 			local TWEEN_TIME = 0.3
@@ -6709,16 +6709,16 @@ local moduleFunctions = {
 				local targetSize = 12
 				local color = Color3.fromRGB(0, 123, 255) -- #007bff
 				if instant then
-					o.Label.Position = targetPos
-					o.Label.TextSize = targetSize
-					o.Label.TextColor3 = color
-					o.Label.TextTransparency = 0
+					Textbox.Label.Position = targetPos
+					Textbox.Label.TextSize = targetSize
+					Textbox.Label.TextColor3 = color
+					Textbox.Label.TextTransparency = 0
 				else
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
 						Position = targetPos,
 						TextTransparency = 0
 					}):Play()
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = targetSize, TextColor3 = color}):Play()
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = targetSize, TextColor3 = color}):Play()
 				end
 			end
 
@@ -6728,16 +6728,16 @@ local moduleFunctions = {
 				local originSize = 16
 				local originColor = Color3.fromRGB(204, 204, 204)
 				if instant then
-					o.Label.Position = originPos
-					o.Label.TextSize = originSize
-					o.Label.TextColor3 = originColor
-					o.Label.TextTransparency = 1
+					Textbox.Label.Position = originPos
+					Textbox.Label.TextSize = originSize
+					Textbox.Label.TextColor3 = originColor
+					Textbox.Label.TextTransparency = 1
 				else
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
 						Position = originPos,
 						TextTransparency = 1
 					}):Play()
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = originSize, TextColor3 = originColor}):Play()
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = originSize, TextColor3 = originColor}):Play()
 				end
 			end
 
@@ -6747,10 +6747,10 @@ local moduleFunctions = {
 				local target = UDim2.new(1, -2 * inset, 0, 2)
 				local targetPos = UDim2.new(0, inset, 1, -2)
 				if instant then
-					o.Highlight.Size = target
-					o.Highlight.Position = targetPos
+					Textbox.Highlight.Size = target
+					Textbox.Highlight.Position = targetPos
 				else
-					TweenService:Create(o.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = targetPos}):Play()
+					TweenService:Create(Textbox.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = targetPos}):Play()
 				end
 			end
 
@@ -6759,10 +6759,10 @@ local moduleFunctions = {
 				local target = UDim2.new(0, 0, 0, 2)
 				local pos = UDim2.new(0, inset, 1, -2)
 				if instant then
-					o.Highlight.Size = target
-					o.Highlight.Position = pos
+					Textbox.Highlight.Size = target
+					Textbox.Highlight.Position = pos
 				else
-					TweenService:Create(o.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = pos}):Play()
+					TweenService:Create(Textbox.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = pos}):Play()
 				end
 			end
 
@@ -6770,20 +6770,20 @@ local moduleFunctions = {
 			local function emphasizeBaseLine(instant)
 				instant = instant or false
 				if instant then
-					o.BaseLine.BackgroundTransparency = 0.6
-					o.BaseLine.BackgroundColor3 = Color3.fromRGB(240, 240, 240) -- เล็กน้อยเข้มขึ้น
+					Textbox.BaseLine.BackgroundTransparency = 0.6
+					Textbox.BaseLine.BackgroundColor3 = Color3.fromRGB(240, 240, 240) -- เล็กน้อยเข้มขึ้น
 				else
-					TweenService:Create(o.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(240, 240, 240)}):Play()
+					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(240, 240, 240)}):Play()
 				end
 			end
 
 			local function deEmphasizeBaseLine(instant)
 				instant = instant or false
 				if instant then
-					o.BaseLine.BackgroundTransparency = 0.85
-					o.BaseLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					Textbox.BaseLine.BackgroundTransparency = 0.85
+					Textbox.BaseLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				else
-					TweenService:Create(o.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.85, BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.85, BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
 				end
 			end
 
@@ -6791,8 +6791,8 @@ local moduleFunctions = {
 			-- The old calculation ran before AbsoluteSize/TextBounds had settled,
 			-- which could leave a focused input at a negative X offset until blur.
 			local function setInputOffset(offset)
-				if o.Input.Position.X.Offset ~= offset or o.Input.Position.Y.Offset ~= 0 then
-					o.Input.Position = UDim2.fromOffset(offset, 0)
+				if Textbox.Input.Position.X.Offset ~= offset or Textbox.Input.Position.Y.Offset ~= 0 then
+					Textbox.Input.Position = UDim2.fromOffset(offset, 0)
 				end
 			end
 
@@ -6801,12 +6801,12 @@ local moduleFunctions = {
 					return 0
 				end
 
-				local inputFont = o.Input.Font
+				local inputFont = Textbox.Input.Font
 				if inputFont ~= Enum.Font.Unknown then
 					local measured, textSize = pcall(function()
 						return TextService:GetTextSize(
 							beforeCursor,
-							o.Input.TextSize,
+							Textbox.Input.TextSize,
 							inputFont,
 							Vector2.new(math.huge, math.huge)
 						)
@@ -6819,7 +6819,7 @@ local moduleFunctions = {
 				-- Custom FontFace reports Enum.Font.Unknown to TextService. Use the
 				-- rendered TextBounds for a safe approximation instead of emitting
 				-- an error or shifting all input text outside its clipped container.
-				local fullText = o.Input.Text
+				local fullText = Textbox.Input.Text
 				if textWidth > 0 and #fullText > 0 then
 					return textWidth * math.clamp(#beforeCursor / #fullText, 0, 1)
 				end
@@ -6828,7 +6828,7 @@ local moduleFunctions = {
 
 			local function adjustInputPosition()
 				local pad = 2
-				local width = o.Container.AbsoluteSize.X
+				local width = Textbox.Container.AbsoluteSize.X
 				if width <= 2 * pad then
 					-- Layout has not resolved yet. Leave the input in a safe position;
 					-- AbsoluteSize will trigger a second pass once it is visible.
@@ -6836,20 +6836,20 @@ local moduleFunctions = {
 					return
 				end
 
-				local textWidth = math.max(0, o.Input.TextBounds.X)
-				if not o.Input:IsFocused() or textWidth <= width - 2 * pad then
+				local textWidth = math.max(0, Textbox.Input.TextBounds.X)
+				if not Textbox.Input:IsFocused() or textWidth <= width - 2 * pad then
 					setInputOffset(pad)
 					return
 				end
 
-				local cursorPosition = o.Input.CursorPosition
+				local cursorPosition = Textbox.Input.CursorPosition
 				if not cursorPosition or cursorPosition < 1 then
 					return
 				end
 
-				local beforeCursor = string.sub(o.Input.Text, 1, cursorPosition - 1)
+				local beforeCursor = string.sub(Textbox.Input.Text, 1, cursorPosition - 1)
 				local cursorWidth = getCursorWidth(beforeCursor, textWidth)
-				local targetOffset = o.Input.Position.X.Offset
+				local targetOffset = Textbox.Input.Position.X.Offset
 				local cursorX = targetOffset + cursorWidth
 				local rightEdge = width - pad
 				if cursorX < pad then
@@ -6865,15 +6865,15 @@ local moduleFunctions = {
 			end
 
 			task.spawn(adjustInputPosition)
-			k.AddSignal(o.Input:GetPropertyChangedSignal("Text"), adjustInputPosition)
-			k.AddSignal(o.Input:GetPropertyChangedSignal("CursorPosition"), adjustInputPosition)
-			k.AddSignal(o.Container:GetPropertyChangedSignal("AbsoluteSize"), adjustInputPosition)
+			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("Text"), adjustInputPosition)
+			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("CursorPosition"), adjustInputPosition)
+			Creator.AddSignal(Textbox.Container:GetPropertyChangedSignal("AbsoluteSize"), adjustInputPosition)
 			pcall(function()
-				k.AddSignal(o.Input:GetPropertyChangedSignal("TextBounds"), adjustInputPosition)
+				Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("TextBounds"), adjustInputPosition)
 			end)
 
 			-- Focus behavior: match CSS :focus rules (0.3s transitions), plus our extra emphasis
-			k.AddSignal(o.Input.Focused, function()
+			Creator.AddSignal(Textbox.Input.Focused, function()
 				adjustInputPosition()
 				floatLabel(false)
 				expandHighlight(false)
@@ -6888,14 +6888,14 @@ local moduleFunctions = {
 					Color = Color3.fromRGB(40, 120, 215) -- subtle darker blue-ish stroke on focus
 				}):Play()
 
-				TweenService:Create(o.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = n and 0.88 or 0}):Play()
-				k.OverrideTag(o.Frame, {BackgroundColor3 = n and "InputFocused" or "DialogHolder"})
-				k.OverrideTag(o.Highlight, {BackgroundColor3 = "Accent"})
+				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.88 or 0}):Play()
+				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "InputFocused" or "DialogHolder"})
+				Creator.OverrideTag(Textbox.Highlight, {BackgroundColor3 = "Accent"})
 			end)
 
-			k.AddSignal(o.Input.FocusLost, function()
+			Creator.AddSignal(Textbox.Input.FocusLost, function()
 				adjustInputPosition()
-				local hasText = o.Input.Text and #o.Input.Text > 0
+				local hasText = Textbox.Input.Text and #Textbox.Input.Text > 0
 				if not hasText then
 					sinkLabel(false)
 				else
@@ -6909,35 +6909,35 @@ local moduleFunctions = {
 
 				-- Stroke return: revert color/transparency/thickness back
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-					Transparency = n and 0.5 or 0.65,
+					Transparency = acrylic and 0.5 or 0.65,
 					Thickness = 1.2,
 					Color = originalStrokeColor
 				}):Play()
 
-				TweenService:Create(o.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = n and 0.92 or 0}):Play()
-				k.OverrideTag(o.Frame, {BackgroundColor3 = n and "Input" or "DialogInput"})
-				k.OverrideTag(o.Highlight, {BackgroundColor3 = n and "InputIndicator" or "DialogInputLine"})
+				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.92 or 0}):Play()
+				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "Input" or "DialogInput"})
+				Creator.OverrideTag(Textbox.Highlight, {BackgroundColor3 = acrylic and "InputIndicator" or "DialogInputLine"})
 			end)
 
 			-- Text change: emphasize baseline while typing
-			k.AddSignal(o.Input:GetPropertyChangedSignal("Text"), function()
-				if o.Input.Text and #o.Input.Text > 0 then
+			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("Text"), function()
+				if Textbox.Input.Text and #Textbox.Input.Text > 0 then
 					-- if user types and the field is focused we keep baseline emphasized
-					if o.Input:IsFocused() then
+					if Textbox.Input:IsFocused() then
 						emphasizeBaseLine(false)
 					else
 						-- if not focused but has text keep label floated
 						floatLabel(false)
 					end
 				else
-					if not o.Input:IsFocused() then
+					if not Textbox.Input:IsFocused() then
 						deEmphasizeBaseLine(false)
 					end
 				end
 			end)
 
 			-- initial state: follow CSS initial
-			if o.Input.Text and #o.Input.Text > 0 then
+			if Textbox.Input.Text and #Textbox.Input.Text > 0 then
 				floatLabel(true)
 				collapseHighlight(true)
 				deEmphasizeBaseLine(true)
@@ -6947,42 +6947,42 @@ local moduleFunctions = {
 				deEmphasizeBaseLine(true)
 			end
 
-			return o
+			return Textbox
 		end
 	end,
 
 	[16] = function()
-		local c, d, e, f, g = moduleContext(16)
-		local h, i = d.Parent.Parent, e(d.Parent.Assets)
-		local j, k = e(h.Creator), e(h.Packages.Flipper)
-		local l, m = j.New, j.AddSignal
-		return function(n)
-			local o, p, q =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(16)
+		local Root, Assets = moduleScript.Parent.Parent, requireModule(moduleScript.Parent.Assets)
+		local Creator, Flipper = requireModule(Root.Creator), requireModule(Root.Packages.Flipper)
+		local New, AddSignal = Creator.New, Creator.AddSignal
+		return function(config)
+			local TitleBar, Library, BarButton =
 				{},
-			e(h),
-			function(o, p, q, r)
-				local s = {
-					Callback = r or function()
+			requireModule(Root),
+			function(icon, position, parent, callback)
+				local Button = {
+					Callback = callback or function()
 					end
 				}
-				s.Frame =
-					l(
+				Button.Frame =
+					New(
 						"TextButton",
 						{
 							Size = UDim2.new(0, 34, 1, -8),
 							AnchorPoint = Vector2.new(1, 0),
 							BackgroundTransparency = 1,
-							Parent = q,
-							Position = p,
+							Parent = parent,
+							Position = position,
 							Text = "",
 							ThemeTag = {BackgroundColor3 = "Text"}
 						},
 						{
-							l("UICorner", {CornerRadius = UDim.new(0, 7)}),
-							l(
+							New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+							New(
 								"ImageLabel",
 								{
-									Image = o,
+									Image = icon,
 									Size = UDim2.fromOffset(16, 16),
 									Position = UDim2.fromScale(0.5, 0.5),
 									AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6993,49 +6993,49 @@ local moduleFunctions = {
 							)
 						}
 					)
-				local t, u = j.SpringMotor(1, s.Frame, "BackgroundTransparency")
-				m(
-					s.Frame.MouseEnter,
+				local motor, setTransparency = Creator.SpringMotor(1, Button.Frame, "BackgroundTransparency")
+				AddSignal(
+					Button.Frame.MouseEnter,
 					function()
-						u(0.94)
+						setTransparency(0.94)
 					end
 				)
-				m(
-					s.Frame.MouseLeave,
+				AddSignal(
+					Button.Frame.MouseLeave,
 					function()
-						u(1, true)
+						setTransparency(1, true)
 					end
 				)
-				m(
-					s.Frame.MouseButton1Down,
+				AddSignal(
+					Button.Frame.MouseButton1Down,
 					function()
-						u(0.96)
+						setTransparency(0.96)
 					end
 				)
-				m(
-					s.Frame.MouseButton1Up,
+				AddSignal(
+					Button.Frame.MouseButton1Up,
 					function()
-						u(0.94)
+						setTransparency(0.94)
 					end
 				)
-				m(s.Frame.MouseButton1Click, s.Callback)
-				s.SetCallback = function(v)
-					s.Callback = v
+				AddSignal(Button.Frame.MouseButton1Click, Button.Callback)
+				Button.SetCallback = function(callback)
+					Button.Callback = callback
 				end
-				return s
+				return Button
 			end
-			o.Frame =
-				l(
+			TitleBar.Frame =
+				New(
 					"Frame",
-					{Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = n.Parent},
+					{Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = config.Parent},
 					{
-						l(
+						New(
 							"Frame",
 							-- ขยับซ้ายเล็กน้อย: Position 16 -> 8, ลด margin ขวาให้สมดุล
 							{Size = UDim2.new(1, -8, 1, 0), Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1},
 							{
 								-- UIListLayout: แนวนอนและจัดกึ่งกลางแนวตั้ง
-								l(
+								New(
 									"UIListLayout",
 									{
 										Padding = UDim.new(0, 6),
@@ -7045,11 +7045,11 @@ local moduleFunctions = {
 									}
 								),
 								-- ไอคอนขนาดใหญ่ขึ้นและจัดด้วย layout
-								l(
+								New(
 									"ImageLabel",
 									{
 										Name = "WindowIcon",
-										Image = n.Icon or "rbxassetid://90989180960460",
+										Image = config.Icon or "rbxassetid://90989180960460",
 										Size = UDim2.fromOffset(32, 32), -- ขยายเป็น 32x32
 										BackgroundTransparency = 1,
 										LayoutOrder = 1,
@@ -7058,11 +7058,11 @@ local moduleFunctions = {
 									}
 								),
 								-- Title (ขนาดฟอนต์เพิ่มเล็กน้อย)
-								l(
+								New(
 									"TextLabel",
 									{
 										RichText = true,
-										Text = n.Title or "",
+										Text = config.Title or "",
 										FontFace = Font.new(
 											"rbxasset://fonts/families/GothamSSm.json",
 											Enum.FontWeight.Regular,
@@ -7078,11 +7078,11 @@ local moduleFunctions = {
 									}
 								),
 								-- SubTitle (ถ้ามี)
-								l(
+								New(
 									"TextLabel",
 									{
 										RichText = true,
-										Text = n.SubTitle or "",
+										Text = config.SubTitle or "",
 										TextTransparency = 0.4,
 										FontFace = Font.new(
 											"rbxasset://fonts/families/GothamSSm.json",
@@ -7100,7 +7100,7 @@ local moduleFunctions = {
 								)
 							}
 						),
-						l(
+						New(
 							"Frame",
 							{
 								BackgroundTransparency = 0.5,
@@ -7113,13 +7113,13 @@ local moduleFunctions = {
 				)
 
 			-- Close: now does a full cleanup + destroy related UI
-			o.CloseButton =
-				q(
-					i.Close,
+			TitleBar.CloseButton =
+				BarButton(
+					Assets.Close,
 					UDim2.new(1, -4, 0, 4),
-					o.Frame,
+					TitleBar.Frame,
 					function()
-						p.Window:Dialog {
+						Library.Window:Dialog {
 							Title = "Close",
 							Content = "Are you sure you want to unload the interface?",
 							Buttons = {
@@ -7129,8 +7129,8 @@ local moduleFunctions = {
 										-- 1) Destroy the primary window/object (p)
 										pcall(
 											function()
-												if p and type(p.Destroy) == "function" then
-													p:Destroy()
+												if Library and type(Library.Destroy) == "function" then
+													Library:Destroy()
 												end
 											end
 										)
@@ -7211,55 +7211,55 @@ local moduleFunctions = {
 					end
 				)
 
-			o.MaxButton =
-				q(
-					i.Max,
+			TitleBar.MaxButton =
+				BarButton(
+					Assets.Max,
 					UDim2.new(1, -40, 0, 4),
-					o.Frame,
+					TitleBar.Frame,
 					function()
-						n.Window.Maximize(not n.Window.Maximized)
+						config.Window.Maximize(not config.Window.Maximized)
 					end
 				)
-			o.MinButton =
-				q(
-					i.Min,
+			TitleBar.MinButton =
+				BarButton(
+					Assets.Min,
 					UDim2.new(1, -80, 0, 4),
-					o.Frame,
+					TitleBar.Frame,
 					function()
-						p.Window:Minimize()
+						Library.Window:Minimize()
 					end
 				)
-			return o
+			return TitleBar
 		end
 	end,
 	[17] = function()
-		local c, d, e, f, g = moduleContext(17)
-		local h, i, j, k =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(17)
+		local UserInputService, mouse, camera, Root =
 			game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
 		game:GetService "Workspace".CurrentCamera,
-		d.Parent.Parent
-		local l, m, n, o, p = e(k.Packages.Flipper), e(k.Creator), e(k.Acrylic), e(d.Parent.Assets), d.Parent
-		local q, r, s = l.Spring.new, l.Instant.new, m.New
-		return function(t)
-			local u, v, w, x, y, z =
-				e(k),
+		moduleScript.Parent.Parent
+		local Flipper, Creator, Acrylic, Assets, Components = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic), requireModule(moduleScript.Parent.Assets), moduleScript.Parent
+		local Spring, Instant, New = Flipper.Spring.new, Flipper.Instant.new, Creator.New
+		return function(config)
+			local Library, Window, dragging, dragInput, mousePos, startPos =
+				requireModule(Root),
 			{
 				Minimized = false,
 				Maximized = false,
-				Size = t.Size,
+				Size = config.Size,
 				CurrentPos = 0,
 				Position = UDim2.fromOffset(
-					j.ViewportSize.X / 2 - t.Size.X.Offset / 2,
-					j.ViewportSize.Y / 2 - t.Size.Y.Offset / 2
+					camera.ViewportSize.X / 2 - config.Size.X.Offset / 2,
+					camera.ViewportSize.Y / 2 - config.Size.Y.Offset / 2
 				)
 			},
 			false
-			local A, B = false
-			local C = false
-			v.AcrylicPaint = n.AcrylicPaint()
-			local D, E =
-				s(
+			local resizing, resizePos = false
+			local minimizeNotified = false
+			Window.AcrylicPaint = Acrylic.AcrylicPaint()
+			local selector, resizeStartFrame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromOffset(4, 0),
@@ -7268,14 +7268,14 @@ local moduleFunctions = {
 						AnchorPoint = Vector2.new(0, 0.5),
 						ThemeTag = {BackgroundColor3 = "Accent"}
 					},
-					{s("UICorner", {CornerRadius = UDim.new(0, 2)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 2)})}
 				),
-			s(
+			New(
 				"Frame",
 				{Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Position = UDim2.new(1, -20, 1, -20)}
 			)
-			v.TabHolder =
-				s(
+			Window.TabHolder =
+				New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.fromScale(1, 1),
@@ -7286,26 +7286,26 @@ local moduleFunctions = {
 						CanvasSize = UDim2.fromScale(0, 0),
 						ScrollingDirection = Enum.ScrollingDirection.Y
 					},
-					{s("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})}
+					{New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})}
 				)
-			local F =
-				s(
+			local tabFrame =
+				New(
 					"Frame",
 					{
-						Size = UDim2.new(0, t.TabWidth, 1, -66),
+						Size = UDim2.new(0, config.TabWidth, 1, -66),
 						Position = UDim2.new(0, 12, 0, 54),
 						BackgroundTransparency = 1,
 						ClipsDescendants = true
 					},
-					{v.TabHolder, D}
+					{Window.TabHolder, selector}
 				)
-			v.TabArea = F
+			Window.TabArea = tabFrame
 			-- Expose the existing selector only as an optional visual handle.
 			-- Workspace search can hide it while the tab rail shows live matches.
-			v.TabSelector = D
-			v.TabWidth = t.TabWidth
-			v.TabDisplay =
-				s(
+			Window.TabSelector = selector
+			Window.TabWidth = config.TabWidth
+			Window.TabDisplay =
+				New(
 					"TextLabel",
 					{
 						RichText = true,
@@ -7317,244 +7317,244 @@ local moduleFunctions = {
 						TextXAlignment = "Left",
 						TextYAlignment = "Center",
 						Size = UDim2.new(1, -16, 0, 28),
-						Position = UDim2.fromOffset(t.TabWidth + 26, 56),
+						Position = UDim2.fromOffset(config.TabWidth + 26, 56),
 						BackgroundTransparency = 1,
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			v.ContainerHolder =
-				s(
+			Window.ContainerHolder =
+				New(
 					"CanvasGroup",
 					{
-						Size = UDim2.new(1, -t.TabWidth - 32, 1, -102),
-						Position = UDim2.fromOffset(t.TabWidth + 26, 90),
+						Size = UDim2.new(1, -config.TabWidth - 32, 1, -102),
+						Position = UDim2.fromOffset(config.TabWidth + 26, 90),
 						BackgroundTransparency = 1
 					}
 				)
-			v.Root =
-				s(
+			Window.Root =
+				New(
 					"Frame",
-					{BackgroundTransparency = 1, Size = v.Size, Position = v.Position, Parent = t.Parent},
-					{v.AcrylicPaint.Frame, v.TabDisplay, v.ContainerHolder, F, E}
+					{BackgroundTransparency = 1, Size = Window.Size, Position = Window.Position, Parent = config.Parent},
+					{Window.AcrylicPaint.Frame, Window.TabDisplay, Window.ContainerHolder, tabFrame, resizeStartFrame}
 				)
-			v.TitleBar = e(d.Parent.TitleBar) {Title = t.Title, SubTitle = t.SubTitle, Parent = v.Root, Window = v}
-			if e(k).UseAcrylic then
-				v.AcrylicPaint.AddParent(v.Root)
+			Window.TitleBar = requireModule(moduleScript.Parent.TitleBar) {Title = config.Title, SubTitle = config.SubTitle, Parent = Window.Root, Window = Window}
+			if requireModule(Root).UseAcrylic then
+				Window.AcrylicPaint.AddParent(Window.Root)
 			end
-			local G, H =
-				l.GroupMotor.new {X = v.Size.X.Offset, Y = v.Size.Y.Offset},
-			l.GroupMotor.new {X = v.Position.X.Offset, Y = v.Position.Y.Offset}
-			v.SelectorPosMotor = l.SingleMotor.new(17)
-			v.SelectorSizeMotor = l.SingleMotor.new(0)
-			v.ContainerBackMotor = l.SingleMotor.new(0)
-			v.ContainerPosMotor = l.SingleMotor.new(94)
-			G:onStep(
-				function(I)
-					v.Root.Size = UDim2.new(0, I.X, 0, I.Y)
+			local sizeMotor, posMotor =
+				Flipper.GroupMotor.new {X = Window.Size.X.Offset, Y = Window.Size.Y.Offset},
+			Flipper.GroupMotor.new {X = Window.Position.X.Offset, Y = Window.Position.Y.Offset}
+			Window.SelectorPosMotor = Flipper.SingleMotor.new(17)
+			Window.SelectorSizeMotor = Flipper.SingleMotor.new(0)
+			Window.ContainerBackMotor = Flipper.SingleMotor.new(0)
+			Window.ContainerPosMotor = Flipper.SingleMotor.new(94)
+			sizeMotor:onStep(
+				function(size)
+					Window.Root.Size = UDim2.new(0, size.X, 0, size.Y)
 				end
 			)
-			H:onStep(
-				function(I)
-					v.Root.Position = UDim2.new(0, I.X, 0, I.Y)
+			posMotor:onStep(
+				function(position)
+					Window.Root.Position = UDim2.new(0, position.X, 0, position.Y)
 				end
 			)
-			local I, J = 0, 0
-			v.SelectorPosMotor:onStep(
-				function(K)
-					D.Position = UDim2.new(0, 0, 0, K + 17)
-					local L = tick()
-					local M = L - J
-					if I ~= nil then
-						v.SelectorSizeMotor:setGoal(q((math.abs(K - I) / (M * 60)) + 16))
-						I = K
+			local lastValue, lastTime = 0, 0
+			Window.SelectorPosMotor:onStep(
+				function(value)
+					selector.Position = UDim2.new(0, 0, 0, value + 17)
+					local now = tick()
+					local deltaTime = now - lastTime
+					if lastValue ~= nil then
+						Window.SelectorSizeMotor:setGoal(Spring((math.abs(value - lastValue) / (deltaTime * 60)) + 16))
+						lastValue = value
 					end
-					J = L
+					lastTime = now
 				end
 			)
-			v.SelectorSizeMotor:onStep(
-				function(K)
-					D.Size = UDim2.new(0, 4, 0, K)
+			Window.SelectorSizeMotor:onStep(
+				function(value)
+					selector.Size = UDim2.new(0, 4, 0, value)
 				end
 			)
-			v.ContainerBackMotor:onStep(
-				function(K)
-					v.ContainerHolder.GroupTransparency = K
+			Window.ContainerBackMotor:onStep(
+				function(value)
+					Window.ContainerHolder.GroupTransparency = value
 				end
 			)
-			v.ContainerPosMotor:onStep(
-				function(K)
-					v.ContainerHolder.Position = UDim2.fromOffset(t.TabWidth + 26, K)
+			Window.ContainerPosMotor:onStep(
+				function(value)
+					Window.ContainerHolder.Position = UDim2.fromOffset(config.TabWidth + 26, value)
 				end
 			)
 			-- Public, additive layout hook used by the workspace toolbar.  Keeping
 			-- this inside Window means compact mode does not fight the existing
 			-- Flipper position motor when a tab is selected.
-			function v.SetTabWidth(M, N)
-				N = math.clamp(tonumber(N) or t.TabWidth, 52, 320)
-				t.TabWidth = N
-				v.TabWidth = N
-				F.Size = UDim2.new(0, N, 1, F.Size.Y.Offset)
-				v.TabDisplay.Position = UDim2.fromOffset(N + 26, 56)
-				v.ContainerHolder.Size = UDim2.new(1, -N - 32, 1, -102)
-				v.ContainerHolder.Position = UDim2.fromOffset(N + 26, v.ContainerPosMotor:getValue())
+			function Window.SetTabWidth(_self, width)
+				width = math.clamp(tonumber(width) or config.TabWidth, 52, 320)
+				config.TabWidth = width
+				Window.TabWidth = width
+				tabFrame.Size = UDim2.new(0, width, 1, tabFrame.Size.Y.Offset)
+				Window.TabDisplay.Position = UDim2.fromOffset(width + 26, 56)
+				Window.ContainerHolder.Size = UDim2.new(1, -width - 32, 1, -102)
+				Window.ContainerHolder.Position = UDim2.fromOffset(width + 26, Window.ContainerPosMotor:getValue())
 			end
-			local K, L
-			v.Maximize = function(M, N, O)
-				v.Maximized = M
-				v.TitleBar.MaxButton.Frame.Icon.Image = M and o.Restore or o.Max
-				if M then
-					K = v.Size.X.Offset
-					L = v.Size.Y.Offset
+			local oldSizeX, oldSizeY
+			Window.Maximize = function(maximized, noPos, instant)
+				Window.Maximized = maximized
+				Window.TitleBar.MaxButton.Frame.Icon.Image = maximized and Assets.Restore or Assets.Max
+				if maximized then
+					oldSizeX = Window.Size.X.Offset
+					oldSizeY = Window.Size.Y.Offset
 				end
-				local P, Q = M and j.ViewportSize.X or K, M and j.ViewportSize.Y or L
-				G:setGoal {
-					X = l[O and "Instant" or "Spring"].new(P, {frequency = 6}),
-					Y = l[O and "Instant" or "Spring"].new(Q, {frequency = 6})
+				local sizeX, sizeY = maximized and camera.ViewportSize.X or oldSizeX, maximized and camera.ViewportSize.Y or oldSizeY
+				sizeMotor:setGoal {
+					X = Flipper[instant and "Instant" or "Spring"].new(sizeX, {frequency = 6}),
+					Y = Flipper[instant and "Instant" or "Spring"].new(sizeY, {frequency = 6})
 				}
-				v.Size = UDim2.fromOffset(P, Q)
-				if not N then
-					H:setGoal {
-						X = q(M and 0 or v.Position.X.Offset, {frequency = 6}),
-						Y = q(M and 0 or v.Position.Y.Offset, {frequency = 6})
+				Window.Size = UDim2.fromOffset(sizeX, sizeY)
+				if not noPos then
+					posMotor:setGoal {
+						X = Spring(maximized and 0 or Window.Position.X.Offset, {frequency = 6}),
+						Y = Spring(maximized and 0 or Window.Position.Y.Offset, {frequency = 6})
 					}
 				end
 			end
-			m.AddSignal(
-				v.TitleBar.Frame.InputBegan,
-				function(M)
-					if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
-						w = true
-						y = M.Position
-						z = v.Root.Position
-						if v.Maximized then
-							z =
+			Creator.AddSignal(
+				Window.TitleBar.Frame.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = true
+						mousePos = input.Position
+						startPos = Window.Root.Position
+						if Window.Maximized then
+							startPos =
 								UDim2.fromOffset(
-									i.X - (i.X * ((K - 100) / v.Root.AbsoluteSize.X)),
-									i.Y - (i.Y * (L / v.Root.AbsoluteSize.Y))
+									mouse.X - (mouse.X * ((oldSizeX - 100) / Window.Root.AbsoluteSize.X)),
+									mouse.Y - (mouse.Y * (oldSizeY / Window.Root.AbsoluteSize.Y))
 								)
 						end
-						M.Changed:Connect(
+						input.Changed:Connect(
 							function()
-								if M.UserInputState == Enum.UserInputState.End then
-									w = false
+								if input.UserInputState == Enum.UserInputState.End then
+									dragging = false
 								end
 							end
 						)
 					end
 				end
 			)
-			m.AddSignal(
-				v.TitleBar.Frame.InputChanged,
-				function(M)
+			Creator.AddSignal(
+				Window.TitleBar.Frame.InputChanged,
+				function(input)
 					if
-						M.UserInputType == Enum.UserInputType.MouseMovement or
-						M.UserInputType == Enum.UserInputType.Touch
+						input.UserInputType == Enum.UserInputType.MouseMovement or
+						input.UserInputType == Enum.UserInputType.Touch
 					then
-						x = M
+						dragInput = input
 					end
 				end
 			)
-			m.AddSignal(
-				E.InputBegan,
-				function(M)
-					if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
-						A = true
-						B = M.Position
+			Creator.AddSignal(
+				resizeStartFrame.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						resizing = true
+						resizePos = input.Position
 					end
 				end
 			)
-			m.AddSignal(
-				h.InputChanged,
-				function(M)
-					if M == x and w then
-						local N = M.Position - y
-						v.Position = UDim2.fromOffset(z.X.Offset + N.X, z.Y.Offset + N.Y)
-						H:setGoal {X = r(v.Position.X.Offset), Y = r(v.Position.Y.Offset)}
-						if v.Maximized then
-							v.Maximize(false, true, true)
+			Creator.AddSignal(
+				UserInputService.InputChanged,
+				function(input)
+					if input == dragInput and dragging then
+						local delta = input.Position - mousePos
+						Window.Position = UDim2.fromOffset(startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y)
+						posMotor:setGoal {X = Instant(Window.Position.X.Offset), Y = Instant(Window.Position.Y.Offset)}
+						if Window.Maximized then
+							Window.Maximize(false, true, true)
 						end
 					end
 					if
-						(M.UserInputType == Enum.UserInputType.MouseMovement or
-							M.UserInputType == Enum.UserInputType.Touch) and
-						A
+						(input.UserInputType == Enum.UserInputType.MouseMovement or
+							input.UserInputType == Enum.UserInputType.Touch) and
+						resizing
 					then
-						local N, O = M.Position - B, v.Size
-						local P = Vector3.new(O.X.Offset, O.Y.Offset, 0) + Vector3.new(1, 1, 0) * N
-						local Q = Vector2.new(math.clamp(P.X, 470, 2048), math.clamp(P.Y, 380, 2048))
-						G:setGoal {X = l.Instant.new(Q.X), Y = l.Instant.new(Q.Y)}
+						local delta, startSize = input.Position - resizePos, Window.Size
+						local targetSize = Vector3.new(startSize.X.Offset, startSize.Y.Offset, 0) + Vector3.new(1, 1, 0) * delta
+						local clampedSize = Vector2.new(math.clamp(targetSize.X, 470, 2048), math.clamp(targetSize.Y, 380, 2048))
+						sizeMotor:setGoal {X = Flipper.Instant.new(clampedSize.X), Y = Flipper.Instant.new(clampedSize.Y)}
 					end
 				end
 			)
-			m.AddSignal(
-				h.InputEnded,
-				function(M)
-					if A == true or M.UserInputType == Enum.UserInputType.Touch then
-						A = false
-						v.Size = UDim2.fromOffset(G:getValue().X, G:getValue().Y)
+			Creator.AddSignal(
+				UserInputService.InputEnded,
+				function(input)
+					if resizing == true or input.UserInputType == Enum.UserInputType.Touch then
+						resizing = false
+						Window.Size = UDim2.fromOffset(sizeMotor:getValue().X, sizeMotor:getValue().Y)
 					end
 				end
 			)
-			m.AddSignal(
-				v.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize",
+			Creator.AddSignal(
+				Window.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					v.TabHolder.CanvasSize = UDim2.new(0, 0, 0, v.TabHolder.UIListLayout.AbsoluteContentSize.Y)
+					Window.TabHolder.CanvasSize = UDim2.new(0, 0, 0, Window.TabHolder.UIListLayout.AbsoluteContentSize.Y)
 				end
 			)
-			m.AddSignal(
-				h.InputBegan,
-				function(M)
+			Creator.AddSignal(
+				UserInputService.InputBegan,
+				function(input)
 					local function toggleMinimize()
 						-- Ctrl is Fluent's legacy default.  Give Ctrl+K one short
 						-- chord window so command search does not minimize first.
-						if M.KeyCode == Enum.KeyCode.LeftControl or M.KeyCode == Enum.KeyCode.RightControl then
+						if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
 							task.delay(0.16, function()
-								if h:IsKeyDown(M.KeyCode) and not h:IsKeyDown(Enum.KeyCode.K) and not h:GetFocusedTextBox() then
-									v:Minimize()
+								if UserInputService:IsKeyDown(input.KeyCode) and not UserInputService:IsKeyDown(Enum.KeyCode.K) and not UserInputService:GetFocusedTextBox() then
+									Window:Minimize()
 								end
 							end)
 						else
-							v:Minimize()
+							Window:Minimize()
 						end
 					end
 					if
-						type(u.MinimizeKeybind) == "table" and u.MinimizeKeybind.Type == "Keybind" and
-						not h:GetFocusedTextBox()
+						type(Library.MinimizeKeybind) == "table" and Library.MinimizeKeybind.Type == "Keybind" and
+						not UserInputService:GetFocusedTextBox()
 					then
-						if M.KeyCode.Name == u.MinimizeKeybind.Value then
+						if input.KeyCode.Name == Library.MinimizeKeybind.Value then
 							toggleMinimize()
 						end
-					elseif M.KeyCode == u.MinimizeKey and not h:GetFocusedTextBox() then
+					elseif input.KeyCode == Library.MinimizeKey and not UserInputService:GetFocusedTextBox() then
 						toggleMinimize()
 					end
 				end
 			)
-			function v.Minimize(M)
-				v.Minimized = not v.Minimized
-				v.Root.Visible = not v.Minimized
-				if not C then
-					C = true
-					local N = u.MinimizeKeybind and u.MinimizeKeybind.Value or u.MinimizeKey.Name
-					u:Notify {Title = "Interface", Content = "Press " .. N .. " to toggle the inteface.", Duration = 6}
+			function Window.Minimize(_self)
+				Window.Minimized = not Window.Minimized
+				Window.Root.Visible = not Window.Minimized
+				if not minimizeNotified then
+					minimizeNotified = true
+					local key = Library.MinimizeKeybind and Library.MinimizeKeybind.Value or Library.MinimizeKey.Name
+					Library:Notify {Title = "Interface", Content = "Press " .. key .. " to toggle the inteface.", Duration = 6}
 				end
 			end
-			function v.Destroy(M)
-				if e(k).UseAcrylic then
-					v.AcrylicPaint.Model:Destroy()
+			function Window.Destroy(_self)
+				if requireModule(Root).UseAcrylic then
+					Window.AcrylicPaint.Model:Destroy()
 				end
-				v.Root:Destroy()
+				Window.Root:Destroy()
 			end
-			local M = e(p.Dialog):Init(v)
-			function v.Dialog(N, O)
-				local P = M:Create()
-				P.Title.Text = O.Title
-				TranslationSystem:Register(P.Title, O.Title, "Text")
-				local Q =
-					s(
+			local DialogModule = requireModule(Components.Dialog):Init(Window)
+			function Window.Dialog(_self, dialogConfig)
+				local dialog = DialogModule:Create()
+				dialog.Title.Text = dialogConfig.Title
+				TranslationSystem:Register(dialog.Title, dialogConfig.Title, "Text")
+				local content =
+					New(
 						"TextLabel",
 						{
 							FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-							Text = O.Content,
+							Text = dialogConfig.Content,
 							TextColor3 = Color3.fromRGB(240, 240, 240),
 							TextSize = 14,
 							TextXAlignment = Enum.TextXAlignment.Left,
@@ -7562,52 +7562,52 @@ local moduleFunctions = {
 							Size = UDim2.new(1, -40, 1, 0),
 							Position = UDim2.fromOffset(20, 60),
 							BackgroundTransparency = 1,
-							Parent = P.Root,
+							Parent = dialog.Root,
 							ClipsDescendants = false,
 							ThemeTag = {TextColor3 = "Text"}
 						}
 					)
-				s(
+				New(
 					"UISizeConstraint",
-					{MinSize = Vector2.new(300, 165), MaxSize = Vector2.new(620, math.huge), Parent = P.Root}
+					{MinSize = Vector2.new(300, 165), MaxSize = Vector2.new(620, math.huge), Parent = dialog.Root}
 				)
-				P.Root.Size = UDim2.fromOffset(Q.TextBounds.X + 40, 165)
-				if Q.TextBounds.X + 40 > v.Size.X.Offset - 120 then
-					P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, 165)
-					Q.TextWrapped = true
-					P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, Q.TextBounds.Y + 150)
+				dialog.Root.Size = UDim2.fromOffset(content.TextBounds.X + 40, 165)
+				if content.TextBounds.X + 40 > Window.Size.X.Offset - 120 then
+					dialog.Root.Size = UDim2.fromOffset(Window.Size.X.Offset - 120, 165)
+					content.TextWrapped = true
+					dialog.Root.Size = UDim2.fromOffset(Window.Size.X.Offset - 120, content.TextBounds.Y + 150)
 				end
-				for R, S in next, O.Buttons do
-					P:Button(S.Title, S.Callback)
+				for _, button in next, dialogConfig.Buttons do
+					dialog:Button(button.Title, button.Callback)
 				end
-				P:Open()
+				dialog:Open()
 			end
-			local N = e(p.Tab):Init(v)
-			function v.AddTab(O, P)
-				local Q = N:New(P.Title, P.Icon, v.TabHolder)
-				if v.Library and v.Library.Workspace and type(v.Library.Workspace.RegisterTab) == "function" then
-					v.Library.Workspace:RegisterTab(Q, P)
+			local TabModule = requireModule(Components.Tab):Init(Window)
+			function Window.AddTab(_self, tabConfig)
+				local tab = TabModule:New(tabConfig.Title, tabConfig.Icon, Window.TabHolder)
+				if Window.Library and Window.Library.Workspace and type(Window.Library.Workspace.RegisterTab) == "function" then
+					Window.Library.Workspace:RegisterTab(tab, tabConfig)
 				end
-				return Q
+				return tab
 			end
-			function v.SelectTab(O, P)
-				if type(P) == "table" and type(P.Index) == "number" then
-					N:SelectTab(P.Index)
-				elseif type(P) == "number" then
-					N:SelectTab(P)
+			function Window.SelectTab(_self, tab)
+				if type(tab) == "table" and type(tab.Index) == "number" then
+					TabModule:SelectTab(tab.Index)
+				elseif type(tab) == "number" then
+					TabModule:SelectTab(tab)
 				else
-					N:SelectTab(1)
+					TabModule:SelectTab(1)
 				end
 			end
-			m.AddSignal(
-				v.TabHolder:GetPropertyChangedSignal "CanvasPosition",
+			Creator.AddSignal(
+				Window.TabHolder:GetPropertyChangedSignal "CanvasPosition",
 				function()
-					I = N:GetCurrentTabPos() + 16
-					J = 0
-					v.SelectorPosMotor:setGoal(r(N:GetCurrentTabPos()))
+					lastValue = TabModule:GetCurrentTabPos() + 16
+					lastTime = 0
+					Window.SelectorPosMotor:setGoal(Instant(TabModule:GetCurrentTabPos()))
 				end
 			)
-			return v
+			return Window
 		end
 	end,
 	[18] = function()
