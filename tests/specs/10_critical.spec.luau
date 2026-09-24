@@ -426,7 +426,8 @@ return function(t)
 		task.wait(1)
 		-- Let running animations finish; a running spring holds its instance.
 		world:settle(3)
-		t.equal(Leaks.retainedDestroyed(world, sinceId), 0, "destroyed instances still referenced")
+		local retained = Leaks.retainedDestroyed(world, sinceId)
+		t.equal(retained, 0, "destroyed instances still referenced:\n" .. Leaks.describeRetained(world, sinceId))
 		assertNoErrors(t, world)
 	end)
 

@@ -9,9 +9,14 @@
 local Leaks = {}
 
 local function forceFullCollection()
-	for _ = 1, 4 do
-		local junk = table.create(100000)
-		for index = 1, 100000 do
+	-- Allocate about three times the current heap in short-lived tables, so
+	-- at least one whole incremental cycle runs however large the heap is
+	-- (it grows as earlier specs run).
+	local tables = math.max(400000, math.floor(collectgarbage("count") * 1024 * 3 / 64))
+	local chunk = 100000
+	for _ = 1, math.ceil(tables / chunk) do
+		local junk = table.create(chunk)
+		for index = 1, chunk do
 			junk[index] = { index }
 		end
 		junk = nil
@@ -49,6 +54,19 @@ function Leaks.retainedDestroyed(world, sinceId: number?): number
 		previous = current
 	end
 	return previous
+end
+
+-- Lists retained instances as "id Class Name" lines, for failure messages.
+function Leaks.describeRetained(world, sinceId: number?): string
+	local lines = {}
+	for instance in world.allInstances do
+		local state = world:stateOf(instance)
+		if state.destroyed and state.id > (sinceId or 0) then
+			table.insert(lines, string.format("%d %s %s Size=%s Text=%s", state.id, state.class, tostring(state.props.Name), tostring(state.props.Size), tostring(state.props.Text)))
+		end
+	end
+	table.sort(lines)
+	return table.concat(lines, "\n")
 end
 
 return Leaks

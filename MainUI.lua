@@ -7744,13 +7744,19 @@ local moduleFunctions = {
 			end
 			return object
 		end
+		-- Re-tags one object and applies only its properties. Re-theming every
+		-- object here made each toggle click cost O(elements) and reset the
+		-- hover state of every other element.
 		function Creator.OverrideTag(object, properties)
-			if Creator.Registry[object] then
-				Creator.Registry[object].Properties = properties
+			local data = Creator.Registry[object]
+			if data then
+				data.Properties = properties
+				for property, themeKey in next, properties do
+					object[property] = Creator.GetThemeProperty(themeKey)
+				end
 			else
 				Creator.AddThemeObject(object, properties)
 			end
-			Creator.UpdateTheme()
 		end
 		function Creator.New(className, properties, children)
 			local object = Instance.new(className)
@@ -8684,7 +8690,7 @@ local moduleFunctions = {
 			local recalculateCanvasSize = function()
 				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, dropdownListLayout.AbsoluteContentSize.Y)
 			end
-			local searchDebounce = nil
+			local searchRevision = 0
 			local dropdownBuilt = false
 			local virtualScrollDebounce = nil
 			local virtualRowHeight = 38
@@ -8698,7 +8704,36 @@ local moduleFunctions = {
 
 			recalculateListPosition()
 			recalculateListSize()
-			Creator.AddSignal(dropdownInner:GetPropertyChangedSignal "AbsolutePosition", recalculateListPosition)
+
+			-- Follow the button and close on outside clicks only while open, so
+			-- closed dropdowns cost nothing when the window moves or on input.
+			local openConnections = {}
+			local function closeOnOutsideInput(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if Dropdown.Opened then
+						local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
+						local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
+
+						-- Check if click is outside dropdown and outside button
+						local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
+						local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
+
+						if outsideDropdown and outsideButton then
+							Dropdown:Close()
+						end
+					end
+				end
+			end
+			local function connectWhileOpen()
+				table.insert(openConnections, Creator.AddSignal(dropdownInner:GetPropertyChangedSignal "AbsolutePosition", recalculateListPosition))
+				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, closeOnOutsideInput))
+			end
+			local function disconnectWhileOpen()
+				for index = #openConnections, 1, -1 do
+					openConnections[index]:Disconnect()
+					openConnections[index] = nil
+				end
+			end
 
 			-- Arrow rotation animation
 			local arrowRotation = Flipper.SingleMotor.new(0)
@@ -8732,26 +8767,6 @@ local moduleFunctions = {
 				end
 			)
 
-			Creator.AddSignal(
-				UserInputService.InputBegan,
-				function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-						if Dropdown.Opened then
-							local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
-							local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
-
-							-- Check if click is outside dropdown and outside button
-							local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
-							local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
-
-							if outsideDropdown and outsideButton then
-								Dropdown:Close()
-							end
-						end
-					end
-				end
-			)
-
 			-- Search box focus animation
 			Creator.AddSignal(
 				searchBox.Focused,
@@ -8767,20 +8782,16 @@ local moduleFunctions = {
 				end
 			)
 
-			-- Search functionality with debounce for better performance
+			-- Search: several text changes in one frame rebuild the list once.
 			Creator.AddSignal(
 				searchBox:GetPropertyChangedSignal("Text"),
 				function()
-					if searchDebounce then
-						searchDebounce:Disconnect()
-					end
-
-					searchDebounce = game:GetService("RunService").Heartbeat:Connect(function()
-						if searchDebounce then
-							searchDebounce:Disconnect()
-							searchDebounce = nil
+					searchRevision = searchRevision + 1
+					local revision = searchRevision
+					task.defer(function()
+						if revision ~= searchRevision then
+							return
 						end
-
 						Dropdown.SearchText = searchBox.Text:lower()
 						dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 						dropdownBuilt = false
@@ -9028,6 +9039,7 @@ local moduleFunctions = {
 					return
 				end
 				Dropdown.Opened = true
+				connectWhileOpen()
 				scrollFrame.ScrollingEnabled = false
 				dropdownHolderCanvas.Visible = true
 				searchBox.Text = ""
@@ -9056,6 +9068,7 @@ local moduleFunctions = {
 					return
 				end
 				Dropdown.Opened = false
+				disconnectWhileOpen()
 				scrollFrame.ScrollingEnabled = true
 
 				-- Arrow rotation animation
@@ -10888,20 +10901,42 @@ local moduleFunctions = {
 		function BaseMotor.onComplete(motor, handler)
 			return motor._onComplete:connect(handler)
 		end
+		-- Running motors are stepped, in start order, from one RenderStepped
+		-- connection that exists only while something is animating. A motor
+		-- whose step errors is stopped so it cannot block the others.
+		local runningMotors = {}
+		local schedulerConnection = nil
+		local function stepRunningMotors(deltaTime)
+			for _, motor in ipairs(table.clone(runningMotors)) do
+				if motor._running then
+					local ok, err = pcall(motor.step, motor, deltaTime)
+					if not ok then
+						motor:stop()
+						task.spawn(error, err, 0)
+					end
+				end
+			end
+			if #runningMotors == 0 and schedulerConnection then
+				schedulerConnection:Disconnect()
+				schedulerConnection = nil
+			end
+		end
 		function BaseMotor.start(motor)
-			if not motor._connection then
-				motor._connection =
-					RunService.RenderStepped:Connect(
-						function(deltaTime)
-							motor:step(deltaTime)
-						end
-					)
+			if not motor._running then
+				motor._running = true
+				table.insert(runningMotors, motor)
+				if not schedulerConnection then
+					schedulerConnection = RunService.RenderStepped:Connect(stepRunningMotors)
+				end
 			end
 		end
 		function BaseMotor.stop(motor)
-			if motor._connection then
-				motor._connection:Disconnect()
-				motor._connection = nil
+			if motor._running then
+				motor._running = false
+				local index = table.find(runningMotors, motor)
+				if index then
+					table.remove(runningMotors, index)
+				end
 			end
 		end
 		BaseMotor.destroy = BaseMotor.stop
