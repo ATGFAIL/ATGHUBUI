@@ -1,0 +1,9 @@
+[package]
+name = "atg-rename"
+version = "0.1.0"
+edition = "2021"
+description = "Scope-aware local variable renamer for MainUI.lua with automatic equivalence checks"
+publish = false
+
+[dependencies]
+full_moon = { version = "=2.2.0", features = ["luau"] }

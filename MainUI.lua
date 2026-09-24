@@ -1,222 +1,222 @@
 do
-    local a = game:GetService("TweenService")
-    local b = game:GetService("ContentProvider")
-    local c = game:GetService("CoreGui")
-    local d = game:GetService("Lighting")
-    local e = game:GetService("RunService")
-    local f = game:GetService("Players")
-    local g = f.LocalPlayer
-    local h = workspace.CurrentCamera
-    local i = "rbxassetid://90989180960460"
-    local j = true
-    local k = "ATG HUB"
-    local l = Enum.Font.GothamBold
-    local m = 0.35
-    local n = 0.8
-    local o = 0.35
-    local p = 0.82
-    local q = 1.12
-    local r = 0.6
-    local t = 0.9
-    local u = 8
-    local v = true
-    if c:FindFirstChild("CoreSplash") then
-        c.CoreSplash:Destroy()
+    local TweenService = game:GetService("TweenService")
+    local ContentProvider = game:GetService("ContentProvider")
+    local CoreGui = game:GetService("CoreGui")
+    local Lighting = game:GetService("Lighting")
+    local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local localPlayer = Players.LocalPlayer
+    local camera = workspace.CurrentCamera
+    local logoImage = "rbxassetid://90989180960460"
+    local showTitle = true
+    local titleText = "ATG HUB"
+    local titleFont = Enum.Font.GothamBold
+    local fadeInTime = 0.35
+    local holdTime = 0.8
+    local fadeOutTime = 0.35
+    local startScale = 0.82
+    local endScale = 1.12
+    local baseImageScale = 0.6
+    local pulseScale = 0.9
+    local blurSize = 8
+    local destroyWhenDone = true
+    if CoreGui:FindFirstChild("CoreSplash") then
+        CoreGui.CoreSplash:Destroy()
     end
     pcall(
         function()
-            b:PreloadAsync({i})
+            ContentProvider:PreloadAsync({logoImage})
         end
     )
-    local function w(x, y, z, A, B)
-        local C = TweenInfo.new(z, A or Enum.EasingStyle.Sine, B or Enum.EasingDirection.Out)
-        local D = a:Create(x, C, y)
-        D:Play()
-        return D
+    local function tween(instance, goals, duration, easingStyle, easingDirection)
+        local info = TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Sine, easingDirection or Enum.EasingDirection.Out)
+        local playing = TweenService:Create(instance, info, goals)
+        playing:Play()
+        return playing
     end
-    local E = Instance.new("ScreenGui")
-    E.Name = "CoreSplash"
-    E.IgnoreGuiInset = true
-    E.ResetOnSpawn = false
-    E.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    E.DisplayOrder = 999999999
-    E.Parent = c
-    local function F()
-        return h and h.ViewportSize or Vector2.new(1280, 720)
+    local splashGui = Instance.new("ScreenGui")
+    splashGui.Name = "CoreSplash"
+    splashGui.IgnoreGuiInset = true
+    splashGui.ResetOnSpawn = false
+    splashGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    splashGui.DisplayOrder = 999999999
+    splashGui.Parent = CoreGui
+    local function getViewportSize()
+        return camera and camera.ViewportSize or Vector2.new(1280, 720)
     end
-    local function G()
-        local H = F()
-        local I = math.min(H.X, H.Y)
-        local J = I / 1080
-        local K = math.clamp(r * J, 0.18, 0.72)
-        return {imageScale = K, textSize = math.clamp(26 * J, 14, 56)}
+    local function getLayoutMetrics()
+        local viewport = getViewportSize()
+        local shortestSide = math.min(viewport.X, viewport.Y)
+        local scaleFactor = shortestSide / 1080
+        local imageScale = math.clamp(baseImageScale * scaleFactor, 0.18, 0.72)
+        return {imageScale = imageScale, textSize = math.clamp(26 * scaleFactor, 14, 56)}
     end
-    local L = Instance.new("Frame")
-    L.Name = "Overlay"
-    L.Size = UDim2.fromScale(1, 1)
-    L.Position = UDim2.fromScale(0, 0)
-    L.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
-    L.BackgroundTransparency = 1
-    L.BorderSizePixel = 0
-    L.ZIndex = 99999999
-    L.Parent = E
-    local function M(B)
-        local N = Instance.new("Frame")
-        N.Size = UDim2.fromScale(1, 0.18)
-        if B == "top" then
-            N.AnchorPoint = Vector2.new(0, 0)
-            N.Position = UDim2.fromScale(0, 0)
-        elseif B == "bottom" then
-            N.AnchorPoint = Vector2.new(0, 1)
-            N.Position = UDim2.fromScale(0, 1)
+    local overlay = Instance.new("Frame")
+    overlay.Name = "Overlay"
+    overlay.Size = UDim2.fromScale(1, 1)
+    overlay.Position = UDim2.fromScale(0, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
+    overlay.BackgroundTransparency = 1
+    overlay.BorderSizePixel = 0
+    overlay.ZIndex = 99999999
+    overlay.Parent = splashGui
+    local function createEdgeShade(side)
+        local shade = Instance.new("Frame")
+        shade.Size = UDim2.fromScale(1, 0.18)
+        if side == "top" then
+            shade.AnchorPoint = Vector2.new(0, 0)
+            shade.Position = UDim2.fromScale(0, 0)
+        elseif side == "bottom" then
+            shade.AnchorPoint = Vector2.new(0, 1)
+            shade.Position = UDim2.fromScale(0, 1)
         end
-        N.BackgroundTransparency = 1
-        N.ZIndex = 99999998
-        N.Parent = E
-        local O = Instance.new("UIGradient", N)
-        O.Transparency = NumberSequence.new {NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 1)}
-        return N
+        shade.BackgroundTransparency = 1
+        shade.ZIndex = 99999998
+        shade.Parent = splashGui
+        local gradient = Instance.new("UIGradient", shade)
+        gradient.Transparency = NumberSequence.new {NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 1)}
+        return shade
     end
-    local P = M("top")
-    local Q = M("bottom")
-    local R
+    local topShade = createEdgeShade("top")
+    local bottomShade = createEdgeShade("bottom")
+    local blur
     do
-        R = d:FindFirstChild("CoreSplashBlur") or Instance.new("BlurEffect")
-        R.Name = "CoreSplashBlur"
-        R.Parent = d
-        R.Size = 0
-        R.Enabled = true
+        blur = Lighting:FindFirstChild("CoreSplashBlur") or Instance.new("BlurEffect")
+        blur.Name = "CoreSplashBlur"
+        blur.Parent = Lighting
+        blur.Size = 0
+        blur.Enabled = true
     end
-    local S = Instance.new("Frame")
-    S.Name = "Center"
-    S.AnchorPoint = Vector2.new(0.5, 0.5)
-    S.Position = UDim2.fromScale(0.5, 0.5)
-    S.Size = UDim2.fromOffset(0, 0)
-    S.BackgroundTransparency = 1
-    S.ZIndex = 99999999
-    S.Parent = E
-    local T = Instance.new("ImageLabel")
-    T.Name = "Logo"
-    T.AnchorPoint = Vector2.new(0.5, 0.5)
-    T.Position = UDim2.fromScale(0.5, 0.5)
-    T.Size = UDim2.fromScale(0.4, 0.4)
-    T.BackgroundTransparency = 1
-    T.Image = i
-    T.ImageTransparency = 1
-    T.ScaleType = Enum.ScaleType.Fit
-    T.ZIndex = 99999999
-    T.Parent = S
-    local U = Instance.new("ImageLabel")
-    U.Name = "Rim"
-    U.AnchorPoint = Vector2.new(0.5, 0.5)
-    U.Position = UDim2.fromScale(0.5, 0.5)
-    U.Size = UDim2.fromScale(1, 1)
-    U.BackgroundTransparency = 1
-    U.Image = i
-    U.ImageTransparency = 0.985
-    U.ScaleType = Enum.ScaleType.Fit
-    U.ZIndex = 99999999
-    U.Parent = T
-    local V = Instance.new("TextLabel")
-    V.Name = "TextShadow"
-    V.AnchorPoint = Vector2.new(0.5, 0)
-    V.Position = UDim2.new(0.5, 1, 0, 16)
-    V.Size = UDim2.new(0.9, 0, 0, 30)
-    V.BackgroundTransparency = 1
-    V.ZIndex = 99999999
-    V.Text = j and k or ""
-    V.TextColor3 = Color3.fromRGB(10, 10, 10)
-    V.TextTransparency = 0.35
-    V.Font = l
-    V.TextSize = 18
-    V.Parent = S
-    local W = Instance.new("TextLabel")
-    W.Name = "Text"
-    W.AnchorPoint = Vector2.new(0.5, 0)
-    W.Position = V.Position
-    W.Size = V.Size
-    W.BackgroundTransparency = 1
-    W.ZIndex = 99999999
-    W.Text = j and k or ""
-    W.TextColor3 = Color3.fromRGB(255, 255, 255)
-    W.TextStrokeTransparency = 0.7
-    W.Font = l
-    W.TextSize = 18
-    W.Parent = S
-    local function X()
-        local Y = G()
-        local Z = Y.imageScale
-        T.Size = UDim2.fromScale(Z, Z)
-        U.Size = UDim2.fromScale(1, 1)
-        local H = F()
-        S.Size = UDim2.fromOffset(math.max(400, H.X * Z * 0.95), math.max(300, H.Y * Z * 0.8))
-        W.TextSize = Y.textSize
-        V.TextSize = Y.textSize
-        local _ = T.AbsoluteSize.Y
-        local a0 = math.clamp(_ / 2 + Y.textSize * 0.9 + 18, 48, 420)
-        W.Position = UDim2.new(0.5, 0, 0.5, a0)
-        V.Position = UDim2.new(0.5, 2, 0.5, a0 + 2)
+    local center = Instance.new("Frame")
+    center.Name = "Center"
+    center.AnchorPoint = Vector2.new(0.5, 0.5)
+    center.Position = UDim2.fromScale(0.5, 0.5)
+    center.Size = UDim2.fromOffset(0, 0)
+    center.BackgroundTransparency = 1
+    center.ZIndex = 99999999
+    center.Parent = splashGui
+    local logo = Instance.new("ImageLabel")
+    logo.Name = "Logo"
+    logo.AnchorPoint = Vector2.new(0.5, 0.5)
+    logo.Position = UDim2.fromScale(0.5, 0.5)
+    logo.Size = UDim2.fromScale(0.4, 0.4)
+    logo.BackgroundTransparency = 1
+    logo.Image = logoImage
+    logo.ImageTransparency = 1
+    logo.ScaleType = Enum.ScaleType.Fit
+    logo.ZIndex = 99999999
+    logo.Parent = center
+    local rim = Instance.new("ImageLabel")
+    rim.Name = "Rim"
+    rim.AnchorPoint = Vector2.new(0.5, 0.5)
+    rim.Position = UDim2.fromScale(0.5, 0.5)
+    rim.Size = UDim2.fromScale(1, 1)
+    rim.BackgroundTransparency = 1
+    rim.Image = logoImage
+    rim.ImageTransparency = 0.985
+    rim.ScaleType = Enum.ScaleType.Fit
+    rim.ZIndex = 99999999
+    rim.Parent = logo
+    local titleShadow = Instance.new("TextLabel")
+    titleShadow.Name = "TextShadow"
+    titleShadow.AnchorPoint = Vector2.new(0.5, 0)
+    titleShadow.Position = UDim2.new(0.5, 1, 0, 16)
+    titleShadow.Size = UDim2.new(0.9, 0, 0, 30)
+    titleShadow.BackgroundTransparency = 1
+    titleShadow.ZIndex = 99999999
+    titleShadow.Text = showTitle and titleText or ""
+    titleShadow.TextColor3 = Color3.fromRGB(10, 10, 10)
+    titleShadow.TextTransparency = 0.35
+    titleShadow.Font = titleFont
+    titleShadow.TextSize = 18
+    titleShadow.Parent = center
+    local title = Instance.new("TextLabel")
+    title.Name = "Text"
+    title.AnchorPoint = Vector2.new(0.5, 0)
+    title.Position = titleShadow.Position
+    title.Size = titleShadow.Size
+    title.BackgroundTransparency = 1
+    title.ZIndex = 99999999
+    title.Text = showTitle and titleText or ""
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextStrokeTransparency = 0.7
+    title.Font = titleFont
+    title.TextSize = 18
+    title.Parent = center
+    local function applyLayout()
+        local metrics = getLayoutMetrics()
+        local imageScale = metrics.imageScale
+        logo.Size = UDim2.fromScale(imageScale, imageScale)
+        rim.Size = UDim2.fromScale(1, 1)
+        local viewport = getViewportSize()
+        center.Size = UDim2.fromOffset(math.max(400, viewport.X * imageScale * 0.95), math.max(300, viewport.Y * imageScale * 0.8))
+        title.TextSize = metrics.textSize
+        titleShadow.TextSize = metrics.textSize
+        local logoHeight = logo.AbsoluteSize.Y
+        local titleOffset = math.clamp(logoHeight / 2 + metrics.textSize * 0.9 + 18, 48, 420)
+        title.Position = UDim2.new(0.5, 0, 0.5, titleOffset)
+        titleShadow.Position = UDim2.new(0.5, 2, 0.5, titleOffset + 2)
     end
-    local a1 = Instance.new("Frame")
-    a1.Name = "Shimmer"
-    a1.AnchorPoint = Vector2.new(0.5, 0.5)
-    a1.Position = UDim2.fromScale(0.5, 0.5)
-    a1.Size = UDim2.fromScale(0.95, 0.95)
-    a1.BackgroundTransparency = 1
-    a1.ZIndex = 99999999
-    a1.Parent = T
-    local a2 = Instance.new("ImageLabel")
-    a2.Size = UDim2.fromScale(1.6, 0.35)
-    a2.AnchorPoint = Vector2.new(0.5, 0.5)
-    a2.Position = UDim2.fromScale(0.5, 0.5)
-    a2.BackgroundTransparency = 1
-    a2.ImageTransparency = 1
-    a2.Image = i
-    a2.ScaleType = Enum.ScaleType.Slice
-    a2.SliceCenter = Rect.new(8, 8, 8, 8)
-    a2.ZIndex = 99999999
-    a2.Parent = a1
-    X()
-    local ae
-    ae =
-        h:GetPropertyChangedSignal("ViewportSize"):Connect(
+    local shimmer = Instance.new("Frame")
+    shimmer.Name = "Shimmer"
+    shimmer.AnchorPoint = Vector2.new(0.5, 0.5)
+    shimmer.Position = UDim2.fromScale(0.5, 0.5)
+    shimmer.Size = UDim2.fromScale(0.95, 0.95)
+    shimmer.BackgroundTransparency = 1
+    shimmer.ZIndex = 99999999
+    shimmer.Parent = logo
+    local shimmerGlint = Instance.new("ImageLabel")
+    shimmerGlint.Size = UDim2.fromScale(1.6, 0.35)
+    shimmerGlint.AnchorPoint = Vector2.new(0.5, 0.5)
+    shimmerGlint.Position = UDim2.fromScale(0.5, 0.5)
+    shimmerGlint.BackgroundTransparency = 1
+    shimmerGlint.ImageTransparency = 1
+    shimmerGlint.Image = logoImage
+    shimmerGlint.ScaleType = Enum.ScaleType.Slice
+    shimmerGlint.SliceCenter = Rect.new(8, 8, 8, 8)
+    shimmerGlint.ZIndex = 99999999
+    shimmerGlint.Parent = shimmer
+    applyLayout()
+    local viewportConnection
+    viewportConnection =
+        camera:GetPropertyChangedSignal("ViewportSize"):Connect(
         function()
-            X()
+            applyLayout()
         end
     )
     task.spawn(
         function()
-            w(L, {BackgroundTransparency = 0.45}, 0.35, Enum.EasingStyle.Quad)
-            w(R, {Size = u}, 0.45, Enum.EasingStyle.Quad)
-            local Y = G()
-            T.Size = UDim2.fromScale(Y.imageScale * p, Y.imageScale * p)
-            w(T, {ImageTransparency = 0}, m, Enum.EasingStyle.Sine)
-            w(T, {Size = UDim2.fromScale(Y.imageScale * 1.02, Y.imageScale * 1.02)}, m, Enum.EasingStyle.Quart)
+            tween(overlay, {BackgroundTransparency = 0.45}, 0.35, Enum.EasingStyle.Quad)
+            tween(blur, {Size = blurSize}, 0.45, Enum.EasingStyle.Quad)
+            local metrics = getLayoutMetrics()
+            logo.Size = UDim2.fromScale(metrics.imageScale * startScale, metrics.imageScale * startScale)
+            tween(logo, {ImageTransparency = 0}, fadeInTime, Enum.EasingStyle.Sine)
+            tween(logo, {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)}, fadeInTime, Enum.EasingStyle.Quart)
             task.spawn(
                 function()
-                    while T.Parent and T.ImageTransparency == 0 do
-                        a2.Rotation = (math.random() - 0.5) * 30
-                        a2.ImageTransparency = 0.85
-                        w(a2, {ImageTransparency = 1}, 0.7, Enum.EasingStyle.Sine)
+                    while logo.Parent and logo.ImageTransparency == 0 do
+                        shimmerGlint.Rotation = (math.random() - 0.5) * 30
+                        shimmerGlint.ImageTransparency = 0.85
+                        tween(shimmerGlint, {ImageTransparency = 1}, 0.7, Enum.EasingStyle.Sine)
                         task.wait(0.12 + math.random() * 0.3)
                     end
                 end
             )
-            task.wait(m * 0.9)
-            local ai =
-                w(
-                T,
-                {Size = UDim2.fromScale(Y.imageScale * 1.06, Y.imageScale * 1.06)},
+            task.wait(fadeInTime * 0.9)
+            local growTween =
+                tween(
+                logo,
+                {Size = UDim2.fromScale(metrics.imageScale * 1.06, metrics.imageScale * 1.06)},
                 0.9,
                 Enum.EasingStyle.Quad,
                 Enum.EasingDirection.InOut
             )
-            ai.Completed:Connect(
+            growTween.Completed:Connect(
                 function()
-                    if T and T.Parent then
-                        w(
-                            T,
-                            {Size = UDim2.fromScale(Y.imageScale * 1.02, Y.imageScale * 1.02)},
+                    if logo and logo.Parent then
+                        tween(
+                            logo,
+                            {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)},
                             0.9,
                             Enum.EasingStyle.Quad,
                             Enum.EasingDirection.InOut
@@ -224,32 +224,32 @@ do
                     end
                 end
             )
-            task.wait(m + n)
-            w(L, {BackgroundTransparency = 1}, o, Enum.EasingStyle.Quad)
-            w(R, {Size = 0}, o, Enum.EasingStyle.Quad)
-            w(
-                T,
-                {ImageTransparency = 1, Size = UDim2.fromScale(Y.imageScale * q, Y.imageScale * q)},
-                o,
+            task.wait(fadeInTime + holdTime)
+            tween(overlay, {BackgroundTransparency = 1}, fadeOutTime, Enum.EasingStyle.Quad)
+            tween(blur, {Size = 0}, fadeOutTime, Enum.EasingStyle.Quad)
+            tween(
+                logo,
+                {ImageTransparency = 1, Size = UDim2.fromScale(metrics.imageScale * endScale, metrics.imageScale * endScale)},
+                fadeOutTime,
                 Enum.EasingStyle.Quad
             )
-            w(W, {TextTransparency = 1}, o * 0.9, Enum.EasingStyle.Quad)
-            w(V, {TextTransparency = 1}, o * 0.9, Enum.EasingStyle.Quad)
-            task.wait(o + 0.05)
-            if v then
-                if ae then
-                    ae:Disconnect()
+            tween(title, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
+            tween(titleShadow, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
+            task.wait(fadeOutTime + 0.05)
+            if destroyWhenDone then
+                if viewportConnection then
+                    viewportConnection:Disconnect()
                 end
                 pcall(
                     function()
-                        E:Destroy()
-                        if R and R.Parent then
-                            R:Destroy()
+                        splashGui:Destroy()
+                        if blur and blur.Parent then
+                            blur:Destroy()
                         end
                     end
                 )
             else
-                E.Parent = E.Parent
+                splashGui.Parent = splashGui.Parent
             end
         end
     )
@@ -3097,7 +3097,7 @@ do
     end
 end
 
-local a, b = {
+local moduleTree, moduleContext = {
 	{
 		1,
 		"ModuleScript",
@@ -3209,9 +3209,9 @@ local a, b = {
 		}
 	}
 }
-local aa = {
+local moduleFunctions = {
 	function()
-		local c, d, e, f, g = b(1)
+		local c, d, e, f, g = moduleContext(1)
 		local h, i, j, k, l, m =
 			game:GetService "Lighting",
 		game:GetService "RunService",
@@ -5104,7 +5104,7 @@ local aa = {
 		return x
 	end,
 	function()
-		local c, d, e, f, g = b(2)
+		local c, d, e, f, g = moduleContext(2)
 		local h = {AcrylicBlur = e(d.AcrylicBlur), CreateAcrylic = e(d.CreateAcrylic), AcrylicPaint = e(d.AcrylicPaint)}
 		function h.init()
 			local i = Instance.new "DepthOfFieldEffect"
@@ -5145,7 +5145,7 @@ local aa = {
 		return h
 	end,
 	function()
-		local c, d, e, f, g = b(3)
+		local c, d, e, f, g = moduleContext(3)
 		local h, i, j, k = e(d.Parent.Parent.Creator), e(d.Parent.CreateAcrylic), unpack(e(d.Parent.Utils))
 		local l = function(l)
 			local m = {}
@@ -5232,7 +5232,7 @@ local aa = {
 		end
 	end,
 	function()
-		local c, d, e, f, g = b(4)
+		local c, d, e, f, g = moduleContext(4)
 		local h, i = e(d.Parent.Parent.Creator), e(d.Parent.AcrylicBlur)
 		local j = h.New
 		return function(k)
@@ -5331,7 +5331,7 @@ local aa = {
 		end
 	end,
 	function()
-		local c, d, e, f, g = b(5)
+		local c, d, e, f, g = moduleContext(5)
 		local h = d.Parent.Parent
 		local i = e(h.Creator)
 		local j = function()
@@ -5356,7 +5356,7 @@ local aa = {
 		return j
 	end,
 	function()
-		local c, d, e, f, g = b(6)
+		local c, d, e, f, g = moduleContext(6)
 		local h, i = function(h, i, j, k, l)
 			return (h - i) * (l - k) / (j - i) + k
 		end, function(h, i)
@@ -5370,7 +5370,7 @@ local aa = {
 		return {i, j}
 	end,
 	[8] = function()
-		local c, d, e, f, g = b(8)
+		local c, d, e, f, g = moduleContext(8)
 		return {
 			Close = "rbxassetid://9886659671",
 			Min = "rbxassetid://9886659276",
@@ -5379,7 +5379,7 @@ local aa = {
 		}
 	end,
 	[9] = function()
-		local c, d, e, f, g = b(9)
+		local c, d, e, f, g = moduleContext(9)
 		local h = d.Parent.Parent
 		local i, j = e(h.Packages.Flipper), e(h.Creator)
 		local k, l = j.New, i.Spring.new
@@ -5456,7 +5456,7 @@ local aa = {
 		end
 	end,
 	[10] = function()
-		local c, d, e, f, g = b(10)
+		local c, d, e, f, g = moduleContext(10)
 		local h, i, j, k =
 			game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
@@ -5605,7 +5605,7 @@ local aa = {
 		return q
 	end,
 	[11] = function()
-		local c, d, e, f, g = b(11)
+		local c, d, e, f, g = moduleContext(11)
 		local h = d.Parent.Parent
 		local i, j = e(h.Packages.Flipper), e(h.Creator)
 		local k, l = j.New, i.Spring.new
@@ -5758,7 +5758,7 @@ local aa = {
 		end
 	end,
 	[12] = function()
-		local c, d, e, f, g = b(12)
+		local c, d, e, f, g = moduleContext(12)
 		local h = d.Parent.Parent
 		local i, j, k = e(h.Packages.Flipper), e(h.Creator), e(h.Acrylic)
 		local l, m, n, o = i.Spring.new, i.Instant.new, j.New, {}
@@ -6274,7 +6274,7 @@ local aa = {
 		return o
 	end,
 	[13] = function()
-		local c, d, e, f, g = b(13)
+		local c, d, e, f, g = moduleContext(13)
 		local h = d.Parent.Parent
 		local i = e(h.Creator)
 		local j = i.New
@@ -6333,7 +6333,7 @@ local aa = {
 		end
 	end,
 	[14] = function()
-		local c, d, e, f, g = b(14)
+		local c, d, e, f, g = moduleContext(14)
 		local h = d.Parent.Parent
 		local i, j = e(h.Packages.Flipper), e(h.Creator)
 		local k, l, m, n, o =
@@ -6555,7 +6555,7 @@ local aa = {
 		return o
 	end,
 	[15] = function()
-		local c, d, e, f, g = b(15)
+		local c, d, e, f, g = moduleContext(15)
 		local TextService, i = game:GetService("TextService"), d.Parent.Parent
 		local j, k = e(i.Packages.Flipper), e(i.Creator)
 		local New = k.New
@@ -6952,7 +6952,7 @@ local aa = {
 	end,
 
 	[16] = function()
-		local c, d, e, f, g = b(16)
+		local c, d, e, f, g = moduleContext(16)
 		local h, i = d.Parent.Parent, e(d.Parent.Assets)
 		local j, k = e(h.Creator), e(h.Packages.Flipper)
 		local l, m = j.New, j.AddSignal
@@ -7233,7 +7233,7 @@ local aa = {
 		end
 	end,
 	[17] = function()
-		local c, d, e, f, g = b(17)
+		local c, d, e, f, g = moduleContext(17)
 		local h, i, j, k =
 			game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
@@ -7611,7 +7611,7 @@ local aa = {
 		end
 	end,
 	[18] = function()
-		local c, d, e, f, g = b(18)
+		local c, d, e, f, g = moduleContext(18)
 		local h = d.Parent
 		local i, j, k =
 			e(h.Themes),
@@ -7774,7 +7774,7 @@ local aa = {
 		return k
 	end,
 	[19] = function()
-		local c, d, e, f, g = b(19)
+		local c, d, e, f, g = moduleContext(19)
 		local h = {}
 		for i, j in next, d:GetChildren() do
 			table.insert(h, e(j))
@@ -7782,7 +7782,7 @@ local aa = {
 		return h
 	end,
 	[20] = function()
-		local c, d, e, f, g = b(20)
+		local c, d, e, f, g = moduleContext(20)
 		local h = d.Parent.Parent
 		local i = e(h.Creator)
 		local j, k, l = i.New, h.Components, {}
@@ -7817,7 +7817,7 @@ local aa = {
 		return l
 	end,
 	[21] = function()
-		local c, d, e, f, g = b(21)
+		local c, d, e, f, g = moduleContext(21)
 		local h, i, j, k =
 			game:GetService "UserInputService",
 		game:GetService "TouchInputService",
@@ -8300,7 +8300,7 @@ local aa = {
 		return u
 	end,
 	[22] = function()
-		local aa, ab, ac, ad, ae = b(22)
+		local aa, ab, ac, ad, ae = moduleContext(22)
 		local af, ag, ah, ai, aj =
 			game:GetService "TweenService",
 		game:GetService "UserInputService",
@@ -9416,7 +9416,7 @@ local aa = {
 		return g
 	end,
 	[23] = function()
-		local aa, ab, ac, ad, ae = b(23)
+		local aa, ab, ac, ad, ae = moduleContext(23)
 		local af = ab.Parent.Parent
 		local ag = ac(af.Creator)
 		local ah, ai, aj, c = ag.New, ag.AddSignal, af.Components, {}
@@ -9493,7 +9493,7 @@ local aa = {
 		return c
 	end,
 	[24] = function()
-		local aa, ab, ac, ad, ae = b(24)
+		local aa, ab, ac, ad, ae = moduleContext(24)
 		local af, ag = game:GetService "UserInputService", ab.Parent.Parent
 		local ah = ac(ag.Creator)
 		local ai, aj, c = ah.New, ag.Components, {}
@@ -9684,7 +9684,7 @@ local aa = {
 		return c
 	end,
 	[25] = function()
-		local aa, ab, ac, ad, ae = b(25)
+		local aa, ab, ac, ad, ae = moduleContext(25)
 		local af = ab.Parent.Parent
 		local ag, ah, ai, aj = af.Components, ac(af.Packages.Flipper), ac(af.Creator), {}
 		aj.__index = aj
@@ -9700,7 +9700,7 @@ local aa = {
 		return aj
 	end,
 	[26] = function()
-		local aa, ab, ac, ad, ae = b(26)
+		local aa, ab, ac, ad, ae = moduleContext(26)
 		local af, ag = game:GetService "UserInputService", ab.Parent.Parent
 		local ah = ac(ag.Creator)
 		local ai, aj, c = ah.New, ag.Components, {}
@@ -9888,7 +9888,7 @@ local aa = {
 		return c
 	end,
 	[27] = function()
-		local aa, ab, ac, ad, ae = b(27)
+		local aa, ab, ac, ad, ae = moduleContext(27)
 		local af, ag = game:GetService "TweenService", ab.Parent.Parent
 		local ah = ac(ag.Creator)
 		local ai, aj, c = ah.New, ag.Components, {}
@@ -9975,7 +9975,7 @@ local aa = {
 		return c
 	end,
 	[28] = function()
-		local aa, ab, ac, ad, ae = b(28)
+		local aa, ab, ac, ad, ae = moduleContext(28)
 		return {
 			assets = {
 				["lucide-accessibility"] = "rbxassetid://10709751939",
@@ -10803,7 +10803,7 @@ local aa = {
 		}
 	end,
 	[30] = function()
-		local aa, ab, ac, ad, ae = b(30)
+		local aa, ab, ac, ad, ae = moduleContext(30)
 		local af = {
 			SingleMotor = ac(ab.SingleMotor),
 			GroupMotor = ac(ab.GroupMotor),
@@ -10815,7 +10815,7 @@ local aa = {
 		return af
 	end,
 	[31] = function()
-		local aa, ab, ac, ad, ae = b(31)
+		local aa, ab, ac, ad, ae = moduleContext(31)
 		local af, ag, ah, ai = game:GetService "RunService", ac(ab.Parent.Signal), function()
 		end, {}
 		ai.__index = ai
@@ -10857,7 +10857,7 @@ local aa = {
 		return ai
 	end,
 	[32] = function()
-		local aa, ab, ac, ad, ae = b(32)
+		local aa, ab, ac, ad, ae = moduleContext(32)
 		return function()
 			local af, ag = game:GetService "RunService", ac(ab.Parent.BaseMotor)
 			describe(
@@ -10898,7 +10898,7 @@ local aa = {
 		end
 	end,
 	[33] = function()
-		local aa, ab, ac, ad, ae = b(33)
+		local aa, ab, ac, ad, ae = moduleContext(33)
 		local af, ag, ah = ac(ab.Parent.BaseMotor), ac(ab.Parent.SingleMotor), ac(ab.Parent.isMotor)
 		local ai = setmetatable({}, af)
 		ai.__index = ai
@@ -10983,7 +10983,7 @@ local aa = {
 		return ai
 	end,
 	[34] = function()
-		local aa, ab, ac, ad, ae = b(34)
+		local aa, ab, ac, ad, ae = moduleContext(34)
 		return function()
 			local af, ag, ah = ac(ab.Parent.GroupMotor), ac(ab.Parent.Instant), ac(ab.Parent.Spring)
 			it(
@@ -11052,7 +11052,7 @@ local aa = {
 		end
 	end,
 	[35] = function()
-		local aa, ab, ac, ad, ae = b(35)
+		local aa, ab, ac, ad, ae = moduleContext(35)
 		local af = {}
 		af.__index = af
 		function af.new(ag)
@@ -11064,7 +11064,7 @@ local aa = {
 		return af
 	end,
 	[36] = function()
-		local aa, ab, ac, ad, ae = b(36)
+		local aa, ab, ac, ad, ae = moduleContext(36)
 		return function()
 			local af = ac(ab.Parent.Instant)
 			it(
@@ -11079,7 +11079,7 @@ local aa = {
 		end
 	end,
 	[37] = function()
-		local aa, ab, ac, ad, ae = b(37)
+		local aa, ab, ac, ad, ae = moduleContext(37)
 		local af = {}
 		af.__index = af
 		function af.new(ag, ah)
@@ -11101,7 +11101,7 @@ local aa = {
 		return af
 	end,
 	[38] = function()
-		local aa, ab, ac, ad, ae = b(38)
+		local aa, ab, ac, ad, ae = moduleContext(38)
 		return function()
 			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Linear)
 			describe(
@@ -11167,7 +11167,7 @@ local aa = {
 		end
 	end,
 	[39] = function()
-		local aa, ab, ac, ad, ae = b(39)
+		local aa, ab, ac, ad, ae = moduleContext(39)
 		local af = {}
 		af.__index = af
 		function af.new(ag, ah)
@@ -11210,7 +11210,7 @@ local aa = {
 		return ag
 	end,
 	[40] = function()
-		local aa, ab, ac, ad, ae = b(40)
+		local aa, ab, ac, ad, ae = moduleContext(40)
 		return function()
 			local af = ac(ab.Parent.Signal)
 			it(
@@ -11264,7 +11264,7 @@ local aa = {
 		end
 	end,
 	[41] = function()
-		local aa, ab, ac, ad, ae = b(41)
+		local aa, ab, ac, ad, ae = moduleContext(41)
 		local af = ac(ab.Parent.BaseMotor)
 		local ag = setmetatable({}, af)
 		ag.__index = ag
@@ -11313,7 +11313,7 @@ local aa = {
 		return ag
 	end,
 	[42] = function()
-		local aa, ab, ac, ad, ae = b(42)
+		local aa, ab, ac, ad, ae = moduleContext(42)
 		return function()
 			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Instant)
 			it(
@@ -11358,7 +11358,7 @@ local aa = {
 		end
 	end,
 	[43] = function()
-		local aa, ab, ac, ad, ae = b(43)
+		local aa, ab, ac, ad, ae = moduleContext(43)
 		local af, ag, ah, aj = 0.001, 0.001, 0.0001, {}
 		aj.__index = aj
 		function aj.new(c, d)
@@ -11408,7 +11408,7 @@ local aa = {
 		return aj
 	end,
 	[44] = function()
-		local aa, ab, ac, ad, ae = b(44)
+		local aa, ab, ac, ad, ae = moduleContext(44)
 		return function()
 			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Spring)
 			describe(
@@ -11447,7 +11447,7 @@ local aa = {
 		end
 	end,
 	[45] = function()
-		local aa, ab, ac, ad, ae = b(45)
+		local aa, ab, ac, ad, ae = moduleContext(45)
 		local af = function(af)
 			local ag = tostring(af):match "^Motor%((.+)%)$"
 			if ag then
@@ -11459,7 +11459,7 @@ local aa = {
 		return af
 	end,
 	[46] = function()
-		local aa, ab, ac, ad, ae = b(46)
+		local aa, ab, ac, ad, ae = moduleContext(46)
 		return function()
 			local af, ag, ah = ac(ab.Parent.isMotor), ac(ab.Parent.SingleMotor), ac(ab.Parent.GroupMotor)
 			local aj, c = ag.new(0), ah.new {}
@@ -11488,7 +11488,7 @@ local aa = {
 		end
 	end,
 	[47] = function()
-		local aa, ab, ac, ad, ae = b(47)
+		local aa, ab, ac, ad, ae = moduleContext(47)
 		local af = {
 			Names = {
 				"Dark",
@@ -11521,7 +11521,7 @@ local aa = {
 		return af
 	end,
 	[48] = function()
-		local aa, ab, ac, ad, ae = b(48)
+		local aa, ab, ac, ad, ae = moduleContext(48)
 		return {
 			Name = "Amethyst",
 			Accent = Color3.fromRGB(147, 51, 234),
@@ -11561,7 +11561,7 @@ local aa = {
 		}
 	end,
 	[49] = function()
-		local aa, ab, ac, ad, ae = b(49)
+		local aa, ab, ac, ad, ae = moduleContext(49)
 		return {
 			Name = "Aqua",
 			Accent = Color3.fromRGB(0, 255, 255),
@@ -11601,7 +11601,7 @@ local aa = {
 		}
 	end,
 	[50] = function()
-		local aa, ab, ac, ad, ae = b(50)
+		local aa, ab, ac, ad, ae = moduleContext(50)
 		return {
 			Name = "Dark V2",
 			Accent = Color3.fromRGB(96, 205, 255),
@@ -11641,7 +11641,7 @@ local aa = {
 		}
 	end,
 	[51] = function()
-		local aa, ab, ac, ad, ae = b(51)
+		local aa, ab, ac, ad, ae = moduleContext(51)
 		return {
 			Name = "Darker V2",
 			Accent = Color3.fromRGB(72, 138, 182),
@@ -11681,7 +11681,7 @@ local aa = {
 		}
 	end,
 	[52] = function()
-		local aa, ab, ac, ad, ae = b(52)
+		local aa, ab, ac, ad, ae = moduleContext(52)
 		return {
 			Name = "Light",
 			Accent = Color3.fromRGB(0, 103, 192),
@@ -11721,7 +11721,7 @@ local aa = {
 		}
 	end,
 	[53] = function()
-		local aa, ab, ac, ad, ae = b(53)
+		local aa, ab, ac, ad, ae = moduleContext(53)
 		return {
 			Name = "Rose",
 			Accent = Color3.fromRGB(255, 20, 147),
@@ -11761,7 +11761,7 @@ local aa = {
 		}
 	end,
 	[54] = function()
-		local aa, ab, ac, ad, ae = b(54)
+		local aa, ab, ac, ad, ae = moduleContext(54)
 		return {
 			Name = "Ocean",
 			Accent = Color3.fromRGB(0, 191, 255),
@@ -11801,7 +11801,7 @@ local aa = {
 		}
 	end,
 	[55] = function()
-		local aa, ab, ac, ad, ae = b(55)
+		local aa, ab, ac, ad, ae = moduleContext(55)
 		return {
 			Name = "Forest",
 			Accent = Color3.fromRGB(50, 205, 50),
@@ -11841,7 +11841,7 @@ local aa = {
 		}
 	end,
 	[56] = function()
-		local aa, ab, ac, ad, ae = b(56)
+		local aa, ab, ac, ad, ae = moduleContext(56)
 		return {
 			Name = "Sunset",
 			Accent = Color3.fromRGB(255, 140, 0),
@@ -11881,7 +11881,7 @@ local aa = {
 		}
 	end,
 	[57] = function()
-		local aa, ab, ac, ad, ae = b(57)
+		local aa, ab, ac, ad, ae = moduleContext(57)
 		return {
 			Name = "Midnight",
 			Accent = Color3.fromRGB(180, 200, 255), -- slightly cooler accent for contrast
@@ -11921,7 +11921,7 @@ local aa = {
 		}
 	end,
 	[58] = function()
-		local aa, ab, ac, ad, ae = b(58)
+		local aa, ab, ac, ad, ae = moduleContext(58)
 		return {
 			Name = "Cherry",
 			Accent = Color3.fromRGB(255, 0, 102),
@@ -11961,7 +11961,7 @@ local aa = {
 		}
 	end,
 	[59] = function()
-		local aa, ab, ac, ad, ae = b(59)
+		local aa, ab, ac, ad, ae = moduleContext(59)
 		return {
 			Name = "Lavender",
 			Accent = Color3.fromRGB(180, 120, 255),
@@ -12001,7 +12001,7 @@ local aa = {
 		}
 	end,
 	[60] = function()
-		local aa, ab, ac, ad, ae = b(60)
+		local aa, ab, ac, ad, ae = moduleContext(60)
 		return {
 			Name = "Gold",
 			Accent = Color3.fromRGB(255, 215, 0),
@@ -12041,7 +12041,7 @@ local aa = {
 		}
 	end,
 	[61] = function()
-		local aa, ab, ac, ad, ae = b(61)
+		local aa, ab, ac, ad, ae = moduleContext(61)
 		return {
 			Name = "Mint",
 			Accent = Color3.fromRGB(0, 255, 200),
@@ -12081,7 +12081,7 @@ local aa = {
 		}
 	end,
 	[62] = function()
-		local aa, ab, ac, ad, ae = b(62)
+		local aa, ab, ac, ad, ae = moduleContext(62)
 		return {
 			Name = "Crimson",
 			Accent = Color3.fromRGB(255, 0, 60),
@@ -12121,7 +12121,7 @@ local aa = {
 		}
 	end,
 	[63] = function()
-		local aa, ab, ac, ad, ae = b(63)
+		local aa, ab, ac, ad, ae = moduleContext(63)
 		return {
 			Name = "Sapphire",
 			Accent = Color3.fromRGB(0, 120, 255),
@@ -12161,7 +12161,7 @@ local aa = {
 		}
 	end,
 	[64] = function()
-		local aa, ab, ac, ad, ae = b(64)
+		local aa, ab, ac, ad, ae = moduleContext(64)
 		return {
 			Name = "Peach",
 			Accent = Color3.fromRGB(255, 160, 120),
@@ -12201,7 +12201,7 @@ local aa = {
 		}
 	end,
 	[65] = function()
-		local aa, ab, ac, ad, ae = b(65)
+		local aa, ab, ac, ad, ae = moduleContext(65)
 		return {
 			Name = "Galaxy",
 			Accent = Color3.fromRGB(180, 100, 255),
@@ -12241,7 +12241,7 @@ local aa = {
 		}
 	end,
 	[66] = function()
-		local aa, ab, ac, ad, ae = b(66)
+		local aa, ab, ac, ad, ae = moduleContext(66)
 		-- RGB Theme with animated rainbow colors flag
 		return {
 			Name = "RGB",
@@ -12283,7 +12283,7 @@ local aa = {
 		}
 	end,
 	[67] = function()
-		local aa, ab, ac, ad, ae = b(67)
+		local aa, ab, ac, ad, ae = moduleContext(67)
 		return {
 			Name = "Dark",
 			Accent = Color3.fromRGB(96, 205, 255),
@@ -12323,7 +12323,7 @@ local aa = {
 		}
 	end,
 	[68] = function()
-		local aa, ab, ac, ad, ae = b(68)
+		local aa, ab, ac, ad, ae = moduleContext(68)
 		return {
 			Name = "Darker",
 			Accent = Color3.fromRGB(72, 138, 182),
@@ -12352,7 +12352,7 @@ local aa = {
 	end
 }
 do
-	local ab, ac, ad, ae, af, ag, ah, aj, c, e, f, g, h, i, j, k =
+	local task, setmetatable, error, newproxy, getmetatable, next, table, unpack, coroutine, scriptGlobal, luaType, nativeRequire, pcall, nativeGetfenv, nativeSetfenv, rawget =
 		task,
 	setmetatable,
 	error,
@@ -12369,254 +12369,254 @@ do
 	getfenv,
 	setfenv,
 	rawget
-	local l, m, n, o, p, s, t, u, v, w, x = ah.insert, ah.remove, ah.freeze or function(l)
-		return l
-	end, ab and ab.defer or function(l, ...)
-		local m = c.create(l)
-		c.resume(m, ...)
-		return m
+	local tableInsert, tableRemove, freeze, defer, runtimeVersion, instanceById, moduleFunctionOf, moduleResults, scriptsToRun, sharedTable, childrenOf = table.insert, table.remove, table.freeze or function(value)
+		return value
+	end, task and task.defer or function(callback, ...)
+		local thread = coroutine.create(callback)
+		coroutine.resume(thread, ...)
+		return thread
 	end, "0.0.0-venv", {}, {}, {}, {}, {}, {}
-	local y, z = {
-		GetChildren = function(y)
-			local z, A = x[y], {}
-			for B in ag, z do
-				l(A, B)
+	local virtualMethods, boundMethods = {
+		GetChildren = function(instance)
+			local children, result = childrenOf[instance], {}
+			for child in next, children do
+				tableInsert(result, child)
 			end
-			return A
+			return result
 		end,
-		FindFirstChild = function(y, z)
-			if not z then
-				ad("Argument 1 missing or nil", 2)
+		FindFirstChild = function(instance, name)
+			if not name then
+				error("Argument 1 missing or nil", 2)
 			end
-			for A in ag, x[y] do
-				if A.Name == z then
-					return A
+			for child in next, childrenOf[instance] do
+				if child.Name == name then
+					return child
 				end
 			end
 			return
 		end,
-		GetFullName = function(y)
-			local z, A = y.Name, y.Parent
-			while A do
-				z = A.Name .. "." .. z
-				A = A.Parent
+		GetFullName = function(instance)
+			local fullName, parent = instance.Name, instance.Parent
+			while parent do
+				fullName = parent.Name .. "." .. fullName
+				parent = parent.Parent
 			end
-			return "VirtualEnv." .. z
+			return "VirtualEnv." .. fullName
 		end
 	},
 	{}
-	for A, B in ag, y do
-		z[A] = function(C, ...)
-			if not x[C] then
-				ad("Expected ':' not '.' calling member function " .. A, 1)
+	for methodName, method in next, virtualMethods do
+		boundMethods[methodName] = function(instance, ...)
+			if not childrenOf[instance] then
+				error("Expected ':' not '.' calling member function " .. methodName, 1)
 			end
-			return B(C, ...)
+			return method(instance, ...)
 		end
 	end
-	local C = function(C, D, E)
-		local F, G, H, I, J = ac({}, {__mode = "k"}), function(F)
-			ad(F .. " is not a valid (virtual) member of " .. C .. " \"" .. D .. "\"", 1)
-		end, function(F)
-			ad("Unable to assign (virtual) property " .. F .. ". Property is read only", 1)
-		end, (ae(true))
-		local K = af(I)
-		K.__index = function(L, M)
-			if M == "ClassName" then
-				return C
-			elseif M == "Name" then
-				return D
-			elseif M == "Parent" then
-				return E
-			elseif C == "StringValue" and M == "Value" then
-				return J
+	local createVirtualInstance = function(className, instanceName, parentInstance)
+		local children, invalidMember, readOnly, proxy, stringValue = setmetatable({}, {__mode = "k"}), function(member)
+			error(member .. " is not a valid (virtual) member of " .. className .. " \"" .. instanceName .. "\"", 1)
+		end, function(property)
+			error("Unable to assign (virtual) property " .. property .. ". Property is read only", 1)
+		end, (newproxy(true))
+		local metatable = getmetatable(proxy)
+		metatable.__index = function(_, key)
+			if key == "ClassName" then
+				return className
+			elseif key == "Name" then
+				return instanceName
+			elseif key == "Parent" then
+				return parentInstance
+			elseif className == "StringValue" and key == "Value" then
+				return stringValue
 			else
-				local N = z[M]
-				if N then
-					return N
+				local method = boundMethods[key]
+				if method then
+					return method
 				end
 			end
-			for N in ag, F do
-				if N.Name == M then
-					return N
+			for child in next, children do
+				if child.Name == key then
+					return child
 				end
 			end
-			G(M)
+			invalidMember(key)
 		end
-		K.__newindex = function(L, M, N)
-			if M == "ClassName" then
-				H(M)
-			elseif M == "Name" then
-				D = N
-			elseif M == "Parent" then
-				if N == I then
+		metatable.__newindex = function(_, key, value)
+			if key == "ClassName" then
+				readOnly(key)
+			elseif key == "Name" then
+				instanceName = value
+			elseif key == "Parent" then
+				if value == proxy then
 					return
 				end
-				if E ~= nil then
-					x[E][I] = nil
+				if parentInstance ~= nil then
+					childrenOf[parentInstance][proxy] = nil
 				end
-				E = N
-				if N ~= nil then
-					x[N][I] = true
+				parentInstance = value
+				if value ~= nil then
+					childrenOf[value][proxy] = true
 				end
-			elseif C == "StringValue" and M == "Value" then
-				J = N
+			elseif className == "StringValue" and key == "Value" then
+				stringValue = value
 			else
-				G(M)
+				invalidMember(key)
 			end
 		end
-		K.__tostring = function()
-			return D
+		metatable.__tostring = function()
+			return instanceName
 		end
-		x[I] = F
-		if E ~= nil then
-			x[E][I] = true
+		childrenOf[proxy] = children
+		if parentInstance ~= nil then
+			childrenOf[parentInstance][proxy] = true
 		end
-		return I
+		return proxy
 	end
-	local function D(E, F)
-		local G, H, I, J = E[1], E[2], E[3], E[4]
-		local K = m(I, 1)
-		local L = C(H, K, F)
-		s[G] = L
-		if I then
-			for M, N in ag, I do
-				L[M] = N
+	local function buildTree(entry, parent)
+		local id, className, properties, childEntries = entry[1], entry[2], entry[3], entry[4]
+		local name = tableRemove(properties, 1)
+		local instance = createVirtualInstance(className, name, parent)
+		instanceById[id] = instance
+		if properties then
+			for property, propertyValue in next, properties do
+				instance[property] = propertyValue
 			end
 		end
-		if J then
-			for M, N in ag, J do
-				D(N, L)
+		if childEntries then
+			for _, childEntry in next, childEntries do
+				buildTree(childEntry, instance)
 			end
 		end
-		return L
+		return instance
 	end
-	local E = {}
-	for F, G in ag, a do
-		l(E, D(G))
+	local roots = {}
+	for _, entry in next, moduleTree do
+		tableInsert(roots, buildTree(entry))
 	end
-	for H, I in ag, aa do
-		local J = s[H]
-		t[J] = I
-		local K = J.ClassName
-		if K == "LocalScript" or K == "Script" then
-			l(v, J)
+	for id, moduleFunction in next, moduleFunctions do
+		local instance = instanceById[id]
+		moduleFunctionOf[instance] = moduleFunction
+		local className = instance.ClassName
+		if className == "LocalScript" or className == "Script" then
+			tableInsert(scriptsToRun, instance)
 		end
 	end
-	local J = function(J)
-		local K, L = J.ClassName, u[J]
-		if L and K == "ModuleScript" then
-			return aj(L)
+	local loadModule = function(instance)
+		local className, cached = instance.ClassName, moduleResults[instance]
+		if cached and className == "ModuleScript" then
+			return unpack(cached)
 		end
-		local M = t[J]
-		if not M then
+		local moduleFunction = moduleFunctionOf[instance]
+		if not moduleFunction then
 			return
 		end
-		if K == "LocalScript" or K == "Script" then
-			M()
+		if className == "LocalScript" or className == "Script" then
+			moduleFunction()
 			return
 		else
-			local N = {M()}
-			u[J] = N
-			return aj(N)
+			local results = {moduleFunction()}
+			moduleResults[instance] = results
+			return unpack(results)
 		end
 	end
-	function b(K)
-		local L = s[K]
-		local M = t[L]
-		if not M then
+	function moduleContext(id)
+		local instance = instanceById[id]
+		local moduleFunction = moduleFunctionOf[instance]
+		if not moduleFunction then
 			return
 		end
-		local N, O, P, Q, R, S, T =
+		local envReady, maui, moduleScript, requireModule, globalEnv, moduleEnv, buildEnvironment =
 			false,
-		n {
-			Version = p,
-			Script = e,
-			Shared = w,
+		freeze {
+			Version = runtimeVersion,
+			Script = scriptGlobal,
+			Shared = sharedTable,
 			GetScript = function()
-				return e
+				return scriptGlobal
 			end,
 			GetShared = function()
-				return w
+				return sharedTable
 			end
 		},
-		L,
-		function(N, ...)
-			if x[N] and N.ClassName == "ModuleScript" and t[N] then
-				return J(N)
+		instance,
+		function(target, ...)
+			if childrenOf[target] and target.ClassName == "ModuleScript" and moduleFunctionOf[target] then
+				return loadModule(target)
 			end
-			return g(N, ...)
+			return nativeRequire(target, ...)
 		end
-		local U, V = function(U, ...)
-			if not N then
-				T()
+		local virtualGetfenv, virtualSetfenv = function(level, ...)
+			if not envReady then
+				buildEnvironment()
 			end
-			if f(U) == "number" and U >= 0 then
-				if U == 0 then
-					return S
+			if luaType(level) == "number" and level >= 0 then
+				if level == 0 then
+					return moduleEnv
 				else
-					U = U + 1
-					local V, W = h(i, U)
-					if V and W == R then
-						return S
+					level = level + 1
+					local ok, env = pcall(nativeGetfenv, level)
+					if ok and env == globalEnv then
+						return moduleEnv
 					end
 				end
 			end
-			return i(U, ...)
-		end, function(U, V, ...)
-			if not N then
-				T()
+			return nativeGetfenv(level, ...)
+		end, function(level, newEnv, ...)
+			if not envReady then
+				buildEnvironment()
 			end
-			if f(U) == "number" and U >= 0 then
-				if U == 0 then
-					return j(S, V)
+			if luaType(level) == "number" and level >= 0 then
+				if level == 0 then
+					return nativeSetfenv(moduleEnv, newEnv)
 				else
-					U = U + 1
-					local W, X = h(i, U)
-					if W and X == R then
-						return j(S, V)
+					level = level + 1
+					local ok, env = pcall(nativeGetfenv, level)
+					if ok and env == globalEnv then
+						return nativeSetfenv(moduleEnv, newEnv)
 					end
 				end
 			end
-			return j(U, V, ...)
+			return nativeSetfenv(level, newEnv, ...)
 		end
-		function T()
-			R = i(0)
-			local W = {maui = O, script = P, require = Q, getfenv = U, setfenv = V}
-			S =
-				ac(
+		function buildEnvironment()
+			globalEnv = nativeGetfenv(0)
+			local injected = {maui = maui, script = moduleScript, require = requireModule, getfenv = virtualGetfenv, setfenv = virtualSetfenv}
+			moduleEnv =
+				setmetatable(
 					{},
 					{
-						__index = function(X, Y)
-							local Z = k(S, Y)
-							if Z ~= nil then
-								return Z
+						__index = function(_, key)
+							local raw = rawget(moduleEnv, key)
+							if raw ~= nil then
+								return raw
 							end
-							local _ = W[Y]
-							if _ ~= nil then
-								return _
+							local injectedValue = injected[key]
+							if injectedValue ~= nil then
+								return injectedValue
 							end
-							return R[Y]
+							return globalEnv[key]
 						end
 					}
 				)
-			j(M, S)
-			N = true
+			nativeSetfenv(moduleFunction, moduleEnv)
+			envReady = true
 		end
-		return O, P, Q, U, V
+		return maui, moduleScript, requireModule, virtualGetfenv, virtualSetfenv
 	end
-	for K, L in ag, v do
-		o(J, L)
+	for _, scriptInstance in next, scriptsToRun do
+		defer(loadModule, scriptInstance)
 	end
 	do
-		local M
-		for N, O in ag, E do
-			if O.ClassName == "ModuleScript" and O.Name == "MainModule" then
-				M = O
+		local mainModule
+		for _, root in next, roots do
+			if root.ClassName == "ModuleScript" and root.Name == "MainModule" then
+				mainModule = root
 				break
 			end
 		end
-		if M then
-			return J(M)
+		if mainModule then
+			return loadModule(mainModule)
 		end
 	end
 end
