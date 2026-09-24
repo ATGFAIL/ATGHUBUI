@@ -282,4 +282,46 @@ return function(t)
 		t.equal(dropdown.Value, "Item 3", "a tap selects on release")
 		assertNoErrors(t, world)
 	end)
+	t.test("2.10 a window larger than the screen is fitted and cannot be lost off screen", function()
+		local context = Boot.new({ viewport = { X = 400, Y = 320 } })
+		local world = context.world
+		local window = newWindow(context)
+		window:AddTab({ Title = "Main" })
+		world:settle(2)
+		t.truthy(window.Size.X.Offset <= 400 - 32, "width fits: " .. tostring(window.Size))
+		t.truthy(window.Size.Y.Offset <= 320 - 32, "height fits: " .. tostring(window.Size))
+		local titleBar = window.TitleBar.Frame
+		world:moveMouse(100, 20)
+		local input = world:mouseDown(titleBar)
+		world:stateOf(titleBar).events.InputChanged:Fire(world:moveMouse(900, -300))
+		world:moveMouse(900, -300)
+		world:stateOf(world.UserInputService).extra.InputChanged:Fire(input)
+		world:mouseUp(titleBar, input)
+		world:settle(1)
+		t.truthy(window.Position.X.Offset <= 400 - 40, "title bar stays on screen horizontally: " .. tostring(window.Position))
+		t.truthy(window.Position.Y.Offset >= 0, "title bar stays on screen vertically: " .. tostring(window.Position))
+		assertNoErrors(t, world)
+	end)
+
+	t.test("2.11 tapping the slider rail sets the value", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		local slider = tab:AddSlider("S", { Title = "S", Default = 0, Min = 0, Max = 100, Rounding = 0 })
+		world:settle(1)
+		local hitArea = KitchenSink.findDescendant(world, slider.Frame, function(_, state)
+			return state.props.Name == "HitArea"
+		end)
+		t.truthy(hitArea, "rail hit area")
+		local rail = hitArea and hitArea.Parent
+		if rail then
+			local x = rail.AbsolutePosition.X + rail.AbsoluteSize.X * 0.75
+			world:moveMouse(x, rail.AbsolutePosition.Y)
+			local input = world:mouseDown(hitArea)
+			world:mouseUp(nil, input)
+			t.near(slider.Value, 75, 1, "value from the tap position")
+		end
+		assertNoErrors(t, world)
+	end)
 end

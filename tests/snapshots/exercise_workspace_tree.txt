@@ -158,6 +158,7 @@ ScreenGui "ScreenGui" ResetOnSpawn=false ZIndexBehavior=EnumItem(Enum.ZIndexBeha
               UICorner "UICorner" CornerRadius=UDim(1,0)
             Frame "Frame" BackgroundColor3=Color3(1,1,1) BackgroundTransparency=1 BorderColor3=Color3(0,0,0) BorderSizePixel=0 Position=UDim2(0,7,0,0) Size=UDim2(1,-14,1,0)
               ImageLabel "ImageLabel" AnchorPoint=Vector2(0,0.5) BackgroundColor3=Color3(1,1,1) BackgroundTransparency=1 BorderColor3=Color3(0,0,0) BorderSizePixel=0 Image="http://www.roblox.com/asset/?id=12266946128" ImageColor3=Color3(0.3765,0.8039,1) Position=UDim2(0.75,-7,0.5,0) Size=UDim2(0,14,0,14)
+              Frame "HitArea" AnchorPoint=Vector2(0,0.5) BackgroundColor3=Color3(1,1,1) BackgroundTransparency=1 BorderColor3=Color3(0,0,0) BorderSizePixel=0 Position=UDim2(0,0,0.5,0) Size=UDim2(1,0,0,24)
         TextButton "TextButton" AutoButtonColor=false AutomaticSize=EnumItem(Enum.AutomaticSize.Y) BackgroundColor3=Color3(0.4706,0.4706,0.4706) BackgroundTransparency=0.87 BorderColor3=Color3(0,0,0) Font=EnumItem(Enum.Font.SourceSans) FontFace=Font(rbxasset://fonts/families/SourceSansPro.json, Regular, Normal) LayoutOrder=7 Size=UDim2(1,0,0,0) Text="" TextColor3=Color3(0,0,0) TextSize=14
           UICorner "UICorner" CornerRadius=UDim(0,4)
           UIStroke "UIStroke" ApplyStrokeMode=EnumItem(Enum.ApplyStrokeMode.Border) Color=Color3(0.1373,0.1373,0.1373) Transparency=0.5

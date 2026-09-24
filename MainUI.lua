@@ -7242,7 +7242,17 @@ local moduleFunctions = {
 		moduleScript.Parent.Parent
 		local Flipper, Creator, Acrylic, Assets, Components = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic), requireModule(moduleScript.Parent.Assets), moduleScript.Parent
 		local Spring, Instant, New = Flipper.Spring.new, Flipper.Instant.new, Creator.New
+		-- Space kept between the window and the screen edges on small screens,
+		-- and how much of the title bar must stay on screen while dragging.
+		local SCREEN_MARGIN = 16
+		local VISIBLE_TITLE = 40
 		return function(config)
+			-- A window larger than the screen is shrunk to fit (phones).
+			local viewport = camera.ViewportSize
+			config.Size = UDim2.fromOffset(
+				math.max(200, math.min(config.Size.X.Offset, viewport.X - SCREEN_MARGIN * 2)),
+				math.max(160, math.min(config.Size.Y.Offset, viewport.Y - SCREEN_MARGIN * 2))
+			)
 			local Library, Window, dragging, dragInput, mousePos, startPos =
 				requireModule(Root),
 			{
@@ -7469,7 +7479,13 @@ local moduleFunctions = {
 				function(input)
 					if input == dragInput and dragging then
 						local delta = input.Position - mousePos
-						Window.Position = UDim2.fromOffset(startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y)
+						-- Keep part of the title bar on screen so the window can
+						-- always be dragged back.
+						local screen = camera.ViewportSize
+						local width = Window.Size.X.Offset
+						local x = math.clamp(startPos.X.Offset + delta.X, VISIBLE_TITLE - width, math.max(VISIBLE_TITLE - width, screen.X - VISIBLE_TITLE))
+						local y = math.clamp(startPos.Y.Offset + delta.Y, 0, math.max(0, screen.Y - VISIBLE_TITLE))
+						Window.Position = UDim2.fromOffset(x, y)
 						posMotor:setGoal {X = Instant(Window.Position.X.Offset), Y = Instant(Window.Position.Y.Offset)}
 						if Window.Maximized then
 							Window.Maximize(false, true, true)
@@ -7482,7 +7498,11 @@ local moduleFunctions = {
 					then
 						local delta, startSize = input.Position - resizePos, Window.Size
 						local targetSize = Vector3.new(startSize.X.Offset, startSize.Y.Offset, 0) + Vector3.new(1, 1, 0) * delta
-						local clampedSize = Vector2.new(math.clamp(targetSize.X, 470, 2048), math.clamp(targetSize.Y, 380, 2048))
+						-- The minimum size shrinks on screens smaller than it.
+						local screen = camera.ViewportSize
+						local minimumX = math.max(200, math.min(470, screen.X - SCREEN_MARGIN * 2))
+						local minimumY = math.max(160, math.min(380, screen.Y - SCREEN_MARGIN * 2))
+						local clampedSize = Vector2.new(math.clamp(targetSize.X, minimumX, 2048), math.clamp(targetSize.Y, minimumY, 2048))
 						sizeMotor:setGoal {X = Flipper.Instant.new(clampedSize.X), Y = Flipper.Instant.new(clampedSize.Y)}
 					end
 				end
@@ -9957,6 +9977,37 @@ local moduleFunctions = {
 			)
 			Creator.AddSignal(
 				sliderDot.InputEnded,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = false
+					end
+				end
+			)
+			-- Pressing anywhere on the rail sets the value and starts a drag. The
+			-- rail is 4 px tall, so an invisible 24 px area catches the press.
+			local railHitArea = New("Frame", {
+				Name = "HitArea",
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.fromScale(0, 0.5),
+				Size = UDim2.new(1, 0, 0, 24),
+				Parent = sliderRail
+			})
+			Creator.AddSignal(
+				railHitArea.InputBegan,
+				function(input)
+					if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
+						and not editingNumber and sliderRail.AbsoluteSize.X > 0 then
+						dragging = true
+						local ratio = math.clamp((input.Position.X - sliderRail.AbsolutePosition.X) / sliderRail.AbsoluteSize.X, 0, 1)
+						Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
+						Library._TouchElement(Slider)
+					end
+				end
+			)
+			-- A drag that started on the rail ends wherever the pointer is lifted.
+			Creator.AddSignal(
+				UserInputService.InputEnded,
 				function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 						dragging = false
