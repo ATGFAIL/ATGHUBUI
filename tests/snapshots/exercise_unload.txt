@@ -1,0 +1,6 @@
+closing notification destroyed: true
+manual notification destroyed: true
+close dialog shown: true
+CoreGui after close: CoreSplash,OtherHub
+unloaded: true
+gui destroyed: true

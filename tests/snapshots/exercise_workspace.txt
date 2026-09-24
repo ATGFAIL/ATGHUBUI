@@ -1,0 +1,13 @@
+search reach: Main=false Combat=false
+found: option:AutoFarm Toggle
+search cleared: Main=true Combat=true
+panel kind: favorites
+history count: 1
+save profile: true nil
+apply profile: true nil
+after apply: toggle=true slider=15
+compact tab width: 54
+focus: Main=true Combat=false
+tab order: tab-2-Combat,tab-1-Main
+focused search: true
+confirm without dialog: true

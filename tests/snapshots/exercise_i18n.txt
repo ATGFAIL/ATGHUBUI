@@ -1,0 +1,11 @@
+pack: test-th nil
+community translation applied: true
+requests in community mode: 0
+requests in machine mode > 0: true
+TranslateText callback: true
+export: true copied=true nil
+clipboard has template: true
+languages: English (en), Thai (th), Vietnamese (vi), Spanish (es)
+font profile: font_36ba56a8 nil
+text style: true nil
+status: {CustomFonts=true,FileSystem=true,FontProfile="default",FontTuning={Enabled=false,LineHeight=100,SizeScale=120,Stroke=0,Style="Auto",Weight="Bold"},Locale="en",Mode="machine",RemoteAssetsEnabled=true,RemoteFetch=true,Scope="shared",SourceLocale="en"}

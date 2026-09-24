@@ -1,0 +1,5 @@
+# Local test scratch files and snapshot diffs
+tests/scratch/
+tests/snapshots/*.actual
+# Rust build output of the rename tool
+tools/rename/target/

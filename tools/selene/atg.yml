@@ -1,0 +1,60 @@
+---
+base: luau
+name: atg
+globals:
+  # Roblox engine globals
+  game: {any: true}
+  workspace: {any: true}
+  script: {any: true}
+  shared: {any: true}
+  plugin: {any: true}
+  Instance: {any: true}
+  Enum: {any: true}
+  Color3: {any: true}
+  UDim: {any: true}
+  UDim2: {any: true}
+  Vector2: {any: true}
+  Vector3: {any: true}
+  CFrame: {any: true}
+  Rect: {any: true}
+  Ray: {any: true}
+  NumberSequence: {any: true}
+  NumberSequenceKeypoint: {any: true}
+  ColorSequence: {any: true}
+  ColorSequenceKeypoint: {any: true}
+  NumberRange: {any: true}
+  TweenInfo: {any: true}
+  Font: {any: true}
+  DateTime: {any: true}
+  task: {any: true}
+  typeof: {any: true}
+  wait: {any: true}
+  delay: {any: true}
+  spawn: {any: true}
+  tick: {any: true}
+  time: {any: true}
+  warn: {any: true}
+  utf8: {any: true}
+  settings: {any: true}
+  UserSettings: {any: true}
+  # Executor (UNC / sUNC) globals used by the library
+  request: {any: true}
+  http_request: {any: true}
+  http: {any: true}
+  httpget: {any: true}
+  syn: {any: true}
+  getgenv: {any: true}
+  protectgui: {any: true}
+  writefile: {any: true}
+  readfile: {any: true}
+  isfile: {any: true}
+  isfolder: {any: true}
+  makefolder: {any: true}
+  listfiles: {any: true}
+  delfile: {any: true}
+  delfolder: {any: true}
+  getcustomasset: {any: true}
+  getsynasset: {any: true}
+  setclipboard: {any: true}
+  toclipboard: {any: true}
+  identifyexecutor: {any: true}

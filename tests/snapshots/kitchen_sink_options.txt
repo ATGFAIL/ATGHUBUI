@@ -1,0 +1,27 @@
+Colorpicker Colorpicker Color3:1, 0, 0
+Dropdown Dropdown string:Gamma
+Input Input string:typed text
+InterfaceAdvancedTools Toggle boolean:false
+InterfaceFloatingToggle Toggle boolean:true
+InterfaceFontLineHeight Slider number:100
+InterfaceFontProfile Dropdown string:Script default [default]
+InterfaceFontSizeScale Slider number:100
+InterfaceFontStroke Slider number:0
+InterfaceFontStyle Dropdown string:Auto
+InterfaceFontTarget Dropdown string:Both
+InterfaceFontTuningEnabled Toggle boolean:false
+InterfaceFontUrl Input string:
+InterfaceFontWeight Dropdown string:Auto
+InterfaceInstalledLanguagePack Dropdown string:No installed language packs
+InterfaceLanguage Dropdown string:English (en)
+InterfaceLanguagePackUrl Input string:
+InterfaceTemplateLocale Input string:
+InterfaceTheme Dropdown string:Dark
+InterfaceTranslationEnabled Toggle boolean:true
+InterfaceTranslationMode Dropdown string:Auto
+Keybind Keybind string:K
+MenuKeybind Keybind string:LeftControl
+MultiDropdown Dropdown table{One=true,Three=true}
+Slider Slider number:3.3
+Toggle Toggle boolean:true
+TransparentToggle Toggle boolean:true

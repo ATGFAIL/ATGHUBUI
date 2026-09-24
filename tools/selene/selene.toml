@@ -1,0 +1,28 @@
+# selene configuration for ATG Hub UI.
+# The Roblox std cannot be generated offline, so atg.yml declares the Roblox
+# and executor globals this library uses. Only correctness lints are enabled;
+# the bundled Fluent code intentionally uses shadowing and short names.
+std = "atg"
+
+[lints]
+shadowing = "allow"
+unused_variable = "allow"
+empty_if = "allow"
+if_same_then_else = "allow"
+multiple_statements = "allow"
+parenthese_conditions = "allow"
+global_usage = "allow"
+unbalanced_assignments = "allow"
+empty_loop = "allow"
+bad_string_escape = "warn"
+mixed_table = "allow"
+manual_table_clone = "allow"
+high_cyclomatic_complexity = "allow"
+roblox_incorrect_color3_new_bounds = "allow"
+roblox_incorrect_roact_usage = "allow"
+undefined_variable = "deny"
+incorrect_standard_library_use = "deny"
+duplicate_keys = "deny"
+almost_swapped = "deny"
+divide_by_zero = "deny"
+must_use = "warn"
