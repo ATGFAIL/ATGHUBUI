@@ -3819,7 +3819,7 @@ local moduleFunctions = {
 					scrollFrame.CanvasPosition = Vector2.new(0, canvasY)
 					local highlight = Instance.new("UIStroke")
 					highlight.Name = "ATGWorkspaceHighlight"
-					highlight.Color = Color3.fromRGB(255, 82, 96)
+					highlight.Color = Creator.GetThemeProperty("Accent")
 					highlight.Thickness = 1.5
 					highlight.Transparency = 1
 					highlight.Parent = entry.Frame
@@ -4012,17 +4012,27 @@ local moduleFunctions = {
 				}
 			}
 		end
+		-- Workspace colors follow the theme: a color option may be a Color3 or a
+		-- theme key such as "SubText"; defaults are theme keys.
+		local function themed(properties, property, color)
+			if type(color) == "string" then
+				properties.ThemeTag = properties.ThemeTag or {}
+				properties.ThemeTag[property] = color
+			else
+				properties[property] = color
+			end
+			return properties
+		end
 		function Workspace:Text(parent, text, textSize, options)
 			options = options or {}
 			local zIndex = options.ZIndex or ((parent and parent.ZIndex or 0) + 1)
-			return New("TextLabel", {
+			return New("TextLabel", themed({
 				Name = options.Name or "ATGWorkspaceText",
 				Parent = parent,
 				BackgroundTransparency = 1,
 				Text = tostring(text or ""),
 				I18nSkip = true,
 				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", options.Weight or Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-				TextColor3 = options.Color or Color3.fromRGB(239, 239, 244),
 				TextTransparency = options.Transparency or 0,
 				TextSize = textSize or 12,
 				TextXAlignment = options.Align or Enum.TextXAlignment.Left,
@@ -4032,40 +4042,37 @@ local moduleFunctions = {
 				Size = options.Size or UDim2.fromScale(1, 1),
 				Position = options.Position or UDim2.fromScale(0, 0),
 				ZIndex = zIndex
-			})
+			}, "TextColor3", options.Color or "Text"))
 		end
 		function Workspace:Button(parent, text, icon, callback, options)
 			local zIndex = options and options.ZIndex or ((parent and parent.ZIndex or 0) + 1)
-			local button = New("TextButton", {
+			local button = New("TextButton", themed({
 				Name = "ATGWorkspaceButton",
 				Parent = parent,
 				Size = options and options.Size or UDim2.new(1, 0, 0, options and options.Height or 34),
 				Position = options and options.Position or UDim2.new(),
-				BackgroundColor3 = options and options.Background or Color3.fromRGB(31, 31, 39),
 				BackgroundTransparency = options and options.BackgroundTransparency or 0.08,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Text = "",
 				ZIndex = zIndex
-			})
+			}, "BackgroundColor3", options and options.Background or "DialogButton"))
 			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = button})
-			New("UIStroke", {
-				Color = options and options.StrokeColor or Color3.fromRGB(89, 89, 105),
+			New("UIStroke", themed({
 				Transparency = options and options.StrokeTransparency or 0.62,
 				Thickness = 1,
 				Parent = button
-			})
+			}, "Color", options and options.StrokeColor or "DialogButtonBorder"))
 			if icon then
-				New("ImageLabel", {
+				New("ImageLabel", themed({
 					Name = "Icon",
 					Parent = button,
 					BackgroundTransparency = 1,
 					Image = Library.GetIcon(icon) or icon,
-					ImageColor3 = options and options.IconColor or Color3.fromRGB(215, 215, 222),
 					Size = UDim2.fromOffset(14, 14),
 					Position = UDim2.new(0, 9, 0.5, -7),
 					ZIndex = zIndex + 1
-				})
+				}, "ImageColor3", options and options.IconColor or "Text"))
 			end
 			self:Text(button, text, options and options.TextSize or 12, {
 				Name = "Title",
@@ -4091,15 +4098,15 @@ local moduleFunctions = {
 				Name = "ATGWorkspaceAction",
 				Parent = parent,
 				Size = UDim2.fromOffset(22, 22),
-				BackgroundColor3 = Color3.fromRGB(31, 31, 39),
 				BackgroundTransparency = 0.14,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Image = Library.GetIcon(icon) or icon,
-				ImageColor3 = Color3.fromRGB(219, 219, 226), ZIndex = zIndex
+				ZIndex = zIndex,
+				ThemeTag = {BackgroundColor3 = "DialogButton", ImageColor3 = "Text"}
 			})
 			New("UICorner", {CornerRadius = UDim.new(0, 6), Parent = button})
-			New("UIStroke", {Color = Color3.fromRGB(90, 90, 104), Transparency = 0.75, Parent = button})
+			New("UIStroke", {Transparency = 0.75, Parent = button, ThemeTag = {Color = "DialogButtonBorder"}})
 			self:Bind(button.MouseEnter, function()
 				TweenService:Create(button, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 					BackgroundTransparency = 0,
@@ -4109,7 +4116,7 @@ local moduleFunctions = {
 			self:Bind(button.MouseLeave, function()
 				TweenService:Create(button, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 					BackgroundTransparency = 0.14,
-					ImageColor3 = Color3.fromRGB(219, 219, 226)
+					ImageColor3 = Creator.GetThemeProperty("Text")
 				}):Play()
 			end)
 			self:Bind(button.MouseButton1Click, function()
@@ -4170,7 +4177,7 @@ local moduleFunctions = {
 			entries = type(entries) == "table" and entries or {}
 			if #entries == 0 then
 				self:Text(parent, emptyText or "Nothing here yet.", 12, {
-					Color = Color3.fromRGB(154, 154, 168),
+					Color = "SubText",
 					Wrapped = true,
 					Size = UDim2.new(1, 0, 0, 38)
 				})
@@ -4194,7 +4201,7 @@ local moduleFunctions = {
 				end
 				local zIndex = row.ZIndex
 				self:Text(row, subtitle, 10, {
-					Color = Color3.fromRGB(151, 151, 165),
+					Color = "SubText",
 					Size = UDim2.new(1, -42, 0, 16),
 					Position = UDim2.fromOffset(8, 21),
 					ZIndex = zIndex + 1
@@ -4207,7 +4214,7 @@ local moduleFunctions = {
 					BackgroundTransparency = 1,
 					AutoButtonColor = false,
 					Image = Library.GetIcon("star"),
-					ImageColor3 = self:IsFavorite(entry.Id) and Color3.fromRGB(255, 198, 82) or Color3.fromRGB(150, 150, 165),
+					ImageColor3 = self:IsFavorite(entry.Id) and Color3.fromRGB(255, 198, 82) or Creator.GetThemeProperty("SubText"),
 					ZIndex = zIndex + 2
 				})
 				self:Bind(favorite.MouseButton1Click, function()
@@ -4246,8 +4253,7 @@ local moduleFunctions = {
 				if self.SidebarSearch then self.SidebarSearch.Text = "" end
 				self:Navigate(entry)
 			end, {
-				Height = 48, ZIndex = 101, Background = Color3.fromRGB(31, 31, 39), BackgroundTransparency = 0.05,
-				StrokeColor = Color3.fromRGB(89, 89, 105), StrokeTransparency = 0.62
+				Height = 48, ZIndex = 101, BackgroundTransparency = 0.05, StrokeTransparency = 0.62
 			})
 			card.LayoutOrder = order
 			local titleLabel = card:FindFirstChild("Title")
@@ -4256,11 +4262,11 @@ local moduleFunctions = {
 				titleLabel.Position = UDim2.fromOffset(30, 3)
 			end
 			self:Text(card, description ~= "" and description or (tabTitle ~= "" and tabTitle or entryType), 10, {
-				Name = "Description", Color = Color3.fromRGB(163, 163, 176), Size = UDim2.new(1, -42, 0, 16),
+				Name = "Description", Color = "SubText", Size = UDim2.new(1, -42, 0, 16),
 				Position = UDim2.fromOffset(30, 21), ZIndex = 102
 			})
 			self:Text(card, (tabTitle ~= "" and tabTitle .. "  •  " or "") .. entryType, 9, {
-				Name = "Type", Color = Color3.fromRGB(255, 142, 153), Size = UDim2.new(1, -42, 0, 13),
+				Name = "Type", Color = "Accent", Size = UDim2.new(1, -42, 0, 13),
 				Position = UDim2.fromOffset(30, 34), ZIndex = 102
 			})
 			table.insert(self.SearchCards, card)
@@ -4357,7 +4363,7 @@ local moduleFunctions = {
 			if not content then return end
 			if #self.Notifications == 0 then
 				self:Text(content, "New notifications are saved here for this session.", 12, {
-					Color = Color3.fromRGB(154, 154, 168), Wrapped = true, Size = UDim2.new(1, 0, 0, 38)
+					Color = "SubText", Wrapped = true, Size = UDim2.new(1, 0, 0, 38)
 				})
 				return
 			end
@@ -4366,7 +4372,7 @@ local moduleFunctions = {
 				local titleLabel = row:FindFirstChild("Title")
 				if titleLabel then titleLabel.Size = UDim2.new(1, -38, 0, 18); titleLabel.Position = UDim2.fromOffset(30, 3) end
 				self:Text(row, notification.Content, 10, {
-					Color = Color3.fromRGB(151, 151, 165), Size = UDim2.new(1, -38, 0, 16), Position = UDim2.fromOffset(30, 21), ZIndex = row.ZIndex + 1
+					Color = "SubText", Size = UDim2.new(1, -38, 0, 16), Position = UDim2.fromOffset(30, 21), ZIndex = row.ZIndex + 1
 				})
 			end
 		end
@@ -4380,14 +4386,14 @@ local moduleFunctions = {
 				})
 			end
 			local nameBox = New("TextBox", {
-				Name = "ProfileName", Parent = content, Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(23, 23, 30),
+				Name = "ProfileName", Parent = content, Size = UDim2.new(1, 0, 0, 30),
 				BackgroundTransparency = 0.04, BorderSizePixel = 0, ClearTextOnFocus = false, Text = self.ProfileDraft or "", PlaceholderText = "Profile name",
-				PlaceholderColor3 = Color3.fromRGB(133, 133, 149), TextColor3 = Color3.fromRGB(239, 239, 244), TextSize = 12,
+				ThemeTag = {BackgroundColor3 = "DialogInput", TextColor3 = "Text", PlaceholderColor3 = "SubText"}, TextSize = 12,
 				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), TextXAlignment = Enum.TextXAlignment.Left, I18nSkip = true, ZIndex = content.ZIndex + 1
 			})
 			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = nameBox})
 			New("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = nameBox})
-			New("UIStroke", {Color = Color3.fromRGB(89, 89, 105), Transparency = 0.62, Parent = nameBox})
+			New("UIStroke", {Transparency = 0.62, Parent = nameBox, ThemeTag = {Color = "DialogButtonBorder"}})
 			self:Bind(nameBox.FocusLost, function() self.ProfileDraft = nameBox.Text end)
 			self:Button(content, "Save current settings", "bookmark-plus", function()
 				self.ProfileDraft = nameBox.Text
@@ -4405,7 +4411,7 @@ local moduleFunctions = {
 			end
 			if #recent > 0 then
 				self:Text(content, "Recent profiles", 10, {
-					Color = Color3.fromRGB(151, 151, 165), Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 18)
+					Color = "SubText", Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 18)
 				})
 				for _, name in ipairs(recent) do
 					self:Button(content, name, "history", function()
@@ -4468,23 +4474,23 @@ local moduleFunctions = {
 			local window = self.Window
 			self.Panel = New("CanvasGroup", {
 				Name = "ATGWorkspacePanel", Parent = window.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 260),
-				Position = UDim2.fromOffset(12, 82), BackgroundColor3 = Color3.fromRGB(20, 20, 27),
+				Position = UDim2.fromOffset(12, 82), ThemeTag = {BackgroundColor3 = "DropdownHolder"},
 				BackgroundTransparency = 0.02, BorderSizePixel = 0, Visible = false, GroupTransparency = 1, ZIndex = 35
 			})
 			New("UICorner", {CornerRadius = UDim.new(0, 9), Parent = self.Panel})
-			New("UIStroke", {Color = Color3.fromRGB(124, 52, 62), Transparency = 0.35, Parent = self.Panel})
+			New("UIStroke", {Transparency = 0.35, Parent = self.Panel, ThemeTag = {Color = "Accent"}})
 			self.PanelTitle = self:Text(self.Panel, "Workspace", 13, {
 				Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, -38, 0, 34), Position = UDim2.fromOffset(10, 0), ZIndex = 36
 			})
 			local closeButton = New("ImageButton", {
 				Name = "Close", Parent = self.Panel, Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -27, 0, 6),
-				BackgroundTransparency = 1, Image = Library.GetIcon("x"), ImageColor3 = Color3.fromRGB(178, 178, 191), AutoButtonColor = false, ZIndex = 37
+				BackgroundTransparency = 1, Image = Library.GetIcon("x"), ThemeTag = {ImageColor3 = "SubText"}, AutoButtonColor = false, ZIndex = 37
 			})
 			self:Connect(closeButton.MouseButton1Click, function() self:ShowPanel(false) end)
 			self.PanelContent = New("ScrollingFrame", {
 				Name = "Content", Parent = self.Panel, Size = UDim2.new(1, -16, 1, -46), Position = UDim2.fromOffset(8, 38),
 				BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 3,
-				ScrollBarImageColor3 = Color3.fromRGB(255, 93, 107), ScrollBarImageTransparency = 0.42, ZIndex = 36
+				ThemeTag = {ScrollBarImageColor3 = "Accent"}, ScrollBarImageTransparency = 0.42, ZIndex = 36
 			})
 		end
 		function Workspace:CreateChrome()
@@ -4495,12 +4501,13 @@ local moduleFunctions = {
 			})
 			self.SidebarSearch = New("TextBox", {
 				Name = "Search", Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 0),
-				BackgroundColor3 = Color3.fromRGB(27, 27, 34), BackgroundTransparency = 0.1, BorderSizePixel = 0, ClearTextOnFocus = false,
-				Text = "", PlaceholderText = "Search...  Ctrl+K", PlaceholderColor3 = Color3.fromRGB(142, 142, 157), TextColor3 = Color3.fromRGB(240, 240, 244),
+				BackgroundTransparency = 0.1, BorderSizePixel = 0, ClearTextOnFocus = false,
+				Text = "", PlaceholderText = "Search...  Ctrl+K",
+				ThemeTag = {BackgroundColor3 = "DialogInput", TextColor3 = "Text", PlaceholderColor3 = "SubText"},
 				TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 21
 			})
 			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.SidebarSearch})
-			New("UIStroke", {Color = Color3.fromRGB(115, 55, 64), Transparency = 0.45, Parent = self.SidebarSearch})
+			New("UIStroke", {Transparency = 0.45, Parent = self.SidebarSearch, ThemeTag = {Color = "Accent"}})
 			New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = self.SidebarSearch})
 			self:UpdateSearchHint()
 			self:Connect(self.SidebarSearch:GetPropertyChangedSignal("Text"), function()
@@ -4531,7 +4538,7 @@ local moduleFunctions = {
 			local found = self:FindEntries(query)
 			if #found > 0 then
 				self:Text(self.PaletteContent, normalized == "" and "Recent" or "Results", 10, {
-					Color = Color3.fromRGB(150, 150, 164), Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 20), ZIndex = 94
+					Color = "SubText", Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 20), ZIndex = 94
 				})
 				self:RenderEntries(self.PaletteContent, found, "")
 			end
@@ -6723,7 +6730,7 @@ local moduleFunctions = {
 						Size = UDim2.new(1, -2 * inset, 0, 2), -- full width minus inset each side
 						Position = UDim2.new(0, inset, 1, -2),
 						AnchorPoint = Vector2.new(0, 0),
-						BackgroundColor3 = Color3.fromRGB(255, 255, 255), -- white
+						BackgroundColor3 = Creator.GetThemeProperty("Text"),
 						BackgroundTransparency = 0.85, -- default: very faint
 						ZIndex = 1
 					},
@@ -6741,9 +6748,9 @@ local moduleFunctions = {
 						Size = UDim2.new(0, 0, 0, 2), -- start at width 0
 						Position = UDim2.new(0, inset, 1, -2), -- same inset as baseline
 						AnchorPoint = Vector2.new(0, 0),
-						BackgroundColor3 = Color3.fromRGB(0, 123, 255), -- #007bff
 						BackgroundTransparency = 0,
-						ZIndex = 2
+						ZIndex = 2,
+						ThemeTag = {BackgroundColor3 = acrylic and "InputIndicator" or "DialogInputLine"}
 					},
 					{
 						New("UICorner", {CornerRadius = frameCornerRadius}) -- ปลายโค้ง
@@ -6759,7 +6766,7 @@ local moduleFunctions = {
 						Text = "",
 						Font = Enum.Font.Gotham,
 						TextSize = 16,
-						TextColor3 = Color3.fromRGB(204, 204, 204),
+						TextColor3 = Creator.GetThemeProperty("SubText"),
 						TextTransparency = 1, -- เริ่มโปร่งตาม CSS
 						BackgroundTransparency = 1,
 						Size = UDim2.new(1, -24, 0, 18),
@@ -6782,7 +6789,7 @@ local moduleFunctions = {
 				instant = instant or false
 				local targetPos = UDim2.new(0, 12, 0, -20) -- top: -20px
 				local targetSize = 12
-				local color = Color3.fromRGB(0, 123, 255) -- #007bff
+				local color = Creator.GetThemeProperty("Accent")
 				if instant then
 					Textbox.Label.Position = targetPos
 					Textbox.Label.TextSize = targetSize
@@ -6801,7 +6808,7 @@ local moduleFunctions = {
 				instant = instant or false
 				local originPos = UDim2.new(0, 12, 0, 0) -- top: 0
 				local originSize = 16
-				local originColor = Color3.fromRGB(204, 204, 204)
+				local originColor = Creator.GetThemeProperty("SubText")
 				if instant then
 					Textbox.Label.Position = originPos
 					Textbox.Label.TextSize = originSize
@@ -6846,9 +6853,9 @@ local moduleFunctions = {
 				instant = instant or false
 				if instant then
 					Textbox.BaseLine.BackgroundTransparency = 0.6
-					Textbox.BaseLine.BackgroundColor3 = Color3.fromRGB(240, 240, 240) -- เล็กน้อยเข้มขึ้น
+					Textbox.BaseLine.BackgroundColor3 = Creator.GetThemeProperty("Text")
 				else
-					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(240, 240, 240)}):Play()
+					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6, BackgroundColor3 = Creator.GetThemeProperty("Text")}):Play()
 				end
 			end
 
@@ -6856,9 +6863,9 @@ local moduleFunctions = {
 				instant = instant or false
 				if instant then
 					Textbox.BaseLine.BackgroundTransparency = 0.85
-					Textbox.BaseLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					Textbox.BaseLine.BackgroundColor3 = Creator.GetThemeProperty("Text")
 				else
-					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.85, BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.85, BackgroundColor3 = Creator.GetThemeProperty("Text")}):Play()
 				end
 			end
 
@@ -6960,7 +6967,7 @@ local moduleFunctions = {
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 					Transparency = 0.2,
 					Thickness = 1.6,
-					Color = Color3.fromRGB(40, 120, 215) -- subtle darker blue-ish stroke on focus
+					Color = Creator.GetThemeProperty("Accent")
 				}):Play()
 
 				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.88 or 0}):Play()
@@ -8610,10 +8617,9 @@ local moduleFunctions = {
 							Position = UDim2.fromOffset(5, 44),
 							BackgroundTransparency = 0.9,
 							Text = "✅ Select All",
-							TextColor3 = Color3.fromRGB(76, 194, 255),
 							TextSize = 13,
 							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
-							ThemeTag = {BackgroundColor3 = "DialogButton"}
+							ThemeTag = {BackgroundColor3 = "DialogButton", TextColor3 = "Accent"}
 						},
 						{
 							New("UICorner", {CornerRadius = UDim.new(0, 8)}),

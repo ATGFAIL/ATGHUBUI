@@ -324,4 +324,39 @@ return function(t)
 		end
 		assertNoErrors(t, world)
 	end)
+	t.test("2.12 search box, Select All and input lines follow the theme", function()
+		local context = Boot.new()
+		local world = context.world
+		local Library = context.Library
+		local rgb = world.env.Color3.fromRGB
+		local window = newWindow(context, { Search = true })
+		local tab = window:AddTab({ Title = "Main" })
+		tab:AddDropdown("Multi", { Title = "Multi", Values = { "a" }, Multi = true })
+		local input = tab:AddInput("Name", { Title = "Name", Default = "" })
+		Library:SetTheme("Light")
+		local search = Library.Workspace.SidebarSearch
+		local selectAll = KitchenSink.findTextButton(world, Library.GUI, "✅ Select All")
+		t.equal(search.BackgroundColor3, rgb(252, 252, 252), "search box uses Light DialogInput")
+		t.equal(search.TextColor3, rgb(10, 10, 10), "search text uses Light Text")
+		t.equal(selectAll.TextColor3, rgb(0, 103, 192), "Select All uses Light Accent")
+		local box = KitchenSink.findDescendant(world, input.Frame, function(_, state)
+			return state.class == "TextBox"
+		end)
+		world:focusTextBox(box)
+		task.wait(0.4)
+		local highlight, baseLine = nil, nil
+		for _, child in box.Parent.Parent:GetChildren() do
+			if child:IsA("Frame") and child.Size.Y.Offset == 2 then
+				if child.ZIndex == 2 then
+					highlight = child
+				else
+					baseLine = child
+				end
+			end
+		end
+		t.equal(highlight and highlight.BackgroundColor3, rgb(0, 103, 192), "focused underline uses Accent")
+		t.equal(baseLine and baseLine.BackgroundColor3, rgb(10, 10, 10), "base line uses Text")
+		world:releaseTextBox(false)
+		assertNoErrors(t, world)
+	end)
 end
