@@ -3152,21 +3152,13 @@ local moduleTree, moduleContext = {
 						{"Flipper"},
 						{
 							{33, "ModuleScript", {"GroupMotor"}},
-							{46, "ModuleScript", {"isMotor.spec"}},
 							{39, "ModuleScript", {"Signal"}},
-							{40, "ModuleScript", {"Signal.spec"}},
 							{45, "ModuleScript", {"isMotor"}},
-							{36, "ModuleScript", {"Instant.spec"}},
-							{44, "ModuleScript", {"Spring.spec"}},
-							{42, "ModuleScript", {"SingleMotor.spec"}},
-							{38, "ModuleScript", {"Linear.spec"}},
 							{31, "ModuleScript", {"BaseMotor"}},
 							{43, "ModuleScript", {"Spring"}},
 							{35, "ModuleScript", {"Instant"}},
 							{37, "ModuleScript", {"Linear"}},
-							{41, "ModuleScript", {"SingleMotor"}},
-							{34, "ModuleScript", {"GroupMotor.spec"}},
-							{32, "ModuleScript", {"BaseMotor.spec"}}
+							{41, "ModuleScript", {"SingleMotor"}}
 						}
 					}
 				}
@@ -11180,47 +11172,6 @@ local moduleFunctions = {
 		end
 		return BaseMotor
 	end,
-	[32] = function()
-		local aa, ab, ac, ad, ae = moduleContext(32)
-		return function()
-			local af, ag = game:GetService "RunService", ac(ab.Parent.BaseMotor)
-			describe(
-				"connection management",
-				function()
-					local ah = ag.new()
-					it(
-						"should hook up connections on :start()",
-						function()
-							ah:start()
-							expect(typeof(ah._connection)).to.equal "RBXScriptConnection"
-						end
-					)
-					it(
-						"should remove connections on :stop() or :destroy()",
-						function()
-							ah:stop()
-							expect(ah._connection).to.equal(nil)
-						end
-					)
-				end
-			)
-			it(
-				"should call :step() with deltaTime",
-				function()
-					local ah, ai = (ag.new())
-					function ah.step(aj, ...)
-						ai = {...}
-						ah:stop()
-					end
-					ah:start()
-					local aj = af.RenderStepped:Wait()
-					af.RenderStepped:Wait()
-					expect(ai).to.be.ok()
-					expect(ai[1]).to.equal(aj)
-				end
-			)
-		end
-	end,
 	[33] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(33)
 		local BaseMotor, SingleMotor, isMotor = requireModule(moduleScript.Parent.BaseMotor), requireModule(moduleScript.Parent.SingleMotor), requireModule(moduleScript.Parent.isMotor)
@@ -11306,75 +11257,6 @@ local moduleFunctions = {
 		end
 		return GroupMotor
 	end,
-	[34] = function()
-		local aa, ab, ac, ad, ae = moduleContext(34)
-		return function()
-			local af, ag, ah = ac(ab.Parent.GroupMotor), ac(ab.Parent.Instant), ac(ab.Parent.Spring)
-			it(
-				"should complete when all child motors are complete",
-				function()
-					local ai = af.new({A = 1, B = 2}, false)
-					expect(ai._complete).to.equal(true)
-					ai:setGoal {A = ag.new(3), B = ah.new(4, {frequency = 7.5, dampingRatio = 1})}
-					expect(ai._complete).to.equal(false)
-					ai:step(1.6666666666666665E-2)
-					expect(ai._complete).to.equal(false)
-					for aj = 1, 30 do
-						ai:step(1.6666666666666665E-2)
-					end
-					expect(ai._complete).to.equal(true)
-				end
-			)
-			it(
-				"should start when the goal is set",
-				function()
-					local ai, aj = af.new({A = 0}, false), false
-					ai:onStart(
-						function()
-							aj = not aj
-						end
-					)
-					ai:setGoal {A = ag.new(1)}
-					expect(aj).to.equal(true)
-					ai:setGoal {A = ag.new(1)}
-					expect(aj).to.equal(false)
-				end
-			)
-			it(
-				"should properly return all values",
-				function()
-					local ai = af.new({A = 1, B = 2}, false)
-					local aj = ai:getValue()
-					expect(aj.A).to.equal(1)
-					expect(aj.B).to.equal(2)
-				end
-			)
-			it(
-				"should error when a goal is given to GroupMotor.new",
-				function()
-					local ai =
-						pcall(
-							function()
-								af.new(ag.new(0))
-							end
-						)
-					expect(ai).to.equal(false)
-				end
-			)
-			it(
-				[[should error when a single goal is provided to GroupMotor:step]],
-				function()
-					local ai =
-						pcall(
-							function()
-								af.new {a = 1}:setGoal(ag.new(0))
-							end
-						)
-					expect(ai).to.equal(false)
-				end
-			)
-		end
-	end,
 	[35] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(35)
 		local Instant = {}
@@ -11386,21 +11268,6 @@ local moduleFunctions = {
 			return {complete = true, value = instant._targetValue}
 		end
 		return Instant
-	end,
-	[36] = function()
-		local aa, ab, ac, ad, ae = moduleContext(36)
-		return function()
-			local af = ac(ab.Parent.Instant)
-			it(
-				"should return a completed state with the provided value",
-				function()
-					local ag = af.new(1.23)
-					local ah = ag:step(0.1, {value = 0, complete = false})
-					expect(ah.complete).to.equal(true)
-					expect(ah.value).to.equal(1.23)
-				end
-			)
-		end
 	end,
 	[37] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(37)
@@ -11423,72 +11290,6 @@ local moduleFunctions = {
 			return {complete = complete, value = position, velocity = velocity}
 		end
 		return Linear
-	end,
-	[38] = function()
-		local aa, ab, ac, ad, ae = moduleContext(38)
-		return function()
-			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Linear)
-			describe(
-				"completed state",
-				function()
-					local ah, ai = af.new(0, false), ag.new(1, {velocity = 1})
-					ah:setGoal(ai)
-					for aj = 1, 60 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should complete",
-						function()
-							expect(ah._state.complete).to.equal(true)
-						end
-					)
-					it(
-						"should be exactly the goal value when completed",
-						function()
-							expect(ah._state.value).to.equal(1)
-						end
-					)
-				end
-			)
-			describe(
-				"uncompleted state",
-				function()
-					local ah, ai = af.new(0, false), ag.new(1, {velocity = 1})
-					ah:setGoal(ai)
-					for aj = 1, 59 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should be uncomplete",
-						function()
-							expect(ah._state.complete).to.equal(false)
-						end
-					)
-				end
-			)
-			describe(
-				"negative velocity",
-				function()
-					local ah, ai = af.new(1, false), ag.new(0, {velocity = 1})
-					ah:setGoal(ai)
-					for aj = 1, 60 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should complete",
-						function()
-							expect(ah._state.complete).to.equal(true)
-						end
-					)
-					it(
-						"should be exactly the goal value when completed",
-						function()
-							expect(ah._state.value).to.equal(0)
-						end
-					)
-				end
-			)
-		end
 	end,
 	[39] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(39)
@@ -11532,60 +11333,6 @@ local moduleFunctions = {
 			return coroutine.yield()
 		end
 		return Signal
-	end,
-	[40] = function()
-		local aa, ab, ac, ad, ae = moduleContext(40)
-		return function()
-			local af = ac(ab.Parent.Signal)
-			it(
-				"should invoke all connections, instantly",
-				function()
-					local ag, ah, aj = (af.new())
-					ag:connect(
-						function(c)
-							ah = c
-						end
-					)
-					ag:connect(
-						function(c)
-							aj = c
-						end
-					)
-					ag:fire "hello"
-					expect(ah).to.equal "hello"
-					expect(aj).to.equal "hello"
-				end
-			)
-			it(
-				"should return values when :wait() is called",
-				function()
-					local ag = af.new()
-					spawn(
-						function()
-							ag:fire(123, "hello")
-						end
-					)
-					local ah, aj = ag:wait()
-					expect(ah).to.equal(123)
-					expect(aj).to.equal "hello"
-				end
-			)
-			it(
-				"should properly handle disconnections",
-				function()
-					local ag, ah = af.new(), false
-					local aj =
-						ag:connect(
-							function()
-								ah = true
-							end
-						)
-					aj:disconnect()
-					ag:fire()
-					expect(ah).to.equal(false)
-				end
-			)
-		end
 	end,
 	[41] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(41)
@@ -11635,51 +11382,6 @@ local moduleFunctions = {
 			return "Motor(Single)"
 		end
 		return SingleMotor
-	end,
-	[42] = function()
-		local aa, ab, ac, ad, ae = moduleContext(42)
-		return function()
-			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Instant)
-			it(
-				"should assign new state on step",
-				function()
-					local ah = af.new(0, false)
-					ah:setGoal(ag.new(5))
-					ah:step(1.6666666666666665E-2)
-					expect(ah._state.complete).to.equal(true)
-					expect(ah._state.value).to.equal(5)
-				end
-			)
-			it(
-				[[should invoke onComplete listeners when the goal is completed]],
-				function()
-					local ah, aj = af.new(0, false), false
-					ah:onComplete(
-						function()
-							aj = true
-						end
-					)
-					ah:setGoal(ag.new(5))
-					ah:step(1.6666666666666665E-2)
-					expect(aj).to.equal(true)
-				end
-			)
-			it(
-				"should start when the goal is set",
-				function()
-					local ah, aj = af.new(0, false), false
-					ah:onStart(
-						function()
-							aj = not aj
-						end
-					)
-					ah:setGoal(ag.new(5))
-					expect(aj).to.equal(true)
-					ah:setGoal(ag.new(5))
-					expect(aj).to.equal(false)
-				end
-			)
-		end
 	end,
 	[43] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(43)
@@ -11731,45 +11433,6 @@ local moduleFunctions = {
 		end
 		return Spring
 	end,
-	[44] = function()
-		local aa, ab, ac, ad, ae = moduleContext(44)
-		return function()
-			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Spring)
-			describe(
-				"completed state",
-				function()
-					local ah, aj = af.new(0, false), ag.new(1, {frequency = 2, dampingRatio = 0.75})
-					ah:setGoal(aj)
-					for c = 1, 100 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should complete",
-						function()
-							expect(ah._state.complete).to.equal(true)
-						end
-					)
-					it(
-						"should be exactly the goal value when completed",
-						function()
-							expect(ah._state.value).to.equal(1)
-						end
-					)
-				end
-			)
-			it(
-				"should inherit velocity",
-				function()
-					local ah = af.new(0, false)
-					ah._state = {complete = false, value = 0, velocity = -5}
-					local aj = ag.new(1, {frequency = 2, dampingRatio = 1})
-					ah:setGoal(aj)
-					ah:step(1.6666666666666665E-2)
-					expect(ah._state.velocity < 0).to.equal(true)
-				end
-			)
-		end
-	end,
 	[45] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(45)
 		local isMotor = function(value)
@@ -11781,35 +11444,6 @@ local moduleFunctions = {
 			end
 		end
 		return isMotor
-	end,
-	[46] = function()
-		local aa, ab, ac, ad, ae = moduleContext(46)
-		return function()
-			local af, ag, ah = ac(ab.Parent.isMotor), ac(ab.Parent.SingleMotor), ac(ab.Parent.GroupMotor)
-			local aj, c = ag.new(0), ah.new {}
-			it(
-				"should properly detect motors",
-				function()
-					expect(af(aj)).to.equal(true)
-					expect(af(c)).to.equal(true)
-				end
-			)
-			it(
-				"shouldn't detect things that aren't motors",
-				function()
-					expect(af {}).to.equal(false)
-				end
-			)
-			it(
-				"should return the proper motor type",
-				function()
-					local d, e = af(aj)
-					local f, g = af(c)
-					expect(e).to.equal "Single"
-					expect(g).to.equal "Group"
-				end
-			)
-		end
 	end,
 	[47] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(47)
