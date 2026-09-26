@@ -8707,11 +8707,24 @@ local moduleFunctions = {
 			end
 			local searchRevision = 0
 			local dropdownBuilt = false
-			local virtualScrollDebounce = nil
-			local virtualRowHeight = 38
-			local virtualThreshold = 10
-			local virtualBuffer = 4
-			local virtualEnabled = false
+			-- Rows in list order. Searching shows or hides these rows instead of
+			-- rebuilding them, so typing creates no instances.
+			local dropdownRows = {}
+			local function applySearchFilter()
+				local query = Dropdown.SearchText
+				for _, row in ipairs(dropdownRows) do
+					local shown = query == "" or row.SearchTarget:find(query, 1, true) ~= nil
+					if row.Button.Visible ~= shown then
+						row.Button.Visible = shown
+						if not shown then
+							-- MouseLeave may not fire for a row hidden under the mouse.
+							row:ResetHover()
+						end
+					end
+				end
+				recalculateCanvasSize()
+				recalculateListSize()
+			end
 			local function rebuildDropdown()
 				Dropdown:BuildDropdownList()
 				dropdownBuilt = true
@@ -8742,6 +8755,10 @@ local moduleFunctions = {
 			local function connectWhileOpen()
 				table.insert(openConnections, Creator.AddSignal(dropdownInner:GetPropertyChangedSignal "AbsolutePosition", recalculateListPosition))
 				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, closeOnOutsideInput))
+				table.insert(openConnections, Creator.AddSignal(dropdownListLayout:GetPropertyChangedSignal "AbsoluteContentSize", function()
+					recalculateCanvasSize()
+					recalculateListSize()
+				end))
 			end
 			local function disconnectWhileOpen()
 				for index = #openConnections, 1, -1 do
@@ -8809,29 +8826,11 @@ local moduleFunctions = {
 						end
 						Dropdown.SearchText = searchBox.Text:lower()
 						dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
-						dropdownBuilt = false
-						if Dropdown.Opened then
+						if dropdownBuilt then
+							applySearchFilter()
+						elseif Dropdown.Opened then
 							rebuildDropdown()
 						end
-					end)
-				end
-			)
-
-			Creator.AddSignal(
-				dropdownScrollFrame:GetPropertyChangedSignal("CanvasPosition"),
-				function()
-					if not virtualEnabled or not Dropdown.Opened or not dropdownBuilt then
-						return
-					end
-					if virtualScrollDebounce then
-						virtualScrollDebounce:Disconnect()
-					end
-					virtualScrollDebounce = game:GetService("RunService").Heartbeat:Connect(function()
-						if virtualScrollDebounce then
-							virtualScrollDebounce:Disconnect()
-							virtualScrollDebounce = nil
-						end
-						rebuildDropdown()
 					end)
 				end
 			)
@@ -9059,6 +9058,8 @@ local moduleFunctions = {
 				dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 				if not dropdownBuilt then
 					rebuildDropdown()
+				else
+					applySearchFilter()
 				end
 				recalculateListPosition()
 				recalculateListSize()
@@ -9153,37 +9154,19 @@ local moduleFunctions = {
 					end
 				end
 				Dropdown.Buttons = {}
+				dropdownRows = {}
 				local renderItems = {}
 				for _, value in next, values do
 					local customColor, cleanText = parseColorCode(value)
-					local searchTarget = cleanText:lower()
-					if Dropdown.SearchText == "" or searchTarget:find(Dropdown.SearchText, 1, true) then
-						table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
-					end
+					table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
 				end
 
-				local totalItems = #renderItems
-				local useVirtual = virtualEnabled and totalItems > virtualThreshold
-				local startIndex, endIndex = 1, totalItems
-				if useVirtual then
-					startIndex = math.max(1, math.floor(dropdownScrollFrame.CanvasPosition.Y / virtualRowHeight) + 1 - virtualBuffer)
-					startIndex = math.min(startIndex, math.max(totalItems, 1))
-					local visibleCount = math.ceil(math.max(dropdownScrollFrame.AbsoluteSize.Y, 1) / virtualRowHeight) + (virtualBuffer * 2)
-					endIndex = math.min(totalItems, startIndex + visibleCount)
-					local topHeight = (startIndex - 1) * virtualRowHeight
-					if topHeight > 0 then
-						New("Frame", {Size = UDim2.new(1, -10, 0, topHeight), BackgroundTransparency = 1, Parent = dropdownScrollFrame})
-					end
-				end
-
-				local rowCount = 0
-				for index = startIndex, endIndex do
+				for index = 1, #renderItems do
 					local item = renderItems[index]
 					if item then
 						local value = item.Value
 						local customColor, cleanText = item.CustomColor, item.CleanText
 						local row = {}
-						rowCount = rowCount + 1
 
 						-- Use custom color for background if provided
 						local bgColor = Color3.fromRGB(255, 255, 255)
@@ -9339,9 +9322,11 @@ local moduleFunctions = {
 								buttonSelector.Size = UDim2.new(0, 5, 0, size)
 							end
 						)
+						local hovered = false
 						Creator.AddSignal(
 							button.MouseEnter,
 							function()
+								hovered = true
 								setBackTransparency(selected and selectedTransparency or hoverTransparency)
 								startLabelScroll()
 							end
@@ -9349,6 +9334,7 @@ local moduleFunctions = {
 						Creator.AddSignal(
 							button.MouseLeave,
 							function()
+								hovered = false
 								setBackTransparency(selected and selectedTransparency or defaultTransparency)
 								stopLabelScroll()
 							end
@@ -9365,6 +9351,14 @@ local moduleFunctions = {
 								setBackTransparency(selected and selectedTransparency or hoverTransparency)
 							end
 						)
+						function row.ResetHover(_self)
+							if not hovered then
+								return
+							end
+							hovered = false
+							setBackTransparency(selected and selectedTransparency or defaultTransparency)
+							stopLabelScroll()
+						end
 						function row.UpdateButton(_self)
 							if config.Multi then
 								selected = Dropdown.Value[value]
@@ -9420,19 +9414,15 @@ local moduleFunctions = {
 							end
 						)
 						row:UpdateButton()
+						row.Button = button
+						row.SearchTarget = cleanText:lower()
+						table.insert(dropdownRows, row)
 						buttons[button] = row
 						Dropdown.Buttons[button] = row
 					end
 				end
-				if useVirtual then
-					local bottomHeight = (totalItems - endIndex) * virtualRowHeight
-					if bottomHeight > 0 then
-						New("Frame", {Size = UDim2.new(1, -10, 0, bottomHeight), BackgroundTransparency = 1, Parent = dropdownScrollFrame})
-					end
-				end
 				Dropdown:Display()
-				recalculateCanvasSize()
-				recalculateListSize()
+				applySearchFilter()
 			end
 			function Dropdown.SetValues(_self, values)
 				if values then

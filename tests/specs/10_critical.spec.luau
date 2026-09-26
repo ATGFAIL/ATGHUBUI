@@ -410,15 +410,16 @@ return function(t)
 		end
 		local dropdown = tab:AddDropdown("Big", { Title = "Big", Values = values, Default = 1 })
 		local button = openDropdown(world, dropdown)
-		local search = KitchenSink.findDescendant(world, context.Library.GUI, function(_, state)
-			return state.class == "TextBox" and state.props.PlaceholderText == "🔍 Search..."
-		end)
 		local sinceId = world.counters.instancesCreated
+		local destroyedBefore = world.counters.instancesDestroyed
+		-- SetValues rebuilds the rows (a search only hides them).
 		for round = 1, 20 do
-			search.Text = "Item " .. (round % 5)
+			local shorter = table.move(values, 1, 40 - (round % 5), 1, {})
+			dropdown:SetValues(shorter)
 			world:step()
 			task.wait()
 		end
+		t.truthy(world.counters.instancesDestroyed - destroyedBefore > 1000, "rows were rebuilt")
 		world:click(button)
 		for index = 1, 10 do
 			context.Library:Notify({ Title = "N" .. index, Content = "x", Duration = 0.05 })

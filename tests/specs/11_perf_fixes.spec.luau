@@ -213,4 +213,80 @@ return function(t)
 		t.equal(world.counters.propertyWrites - before, 0, "writes caused by moving the window")
 		t.equal(#world.errors, 0, "engine errors")
 	end)
+
+	t.test("P5 searching a dropdown filters the rows it already has", function()
+		local context = Boot.new()
+		local world = context.world
+		local window = newWindow(context)
+		local tab = window:AddTab({ Title = "Main" })
+		local values = {}
+		for index = 1, 300 do
+			values[index] = "Item " .. index
+		end
+		local dropdown = tab:AddDropdown("Big", { Title = "Big", Values = values, Default = 1 })
+		world:settle(1)
+		dropdown:Open()
+		world:settle(1)
+
+		local function rowFor(value)
+			for button in dropdown.Buttons do
+				local label = button:FindFirstChild("ButtonLabel", true)
+				if label and label.Text == value then
+					return button
+				end
+			end
+			return nil
+		end
+		local function shownRows()
+			local count = 0
+			for button in dropdown.Buttons do
+				if button.Visible then
+					count += 1
+				end
+			end
+			return count
+		end
+		local function search(text)
+			local box
+			for _, instance in context.Library.GUI:GetDescendants() do
+				if instance.ClassName == "TextBox" and instance.PlaceholderText == "🔍 Search..." and instance.Parent.Parent.Visible then
+					box = instance
+				end
+			end
+			local created = world.counters.instancesCreated
+			box.Text = text
+			world:step()
+			task.wait()
+			return world.counters.instancesCreated - created
+		end
+
+		local rowTwo = rowFor("Item 2")
+		t.truthy(rowTwo, "row for Item 2")
+		local list = rowTwo.Parent
+		local layout = list:FindFirstChildOfClass("UIListLayout")
+		world:hover(rowTwo, true)
+		world:settle(1)
+		t.notEqual(rowTwo.BackgroundTransparency, 1, "hover highlights the row")
+
+		t.equal(search("Item 1"), 0, "instances created by a search")
+		t.equal(shownRows(), 111, "rows matching 'item 1'")
+		t.falsy(rowTwo.Visible, "a row that does not match is hidden")
+		t.equal(list.CanvasSize.Y.Offset, layout.AbsoluteContentSize.Y, "canvas fits the shown rows")
+		world:settle(1)
+		t.equal(rowTwo.BackgroundTransparency, 1, "a hidden row loses its hover highlight")
+
+		t.equal(search(""), 0, "instances created by clearing the search")
+		t.equal(shownRows(), 300, "all rows shown again")
+		t.equal(list.CanvasSize.Y.Offset, layout.AbsoluteContentSize.Y, "canvas fits all rows")
+
+		search("Item 29")
+		dropdown:Close()
+		world:settle(1)
+		dropdown:Open()
+		world:step()
+		task.wait()
+		t.equal(rowFor("Item 2"), rowTwo, "reopening keeps the same rows")
+		t.equal(shownRows(), 300, "reopening clears the search")
+		t.equal(#world.errors, 0, "engine errors:\n" .. table.concat(world.errors, "\n---\n"))
+	end)
 end

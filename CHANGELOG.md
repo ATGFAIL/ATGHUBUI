@@ -67,10 +67,12 @@ Measured with the headless counters in `tests/specs/03_perf.spec.luau` (independ
 | Peak RenderStepped connections while animating | 101 | 1 |
 | Writes when moving a window with 30 closed dropdowns | 30 | 0 |
 | Requests while building a UI in Thai (default mode) | 24 | 0 |
+| Instances created per key typed in a 300-item dropdown's search | 888 to 2,400 | 0 |
 
 - `Creator.OverrideTag` re-themes one object instead of all of them (this also stopped toggle clicks from resetting other elements' hover state).
 - Animations share one RenderStepped connection.
 - Closed dropdowns do no work; the floating button animates on Heartbeat only while shown.
+- Dropdown search shows and hides the rows it already built instead of rebuilding the list on every key. The unused, disabled row virtualization was removed.
 - Language switches re-apply fonts only when a custom font profile or text tuning is active.
 - Flipper's unused test modules were removed from the bundle (368 lines).
 
