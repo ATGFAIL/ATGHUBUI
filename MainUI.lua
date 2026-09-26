@@ -4154,39 +4154,7 @@ local moduleFunctions = {
 		function Workspace:ClearSearchSurface()
 			return nil
 		end
-		function Workspace:AddSearchControlCard(entry, order)
-			-- Kept private for old callers, but intentionally never mounts cards.
-			if false then
-			local title, description = self:GetEntryDisplayText(entry)
-			if title == "" then title = tostring(entry.Title or entry.Type or "Control") end
-			local tabTitle = self:GetTabDisplayTitle(entry.Tab)
-			local entryType = tostring(entry.Type or "Control")
-			local icons = {
-				Toggle = "toggle-left", Button = "mouse-pointer-click", Input = "text-cursor-input", Dropdown = "chevron-down",
-				Slider = "sliders-horizontal", Keybind = "keyboard", Paragraph = "align-left", Colorpicker = "palette"
-			}
-			local card = self:Button(self.SearchSurface, title, icons[entryType] or "search", function()
-				if self.SidebarSearch then self.SidebarSearch.Text = "" end
-				self:Navigate(entry)
-			end, {
-				Height = 48, ZIndex = 101, BackgroundTransparency = 0.05, StrokeTransparency = 0.62
-			})
-			card.LayoutOrder = order
-			local titleLabel = card:FindFirstChild("Title")
-			if titleLabel then
-				titleLabel.Size = UDim2.new(1, -42, 0, 19)
-				titleLabel.Position = UDim2.fromOffset(30, 3)
-			end
-			self:Text(card, description ~= "" and description or (tabTitle ~= "" and tabTitle or entryType), 10, {
-				Name = "Description", Color = "SubText", Size = UDim2.new(1, -42, 0, 16),
-				Position = UDim2.fromOffset(30, 21), ZIndex = 102
-			})
-			self:Text(card, (tabTitle ~= "" and tabTitle .. "  •  " or "") .. entryType, 9, {
-				Name = "Type", Color = "Accent", Size = UDim2.new(1, -42, 0, 13),
-				Position = UDim2.fromOffset(30, 34), ZIndex = 102
-			})
-			table.insert(self.SearchCards, card)
-			end
+		function Workspace:AddSearchControlCard(_entry, _order)
 			return nil
 		end
 		function Workspace:RenderSearchSurface()
@@ -4384,7 +4352,6 @@ local moduleFunctions = {
 			elseif self.PanelKind == "history" then self:RenderHistory()
 			elseif self.PanelKind == "profiles" then self:RenderProfiles()
 			elseif self.PanelKind == "workspace" then self:RenderWorkspaceMenu() end
-			if self.Palette and self.Palette.Visible then self:RenderPalette(self.PaletteInput.Text) end
 		end
 		function Workspace:CreatePanel()
 			local window = self.Window
@@ -4434,34 +4401,15 @@ local moduleFunctions = {
 			window.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -100)
 			self:CreatePanel()
 		end
-		function Workspace:RenderPalette(query)
-			if not self.PaletteContent then return end
-			self:ClearList(self.PaletteContent)
-			query = query or ""
-			local normalized = workspaceTrim(query):lower()
-			local commands = {
-				{Title = "Open Favorites", Icon = "star", Match = "favorites favorite star", Action = function() self:ClosePalette(); self:RenderFavorites() end},
-				{Title = "Open Profiles", Icon = "bookmark", Match = "profiles profile config", Action = function() self:ClosePalette(); self:RenderProfiles() end},
-				{Title = "Notification history", Icon = "history", Match = "history notifications activity", Action = function() self:ClosePalette(); self:RenderHistory() end},
-				{Title = "Toggle compact sidebar", Icon = "layout-dashboard", Match = "compact sidebar layout", Action = function() self:SetCompact(not self.State.CompactMode); self:ClosePalette() end},
-				{Title = "Toggle focus mode", Icon = "focus", Match = "focus mode", Action = function() self:SetFocus(not self.State.FocusMode); self:ClosePalette() end}
-			}
-			for _, command in ipairs(commands) do
-				if normalized == "" or command.Title:lower():find(normalized, 1, true) or command.Match:find(normalized, 1, true) then
-					self:Button(self.PaletteContent, command.Title, command.Icon, command.Action, {Height = 34, ZIndex = 94})
-				end
-			end
-			local found = self:FindEntries(query)
-			if #found > 0 then
-				self:Text(self.PaletteContent, normalized == "" and "Recent" or "Results", 10, {
-					Color = "SubText", Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 20), ZIndex = 94
-				})
-				self:RenderEntries(self.PaletteContent, found, "")
-			end
-		end
+		-- The command palette was replaced by the sidebar search, which shows
+		-- the real controls. These stay as no-ops for old callers.
 		function Workspace:CreatePalette()
-			-- Retained as a harmless compatibility method. Search lives in the
-			-- sidebar so it can keep showing the original controls.
+			return nil
+		end
+		function Workspace:RenderPalette(_query)
+			return nil
+		end
+		function Workspace:ClosePalette()
 			return nil
 		end
 		function Workspace:OpenPalette()
@@ -4473,14 +4421,6 @@ local moduleFunctions = {
 				if self.SidebarSearch and self.SidebarSearch.Parent then
 					self.SidebarSearch:CaptureFocus()
 				end
-			end)
-		end
-		function Workspace:ClosePalette()
-			if not self.Palette or not self.Palette.Visible then return end
-			local hide = TweenService:Create(self.Palette, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {GroupTransparency = 1})
-			hide:Play()
-			hide.Completed:Connect(function()
-				if self.Palette and self.Palette.GroupTransparency >= 0.99 then self.Palette.Visible = false end
 			end)
 		end
 		function Workspace:Attach(window)
@@ -4498,7 +4438,6 @@ local moduleFunctions = {
 			self:SetFocus(self.State.FocusMode)
 			self:Connect(UserInputService.InputBegan, function(input, gameProcessed)
 				if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-				if input.KeyCode == Enum.KeyCode.Escape and self.Palette and self.Palette.Visible then self:ClosePalette(); return end
 				if self.SearchEnabled and not gameProcessed and input.KeyCode == Enum.KeyCode.K and not UserInputService:GetFocusedTextBox() and
 					(UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
 					self:OpenPalette()
@@ -4525,9 +4464,9 @@ local moduleFunctions = {
 			self.Connections = {}
 			self.Window = nil
 			self.Tabs, self.TabById, self.Entries, self.EntryById = {}, {}, {}, {}
-			self.Sidebar, self.SidebarSearch, self.SidebarToolbar, self.ToolbarLayout = nil, nil, nil, nil
-			self.Panel, self.PanelContent, self.PanelTitle, self.Palette, self.PaletteInput, self.PaletteContent = nil, nil, nil, nil, nil, nil
-			self.SearchSurface, self.SearchSurfaceLayout, self.SearchCards, self.SearchMatchedTabs = nil, nil, nil, nil
+			self.Sidebar, self.SidebarSearch = nil, nil
+			self.Panel, self.PanelContent, self.PanelTitle = nil, nil, nil
+			self.SearchMatchedTabs = nil
 		end
 		-- Built-in floating minimize/open button. This replaces the old
 		-- per-script FluentToggleGui snippet and talks to this window directly

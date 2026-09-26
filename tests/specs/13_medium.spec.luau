@@ -208,6 +208,23 @@ return function(t)
 		optedWindow:AddTab({ Title = "Main" })
 		t.truthy(opted.Library.Workspace.SidebarSearch, "search box with Search = true")
 		t.equal(optedWindow.TabArea.Position, opted.world.env.UDim2.new(0, 12, 0, 88), "tabs move below the search box")
+		-- The old palette and search-card methods stay callable as no-ops.
+		local optedWorkspace = opted.Library.Workspace
+		local entry = optedWorkspace:FindEntries("")[1]
+		for _, call in {
+			function() return optedWorkspace:CreatePalette() end,
+			function() return optedWorkspace:RenderPalette("farm") end,
+			function() return optedWorkspace:ClosePalette() end,
+			function() return optedWorkspace:CreateSearchSurface() end,
+			function() return optedWorkspace:ClearSearchSurface() end,
+			function() return optedWorkspace:AddSearchControlCard(entry, 1) end,
+			function() return optedWorkspace:RenderSearchSurface() end,
+		} do
+			local ok, result = pcall(call)
+			t.truthy(ok, "legacy method errored: " .. tostring(result))
+			t.equal(result, nil, "legacy method returns nil")
+		end
+		optedWorkspace:RefreshSurface()
 		assertNoErrors(t, opted.world)
 	end)
 
