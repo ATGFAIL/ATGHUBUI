@@ -27,9 +27,24 @@ UPDATE_SNAPSHOTS=1 lune run tests/run.luau   # rewrite snapshots after an intend
 
 - `ingame/smoke.lua` prints PASS / FAIL / SKIP for each known bug plus a manual checklist.
 - `ingame/bench.lua` measures build time, heap, per-call cost and frame times.
+- `ingame/playground.lua` opens a window with every element, long lists, notification
+  buttons, a theme picker and InterfaceManager settings, for the manual checklist.
 
-Both load `MainUI.lua` from `CONFIG.Url` (or `CONFIG.LocalFile` inside the executor
-workspace folder) and copy their report to the clipboard.
+Each script loads `MainUI.lua` from `CONFIG.Url` (or `CONFIG.LocalFile` inside the
+executor workspace folder). Instead of editing the file, set `getgenv().ATGTest` first;
+any `CONFIG` key can be overridden:
+
+```lua
+getgenv().ATGTest = {
+    Url = "https://raw.githubusercontent.com/ATGFAIL/ATGHUBUI/main/MainUI.lua",
+    Label = "baseline",
+}
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ATGFAIL/ATGHUBUI/claude/visible-files-wq5mqr/tests/ingame/smoke.lua"))()
+```
+
+smoke and bench copy their report to the clipboard; paste it somewhere before the next
+run overwrites it. To check the splash screen, set `getgenv().ATGSplash = true` before
+running the playground.
 
 ## Lint
 

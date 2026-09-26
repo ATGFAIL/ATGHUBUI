@@ -6,6 +6,7 @@
 ]]
 
 local fs = require("@lune/fs")
+local task = require("@lune/task")
 
 local Boot = require("../harness/boot")
 
@@ -53,5 +54,36 @@ return function(t)
 		t.truthy(type(rounds) == "table" and #rounds == 1, "one round recorded")
 		t.truthy(world.clipboard and world.clipboard:find("ATG bench", 1, true), "report copied")
 		t.equal(#world.errors, 0, "engine errors:\n" .. table.concat(world.errors, "\n---\n"))
+	end)
+	t.test("smoke.lua takes its settings from getgenv().ATGTest", function()
+		local context = Boot.new()
+		local world = context.world
+		world.files["MainUI.lua"] = fs.readFile(Boot.sourcePath("MainUI"))
+		world.genv.ATGTest = { LocalFile = "MainUI.lua", Label = "override" }
+		local stop = world:startClock()
+		local chunk = assert(world.env.loadstring(fs.readFile("tests/ingame/smoke.lua"), "=smoke"))
+		local ok, err = pcall(chunk)
+		stop()
+		t.truthy(ok, "smoke.lua raised: " .. tostring(err))
+		t.truthy(world.clipboard and world.clipboard:find("ATG smoke [override]", 1, true), "label taken from ATGTest")
+	end)
+
+	t.test("playground.lua builds its window in the fake engine", function()
+		local context = Boot.new()
+		local world = context.world
+		world.files["MainUI.lua"] = fs.readFile(Boot.sourcePath("MainUI"))
+		world.files["InterfaceManager.lua"] = fs.readFile(Boot.sourcePath("InterfaceManager"))
+		world.genv.ATGTest = { LocalFile = "MainUI.lua", InterfaceManagerFile = "InterfaceManager.lua", Label = "test" }
+		local stop = world:startClock()
+		local chunk = assert(world.env.loadstring(fs.readFile("tests/ingame/playground.lua"), "=playground"))
+		local ok, Library = pcall(chunk)
+		task.wait(0.5)
+		stop()
+		t.truthy(ok, "playground.lua raised: " .. tostring(Library))
+		t.truthy(type(Library) == "table" and Library.Window ~= nil, "window created")
+		t.truthy(Library.Options.InterfaceTranslationMode ~= nil, "InterfaceManager settings built")
+		t.truthy(Library.Options.PlayLong ~= nil, "long list built")
+		t.equal(#world.errors, 0, "engine errors:\n" .. table.concat(world.errors, "\n---\n"))
+		Library:Destroy()
 	end)
 end

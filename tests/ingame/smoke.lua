@@ -21,6 +21,20 @@ local CONFIG = {
 	Label = "run",
 }
 
+-- Settings can also come from getgenv().ATGTest (handy on phones: no need
+-- to edit this file), for example:
+--   getgenv().ATGTest = { Url = "https://.../main/MainUI.lua", Label = "baseline" }
+do
+	local ok, overrides = pcall(function()
+		return getgenv().ATGTest
+	end)
+	if ok and type(overrides) == "table" then
+		for key, value in pairs(overrides) do
+			CONFIG[key] = value
+		end
+	end
+end
+
 local results = {}
 local function record(status, name, detail)
 	table.insert(results, { status = status, name = name, detail = detail })
