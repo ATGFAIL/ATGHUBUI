@@ -553,6 +553,17 @@ do
             theme:SetValue(settings.Theme)
         end)
 
+        local menuKeybind = section:AddKeybind("MenuKeybind", {
+            Title = "Minimize Bind",
+            Description = "Key to hide the window",
+            Default = settings.MenuKeybind
+        })
+        menuKeybind:OnChanged(function()
+            settings.MenuKeybind = menuKeybind.Value
+            self:SaveSettings()
+        end)
+        library.MinimizeKeybind = menuKeybind
+
         if library.UseAcrylic then
             section:AddToggle("AcrylicToggle", {
                 Title = "Acrylic",
@@ -577,20 +588,10 @@ do
             end
         })
 
-        local menuKeybind = section:AddKeybind("MenuKeybind", {
-            Title = "Minimize Bind",
-            Default = settings.MenuKeybind
-        })
-        menuKeybind:OnChanged(function()
-            settings.MenuKeybind = menuKeybind.Value
-            self:SaveSettings()
-        end)
-        library.MinimizeKeybind = menuKeybind
-
         if type(library.SetFloatingToggleConfig) == "function" then
             section:AddToggle("InterfaceFloatingToggle", {
                 Title = "Floating button",
-                Description = "Drag it. Ctrl + M toggles UI.",
+                Description = "Draggable show/hide button",
                 Default = settings.FloatingToggle,
                 Callback = function(value)
                     settings.FloatingToggle = value
@@ -638,7 +639,7 @@ do
             end)
         end
 
-        local localization = tab:AddSection("Quick settings")
+        local localization = tab:AddSection("Language & Font")
         local languageDropdown = localization:AddDropdown("InterfaceLanguage", {
             Title = "UI language",
             Description = "Choose your language.",
@@ -654,17 +655,6 @@ do
         pcall(function()
             languageDropdown:SetValue(getLanguageValue(i18n, settings.Language))
         end)
-
-        localization:AddToggle("InterfaceTranslationEnabled", {
-            Title = "Translation",
-            Description = "Show translated text.",
-            Default = settings.TranslationEnabled,
-            Callback = function(value)
-                settings.TranslationEnabled = value
-                i18n:SetEnabled(value)
-                self:SaveSettings()
-            end
-        })
 
         -- Keep the common actions visible. Import/update tools are grouped
         -- below so first-time users do not have to scan a long settings page.
@@ -746,6 +736,17 @@ do
             saveSoon()
         end
 
+        localization:AddToggle("InterfaceTranslationEnabled", {
+            Title = "Translation",
+            Description = "Show translated text.",
+            Default = settings.TranslationEnabled,
+            Callback = function(value)
+                settings.TranslationEnabled = value
+                i18n:SetEnabled(value)
+                self:SaveSettings()
+            end
+        })
+
         if fontTuningSupported then
             localization:AddToggle("InterfaceFontTuningEnabled", {
                 Title = "Advanced font settings",
@@ -759,19 +760,6 @@ do
             })
 
             fontAppearance = tab:AddSection("Font appearance")
-            fontAppearance:AddSlider("InterfaceFontSizeScale", {
-                Title = "Text size",
-                Description = "100% = normal.",
-                Default = settings.FontSizeScale,
-                Min = 70,
-                Max = 160,
-                Rounding = 0,
-                Callback = function(value)
-                    settings.FontSizeScale = value
-                    requestFontTuningUpdate(false)
-                end
-            })
-
             fontAppearance:AddDropdown("InterfaceFontWeight", {
                 Title = "Weight",
                 Description = "How bold the text is.",
@@ -791,6 +779,19 @@ do
                 Callback = function(value)
                     settings.FontStyle = value
                     requestFontTuningUpdate(true)
+                end
+            })
+
+            fontAppearance:AddSlider("InterfaceFontSizeScale", {
+                Title = "Text size",
+                Description = "100% = normal.",
+                Default = settings.FontSizeScale,
+                Min = 70,
+                Max = 160,
+                Rounding = 0,
+                Callback = function(value)
+                    settings.FontSizeScale = value
+                    requestFontTuningUpdate(false)
                 end
             })
 
@@ -855,6 +856,17 @@ do
         table.insert(advancedSections, languageTools)
         setAdvancedVisible(settings.AdvancedTools)
 
+        local capabilityText = string.format(
+            "Save: %s | Web: %s | Fonts: %s",
+            capabilities.FileSystem and "OK" or "No",
+            (capabilities.RemoteFetch and assets.Enabled) and "OK" or "No",
+            capabilities.CustomFonts and "OK" or "No"
+        )
+        languageTools:AddParagraph({
+            Title = "Status",
+            Content = capabilityText
+        })
+
         local modeValues = {}
         for display in pairs(MODE_VALUES) do
             table.insert(modeValues, display)
@@ -880,16 +892,43 @@ do
             modeDropdown:SetValue(modeDisplay(settings.TranslationMode))
         end)
 
-        local capabilityText = string.format(
-            "Save: %s | Web: %s | Fonts: %s",
-            capabilities.FileSystem and "OK" or "No",
-            (capabilities.RemoteFetch and assets.Enabled) and "OK" or "No",
-            capabilities.CustomFonts and "OK" or "No"
-        )
-        languageTools:AddParagraph({
-            Title = "Status",
-            Content = capabilityText
+        local installedPackValues = {}
+        local installedPackDropdown
+        local function refreshLanguagePacks(dropdown)
+            installedPackValues = {}
+            for _, pack in ipairs(assets:GetLanguagePacks()) do
+                table.insert(installedPackValues, packDisplay(pack))
+            end
+            if #installedPackValues == 0 then
+                installedPackValues = {"No installed language packs"}
+            end
+            if dropdown then
+                dropdown:SetValues(installedPackValues)
+                local wanted
+                for _, value in ipairs(installedPackValues) do
+                    if packIdFromDisplay(value) == settings.LanguagePack then
+                        wanted = value
+                        break
+                    end
+                end
+                dropdown:SetValue(wanted or installedPackValues[1])
+            end
+        end
+
+        installedPackDropdown = languageTools:AddDropdown("InterfaceInstalledLanguagePack", {
+            Title = "Saved pack",
+            Description = "Choose a pack.",
+            Values = {"No installed language packs"},
+            Default = "No installed language packs",
+            Callback = function(value)
+                local id = packIdFromDisplay(value)
+                if id ~= "" then
+                    settings.LanguagePack = id
+                    self:SaveSettings()
+                end
+            end
         })
+        refreshLanguagePacks(installedPackDropdown)
 
         languageTools:AddInput("InterfaceLanguagePackUrl", {
             Title = "Language JSON",
@@ -915,29 +954,6 @@ do
                 saveSoon()
             end
         })
-
-        local installedPackValues = {}
-        local installedPackDropdown
-        local function refreshLanguagePacks(dropdown)
-            installedPackValues = {}
-            for _, pack in ipairs(assets:GetLanguagePacks()) do
-                table.insert(installedPackValues, packDisplay(pack))
-            end
-            if #installedPackValues == 0 then
-                installedPackValues = {"No installed language packs"}
-            end
-            if dropdown then
-                dropdown:SetValues(installedPackValues)
-                local wanted
-                for _, value in ipairs(installedPackValues) do
-                    if packIdFromDisplay(value) == settings.LanguagePack then
-                        wanted = value
-                        break
-                    end
-                end
-                dropdown:SetValue(wanted or installedPackValues[1])
-            end
-        end
 
         languageTools:AddButton({
             Title = "Install JSON",
@@ -990,21 +1006,6 @@ do
                 )
             end
         })
-
-        installedPackDropdown = languageTools:AddDropdown("InterfaceInstalledLanguagePack", {
-            Title = "Saved pack",
-            Description = "Choose a pack.",
-            Values = {"No installed language packs"},
-            Default = "No installed language packs",
-            Callback = function(value)
-                local id = packIdFromDisplay(value)
-                if id ~= "" then
-                    settings.LanguagePack = id
-                    self:SaveSettings()
-                end
-            end
-        })
-        refreshLanguagePacks(installedPackDropdown)
 
         languageTools:AddButton({
             Title = "Update pack",
