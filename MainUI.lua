@@ -1,465 +1,240 @@
-do
-    local a = game:GetService("TweenService")
-    local b = game:GetService("ContentProvider")
-    local c = game:GetService("CoreGui")
-    local d = game:GetService("Lighting")
-    local e = game:GetService("RunService")
-    local f = game:GetService("Players")
-    local g = f.LocalPlayer
-    local h = workspace.CurrentCamera
-    local i = "rbxassetid://90989180960460"
-    local j = true
-    local k = "ATG HUB"
-    local l = Enum.Font.GothamBold
-    local m = 0.35
-    local n = 0.8
-    local o = 0.35
-    local p = 0.82
-    local q = 1.12
-    local r = 0.6
-    local t = 0.9
-    local u = 8
-    local v = true
-    if c:FindFirstChild("CoreSplash") then
-        c.CoreSplash:Destroy()
+-- Splash screen. Opt-in: set getgenv().ATGSplash = true before loading,
+-- pass CreateWindow{Splash = true}, or call Library:ShowSplash(). Shown once.
+local splashShown = false
+local function showSplash()
+    if splashShown then
+        return
     end
-    pcall(
-        function()
-            b:PreloadAsync({i})
+    splashShown = true
+    -- Runs on its own thread: PreloadAsync yields, and callers such as
+    -- CreateWindow must not.
+    task.spawn(function()
+        local TweenService = game:GetService("TweenService")
+        local ContentProvider = game:GetService("ContentProvider")
+        local CoreGui = game:GetService("CoreGui")
+        local Lighting = game:GetService("Lighting")
+        local RunService = game:GetService("RunService")
+        local Players = game:GetService("Players")
+        local localPlayer = Players.LocalPlayer
+        local camera = workspace.CurrentCamera
+        local logoImage = "rbxassetid://90989180960460"
+        local showTitle = true
+        local titleText = "ATG HUB"
+        local titleFont = Enum.Font.GothamBold
+        local fadeInTime = 0.35
+        local holdTime = 0.8
+        local fadeOutTime = 0.35
+        local startScale = 0.82
+        local endScale = 1.12
+        local baseImageScale = 0.6
+        local pulseScale = 0.9
+        local blurSize = 8
+        if CoreGui:FindFirstChild("CoreSplash") then
+            CoreGui.CoreSplash:Destroy()
         end
-    )
-    local function w(x, y, z, A, B)
-        local C = TweenInfo.new(z, A or Enum.EasingStyle.Sine, B or Enum.EasingDirection.Out)
-        local D = a:Create(x, C, y)
-        D:Play()
-        return D
-    end
-    local E = Instance.new("ScreenGui")
-    E.Name = "CoreSplash"
-    E.IgnoreGuiInset = true
-    E.ResetOnSpawn = false
-    E.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    E.DisplayOrder = 999999999
-    E.Parent = c
-    local function F()
-        return h and h.ViewportSize or Vector2.new(1280, 720)
-    end
-    local function G()
-        local H = F()
-        local I = math.min(H.X, H.Y)
-        local J = I / 1080
-        local K = math.clamp(r * J, 0.18, 0.72)
-        return {imageScale = K, textSize = math.clamp(26 * J, 14, 56)}
-    end
-    local L = Instance.new("Frame")
-    L.Name = "Overlay"
-    L.Size = UDim2.fromScale(1, 1)
-    L.Position = UDim2.fromScale(0, 0)
-    L.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
-    L.BackgroundTransparency = 1
-    L.BorderSizePixel = 0
-    L.ZIndex = 99999999
-    L.Parent = E
-    local function M(B)
-        local N = Instance.new("Frame")
-        N.Size = UDim2.fromScale(1, 0.18)
-        if B == "top" then
-            N.AnchorPoint = Vector2.new(0, 0)
-            N.Position = UDim2.fromScale(0, 0)
-        elseif B == "bottom" then
-            N.AnchorPoint = Vector2.new(0, 1)
-            N.Position = UDim2.fromScale(0, 1)
+        pcall(
+            function()
+                ContentProvider:PreloadAsync({logoImage})
+            end
+        )
+        local function tween(instance, goals, duration, easingStyle, easingDirection)
+            local info = TweenInfo.new(duration, easingStyle or Enum.EasingStyle.Sine, easingDirection or Enum.EasingDirection.Out)
+            local playing = TweenService:Create(instance, info, goals)
+            playing:Play()
+            return playing
         end
-        N.BackgroundTransparency = 1
-        N.ZIndex = 99999998
-        N.Parent = E
-        local O = Instance.new("UIGradient", N)
-        O.Transparency = NumberSequence.new {NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 1)}
-        return N
-    end
-    local P = M("top")
-    local Q = M("bottom")
-    local R
-    do
-        R = d:FindFirstChild("CoreSplashBlur") or Instance.new("BlurEffect")
-        R.Name = "CoreSplashBlur"
-        R.Parent = d
-        R.Size = 0
-        R.Enabled = true
-    end
-    local S = Instance.new("Frame")
-    S.Name = "Center"
-    S.AnchorPoint = Vector2.new(0.5, 0.5)
-    S.Position = UDim2.fromScale(0.5, 0.5)
-    S.Size = UDim2.fromOffset(0, 0)
-    S.BackgroundTransparency = 1
-    S.ZIndex = 99999999
-    S.Parent = E
-    local T = Instance.new("ImageLabel")
-    T.Name = "Logo"
-    T.AnchorPoint = Vector2.new(0.5, 0.5)
-    T.Position = UDim2.fromScale(0.5, 0.5)
-    T.Size = UDim2.fromScale(0.4, 0.4)
-    T.BackgroundTransparency = 1
-    T.Image = i
-    T.ImageTransparency = 1
-    T.ScaleType = Enum.ScaleType.Fit
-    T.ZIndex = 99999999
-    T.Parent = S
-    local U = Instance.new("ImageLabel")
-    U.Name = "Rim"
-    U.AnchorPoint = Vector2.new(0.5, 0.5)
-    U.Position = UDim2.fromScale(0.5, 0.5)
-    U.Size = UDim2.fromScale(1, 1)
-    U.BackgroundTransparency = 1
-    U.Image = i
-    U.ImageTransparency = 0.985
-    U.ScaleType = Enum.ScaleType.Fit
-    U.ZIndex = 99999999
-    U.Parent = T
-    local V = Instance.new("TextLabel")
-    V.Name = "TextShadow"
-    V.AnchorPoint = Vector2.new(0.5, 0)
-    V.Position = UDim2.new(0.5, 1, 0, 16)
-    V.Size = UDim2.new(0.9, 0, 0, 30)
-    V.BackgroundTransparency = 1
-    V.ZIndex = 99999999
-    V.Text = j and k or ""
-    V.TextColor3 = Color3.fromRGB(10, 10, 10)
-    V.TextTransparency = 0.35
-    V.Font = l
-    V.TextSize = 18
-    V.Parent = S
-    local W = Instance.new("TextLabel")
-    W.Name = "Text"
-    W.AnchorPoint = Vector2.new(0.5, 0)
-    W.Position = V.Position
-    W.Size = V.Size
-    W.BackgroundTransparency = 1
-    W.ZIndex = 99999999
-    W.Text = j and k or ""
-    W.TextColor3 = Color3.fromRGB(255, 255, 255)
-    W.TextStrokeTransparency = 0.7
-    W.Font = l
-    W.TextSize = 18
-    W.Parent = S
-    local function X()
-        local Y = G()
-        local Z = Y.imageScale
-        T.Size = UDim2.fromScale(Z, Z)
-        U.Size = UDim2.fromScale(1, 1)
-        local H = F()
-        S.Size = UDim2.fromOffset(math.max(400, H.X * Z * 0.95), math.max(300, H.Y * Z * 0.8))
-        W.TextSize = Y.textSize
-        V.TextSize = Y.textSize
-        local _ = T.AbsoluteSize.Y
-        local a0 = math.clamp(_ / 2 + Y.textSize * 0.9 + 18, 48, 420)
-        W.Position = UDim2.new(0.5, 0, 0.5, a0)
-        V.Position = UDim2.new(0.5, 2, 0.5, a0 + 2)
-    end
-    local a1 = Instance.new("Frame")
-    a1.Name = "Shimmer"
-    a1.AnchorPoint = Vector2.new(0.5, 0.5)
-    a1.Position = UDim2.fromScale(0.5, 0.5)
-    a1.Size = UDim2.fromScale(0.95, 0.95)
-    a1.BackgroundTransparency = 1
-    a1.ZIndex = 99999999
-    a1.Parent = T
-    local a2 = Instance.new("ImageLabel")
-    a2.Size = UDim2.fromScale(1.6, 0.35)
-    a2.AnchorPoint = Vector2.new(0.5, 0.5)
-    a2.Position = UDim2.fromScale(0.5, 0.5)
-    a2.BackgroundTransparency = 1
-    a2.ImageTransparency = 1
-    a2.Image = i
-    a2.ScaleType = Enum.ScaleType.Slice
-    a2.SliceCenter = Rect.new(8, 8, 8, 8)
-    a2.ZIndex = 99999999
-    a2.Parent = a1
-    X()
-    local ae
-    ae =
-        h:GetPropertyChangedSignal("ViewportSize"):Connect(
-        function()
-            X()
+        local splashGui = Instance.new("ScreenGui")
+        splashGui.Name = "CoreSplash"
+        splashGui.IgnoreGuiInset = true
+        splashGui.ResetOnSpawn = false
+        splashGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        splashGui.DisplayOrder = 999999999
+        splashGui.Parent = CoreGui
+        local function getViewportSize()
+            return camera and camera.ViewportSize or Vector2.new(1280, 720)
         end
-    )
-    task.spawn(
-        function()
-            w(L, {BackgroundTransparency = 0.45}, 0.35, Enum.EasingStyle.Quad)
-            w(R, {Size = u}, 0.45, Enum.EasingStyle.Quad)
-            local Y = G()
-            T.Size = UDim2.fromScale(Y.imageScale * p, Y.imageScale * p)
-            w(T, {ImageTransparency = 0}, m, Enum.EasingStyle.Sine)
-            w(T, {Size = UDim2.fromScale(Y.imageScale * 1.02, Y.imageScale * 1.02)}, m, Enum.EasingStyle.Quart)
-            task.spawn(
-                function()
-                    while T.Parent and T.ImageTransparency == 0 do
-                        a2.Rotation = (math.random() - 0.5) * 30
-                        a2.ImageTransparency = 0.85
-                        w(a2, {ImageTransparency = 1}, 0.7, Enum.EasingStyle.Sine)
-                        task.wait(0.12 + math.random() * 0.3)
-                    end
-                end
-            )
-            task.wait(m * 0.9)
-            local ai =
-                w(
-                T,
-                {Size = UDim2.fromScale(Y.imageScale * 1.06, Y.imageScale * 1.06)},
-                0.9,
-                Enum.EasingStyle.Quad,
-                Enum.EasingDirection.InOut
-            )
-            ai.Completed:Connect(
-                function()
-                    if T and T.Parent then
-                        w(
-                            T,
-                            {Size = UDim2.fromScale(Y.imageScale * 1.02, Y.imageScale * 1.02)},
-                            0.9,
-                            Enum.EasingStyle.Quad,
-                            Enum.EasingDirection.InOut
-                        )
-                    end
-                end
-            )
-            task.wait(m + n)
-            w(L, {BackgroundTransparency = 1}, o, Enum.EasingStyle.Quad)
-            w(R, {Size = 0}, o, Enum.EasingStyle.Quad)
-            w(
-                T,
-                {ImageTransparency = 1, Size = UDim2.fromScale(Y.imageScale * q, Y.imageScale * q)},
-                o,
-                Enum.EasingStyle.Quad
-            )
-            w(W, {TextTransparency = 1}, o * 0.9, Enum.EasingStyle.Quad)
-            w(V, {TextTransparency = 1}, o * 0.9, Enum.EasingStyle.Quad)
-            task.wait(o + 0.05)
-            if v then
-                if ae then
-                    ae:Disconnect()
-                end
-                pcall(
+        local function getLayoutMetrics()
+            local viewport = getViewportSize()
+            local shortestSide = math.min(viewport.X, viewport.Y)
+            local scaleFactor = shortestSide / 1080
+            local imageScale = math.clamp(baseImageScale * scaleFactor, 0.18, 0.72)
+            return {imageScale = imageScale, textSize = math.clamp(26 * scaleFactor, 14, 56)}
+        end
+        local overlay = Instance.new("Frame")
+        overlay.Name = "Overlay"
+        overlay.Size = UDim2.fromScale(1, 1)
+        overlay.Position = UDim2.fromScale(0, 0)
+        overlay.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
+        overlay.BackgroundTransparency = 1
+        overlay.BorderSizePixel = 0
+        overlay.ZIndex = 99999999
+        overlay.Parent = splashGui
+        local blur
+        do
+            blur = Lighting:FindFirstChild("CoreSplashBlur") or Instance.new("BlurEffect")
+            blur.Name = "CoreSplashBlur"
+            blur.Parent = Lighting
+            blur.Size = 0
+            blur.Enabled = true
+        end
+        local center = Instance.new("Frame")
+        center.Name = "Center"
+        center.AnchorPoint = Vector2.new(0.5, 0.5)
+        center.Position = UDim2.fromScale(0.5, 0.5)
+        center.Size = UDim2.fromOffset(0, 0)
+        center.BackgroundTransparency = 1
+        center.ZIndex = 99999999
+        center.Parent = splashGui
+        local logo = Instance.new("ImageLabel")
+        logo.Name = "Logo"
+        logo.AnchorPoint = Vector2.new(0.5, 0.5)
+        logo.Position = UDim2.fromScale(0.5, 0.5)
+        logo.Size = UDim2.fromScale(0.4, 0.4)
+        logo.BackgroundTransparency = 1
+        logo.Image = logoImage
+        logo.ImageTransparency = 1
+        logo.ScaleType = Enum.ScaleType.Fit
+        logo.ZIndex = 99999999
+        logo.Parent = center
+        local rim = Instance.new("ImageLabel")
+        rim.Name = "Rim"
+        rim.AnchorPoint = Vector2.new(0.5, 0.5)
+        rim.Position = UDim2.fromScale(0.5, 0.5)
+        rim.Size = UDim2.fromScale(1, 1)
+        rim.BackgroundTransparency = 1
+        rim.Image = logoImage
+        rim.ImageTransparency = 0.985
+        rim.ScaleType = Enum.ScaleType.Fit
+        rim.ZIndex = 99999999
+        rim.Parent = logo
+        local titleShadow = Instance.new("TextLabel")
+        titleShadow.Name = "TextShadow"
+        titleShadow.AnchorPoint = Vector2.new(0.5, 0)
+        titleShadow.Position = UDim2.new(0.5, 1, 0, 16)
+        titleShadow.Size = UDim2.new(0.9, 0, 0, 30)
+        titleShadow.BackgroundTransparency = 1
+        titleShadow.ZIndex = 99999999
+        titleShadow.Text = showTitle and titleText or ""
+        titleShadow.TextColor3 = Color3.fromRGB(10, 10, 10)
+        titleShadow.TextTransparency = 0.35
+        titleShadow.Font = titleFont
+        titleShadow.TextSize = 18
+        titleShadow.Parent = center
+        local title = Instance.new("TextLabel")
+        title.Name = "Text"
+        title.AnchorPoint = Vector2.new(0.5, 0)
+        title.Position = titleShadow.Position
+        title.Size = titleShadow.Size
+        title.BackgroundTransparency = 1
+        title.ZIndex = 99999999
+        title.Text = showTitle and titleText or ""
+        title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        title.TextStrokeTransparency = 0.7
+        title.Font = titleFont
+        title.TextSize = 18
+        title.Parent = center
+        local function applyLayout()
+            local metrics = getLayoutMetrics()
+            local imageScale = metrics.imageScale
+            logo.Size = UDim2.fromScale(imageScale, imageScale)
+            rim.Size = UDim2.fromScale(1, 1)
+            local viewport = getViewportSize()
+            center.Size = UDim2.fromOffset(math.max(400, viewport.X * imageScale * 0.95), math.max(300, viewport.Y * imageScale * 0.8))
+            title.TextSize = metrics.textSize
+            titleShadow.TextSize = metrics.textSize
+            local logoHeight = logo.AbsoluteSize.Y
+            local titleOffset = math.clamp(logoHeight / 2 + metrics.textSize * 0.9 + 18, 48, 420)
+            title.Position = UDim2.new(0.5, 0, 0.5, titleOffset)
+            titleShadow.Position = UDim2.new(0.5, 2, 0.5, titleOffset + 2)
+        end
+        applyLayout()
+        local viewportConnection
+        viewportConnection =
+            camera:GetPropertyChangedSignal("ViewportSize"):Connect(
+            function()
+                applyLayout()
+            end
+        )
+        task.spawn(
+            function()
+                tween(overlay, {BackgroundTransparency = 0.45}, 0.35, Enum.EasingStyle.Quad)
+                tween(blur, {Size = blurSize}, 0.45, Enum.EasingStyle.Quad)
+                local metrics = getLayoutMetrics()
+                logo.Size = UDim2.fromScale(metrics.imageScale * startScale, metrics.imageScale * startScale)
+                tween(logo, {ImageTransparency = 0}, fadeInTime, Enum.EasingStyle.Sine)
+                tween(logo, {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)}, fadeInTime, Enum.EasingStyle.Quart)
+                task.wait(fadeInTime * 0.9)
+                local growTween =
+                    tween(
+                    logo,
+                    {Size = UDim2.fromScale(metrics.imageScale * 1.06, metrics.imageScale * 1.06)},
+                    0.9,
+                    Enum.EasingStyle.Quad,
+                    Enum.EasingDirection.InOut
+                )
+                growTween.Completed:Connect(
                     function()
-                        E:Destroy()
-                        if R and R.Parent then
-                            R:Destroy()
+                        if logo and logo.Parent then
+                            tween(
+                                logo,
+                                {Size = UDim2.fromScale(metrics.imageScale * 1.02, metrics.imageScale * 1.02)},
+                                0.9,
+                                Enum.EasingStyle.Quad,
+                                Enum.EasingDirection.InOut
+                            )
                         end
                     end
                 )
-            else
-                E.Parent = E.Parent
+                task.wait(fadeInTime + holdTime)
+                tween(overlay, {BackgroundTransparency = 1}, fadeOutTime, Enum.EasingStyle.Quad)
+                tween(blur, {Size = 0}, fadeOutTime, Enum.EasingStyle.Quad)
+                tween(
+                    logo,
+                    {ImageTransparency = 1, Size = UDim2.fromScale(metrics.imageScale * endScale, metrics.imageScale * endScale)},
+                    fadeOutTime,
+                    Enum.EasingStyle.Quad
+                )
+                tween(title, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
+                tween(titleShadow, {TextTransparency = 1}, fadeOutTime * 0.9, Enum.EasingStyle.Quad)
+                task.wait(fadeOutTime + 0.05)
+                if viewportConnection then
+                    viewportConnection:Disconnect()
+                end
+                pcall(
+                    function()
+                        splashGui:Destroy()
+                        if blur and blur.Parent then
+                            blur:Destroy()
+                        end
+                    end
+                )
             end
-        end
-    )
+        )
+    end)
 end
-
-local TranslationSystem = {}
 do
-    local HttpService = game:GetService("HttpService")
-
-    -- Configuration
-    TranslationSystem.API_URL = "https://translate.atgofficial.net"
-    TranslationSystem.Cache = {} -- Cache: {["en_th_Hello"] = "สวัสดี"}
-    TranslationSystem.Registry = {} -- Registry: {[TextObject] = {OriginalText, Property}}
-    TranslationSystem.CurrentLanguage = "en" -- Current UI language
-    TranslationSystem.SourceLanguage = "en" -- Original language
-    TranslationSystem.Enabled = true -- Translation enabled/disabled
-    TranslationSystem.AvailableLanguages = {
-        {code = "en", name = "English", flag = "🇬🇧"},
-        {code = "th", name = "ไทย", flag = "🇹🇭"},
-        {code = "vi", name = "Tiếng Việt", flag = "🇻🇳"},
-        {code = "es", name = "Español", flag = "🇪🇸"}
-    }
-
-    -- Generate cache key
-    local function getCacheKey(source, target, text)
-        return source .. "_" .. target .. "_" .. text
-    end
-
-    -- Check if text contains emoji (protect from corruption)
-    local function hasEmoji(text)
-        -- Common emoji Unicode ranges
-        for i = 1, #text do
-            local byte = string.byte(text, i)
-            -- Emoji ranges: UTF-8 4-byte sequences (emojis)
-            if byte >= 240 then
-                return true
-            end
-        end
-        return false
-    end
-
-    -- Translate text using Gemini API (Async, one-by-one with instant display)
-    function TranslationSystem:TranslateText(text, targetLang, callback)
-        if not self.Enabled or not text or text == "" then
-            if callback then callback(text) end
-            return text
-        end
-
-        -- Skip if target is same as source
-        if targetLang == self.SourceLanguage then
-            if callback then callback(text) end
-            return text
-        end
-
-        -- Skip if text contains emoji (prevent corruption)
-        if hasEmoji(text) then
-            if callback then callback(text) end
-            return text
-        end
-
-        -- Check cache first
-        local cacheKey = getCacheKey(self.SourceLanguage, targetLang, text)
-        if self.Cache[cacheKey] then
-            if callback then callback(self.Cache[cacheKey]) end
-            return self.Cache[cacheKey]
-        end
-
-        -- Async individual API call (instant display when done)
-        task.spawn(function()
-            local success, result = pcall(function()
-                local requestBody = HttpService:JSONEncode({
-                    q = text,
-                    source = self.SourceLanguage,
-                    target = targetLang
-                })
-
-                local response = request({
-                    Url = self.API_URL .. "/translate",
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = requestBody
-                })
-
-                if not response or not response.Success then
-                    error("Request failed")
-                end
-
-                local data = HttpService:JSONDecode(response.Body)
-                return data.translatedText or text
-            end)
-
-            if success and result then
-                -- Cache the translation
-                self.Cache[cacheKey] = result
-
-                -- Update UI immediately (instant display!)
-                if callback then
-                    callback(result)
-                end
-            else
-                -- Fallback to original text
-                if callback then
-                    callback(text)
-                end
-            end
-        end)
-
-        return text -- Return original immediately (will update async)
-    end
-
-    -- Register text element for auto-translation
-    function TranslationSystem:Register(textObject, originalText, propertyName)
-        if not textObject or not originalText then
-            return
-        end
-
-        propertyName = propertyName or "Text"
-
-        self.Registry[textObject] = {
-            OriginalText = originalText,
-            Property = propertyName
-        }
-
-        -- Debug: Show registration
-        -- print(string.format("[TranslationSystem] Registered: '%s'", originalText:sub(1, 30)))
-
-        -- Translate immediately if not English
-        if self.CurrentLanguage ~= self.SourceLanguage then
-            self:UpdateText(textObject)
-        end
-
-        return textObject
-    end
-
-    -- Update single text element (Async)
-    function TranslationSystem:UpdateText(textObject)
-        local registry = self.Registry[textObject]
-        if not registry then
-            return
-        end
-
-        self:TranslateText(registry.OriginalText, self.CurrentLanguage, function(translated)
-            if textObject and textObject.Parent then
-                textObject[registry.Property] = translated
-            end
-        end)
-    end
-
-    -- Update all registered text elements (Async)
-    function TranslationSystem:UpdateAllText()
-        for textObject, registry in pairs(self.Registry) do
-            if textObject and textObject.Parent then
-                self:UpdateText(textObject)
-            else
-                self.Registry[textObject] = nil
-            end
-        end
-    end
-
-    -- Set language and update UI
-    function TranslationSystem:SetLanguage(langCode)
-        if langCode == self.CurrentLanguage then
-            return
-        end
-
-        self.CurrentLanguage = langCode
-        self:UpdateAllText()
-    end
-
-    -- Get language dropdown options
-    function TranslationSystem:GetLanguageOptions()
-        local options = {}
-        for _, lang in ipairs(self.AvailableLanguages) do
-            table.insert(options, lang.flag .. " " .. lang.name)
-        end
-        return options
-    end
-
-    -- Get language code from dropdown value (index or string)
-    function TranslationSystem:GetLanguageCode(value)
-        -- If value is a number (index), use it directly
-        if type(value) == "number" then
-            if self.AvailableLanguages[value] then
-                return self.AvailableLanguages[value].code
-            end
-        end
-
-        -- If value is a string (language name with flag), find matching language
-        if type(value) == "string" then
-            for _, lang in ipairs(self.AvailableLanguages) do
-                local displayName = lang.flag .. " " .. lang.name
-                if displayName == value then
-                    return lang.code
-                end
-            end
-        end
-
-        return "en"
-    end
-
-    -- Get current language index
-    function TranslationSystem:GetLanguageIndex()
-        for i, lang in ipairs(self.AvailableLanguages) do
-            if lang.code == self.CurrentLanguage then
-                return i
-            end
-        end
-        return 1
+    local requested = false
+    pcall(function()
+        requested = type(getgenv) == "function" and getgenv().ATGSplash == true
+    end)
+    if requested then
+        showSplash()
     end
 end
+
+-- Legacy translation API. Its methods are provided by the compatibility
+-- facade over the I18n system at the end of CustomizationSystem below; only
+-- the server address and the fields older scripts may read are declared
+-- here (the facade points them at the I18n state).
+local TranslationSystem = {
+    API_URL = "https://translate.atgofficial.net",
+    Cache = {},
+    Registry = {},
+    CurrentLanguage = "en",
+    SourceLanguage = "en",
+    Enabled = true,
+    AvailableLanguages = {}
+}
 -- ============================================================================
 
 --[[
@@ -584,11 +359,11 @@ do
         return aliases[normalized] or normalized
     end
 
+    -- Called for every instance the library creates, so it avoids pcall and
+    -- IsA. These three classes have no subclasses.
+    local TEXT_CLASSES = {TextLabel = true, TextButton = true, TextBox = true}
     local function isTextObject(object)
-        local ok, result = pcall(function()
-            return object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")
-        end)
-        return ok and result
+        return typeof(object) == "Instance" and TEXT_CLASSES[object.ClassName] == true
     end
 
     local nestedHttpRequest = type(http) == "table" and type(http.request) == "function" and http.request or nil
@@ -742,8 +517,16 @@ do
             return nil, "Only HTTPS URLs are accepted."
         end
 
-        local host = (url:match("^https://([^/%?#:]+)") or ""):lower()
-        if host == "" or host == "localhost" or host:match("^127%.") or host:match("^10%.")
+        -- A basic guard against addresses inside the user's network. It cannot
+        -- catch a public name that resolves to a private address.
+        local authority = url:match("^https://([^/%?#]*)") or ""
+        if authority:find("@", 1, true) or authority:find("[", 1, true) then
+            return nil, "URLs with credentials or IPv6 addresses are not allowed."
+        end
+        local host = (authority:match("^([^:]*)") or ""):lower():gsub("%.$", "")
+        if host == "" or host == "localhost" or host:match("%.localhost$") or host:match("%.local$")
+            or host:match("^%d+$") or host:match("^0x") or host:match("^0")
+            or host:match("^127%.") or host:match("^10%.") or host:match("^169%.254%.")
             or host:match("^192%.168%.") or host:match("^172%.1[6-9]%.")
             or host:match("^172%.2[0-9]%.") or host:match("^172%.3[0-1]%.") then
             return nil, "Local-network URLs are not allowed."
@@ -858,8 +641,17 @@ do
         MachineQueue = {},
         MachineActive = 0,
         MachineMaxConcurrent = 2,
-        MachineRequestLimit = 80,
+        -- Machine requests allowed per target language per session.
+        MachineRequestLimit = 200,
         MachineRequests = 0,
+        MachineRequestsByLocale = {},
+        -- At most this many machine requests start in any one second.
+        MachineRateLimit = 4,
+        MachineRateTokens = 4,
+        -- Translations received are also kept on disk per script scope and
+        -- language pair (least recently used entries are dropped).
+        MachineDiskCacheLimit = 2000,
+        MachineDiskCaches = {},
         RobloxCache = {},
         RobloxCacheOrder = {},
         RobloxPending = {},
@@ -867,7 +659,8 @@ do
         RobloxTranslatorPending = {},
         CurrentLocale = "en",
         SourceLocale = "en",
-        Mode = "auto",
+        -- Language packs only. Roblox and machine translation are opt-in.
+        Mode = "community",
         Enabled = true,
         Scope = "shared",
         Revision = 0,
@@ -902,6 +695,23 @@ do
         end
     end
 
+    -- A translation shown in a RichText label is escaped unless the source
+    -- text already uses markup, so a pack or server cannot inject tags.
+    local function forDisplay(entry, translated)
+        local source = entry.OriginalText
+        if type(translated) ~= "string" or source:find("<", 1, true) or source:find("&[%w#]+;") then
+            return translated
+        end
+        local richText = false
+        pcall(function()
+            richText = entry.Object.RichText == true
+        end)
+        if not richText then
+            return translated
+        end
+        return (translated:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+    end
+
     local function setEntryText(entry, text, expectedRevision)
         if expectedRevision and expectedRevision ~= I18n.Revision then
             return
@@ -916,7 +726,7 @@ do
                 changed = true
             end
         end)
-        if changed then
+        if changed and FontManager:NeedsApply() then
             local fontEntry = FontManager.Registry[entry.Object]
             if fontEntry then
                 FontManager:ApplyObject(fontEntry)
@@ -1143,12 +953,20 @@ do
     function I18n:GetManualTranslation(entry, locale)
         local requested = normalizeLocale(locale)
         local requestedBase = localeBase(requested)
-        for index = #self.PackOrder, 1, -1 do
-            local pack = self.Packs[self.PackOrder[index]]
-            if pack and (normalizeLocale(pack.Locale) == requested or localeBase(pack.Locale) == requestedBase) then
-                local translated = pack.Translations[entry.Key] or pack.Translations[entry.OriginalText]
-                if type(translated) == "string" and translated ~= "" then
-                    return translated, pack
+        -- Packs for the exact locale (th-th) win over packs that only share
+        -- the base language (th); within each pass the newest pack wins.
+        for pass = 1, 2 do
+            for index = #self.PackOrder, 1, -1 do
+                local pack = self.Packs[self.PackOrder[index]]
+                local matches = pack and (
+                    (pass == 1 and normalizeLocale(pack.Locale) == requested)
+                    or (pass == 2 and localeBase(pack.Locale) == requestedBase)
+                )
+                if matches then
+                    local translated = pack.Translations[entry.Key] or pack.Translations[entry.OriginalText]
+                    if type(translated) == "string" and translated ~= "" then
+                        return translated, pack
+                    end
                 end
             end
         end
@@ -1182,8 +1000,10 @@ do
                 normalized = normalizeLocale(code)
             end
             -- Permit a valid BCP-47-like locale before a pack has been
-            -- installed (for example th-TH, ja-JP, id-ID).
-            if normalized:match("^[a-z][a-z][a-z]?(-[a-z0-9]+)*$") then
+            -- installed (for example th-TH, ja-JP, id-ID). Lua patterns have
+            -- no repeated groups, so the subtags are checked separately.
+            local base, subtags = normalized:match("^([a-z][a-z][a-z]?)(.*)$")
+            if base and (subtags == "" or (subtags:gsub("%-[a-z0-9]+", "")) == "") then
                 return normalized
             end
         end
@@ -1206,8 +1026,7 @@ do
         -- result is still valid. Clearing them here creates a race where an
         -- old completion can consume callbacks from a newly queued same-key
         -- request. Prune only jobs which have not started and target a locale
-        -- that is no longer current.
-        self.MachineRequests = 0
+        -- that is no longer current. The machine quota is not reset here.
         local retainedQueue = {}
         for _, job in ipairs(self.MachineQueue) do
             if job.SourceLocale == self.SourceLocale and job.TargetLocale == self.CurrentLocale then
@@ -1249,7 +1068,7 @@ do
             source = true
         }
         if not accepted[mode] then
-            mode = "auto"
+            mode = "community"
         end
         if self.Mode == mode then
             return
@@ -1276,7 +1095,11 @@ do
             end
         end
         self:UpdateAllText()
-        FontManager:ApplyAll()
+        -- The font depends on the language only when a custom profile or
+        -- text tuning is active; otherwise every label keeps its own font.
+        if FontManager:NeedsApply() then
+            FontManager:ApplyAll()
+        end
     end
 
     function I18n:SetScope(scope, sourceLocale)
@@ -1311,7 +1134,11 @@ do
             Property = propertyName,
             Key = getEntryKey(originalText, options.Key),
             Context = options.Context or "",
-            Skip = options.Skip == true
+            Skip = options.Skip == true,
+            -- Runtime text (status lines, notifications, SetTitle/SetDesc
+            -- after creation) may contain player data: packs and Roblox
+            -- only, never machine translation.
+            Dynamic = options.Dynamic == true
         }
         self.Registry[textObject] = entry
         FontManager:Track(textObject, options.FontRole)
@@ -1331,7 +1158,8 @@ do
         self:Register(textObject, properties.Text, "Text", {
             Key = properties.I18nKey,
             Context = properties.I18nContext,
-            FontRole = properties.FontRole
+            FontRole = properties.FontRole,
+            Dynamic = properties.I18nDynamic == true
         })
     end
 
@@ -1409,10 +1237,104 @@ do
         end)
     end
 
+    function I18n:GetMachineCachePath(sourceLocale, targetLocale)
+        local fileName = "machine." .. sanitizeSegment(sourceLocale, "source") .. "-" .. sanitizeSegment(targetLocale, "target") .. ".json"
+        return joinPath(self:GetScopeFolder(), fileName)
+    end
+
+    -- Loaded once per file. Saved as an array of {source, translation}
+    -- pairs, oldest first, so the JSON never mixes array and object keys.
+    function I18n:GetMachineDiskCache(sourceLocale, targetLocale)
+        local path = self:GetMachineCachePath(sourceLocale, targetLocale)
+        local cache = self.MachineDiskCaches[path]
+        if cache then
+            return cache
+        end
+        -- Stamps[source] records when an entry was last used; the oldest one
+        -- is dropped when the cache is full.
+        cache = {Path = path, Entries = {}, Stamps = {}, Count = 0, Clock = 0, SaveQueued = false}
+        self.MachineDiskCaches[path] = cache
+        if Storage:CanUseFiles() then
+            local contents = Storage:Read(path)
+            local decoded = contents and jsonDecode(contents)
+            if type(decoded) == "table" and type(decoded.entries) == "table" then
+                for _, pair in ipairs(decoded.entries) do
+                    if type(pair) == "table" and type(pair[1]) == "string" and type(pair[2]) == "string"
+                        and cache.Entries[pair[1]] == nil then
+                        cache.Entries[pair[1]] = pair[2]
+                        cache.Count = cache.Count + 1
+                        cache.Clock = cache.Clock + 1
+                        cache.Stamps[pair[1]] = cache.Clock
+                    end
+                end
+            end
+        end
+        return cache
+    end
+
+    local function touchDiskEntry(cache, source)
+        cache.Clock = cache.Clock + 1
+        cache.Stamps[source] = cache.Clock
+    end
+
+    function I18n:SaveMachineDiskCache(cache)
+        if cache.SaveQueued or not Storage:CanUseFiles() then
+            return
+        end
+        cache.SaveQueued = true
+        -- Coalesce the writes of one burst of translations.
+        task.delay(2, function()
+            cache.SaveQueued = false
+            local sources = {}
+            for source in pairs(cache.Entries) do
+                table.insert(sources, source)
+            end
+            table.sort(sources, function(left, right)
+                return cache.Stamps[left] < cache.Stamps[right]
+            end)
+            local entries = {}
+            for _, source in ipairs(sources) do
+                table.insert(entries, {source, cache.Entries[source]})
+            end
+            local encoded = jsonEncode({schema = "atg.i18n.machine-cache.v1", entries = entries})
+            if encoded then
+                Storage:Write(cache.Path, encoded)
+            end
+        end)
+    end
+
+    function I18n:RememberMachineTranslation(sourceLocale, targetLocale, source, translated)
+        local cache = self:GetMachineDiskCache(sourceLocale, targetLocale)
+        if cache.Entries[source] == nil then
+            cache.Count = cache.Count + 1
+        end
+        cache.Entries[source] = translated
+        touchDiskEntry(cache, source)
+        local limit = tonumber(self.MachineDiskCacheLimit) or 2000
+        while cache.Count > limit do
+            local oldest, oldestStamp = nil, math.huge
+            for candidate, stamp in pairs(cache.Stamps) do
+                if stamp < oldestStamp then
+                    oldest, oldestStamp = candidate, stamp
+                end
+            end
+            cache.Entries[oldest] = nil
+            cache.Stamps[oldest] = nil
+            cache.Count = cache.Count - 1
+        end
+        self:SaveMachineDiskCache(cache)
+    end
+
     function I18n:DrainMachineQueue()
-        while self.MachineActive < self.MachineMaxConcurrent and #self.MachineQueue > 0 do
+        while self.MachineActive < self.MachineMaxConcurrent and #self.MachineQueue > 0 and self.MachineRateTokens > 0 do
             local job = table.remove(self.MachineQueue, 1)
             self.MachineActive = self.MachineActive + 1
+            -- Each start uses a token that comes back one second later.
+            self.MachineRateTokens = self.MachineRateTokens - 1
+            task.delay(1, function()
+                self.MachineRateTokens = math.min(self.MachineRateTokens + 1, tonumber(self.MachineRateLimit) or 4)
+                self:DrainMachineQueue()
+            end)
             task.spawn(function()
                 local translated
                 local body = jsonEncode({
@@ -1438,6 +1360,7 @@ do
                     if type(result) == "string" and result ~= "" then
                         translated = result
                         cacheTranslation(self, "MachineCache", "MachineCacheOrder", job.Key, result)
+                        self:RememberMachineTranslation(job.SourceLocale, job.TargetLocale, job.Text, result)
                     end
                 end
 
@@ -1452,16 +1375,26 @@ do
         end
     end
 
-    function I18n:TryMachine(entry, revision, callback)
+    function I18n:TryMachine(entry, revision, callback, targetLocale)
         local endpoint = TranslationSystem.API_URL
         if type(Capabilities.Request) ~= "function" or type(endpoint) ~= "string" or endpoint == "" then
             callback(nil)
             return
         end
 
-        local cacheKey = self.SourceLocale .. "|" .. self.CurrentLocale .. "|" .. entry.OriginalText
+        targetLocale = normalizeLocale(targetLocale or self.CurrentLocale)
+        local cacheKey = self.SourceLocale .. "|" .. targetLocale .. "|" .. entry.OriginalText
         if self.MachineCache[cacheKey] then
             callback(self.MachineCache[cacheKey])
+            return
+        end
+        -- Translations from earlier sessions cost no request or quota.
+        local disk = self:GetMachineDiskCache(self.SourceLocale, targetLocale)
+        local stored = disk.Entries[entry.OriginalText]
+        if stored then
+            touchDiskEntry(disk, entry.OriginalText)
+            cacheTranslation(self, "MachineCache", "MachineCacheOrder", cacheKey, stored)
+            callback(stored)
             return
         end
 
@@ -1470,18 +1403,20 @@ do
             table.insert(waiting, callback)
             return
         end
-        if self.MachineRequests >= self.MachineRequestLimit then
+        local used = self.MachineRequestsByLocale[targetLocale] or 0
+        if used >= (tonumber(self.MachineRequestLimit) or 0) then
             callback(nil)
             return
         end
 
+        self.MachineRequestsByLocale[targetLocale] = used + 1
         self.MachineRequests = self.MachineRequests + 1
         self.MachinePending[cacheKey] = {callback}
         table.insert(self.MachineQueue, {
             Key = cacheKey,
             Text = entry.OriginalText,
             SourceLocale = self.SourceLocale,
-            TargetLocale = self.CurrentLocale,
+            TargetLocale = targetLocale,
             Endpoint = endpoint
         })
         self:DrainMachineQueue()
@@ -1502,7 +1437,7 @@ do
 
         local manual = self:GetManualTranslation(entry, self.CurrentLocale)
         if manual then
-            setEntryText(entry, manual, revision)
+            setEntryText(entry, forDisplay(entry, manual), revision)
             return
         end
 
@@ -1511,18 +1446,18 @@ do
             return
         end
 
-        local tryMachine = self.Mode == "machine" or self.Mode == "auto"
+        local tryMachine = (self.Mode == "machine" or self.Mode == "auto") and not entry.Dynamic
         local tryRoblox = self.Mode == "roblox" or self.Mode == "auto"
         local function afterRoblox(translated)
             if revision ~= self.Revision then
                 return
             end
             if translated then
-                setEntryText(entry, translated, revision)
+                setEntryText(entry, forDisplay(entry, translated), revision)
             elseif tryMachine then
                 self:TryMachine(entry, revision, function(machineTranslated)
                     if machineTranslated then
-                        setEntryText(entry, machineTranslated, revision)
+                        setEntryText(entry, forDisplay(entry, machineTranslated), revision)
                     end
                 end)
             end
@@ -1533,7 +1468,7 @@ do
         elseif tryMachine then
             self:TryMachine(entry, revision, function(machineTranslated)
                 if machineTranslated then
-                    setEntryText(entry, machineTranslated, revision)
+                    setEntryText(entry, forDisplay(entry, machineTranslated), revision)
                 end
             end)
         end
@@ -1589,7 +1524,7 @@ do
             Key = getEntryKey(sourceText),
             Property = "Text"
         }
-        local manual = self:GetManualTranslation(entry, targetLocale)
+        local manual = self.Mode ~= "source" and self:GetManualTranslation(entry, targetLocale)
         if manual then
             if callback then
                 callback(manual)
@@ -1597,51 +1532,26 @@ do
             return manual
         end
 
-        local endpoint = TranslationSystem.API_URL
-        local cacheKey = self.SourceLocale .. "|" .. targetLocale .. "|" .. sourceText
-        if self.MachineCache[cacheKey] then
-            if callback then
-                callback(self.MachineCache[cacheKey])
-            end
-            return self.MachineCache[cacheKey]
-        end
-        if type(Capabilities.Request) ~= "function" or type(endpoint) ~= "string" or endpoint == "" then
+        -- Only the modes that allow it send text out, through the same queue
+        -- and quota as interface text.
+        if self.Mode ~= "machine" and self.Mode ~= "auto" then
             if callback then
                 callback(sourceText)
             end
             return sourceText
         end
-
-        task.spawn(function()
-            local translated
-            local body = jsonEncode({
-                q = sourceText,
-                source = self.SourceLocale,
-                target = targetLocale
-            })
-            if body then
-                local ok, response = pcall(Capabilities.Request, {
-                    Url = endpoint:gsub("/$", "") .. "/translate",
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = body
-                })
-                local rawResponse
-                if ok and type(response) == "string" then
-                    rawResponse = response
-                elseif ok and type(response) == "table" and response.Success ~= false then
-                    rawResponse = response.Body or response.body
-                end
-                local decoded = type(rawResponse) == "string" and jsonDecode(rawResponse)
-                if decoded and type(decoded.translatedText) == "string" and decoded.translatedText ~= "" then
-                    translated = decoded.translatedText
-                    cacheTranslation(self, "MachineCache", "MachineCacheOrder", cacheKey, translated)
-                end
+        local cached = self.MachineCache[self.SourceLocale .. "|" .. targetLocale .. "|" .. sourceText]
+        if cached then
+            if callback then
+                callback(cached)
             end
+            return cached
+        end
+        self:TryMachine(entry, self.Revision, function(translated)
             if callback then
                 callback(translated or sourceText)
             end
-        end)
+        end, targetLocale)
         return sourceText
     end
 
@@ -2341,14 +2251,8 @@ do
             local originalFace, originalTextSize, originalLineHeight, originalStrokeTransparency
             pcall(function()
                 originalFace = textObject.FontFace
-            end)
-            pcall(function()
                 originalTextSize = textObject.TextSize
-            end)
-            pcall(function()
                 originalLineHeight = textObject.LineHeight
-            end)
-            pcall(function()
                 originalStrokeTransparency = textObject.TextStrokeTransparency
             end)
             entry = {
@@ -2462,6 +2366,14 @@ do
         end
         self:ApplyTextStyle(entry)
         return false
+    end
+
+    -- True when fonts differ from each label's own font: a custom profile or
+    -- enabled text tuning. With neither, applying a font is a no-op.
+    function FontManager:NeedsApply()
+        local profile = self.Profiles[self.CurrentProfile] or self.Profiles.default
+        local customProfile = profile ~= nil and not profile.UseOriginal
+        return customProfile or (self.TextStyleConfig ~= nil and self.TextStyleConfig.Enabled == true)
     end
 
     function FontManager:ApplyAll()
@@ -3097,7 +3009,7 @@ do
     end
 end
 
-local a, b = {
+local moduleTree, moduleContext = {
 	{
 		1,
 		"ModuleScript",
@@ -3159,21 +3071,13 @@ local a, b = {
 						{"Flipper"},
 						{
 							{33, "ModuleScript", {"GroupMotor"}},
-							{46, "ModuleScript", {"isMotor.spec"}},
 							{39, "ModuleScript", {"Signal"}},
-							{40, "ModuleScript", {"Signal.spec"}},
 							{45, "ModuleScript", {"isMotor"}},
-							{36, "ModuleScript", {"Instant.spec"}},
-							{44, "ModuleScript", {"Spring.spec"}},
-							{42, "ModuleScript", {"SingleMotor.spec"}},
-							{38, "ModuleScript", {"Linear.spec"}},
 							{31, "ModuleScript", {"BaseMotor"}},
 							{43, "ModuleScript", {"Spring"}},
 							{35, "ModuleScript", {"Instant"}},
 							{37, "ModuleScript", {"Linear"}},
-							{41, "ModuleScript", {"SingleMotor"}},
-							{34, "ModuleScript", {"GroupMotor.spec"}},
-							{32, "ModuleScript", {"BaseMotor.spec"}}
+							{41, "ModuleScript", {"SingleMotor"}}
 						}
 					}
 				}
@@ -3209,28 +3113,44 @@ local a, b = {
 		}
 	}
 }
-local aa = {
+local moduleFunctions = {
 	function()
-		local c, d, e, f, g = b(1)
-		local h, i, j, k, l, m =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(1)
+		local Lighting, RunService, localPlayer, UserInputService, TweenService, camera =
 			game:GetService "Lighting",
 		game:GetService "RunService",
 		game:GetService "Players".LocalPlayer,
 		game:GetService "UserInputService",
 		game:GetService "TweenService",
 		game:GetService "Workspace".CurrentCamera
-		local n, o = j:GetMouse(), d
-		local p, q, r, s = e(o.Creator), e(o.Elements), e(o.Acrylic), o.Components
-		local t, u, v = e(s.Notification), p.New, protectgui or (syn and syn.protect_gui) or function()
+		local mouse, libraryRoot = localPlayer:GetMouse(), moduleScript
+		local Creator, elementModules, Acrylic, Components = requireModule(libraryRoot.Creator), requireModule(libraryRoot.Elements), requireModule(libraryRoot.Acrylic), libraryRoot.Components
+		local Notification, New, protectGui = requireModule(Components.Notification), Creator.New, protectgui or (syn and syn.protect_gui) or function()
 		end
-		local w = u("ScreenGui", {Parent = i:IsStudio() and j.PlayerGui or game:GetService "CoreGui"})
-		v(w)
-		t:Init(w)
-		local x = {
+		local gui = New("ScreenGui", {Parent = RunService:IsStudio() and localPlayer.PlayerGui or game:GetService "CoreGui"})
+		protectGui(gui)
+		Notification:Init(gui)
+		-- Indexing an Enum with an unknown name throws; return nil instead.
+		local function safeEnumItem(enumType, name)
+			if typeof(name) == "EnumItem" then
+				return name
+			end
+			if type(name) ~= "string" then
+				return nil
+			end
+			local ok, item = pcall(function()
+				return enumType[name]
+			end)
+			return ok and item or nil
+		end
+		local Library = {
+			-- Fluent's version, kept for scripts that check it.
 			Version = "1.6.0",
+			-- This ATG build: opt-in extras, privacy and bug fixes (CHANGELOG.md).
+			ATGVersion = "2.0.0",
 			OpenFrames = {},
 			Options = {},
-			Themes = e(o.Themes).Names,
+			Themes = requireModule(libraryRoot.Themes).Names,
 			Window = nil,
 			WindowFrame = nil,
 			Unloaded = false,
@@ -3241,7 +3161,7 @@ local aa = {
 			Transparency = true,
 			MinimizeKeybind = nil,
 			MinimizeKey = Enum.KeyCode.LeftControl,
-			GUI = w,
+			GUI = gui,
 			-- Compatibility facade plus the modern customization APIs.
 			Translation = TranslationSystem,
 			I18n = CustomizationSystem.I18n,
@@ -3251,35 +3171,68 @@ local aa = {
 			Customization = CustomizationSystem,
 			CurrentLanguage = "en"
 		}
-		function x.SafeCallback(y, z, ...)
-			if not z then
+		-- Dropdowns currently open; closed on minimize, tab change and unload.
+		Library._OpenDropdowns = {}
+		function Library._CloseDropdowns()
+			for dropdown in pairs(Library._OpenDropdowns) do
+				pcall(dropdown.Close, dropdown)
+			end
+		end
+		-- Library.OnUnload:Connect(fn) runs fn once, first thing in Destroy.
+		local unloadHandlers = {}
+		Library.OnUnload = {}
+		function Library.OnUnload.Connect(_, callback)
+			assert(type(callback) == "function", "OnUnload:Connect expects a function")
+			local handler = {Callback = callback, Connected = true}
+			function handler.Disconnect()
+				handler.Connected = false
+			end
+			table.insert(unloadHandlers, handler)
+			return handler
+		end
+		function Library.SafeCallback(_, callback, ...)
+			if not callback then
 				return
 			end
-			local A, B = pcall(z, ...)
-			if not A then
-				local C, D = B:find ":%d+: "
-				if not D then
-					return x:Notify {Title = "Interface", Content = "Callback error", SubContent = B, Duration = 5}
+			local ok, err = pcall(callback, ...)
+			if not ok then
+				err = tostring(err)
+				local _, matchEnd = err:find ":%d+: "
+				if not matchEnd then
+					return Library:Notify {Title = "Interface", Content = "Callback error", SubContent = err, Duration = 5}
 				end
-				return x:Notify {
+				return Library:Notify {
 					Title = "Interface",
 					Content = "Callback error",
-					SubContent = B:sub(D + 1),
+					SubContent = err:sub(matchEnd + 1),
 					Duration = 5
 				}
 			end
 		end
-		function x.Round(y, z, A)
-			if A == 0 then
-				return math.floor(z)
+		function Library.Round(_, value, decimals)
+			-- Always returns a number, rounded half up to `decimals` places.
+			local number = tonumber(value)
+			if number == nil then
+				return value
 			end
-			z = tostring(z)
-			return z:find "%." and tonumber(z:sub(1, z:find "%." + A)) or z
+			local factor = 10 ^ (tonumber(decimals) or 0)
+			return math.floor(number * factor + 0.5) / factor
 		end
-		local y = e(o.Icons).assets
-		function x.GetIcon(z, A)
-			if A ~= nil and y["lucide-" .. A] then
-				return y["lucide-" .. A]
+		function Library.ShowSplash(_)
+			showSplash()
+		end
+		-- Adds an element to Workspace Recent. Elements call this from user
+		-- input only, so values set by scripts or loaded configs stay out.
+		function Library._TouchElement(element)
+			local workspace = Library.Workspace
+			if workspace and type(element) == "table" and element._ATGEntry then
+				workspace:TouchEntry(element._ATGEntry)
+			end
+		end
+		local iconAssets = requireModule(libraryRoot.Icons).assets
+		function Library.GetIcon(_, name)
+			if name ~= nil and iconAssets["lucide-" .. name] then
+				return iconAssets["lucide-" .. name]
 			end
 			return nil
 		end
@@ -3293,7 +3246,7 @@ local aa = {
 		local WorkspaceHttpService = game:GetService("HttpService")
 		local Workspace = {
 			Version = 1,
-			Library = x,
+			Library = Library,
 			Scope = "shared",
 			Window = nil,
 			Tabs = {},
@@ -3315,117 +3268,120 @@ local aa = {
 			ArrangeMode = false,
 			SaveScheduled = false
 		}
-		x.Workspace = Workspace
+		Library.Workspace = Workspace
 
-		local function workspaceSafeSegment(A, B)
-			A = tostring(A or B or "shared")
-			A = A:gsub("[^%w%-%._]", "_"):gsub("_+", "_"):sub(1, 80)
-			if A == "" or A == "." or A == ".." then
-				return B or "shared"
+		local function workspaceSafeSegment(value, fallback)
+			value = tostring(value or fallback or "shared")
+			value = value:gsub("[^%w%-%._]", "_"):gsub("_+", "_"):sub(1, 80)
+			if value == "" or value == "." or value == ".." then
+				return fallback or "shared"
 			end
-			return A
+			return value
 		end
-		local function workspaceTrim(A)
-			return type(A) == "string" and (A:match("^%s*(.-)%s*$") or "") or ""
+		local function workspaceTrim(value)
+			return type(value) == "string" and (value:match("^%s*(.-)%s*$") or "") or ""
 		end
-		local function workspaceObjectText(A)
-			if type(A) == "string" then return A end
-			if A == nil then return "" end
-			local B, C = pcall(function() return A.Text end)
-			return B and type(C) == "string" and C or ""
+		local function workspaceObjectText(object)
+			if type(object) == "string" then return object end
+			if object == nil then return "" end
+			local ok, text = pcall(function() return object.Text end)
+			return ok and type(text) == "string" and text or ""
 		end
-		local function workspaceIndex(A, B)
-			for C, D in ipairs(A or {}) do
-				if D == B then
-					return C
+		local function workspaceIndex(list, item)
+			for index, value in ipairs(list or {}) do
+				if value == item then
+					return index
 				end
 				end
 			return nil
 		end
-		local function workspacePush(A, B, C)
-			local D = workspaceIndex(A, B)
-			if D then
-				table.remove(A, D)
+		local function workspacePush(list, item, limit)
+			local index = workspaceIndex(list, item)
+			if index then
+				table.remove(list, index)
 			end
-			table.insert(A, 1, B)
-			while #A > (C or 12) do
-				table.remove(A)
+			table.insert(list, 1, item)
+			while #list > (limit or 12) do
+				table.remove(list)
 			end
 		end
-		local function workspaceCopy(A)
-			if type(A) ~= "table" then
-				return A
+		local function workspaceCopy(value)
+			if type(value) ~= "table" then
+				return value
 			end
-			local B = {}
-			for C, D in pairs(A) do
-				B[C] = workspaceCopy(D)
+			local copy = {}
+			for key, item in pairs(value) do
+				copy[key] = workspaceCopy(item)
 			end
-			return B
+			return copy
 		end
-		local function workspaceEncodeValue(A)
-			local B = typeof(A)
-			if B == "Color3" then
-				return {__atg = "Color3", R = A.R, G = A.G, B = A.B}
+		local function workspaceEncodeValue(value)
+			local kind = typeof(value)
+			if kind == "Color3" then
+				return {__atg = "Color3", R = value.R, G = value.G, B = value.B}
 			end
-			if B == "EnumItem" then
-				local C, D, E = pcall(function()
-					return A.EnumType.Name, A.Name
+			if kind == "EnumItem" then
+				local ok, enumName, itemName = pcall(function()
+					return value.EnumType.Name, value.Name
 				end)
-				if C then
-					return {__atg = "Enum", Type = D, Name = E}
+				if ok then
+					return {__atg = "Enum", Type = enumName, Name = itemName}
 				end
-				return tostring(A)
+				return tostring(value)
 			end
-			if type(A) == "table" then
-				local C = {}
-				for D, E in pairs(A) do
-					C[D] = workspaceEncodeValue(E)
+			if type(value) == "table" then
+				local encoded = {}
+				for key, item in pairs(value) do
+					encoded[key] = workspaceEncodeValue(item)
 				end
-				return C
+				return encoded
 			end
-			if type(A) == "string" or type(A) == "number" or type(A) == "boolean" then
-				return A
+			if type(value) == "string" or type(value) == "number" or type(value) == "boolean" then
+				return value
 			end
 			return nil
 		end
-		local function workspaceDecodeValue(A)
-			if type(A) ~= "table" then
-				return A
+		local function workspaceDecodeValue(value)
+			if type(value) ~= "table" then
+				return value
 			end
-			if A.__atg == "Color3" then
-				return Color3.new(tonumber(A.R) or 1, tonumber(A.G) or 1, tonumber(A.B) or 1)
+			if value.__atg == "Color3" then
+				return Color3.new(tonumber(value.R) or 1, tonumber(value.G) or 1, tonumber(value.B) or 1)
 			end
-			if A.__atg == "Enum" and type(A.Type) == "string" and type(A.Name) == "string" then
-				local B = Enum[A.Type]
-				return B and B[A.Name] or A.Name
+			if value.__atg == "Enum" and type(value.Type) == "string" and type(value.Name) == "string" then
+				local item
+				pcall(function()
+					item = Enum[value.Type][value.Name]
+				end)
+				return item or value.Name
 			end
-			local B = {}
-			for C, D in pairs(A) do
-				if C ~= "__atg" then
-					B[C] = workspaceDecodeValue(D)
+			local decoded = {}
+			for key, item in pairs(value) do
+				if key ~= "__atg" then
+					decoded[key] = workspaceDecodeValue(item)
 				end
 			end
-			return B
+			return decoded
 		end
 
-		function Workspace:Connect(A, B)
-			local C = A:Connect(B)
-			table.insert(self.Connections, C)
-			return C
+		function Workspace:Connect(signal, handler)
+			local connection = signal:Connect(handler)
+			table.insert(self.Connections, connection)
+			return connection
 		end
 		-- Connections owned by a transient search/profile row are released when
 		-- that row is destroyed.  Do not retain them in the workspace registry.
-		function Workspace:Bind(A, B)
-			return A:Connect(B)
+		function Workspace:Bind(signal, handler)
+			return signal:Connect(handler)
 		end
 		function Workspace:GetStorage()
-			local A = x.Customization and x.Customization.Storage
-			return type(A) == "table" and A or nil
+			local storage = Library.Customization and Library.Customization.Storage
+			return type(storage) == "table" and storage or nil
 		end
 		function Workspace:GetPath()
-			local A = self:GetStorage()
-			local B = A and A.Root or "FluentSettings"
-			return tostring(B) .. "/productivity/" .. workspaceSafeSegment(self.Scope, "shared") .. "/workspace.json"
+			local storage = self:GetStorage()
+			local root = storage and storage.Root or "FluentSettings"
+			return tostring(root) .. "/productivity/" .. workspaceSafeSegment(self.Scope, "shared") .. "/workspace.json"
 		end
 		function Workspace:SaveSoon()
 			self.SaveRevision = (self.SaveRevision or 0) + 1
@@ -3434,59 +3390,59 @@ local aa = {
 				return
 			end
 			self.SaveScheduled = true
-			local A = self.Scope
-			local B = self.State
+			local scope = self.Scope
+			local state = self.State
 			task.delay(0.35, function()
 				self.SaveScheduled = false
 				if revision ~= self.SaveRevision then
 					self:SaveSoon()
 					return
 				end
-				if self.Scope ~= A or self.State ~= B then
+				if self.Scope ~= scope or self.State ~= state then
 					return
 				end
-				local C = self:GetStorage()
-				if not C or type(C.CanUseFiles) ~= "function" or not C:CanUseFiles() then
+				local storage = self:GetStorage()
+				if not storage or type(storage.CanUseFiles) ~= "function" or not storage:CanUseFiles() then
 					return
 				end
-				local D, E = pcall(WorkspaceHttpService.JSONEncode, WorkspaceHttpService, self.State)
-				if D then
-					pcall(C.Write, C, self:GetPath(), E)
+				local ok, encoded = pcall(WorkspaceHttpService.JSONEncode, WorkspaceHttpService, self.State)
+				if ok then
+					pcall(storage.Write, storage, self:GetPath(), encoded)
 				end
 			end)
 		end
 		function Workspace:Load()
-			local A = self:GetStorage()
-			if not A or type(A.CanUseFiles) ~= "function" or not A:CanUseFiles() then
+			local storage = self:GetStorage()
+			if not storage or type(storage.CanUseFiles) ~= "function" or not storage:CanUseFiles() then
 				return false
 			end
-			local B, C = A:Read(self:GetPath())
-			if type(B) ~= "string" then
-				return false, C
+			local contents, readError = storage:Read(self:GetPath())
+			if type(contents) ~= "string" then
+				return false, readError
 			end
-			local D, E = pcall(WorkspaceHttpService.JSONDecode, WorkspaceHttpService, B)
-			if not D or type(E) ~= "table" then
+			local ok, decoded = pcall(WorkspaceHttpService.JSONDecode, WorkspaceHttpService, contents)
+			if not ok or type(decoded) ~= "table" then
 				return false, "Workspace file is not valid JSON."
 			end
-			local F = self.State
-			for G, H in pairs(F) do
-				if type(E[G]) == type(H) then
-					F[G] = E[G]
+			local state = self.State
+			for key, defaultValue in pairs(state) do
+				if type(decoded[key]) == type(defaultValue) then
+					state[key] = decoded[key]
 				end
 			end
-			if type(F.SmartConfirm) ~= "boolean" then
-				F.SmartConfirm = true
+			if type(state.SmartConfirm) ~= "boolean" then
+				state.SmartConfirm = true
 			end
 			-- Focus is intentionally session-only.  Restoring it at startup can
 			-- make every tab except the first one look as if it vanished.
-			F.FocusMode = false
+			state.FocusMode = false
 			return true
 		end
-		function Workspace:Configure(A)
-			A = type(A) == "table" and A or {}
-			local B = workspaceSafeSegment(A.ScriptId or (x.I18n and x.I18n.Scope) or self.Scope, "shared")
-			if B ~= self.Scope then
-				self.Scope = B
+		function Workspace:Configure(options)
+			options = type(options) == "table" and options or {}
+			local scope = workspaceSafeSegment(options.ScriptId or (Library.I18n and Library.I18n.Scope) or self.Scope, "shared")
+			if scope ~= self.Scope then
+				self.Scope = scope
 				self.State = {
 					Favorites = {}, Recent = {}, RecentProfiles = {}, TabOrder = {}, Profiles = {},
 					CompactMode = false, FocusMode = false, SmartConfirm = true
@@ -3498,414 +3454,411 @@ local aa = {
 			end
 			return self
 		end
-		function Workspace:IsFavorite(A)
-			return workspaceIndex(self.State.Favorites, A) ~= nil
+		function Workspace:IsFavorite(id)
+			return workspaceIndex(self.State.Favorites, id) ~= nil
 		end
-		function Workspace:ToggleFavorite(A)
-			if type(A) ~= "string" then
+		function Workspace:ToggleFavorite(id)
+			if type(id) ~= "string" then
 				return
 			end
-			local B = workspaceIndex(self.State.Favorites, A)
-			if B then
-				table.remove(self.State.Favorites, B)
+			local index = workspaceIndex(self.State.Favorites, id)
+			if index then
+				table.remove(self.State.Favorites, index)
 			else
-				workspacePush(self.State.Favorites, A, 24)
+				workspacePush(self.State.Favorites, id, 24)
 			end
 			self:SaveSoon()
 			self:RefreshSurface()
 		end
-		function Workspace:TouchEntry(A)
-			local B = type(A) == "table" and A.Id or A
-			if type(B) == "string" then
-				workspacePush(self.State.Recent, B, 12)
+		function Workspace:TouchEntry(entry)
+			local id = type(entry) == "table" and entry.Id or entry
+			if type(id) == "string" then
+				workspacePush(self.State.Recent, id, 12)
 				self:SaveSoon()
 			end
 		end
-		function Workspace:TouchTab(A)
-			if type(A) ~= "table" then
+		function Workspace:TouchTab(tab)
+			if type(tab) ~= "table" then
 				return
 			end
-			self:TouchEntry(A.Id)
+			self:TouchEntry(tab.Id)
 			self:ApplyModes()
 			if self.SearchActive then
-				self:ApplySearchControlVisibility(A)
+				self:ApplySearchControlVisibility(tab)
 			end
 		end
-		function Workspace:RegisterTab(A, B)
-			if type(A) ~= "table" or not A.Frame or self.TabById[A.Id] then
-				return A
+		function Workspace:RegisterTab(tab, _)
+			if type(tab) ~= "table" or not tab.Frame or self.TabById[tab.Id] then
+				return tab
 			end
-			A.OriginalName = A.OriginalName or A.Name
-			A.OriginalLabelText = A.Label and A.Label.Text or A.Name
-			self.TabById[A.Id] = A
-			table.insert(self.Tabs, A)
-			self:Connect(A.Frame.InputBegan, function(C)
-				if self.ArrangeMode and (C.UserInputType == Enum.UserInputType.MouseButton1 or C.UserInputType == Enum.UserInputType.Touch) then
-					self.Drag = {Tab = A, Start = C.Position, Input = C, Moved = false}
+			tab.OriginalName = tab.OriginalName or tab.Name
+			tab.OriginalLabelText = tab.Label and tab.Label.Text or tab.Name
+			self.TabById[tab.Id] = tab
+			table.insert(self.Tabs, tab)
+			self:Connect(tab.Frame.InputBegan, function(input)
+				if self.ArrangeMode and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+					self.Drag = {Tab = tab, Start = input.Position, Input = input, Moved = false}
 				end
 			end)
 			self:ApplyTabOrder()
 			self:ApplyModes()
-			return A
+			return tab
 		end
-		function Workspace:RegisterElement(A, B, C, D, E)
-			if type(A) ~= "table" then
+		function Workspace:RegisterElement(element, section, options, elementType, optionKey)
+			if type(element) ~= "table" then
 				return nil
 			end
-			C = type(C) == "table" and C or {}
-			local F = type(E) == "string" and E or C.Id or C.Title or D or "element"
-			local G = "option:" .. workspaceSafeSegment(F, "element")
-			if self.EntryById[G] then
-				G = G .. "-" .. tostring(#self.Entries + 1)
+			options = type(options) == "table" and options or {}
+			local label = type(optionKey) == "string" and optionKey or options.Id or options.Title or elementType or "element"
+			local id = "option:" .. workspaceSafeSegment(label, "element")
+			if self.EntryById[id] then
+				id = id .. "-" .. tostring(#self.Entries + 1)
 			end
-			local H = {
-				Id = G,
-				Title = tostring(C.Title or A.Title or F),
-				Description = tostring(C.Description or ""),
-				Type = tostring(D or A.Type or "Control"),
-				Object = A,
-				Frame = A.Frame or A.Root,
-				Section = B,
-				Tab = B and B.Tab or nil,
-				TabTitle = B and B.TabTitle or ""
+			local entry = {
+				Id = id,
+				Title = tostring(options.Title or element.Title or label),
+				Description = tostring(options.Description or ""),
+				Type = tostring(elementType or element.Type or "Control"),
+				Object = element,
+				Frame = element.Frame or element.Root,
+				Section = section,
+				Tab = section and section.Tab or nil,
+				TabTitle = section and section.TabTitle or ""
 			}
-			self.EntryById[H.Id] = H
-			table.insert(self.Entries, H)
-			if type(A.SetValue) == "function" and not A._ATGWorkspaceValueWrapped then
-				A._ATGWorkspaceValueWrapped = true
-				local I = A.SetValue
-				A.SetValue = function(J, ...)
-					local K = {I(J, ...)}
-					self:TouchEntry(H)
-					return unpack(K)
-				end
-			end
-			return H
+			self.EntryById[entry.Id] = entry
+			table.insert(self.Entries, entry)
+			-- Elements report user changes through Library._TouchElement.
+			element._ATGEntry = entry
+			return entry
 		end
 		function Workspace:ApplyTabOrder()
 			if #self.Tabs == 0 then
 				return
 			end
-			local A, B = {}, {}
-			for _, C in ipairs(self.State.TabOrder or {}) do
-				local D = self.TabById[C]
-				if D then
-					table.insert(A, D)
-					B[D.Id] = true
+			local ordered, seen = {}, {}
+			for _, id in ipairs(self.State.TabOrder or {}) do
+				local tab = self.TabById[id]
+				if tab then
+					table.insert(ordered, tab)
+					seen[tab.Id] = true
 				end
 			end
-			for _, C in ipairs(self.Tabs) do
-				if not B[C.Id] then
-					table.insert(A, C)
+			for _, tab in ipairs(self.Tabs) do
+				if not seen[tab.Id] then
+					table.insert(ordered, tab)
 				end
 			end
 			self.State.TabOrder = {}
-			for C, D in ipairs(A) do
-				D.Frame.LayoutOrder = C * 10
-				table.insert(self.State.TabOrder, D.Id)
+			for index, tab in ipairs(ordered) do
+				tab.Frame.LayoutOrder = index * 10
+				table.insert(self.State.TabOrder, tab.Id)
 			end
 		end
-		function Workspace:MoveTabTo(A, B)
-			local C = {}
-			for _, D in ipairs(self.Tabs) do
-				table.insert(C, D)
+		function Workspace:MoveTabTo(tab, target)
+			local ordered = {}
+			for _, tab in ipairs(self.Tabs) do
+				table.insert(ordered, tab)
 			end
-			table.sort(C, function(D, E)
-				return D.Frame.LayoutOrder < E.Frame.LayoutOrder
+			table.sort(ordered, function(left, right)
+				return left.Frame.LayoutOrder < right.Frame.LayoutOrder
 			end)
-			local D = workspaceIndex(C, A)
-			local E = workspaceIndex(C, B)
-			if not D or not E or D == E then
+			local fromIndex = workspaceIndex(ordered, tab)
+			local toIndex = workspaceIndex(ordered, target)
+			if not fromIndex or not toIndex or fromIndex == toIndex then
 				return
 			end
-			table.remove(C, D)
-			table.insert(C, E, A)
+			table.remove(ordered, fromIndex)
+			table.insert(ordered, toIndex, tab)
 			self.State.TabOrder = {}
-			for F, G in ipairs(C) do
-				G.Frame.LayoutOrder = F * 10
-				table.insert(self.State.TabOrder, G.Id)
+			for index, tab in ipairs(ordered) do
+				tab.Frame.LayoutOrder = index * 10
+				table.insert(self.State.TabOrder, tab.Id)
 			end
 			self:SaveSoon()
 		end
-		function Workspace:MoveDraggingTab(A)
+		function Workspace:MoveDraggingTab(cursorY)
 			if not self.Drag or not self.Drag.Tab then
 				return
 			end
-			local B, C = self.Drag.Tab, nil
+			local dragged, target = self.Drag.Tab, nil
 			-- self.Tabs is in tab-creation order, not current visual order, so it
 			-- must be sorted by LayoutOrder before hit-testing against cursor Y
 			-- (same sort MoveTabTo already does before computing indices) —
 			-- otherwise this picks the wrong drop target once a drag has moved a
 			-- tab away from its creation-order position.
-			local E = {}
-			for _, D in ipairs(self.Tabs) do
-				table.insert(E, D)
+			local ordered = {}
+			for _, tab in ipairs(self.Tabs) do
+				table.insert(ordered, tab)
 			end
-			table.sort(E, function(F, G)
-				return F.Frame.LayoutOrder < G.Frame.LayoutOrder
+			table.sort(ordered, function(left, right)
+				return left.Frame.LayoutOrder < right.Frame.LayoutOrder
 			end)
-			for _, D in ipairs(E) do
-				if D ~= B and D.Frame.Visible and A < D.Frame.AbsolutePosition.Y + D.Frame.AbsoluteSize.Y * 0.5 then
-					C = D
+			for _, tab in ipairs(ordered) do
+				if tab ~= dragged and tab.Frame.Visible and cursorY < tab.Frame.AbsolutePosition.Y + tab.Frame.AbsoluteSize.Y * 0.5 then
+					target = tab
 					break
 				end
 			end
-			if not C then
-				for D = #E, 1, -1 do
-					if E[D] ~= B and E[D].Frame.Visible then
-						C = E[D]
+			if not target then
+				for index = #ordered, 1, -1 do
+					if ordered[index] ~= dragged and ordered[index].Frame.Visible then
+						target = ordered[index]
 						break
 					end
 				end
 			end
-			if C then
-				self:MoveTabTo(B, C)
+			if target then
+				self:MoveTabTo(dragged, target)
 			end
 		end
 		function Workspace:ApplyModes()
-			local A = self.State.CompactMode == true
-			local B = self.State.FocusMode == true
-			for _, C in ipairs(self.Tabs) do
-				if C.Frame then
+			local compact = self.State.CompactMode == true
+			local focus = self.State.FocusMode == true
+			for _, tab in ipairs(self.Tabs) do
+				if tab.Frame then
 					if self.SearchActive then
-						C.Frame.Visible = self.SearchMatchedTabs and self.SearchMatchedTabs[C.Id] == true
+						tab.Frame.Visible = self.SearchMatchedTabs and self.SearchMatchedTabs[tab.Id] == true
 					else
-						C.Frame.Visible = not B or C.Selected
+						tab.Frame.Visible = not focus or tab.Selected
 					end
 				end
-				if C.Label then
-					if A and C.IconObject and C.IconObject.Image ~= "" then
-						C.Label.Visible = false
-					elseif A then
-						C._ATGCompactLabel = true
-						C.Label.Visible = true
-						C.Label.Text = tostring(C.OriginalLabelText or C.Name):sub(1, 1)
-						C.Label.Position = UDim2.new(0, 0, 0.5, 0)
-						C.Label.Size = UDim2.new(1, 0, 1, 0)
-						C.Label.TextXAlignment = Enum.TextXAlignment.Center
+				if tab.Label then
+					if compact and tab.IconObject and tab.IconObject.Image ~= "" then
+						tab.Label.Visible = false
+					elseif compact then
+						tab._ATGCompactLabel = true
+						tab.Label.Visible = true
+						tab.Label.Text = tostring(tab.OriginalLabelText or tab.Name):sub(1, 1)
+						tab.Label.Position = UDim2.new(0, 0, 0.5, 0)
+						tab.Label.Size = UDim2.new(1, 0, 1, 0)
+						tab.Label.TextXAlignment = Enum.TextXAlignment.Center
 					else
-						C.Label.Visible = true
-						if C._ATGCompactLabel then
-							C._ATGCompactLabel = nil
-							C.Label.Text = C.OriginalLabelText or C.Name
-							pcall(function() TranslationSystem:UpdateText(C.Label) end)
+						tab.Label.Visible = true
+						if tab._ATGCompactLabel then
+							tab._ATGCompactLabel = nil
+							tab.Label.Text = tab.OriginalLabelText or tab.Name
+							pcall(function() TranslationSystem:UpdateText(tab.Label) end)
 						end
-						C.Label.Position = C.IconObject and C.IconObject.Image ~= "" and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0)
-						C.Label.Size = UDim2.new(1, -12, 1, 0)
-						C.Label.TextXAlignment = Enum.TextXAlignment.Left
+						tab.Label.Position = tab.IconObject and tab.IconObject.Image ~= "" and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0)
+						tab.Label.Size = UDim2.new(1, -12, 1, 0)
+						tab.Label.TextXAlignment = Enum.TextXAlignment.Left
 					end
 				end
-				if A and C.IconObject and C.IconObject.Image ~= "" then
-					C.IconObject.Position = UDim2.new(0.5, -8, 0.5, 0)
-				elseif C.IconObject then
-					C.IconObject.Position = UDim2.new(0, 8, 0.5, 0)
+				if compact and tab.IconObject and tab.IconObject.Image ~= "" then
+					tab.IconObject.Position = UDim2.new(0.5, -8, 0.5, 0)
+				elseif tab.IconObject then
+					tab.IconObject.Position = UDim2.new(0, 8, 0.5, 0)
 				end
 			end
 		end
-		function Workspace:SetCompact(A)
-			A = A == true
-			self.State.CompactMode = A
-			if A and self.SidebarSearch and self.SidebarSearch.Text ~= "" then
+		function Workspace:SetCompact(enabled)
+			enabled = enabled == true
+			self.State.CompactMode = enabled
+			if enabled and self.SidebarSearch and self.SidebarSearch.Text ~= "" then
 				-- Compact mode intentionally has no search field, so never leave
 				-- the tab rail replaced by invisible search rows.
 				self.SidebarSearch.Text = ""
 			end
 			if self.Window and type(self.Window.SetTabWidth) == "function" then
-				self.Window:SetTabWidth(A and 54 or self.OriginalTabWidth)
+				self.Window:SetTabWidth(enabled and 54 or self.OriginalTabWidth)
 			end
 			if self.Sidebar then
-				self.Sidebar.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 0, A and 0 or 26)
-				self.SidebarSearch.Visible = not A
+				self.Sidebar.Size = UDim2.new(0, enabled and 54 or self.OriginalTabWidth, 0, enabled and 0 or 26)
+				self.SidebarSearch.Visible = not enabled
 			end
 			if self.Window and self.Window.TabArea then
-				self.Window.TabArea.Position = UDim2.new(0, 12, 0, A and 54 or 88)
-				self.Window.TabArea.Size = UDim2.new(0, A and 54 or self.OriginalTabWidth, 1, A and -66 or -100)
+				-- Tabs start at Fluent's 54px, or below the search box when shown.
+				local top = self.Sidebar and 88 or 54
+				self.Window.TabArea.Position = UDim2.new(0, 12, 0, enabled and 54 or top)
+				self.Window.TabArea.Size = UDim2.new(0, enabled and 54 or self.OriginalTabWidth, 1, enabled and -66 or -(top + 12))
 			end
 			if self.Panel then
-				self.Panel.Size = UDim2.new(0, A and 230 or self.OriginalTabWidth, 0, 260)
+				self.Panel.Size = UDim2.new(0, enabled and 230 or self.OriginalTabWidth, 0, 260)
 			end
 			self:ApplyModes()
 			self:SaveSoon()
 		end
 		function Workspace:UpdateSearchHint()
 			if self.SidebarSearch then
-				self.SidebarSearch.PlaceholderText = self.State.FocusMode and "Focus mode on  •  Ctrl+K to exit" or "Search...  Ctrl+K"
+				local hint = self.State.FocusMode and "Focus mode on  •  Ctrl+K to exit" or "Search...  Ctrl+K"
+				self.SidebarSearch.PlaceholderText = hint
+				TranslationSystem:Register(self.SidebarSearch, hint, "PlaceholderText")
 			end
 		end
-		function Workspace:SetFocus(A)
-			A = A == true
-			if A then
-				local B = false
-				for _, C in ipairs(self.Tabs) do
-					B = B or C.Selected
+		function Workspace:SetFocus(enabled)
+			enabled = enabled == true
+			if enabled then
+				local anySelected = false
+				for _, tab in ipairs(self.Tabs) do
+					anySelected = anySelected or tab.Selected
 				end
-				if not B and self.Tabs[1] and type(self.Tabs[1].Select) == "function" then
+				if not anySelected and self.Tabs[1] and type(self.Tabs[1].Select) == "function" then
 					self.Tabs[1]:Select()
 				end
 			end
-			self.State.FocusMode = A
+			self.State.FocusMode = enabled
 			self:ApplyModes()
 			self:UpdateSearchHint()
 			self:SaveSoon()
 		end
-		function Workspace:SetArrangeMode(A)
-			self.ArrangeMode = A == true
-			for _, B in ipairs(self.Tabs) do
-				if B.Frame then
-					B.Frame.Active = self.ArrangeMode
-					B.Frame.BackgroundTransparency = self.ArrangeMode and 0.94 or (B.Selected and 0.89 or 1)
+		function Workspace:SetArrangeMode(enabled)
+			self.ArrangeMode = enabled == true
+			for _, tab in ipairs(self.Tabs) do
+				if tab.Frame then
+					tab.Frame.Active = self.ArrangeMode
+					tab.Frame.BackgroundTransparency = self.ArrangeMode and 0.94 or (tab.Selected and 0.89 or 1)
 				end
 			end
-			if x.Window then
-				x:Notify {
+			if Library.Window then
+				Library:Notify {
 					Title = "Tabs",
 					Content = self.ArrangeMode and "Drag tabs to rearrange. Click Arrange again when done." or "Tab order saved.",
 					Duration = 3
 				}
 			end
 		end
-		function Workspace:Navigate(A)
-			if type(A) ~= "table" then
+		function Workspace:Navigate(entry)
+			if type(entry) ~= "table" then
 				return
 			end
-			if A.Tab and type(A.Tab.Select) == "function" then
-				A.Tab:Select()
+			if entry.Tab and type(entry.Tab.Select) == "function" then
+				entry.Tab:Select()
 			end
-			self:TouchEntry(A)
-			if A.Frame and A.Tab and A.Tab.ScrollFrame then
+			self:TouchEntry(entry)
+			if entry.Frame and entry.Tab and entry.Tab.ScrollFrame then
 				task.delay(0.18, function()
-					if not A.Frame.Parent or not A.Tab.ScrollFrame.Parent then
+					if not entry.Frame.Parent or not entry.Tab.ScrollFrame.Parent then
 						return
 					end
-					local B = A.Tab.ScrollFrame
-					local C = math.max(0, A.Frame.AbsolutePosition.Y - B.AbsolutePosition.Y + B.CanvasPosition.Y - 12)
-					B.CanvasPosition = Vector2.new(0, C)
-					local D = Instance.new("UIStroke")
-					D.Name = "ATGWorkspaceHighlight"
-					D.Color = Color3.fromRGB(255, 82, 96)
-					D.Thickness = 1.5
-					D.Transparency = 1
-					D.Parent = A.Frame
-					l:Create(D, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.1}):Play()
+					local scrollFrame = entry.Tab.ScrollFrame
+					local canvasY = math.max(0, entry.Frame.AbsolutePosition.Y - scrollFrame.AbsolutePosition.Y + scrollFrame.CanvasPosition.Y - 12)
+					scrollFrame.CanvasPosition = Vector2.new(0, canvasY)
+					local highlight = Instance.new("UIStroke")
+					highlight.Name = "ATGWorkspaceHighlight"
+					highlight.Color = Creator.GetThemeProperty("Accent")
+					highlight.Thickness = 1.5
+					highlight.Transparency = 1
+					highlight.Parent = entry.Frame
+					TweenService:Create(highlight, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.1}):Play()
 					task.delay(0.85, function()
-						if D.Parent then
-							local E = l:Create(D, TweenInfo.new(0.22), {Transparency = 1})
-							E:Play()
-							E.Completed:Connect(function()
-								if D.Parent then D:Destroy() end
+						if highlight.Parent then
+							local fadeOut = TweenService:Create(highlight, TweenInfo.new(0.22), {Transparency = 1})
+							fadeOut:Play()
+							fadeOut.Completed:Connect(function()
+								if highlight.Parent then highlight:Destroy() end
 							end)
 						end
 					end)
 				end)
 			end
 		end
-		function Workspace:GetTabDisplayTitle(A)
-			if type(A) ~= "table" then return "" end
-			if A.Selected and self.Window then
-				local B = workspaceObjectText(self.Window.TabDisplay)
-				if B ~= "" then return B end
+		function Workspace:GetTabDisplayTitle(tab)
+			if type(tab) ~= "table" then return "" end
+			if tab.Selected and self.Window then
+				local displayed = workspaceObjectText(self.Window.TabDisplay)
+				if displayed ~= "" then return displayed end
 			end
-			local B = workspaceObjectText(A.Label)
-			return B ~= "" and B or tostring(A.Name or "")
+			local label = workspaceObjectText(tab.Label)
+			return label ~= "" and label or tostring(tab.Name or "")
 		end
-		function Workspace:GetEntryDisplayText(A)
-			if type(A) ~= "table" then return "", "" end
-			local B = type(A.Object) == "table" and A.Object or nil
-			local C = workspaceObjectText(B and B.TitleLabel)
-			local D = workspaceObjectText(B and B.DescLabel)
-			return C ~= "" and C or tostring(A.Title or ""), D ~= "" and D or tostring(A.Description or "")
+		function Workspace:GetEntryDisplayText(entry)
+			if type(entry) ~= "table" then return "", "" end
+			local object = type(entry.Object) == "table" and entry.Object or nil
+			local title = workspaceObjectText(object and object.TitleLabel)
+			local description = workspaceObjectText(object and object.DescLabel)
+			return title ~= "" and title or tostring(entry.Title or ""), description ~= "" and description or tostring(entry.Description or "")
 		end
-		function Workspace:TabMatchesSearch(A, B)
-			B = workspaceTrim(B):lower()
-			if B == "" or type(A) ~= "table" then return B == "" end
-			local C = tostring(A.Name or "")
-			local D = tostring(A.OriginalName or "")
-			local E = tostring(A.OriginalLabelText or "")
-			local F = self:GetTabDisplayTitle(A)
-			return (C .. " " .. D .. " " .. E .. " " .. F):lower():find(B, 1, true) ~= nil
+		function Workspace:TabMatchesSearch(tab, query)
+			query = workspaceTrim(query):lower()
+			if query == "" or type(tab) ~= "table" then return query == "" end
+			local name = tostring(tab.Name or "")
+			local originalName = tostring(tab.OriginalName or "")
+			local labelText = tostring(tab.OriginalLabelText or "")
+			local displayTitle = self:GetTabDisplayTitle(tab)
+			return (name .. " " .. originalName .. " " .. labelText .. " " .. displayTitle):lower():find(query, 1, true) ~= nil
 		end
 		function Workspace:RestoreSearchControlVisibility()
-			for A, B in pairs(self.SearchControlVisibility or {}) do
-				if A and A.Parent then pcall(function() A.Visible = B end) end
+			for object, visible in pairs(self.SearchControlVisibility or {}) do
+				if object and object.Parent then pcall(function() object.Visible = visible end) end
 			end
 			self.SearchControlVisibility = {}
-			for A, B in pairs(self.SearchSectionVisibility or {}) do
-				if A and A.Parent then pcall(function() A.Visible = B end) end
+			for object, visible in pairs(self.SearchSectionVisibility or {}) do
+				if object and object.Parent then pcall(function() object.Visible = visible end) end
 			end
 			self.SearchSectionVisibility = {}
 		end
-		function Workspace:ApplySearchControlVisibility(A)
+		function Workspace:ApplySearchControlVisibility(tab)
 			self:RestoreSearchControlVisibility()
-			if not self.SearchActive or not A then return end
+			if not self.SearchActive or not tab then return end
 			-- A title match means this is the exact requested Tab: retain its
 			-- complete, original UI.  Only an indirect control match is filtered.
-			if self.SearchDirectTabs and self.SearchDirectTabs[A.Id] then return end
-			local B = {}
-			for _, C in ipairs(self.Entries) do
-				if C and C.Tab == A and C.Section and C.Section.Root then
-					B[C.Section.Root] = B[C.Section.Root] or false
-					if self.SearchMatchedEntries and self.SearchMatchedEntries[C.Id] then B[C.Section.Root] = true end
+			if self.SearchDirectTabs and self.SearchDirectTabs[tab.Id] then return end
+			local sectionMatches = {}
+			for _, entry in ipairs(self.Entries) do
+				if entry and entry.Tab == tab and entry.Section and entry.Section.Root then
+					sectionMatches[entry.Section.Root] = sectionMatches[entry.Section.Root] or false
+					if self.SearchMatchedEntries and self.SearchMatchedEntries[entry.Id] then sectionMatches[entry.Section.Root] = true end
 				end
 			end
-			for C, D in pairs(B) do
-				if C.Parent then
-					self.SearchSectionVisibility[C] = C.Visible
-					C.Visible = D
+			for section, visible in pairs(sectionMatches) do
+				if section.Parent then
+					self.SearchSectionVisibility[section] = section.Visible
+					section.Visible = visible
 				end
 			end
-			for _, B in ipairs(self.Entries) do
-				local C = B and B.Frame
-				if B and B.Tab == A and C and C.Parent then
-					self.SearchControlVisibility[C] = C.Visible
-					C.Visible = self.SearchMatchedEntries and self.SearchMatchedEntries[B.Id] == true
+			for _, entry in ipairs(self.Entries) do
+				local frame = entry and entry.Frame
+				if entry and entry.Tab == tab and frame and frame.Parent then
+					self.SearchControlVisibility[frame] = frame.Visible
+					frame.Visible = self.SearchMatchedEntries and self.SearchMatchedEntries[entry.Id] == true
 				end
 			end
 		end
-		function Workspace:FindEntries(A)
-			A = workspaceTrim(A):lower()
-			local B = {}
-			if A == "" then
-				for _, C in ipairs(self.State.Recent) do
-					local D = self.EntryById[C] or self.TabById[C]
-					if D then
-						if D.Type == "Tab" then
-							table.insert(B, {Id = D.Id, Title = D.Name, Description = "Tab", Type = "Tab", Tab = D})
+		function Workspace:FindEntries(query)
+			query = workspaceTrim(query):lower()
+			local results = {}
+			if query == "" then
+				for _, id in ipairs(self.State.Recent) do
+					local item = self.EntryById[id] or self.TabById[id]
+					if item then
+						if item.Type == "Tab" then
+							table.insert(results, {Id = item.Id, Title = item.Name, Description = "Tab", Type = "Tab", Tab = item})
 						else
-							table.insert(B, D)
+							table.insert(results, item)
 						end
 					end
 				end
-				return B
+				return results
 			end
-			for _, C in ipairs(self.Entries) do
+			for _, entry in ipairs(self.Entries) do
 				-- Controls created by older scripts do not always provide every
 				-- display field. Search is optional UI, so normalize missing data
 				-- instead of letting it interrupt the main UI creation flow.
-				if type(C) == "table" then
-					local D, E = self:GetEntryDisplayText(C)
-					local F = self:GetTabDisplayTitle(C.Tab)
-					local G = (tostring(C.Title or "") .. " " .. tostring(C.Description or "") .. " " .. tostring(C.TabTitle or "") .. " " .. tostring(C.Type or "") .. " " .. D .. " " .. E .. " " .. F):lower()
-					if G:find(A, 1, true) then
-						table.insert(B, C)
+				if type(entry) == "table" then
+					local title, description = self:GetEntryDisplayText(entry)
+					local tabTitle = self:GetTabDisplayTitle(entry.Tab)
+					local haystack = (tostring(entry.Title or "") .. " " .. tostring(entry.Description or "") .. " " .. tostring(entry.TabTitle or "") .. " " .. tostring(entry.Type or "") .. " " .. title .. " " .. description .. " " .. tabTitle):lower()
+					if haystack:find(query, 1, true) then
+						table.insert(results, entry)
 					end
 				end
 			end
-			for _, C in ipairs(self.Tabs) do
-				local D = type(C) == "table" and tostring(C.Name or "") or ""
-				local E = self:GetTabDisplayTitle(C)
-				if (D .. " " .. E):lower():find(A, 1, true) then
-					table.insert(B, {Id = C.Id, Title = E, Description = "Tab", Type = "Tab", Tab = C})
+			for _, tab in ipairs(self.Tabs) do
+				local name = type(tab) == "table" and tostring(tab.Name or "") or ""
+				local displayTitle = self:GetTabDisplayTitle(tab)
+				if (name .. " " .. displayTitle):lower():find(query, 1, true) then
+					table.insert(results, {Id = tab.Id, Title = displayTitle, Description = "Tab", Type = "Tab", Tab = tab})
 				end
 			end
-			return B
+			return results
 		end
-		function Workspace:RecordNotification(A)
-			if type(A) ~= "table" then
+		function Workspace:RecordNotification(notification)
+			if type(notification) ~= "table" then
 				return
 			end
 			table.insert(self.Notifications, 1, {
-				Title = tostring(A.Title or "Notification"),
-				Content = tostring(A.Content or A.SubContent or ""),
+				Title = tostring(notification.Title or "Notification"),
+				Content = tostring(notification.Content or notification.SubContent or ""),
 				At = os.clock()
 			})
 			while #self.Notifications > 40 do
@@ -3916,193 +3869,200 @@ local aa = {
 			end
 		end
 		function Workspace:CaptureProfile()
-			local A = {}
-			for B, C in pairs(x.Options) do
-				if type(C) == "table" and C.Type and C.Value ~= nil then
-					A[B] = {
-						Type = C.Type,
-						Value = workspaceEncodeValue(C.Value),
-						Transparency = C.Transparency
+			local profile = {}
+			for key, option in pairs(Library.Options) do
+				if type(option) == "table" and option.Type and option.Value ~= nil then
+					profile[key] = {
+						Type = option.Type,
+						Value = workspaceEncodeValue(option.Value),
+						Transparency = option.Transparency
 					}
 				end
 			end
-			return A
+			return profile
 		end
-		function Workspace:SaveProfile(A)
-			A = workspaceTrim(A):sub(1, 36)
-			if A == "" then
+		function Workspace:SaveProfile(name)
+			name = workspaceTrim(name):sub(1, 36)
+			if name == "" then
 				return false, "Enter a profile name first."
 			end
-			self.State.Profiles[A] = self:CaptureProfile()
-			workspacePush(self.State.RecentProfiles, A, 5)
+			self.State.Profiles[name] = self:CaptureProfile()
+			workspacePush(self.State.RecentProfiles, name, 5)
 			self:SaveSoon()
 			return true
 		end
-		function Workspace:ApplyProfile(A)
-			local B = self.State.Profiles[A]
-			if type(B) ~= "table" then
+		function Workspace:ApplyProfile(name)
+			local profile = self.State.Profiles[name]
+			if type(profile) ~= "table" then
 				return false, "Profile was not found."
 			end
-			for C, D in pairs(B) do
-				local E = x.Options[C]
-				if type(E) == "table" then
-					local F = workspaceDecodeValue(D.Value)
+			for key, saved in pairs(profile) do
+				local option = Library.Options[key]
+				if type(option) == "table" then
 					pcall(function()
-						if D.Type == "Colorpicker" and type(E.SetValueRGB) == "function" and typeof(F) == "Color3" then
-							E:SetValueRGB(F, D.Transparency)
-						elseif type(E.SetValue) == "function" then
-							E:SetValue(F)
+						local value = workspaceDecodeValue(saved.Value)
+						if saved.Type == "Colorpicker" and type(option.SetValueRGB) == "function" and typeof(value) == "Color3" then
+							option:SetValueRGB(value, saved.Transparency)
+						elseif type(option.SetValue) == "function" then
+							option:SetValue(value)
 						end
 					end)
 				end
 			end
-			workspacePush(self.State.RecentProfiles, A, 5)
+			workspacePush(self.State.RecentProfiles, name, 5)
 			self:SaveSoon()
 			return true
 		end
-		function Workspace:Confirm(A, B, ...)
-			local C, D = { ... }, select("#", ...)
+		function Workspace:Confirm(prompt, callback, ...)
+			local args, argCount = { ... }, select("#", ...)
 			if self.State.SmartConfirm == false or not self.Window or type(self.Window.Dialog) ~= "function" then
-				return x:SafeCallback(B, unpack(C, 1, D))
+				return Library:SafeCallback(callback, unpack(args, 1, argCount))
 			end
-			local E = type(A) == "table" and A or {}
+			local options = type(prompt) == "table" and prompt or {}
 			self.Window:Dialog {
-				Title = tostring(E.Title or "Please confirm"),
-				Content = tostring(E.Content or (type(A) == "string" and A or "This action cannot be undone.")),
+				Title = tostring(options.Title or "Please confirm"),
+				Content = tostring(options.Content or (type(prompt) == "string" and prompt or "This action cannot be undone.")),
 				Buttons = {
-					{Title = tostring(E.ConfirmText or "Continue"), Callback = function() x:SafeCallback(B, unpack(C, 1, D)) end},
-					{Title = tostring(E.CancelText or "Cancel")}
+					{Title = tostring(options.ConfirmText or "Continue"), Callback = function() Library:SafeCallback(callback, unpack(args, 1, argCount)) end},
+					{Title = tostring(options.CancelText or "Cancel")}
 				}
 			}
 		end
-		function Workspace:Text(A, B, C, D)
-			D = D or {}
-			local E = D.ZIndex or ((A and A.ZIndex or 0) + 1)
-			return u("TextLabel", {
-				Name = D.Name or "ATGWorkspaceText",
-				Parent = A,
-				BackgroundTransparency = 1,
-				Text = tostring(B or ""),
-				I18nSkip = true,
-				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", D.Weight or Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-				TextColor3 = D.Color or Color3.fromRGB(239, 239, 244),
-				TextTransparency = D.Transparency or 0,
-				TextSize = C or 12,
-				TextXAlignment = D.Align or Enum.TextXAlignment.Left,
-				TextYAlignment = D.VerticalAlign or Enum.TextYAlignment.Center,
-				TextTruncate = D.Truncate or Enum.TextTruncate.AtEnd,
-				TextWrapped = D.Wrapped == true,
-				Size = D.Size or UDim2.fromScale(1, 1),
-				Position = D.Position or UDim2.fromScale(0, 0),
-				ZIndex = E
-			})
+		-- Workspace colors follow the theme: a color option may be a Color3 or a
+		-- theme key such as "SubText"; defaults are theme keys.
+		local function themed(properties, property, color)
+			if type(color) == "string" then
+				properties.ThemeTag = properties.ThemeTag or {}
+				properties.ThemeTag[property] = color
+			else
+				properties[property] = color
+			end
+			return properties
 		end
-		function Workspace:Button(A, B, C, D, E)
-			local F = E and E.ZIndex or ((A and A.ZIndex or 0) + 1)
-			local G = u("TextButton", {
+		function Workspace:Text(parent, text, textSize, options)
+			options = options or {}
+			local zIndex = options.ZIndex or ((parent and parent.ZIndex or 0) + 1)
+			return New("TextLabel", themed({
+				Name = options.Name or "ATGWorkspaceText",
+				Parent = parent,
+				BackgroundTransparency = 1,
+				Text = tostring(text or ""),
+				I18nSkip = true,
+				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", options.Weight or Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+				TextTransparency = options.Transparency or 0,
+				TextSize = textSize or 12,
+				TextXAlignment = options.Align or Enum.TextXAlignment.Left,
+				TextYAlignment = options.VerticalAlign or Enum.TextYAlignment.Center,
+				TextTruncate = options.Truncate or Enum.TextTruncate.AtEnd,
+				TextWrapped = options.Wrapped == true,
+				Size = options.Size or UDim2.fromScale(1, 1),
+				Position = options.Position or UDim2.fromScale(0, 0),
+				ZIndex = zIndex
+			}, "TextColor3", options.Color or "Text"))
+		end
+		function Workspace:Button(parent, text, icon, callback, options)
+			local zIndex = options and options.ZIndex or ((parent and parent.ZIndex or 0) + 1)
+			local button = New("TextButton", themed({
 				Name = "ATGWorkspaceButton",
-				Parent = A,
-				Size = E and E.Size or UDim2.new(1, 0, 0, E and E.Height or 34),
-				Position = E and E.Position or UDim2.new(),
-				BackgroundColor3 = E and E.Background or Color3.fromRGB(31, 31, 39),
-				BackgroundTransparency = E and E.BackgroundTransparency or 0.08,
+				Parent = parent,
+				Size = options and options.Size or UDim2.new(1, 0, 0, options and options.Height or 34),
+				Position = options and options.Position or UDim2.new(),
+				BackgroundTransparency = options and options.BackgroundTransparency or 0.08,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Text = "",
-				ZIndex = F
-			})
-			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = G})
-			u("UIStroke", {
-				Color = E and E.StrokeColor or Color3.fromRGB(89, 89, 105),
-				Transparency = E and E.StrokeTransparency or 0.62,
+				ZIndex = zIndex
+			}, "BackgroundColor3", options and options.Background or "DialogButton"))
+			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = button})
+			New("UIStroke", themed({
+				Transparency = options and options.StrokeTransparency or 0.62,
 				Thickness = 1,
-				Parent = G
-			})
-			if C then
-				u("ImageLabel", {
+				Parent = button
+			}, "Color", options and options.StrokeColor or "DialogButtonBorder"))
+			if icon then
+				New("ImageLabel", themed({
 					Name = "Icon",
-					Parent = G,
+					Parent = button,
 					BackgroundTransparency = 1,
-					Image = x.GetIcon(C) or C,
-					ImageColor3 = E and E.IconColor or Color3.fromRGB(215, 215, 222),
+					Image = Library.GetIcon(icon) or icon,
 					Size = UDim2.fromOffset(14, 14),
 					Position = UDim2.new(0, 9, 0.5, -7),
-					ZIndex = F + 1
-				})
+					ZIndex = zIndex + 1
+				}, "ImageColor3", options and options.IconColor or "Text"))
 			end
-			self:Text(G, B, E and E.TextSize or 12, {
+			self:Text(button, text, options and options.TextSize or 12, {
 				Name = "Title",
-				Weight = E and E.Weight or Enum.FontWeight.Medium,
-				Size = UDim2.new(1, C and -34 or -16, 1, 0),
-				Position = UDim2.new(0, C and 30 or 8, 0, 0),
-				ZIndex = F + 1
+				Weight = options and options.Weight or Enum.FontWeight.Medium,
+				Size = UDim2.new(1, icon and -34 or -16, 1, 0),
+				Position = UDim2.new(0, icon and 30 or 8, 0, 0),
+				ZIndex = zIndex + 1
 			})
-			self:Bind(G.MouseEnter, function()
-				l:Create(G, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+			self:Bind(button.MouseEnter, function()
+				TweenService:Create(button, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
 			end)
-			self:Bind(G.MouseLeave, function()
-				l:Create(G, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = E and E.BackgroundTransparency or 0.08}):Play()
+			self:Bind(button.MouseLeave, function()
+				TweenService:Create(button, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = options and options.BackgroundTransparency or 0.08}):Play()
 			end)
-			self:Bind(G.MouseButton1Click, function()
-				x:SafeCallback(D)
+			self:Bind(button.MouseButton1Click, function()
+				Library:SafeCallback(callback)
 			end)
-			return G
+			return button
 		end
-		function Workspace:SquareButton(A, B, C)
-			local D = (A and A.ZIndex or 0) + 1
-			local E = u("ImageButton", {
+		function Workspace:SquareButton(parent, icon, callback)
+			local zIndex = (parent and parent.ZIndex or 0) + 1
+			local button = New("ImageButton", {
 				Name = "ATGWorkspaceAction",
-				Parent = A,
+				Parent = parent,
 				Size = UDim2.fromOffset(22, 22),
-				BackgroundColor3 = Color3.fromRGB(31, 31, 39),
 				BackgroundTransparency = 0.14,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
-				Image = x.GetIcon(B) or B,
-				ImageColor3 = Color3.fromRGB(219, 219, 226), ZIndex = D
+				Image = Library.GetIcon(icon) or icon,
+				ZIndex = zIndex,
+				ThemeTag = {BackgroundColor3 = "DialogButton", ImageColor3 = "Text"}
 			})
-			u("UICorner", {CornerRadius = UDim.new(0, 6), Parent = E})
-			u("UIStroke", {Color = Color3.fromRGB(90, 90, 104), Transparency = 0.75, Parent = E})
-			self:Bind(E.MouseEnter, function()
-				l:Create(E, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			New("UICorner", {CornerRadius = UDim.new(0, 6), Parent = button})
+			New("UIStroke", {Transparency = 0.75, Parent = button, ThemeTag = {Color = "DialogButtonBorder"}})
+			self:Bind(button.MouseEnter, function()
+				TweenService:Create(button, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 					BackgroundTransparency = 0,
 					ImageColor3 = Color3.fromRGB(255, 99, 113)
 				}):Play()
 			end)
-			self:Bind(E.MouseLeave, function()
-				l:Create(E, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			self:Bind(button.MouseLeave, function()
+				TweenService:Create(button, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 					BackgroundTransparency = 0.14,
-					ImageColor3 = Color3.fromRGB(219, 219, 226)
+					ImageColor3 = Creator.GetThemeProperty("Text")
 				}):Play()
 			end)
-			self:Bind(E.MouseButton1Click, function()
-				x:SafeCallback(C)
+			self:Bind(button.MouseButton1Click, function()
+				Library:SafeCallback(callback)
 			end)
-			return E
+			return button
 		end
-		function Workspace:ClearList(A)
-			for _, B in ipairs(A:GetChildren()) do
-				B:Destroy()
+		function Workspace:ClearList(list)
+			for _, child in ipairs(list:GetChildren()) do
+				child:Destroy()
 			end
-			local B = u("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = A})
-			B:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-				if A.Parent then
-					A.CanvasSize = UDim2.new(0, 0, 0, B.AbsoluteContentSize.Y + 4)
+			local layout = New("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = list})
+			layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+				if list.Parent then
+					list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 4)
 				end
 			end)
-			return B
+			return layout
 		end
-		function Workspace:ShowPanel(A)
+		function Workspace:ShowPanel(visible)
 			if not self.Panel then
 				return
 			end
-			if not A then
-				local B = l:Create(self.Panel, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+			if not visible then
+				local hide = TweenService:Create(self.Panel, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
 					GroupTransparency = 1,
 					Position = UDim2.fromOffset(12, 78)
 				})
-				B:Play()
-				B.Completed:Connect(function()
+				hide:Play()
+				hide.Completed:Connect(function()
 					if self.Panel and self.Panel.GroupTransparency >= 0.99 then
 						self.Panel.Visible = false
 					end
@@ -4113,78 +4073,78 @@ local aa = {
 			self.Panel.Visible = true
 			self.Panel.GroupTransparency = 1
 			self.Panel.Position = UDim2.fromOffset(12, 78)
-			l:Create(self.Panel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			TweenService:Create(self.Panel, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 				GroupTransparency = 0,
 				Position = UDim2.fromOffset(12, 82)
 			}):Play()
 		end
-		function Workspace:BeginPanel(A, B)
+		function Workspace:BeginPanel(kind, title)
 			if not self.Panel then
 				return nil
 			end
-			local C = self.PanelKind ~= A or not self.Panel.Visible
-			self.PanelKind = A
-			self.PanelTitle.Text = B
-			if C then self:ShowPanel(true) end
+			local reopened = self.PanelKind ~= kind or not self.Panel.Visible
+			self.PanelKind = kind
+			self.PanelTitle.Text = title
+			if reopened then self:ShowPanel(true) end
 			self:ClearList(self.PanelContent)
 			return self.PanelContent
 		end
-		function Workspace:RenderEntries(A, B, C)
-			B = type(B) == "table" and B or {}
-			if #B == 0 then
-				self:Text(A, C or "Nothing here yet.", 12, {
-					Color = Color3.fromRGB(154, 154, 168),
+		function Workspace:RenderEntries(parent, entries, emptyText)
+			entries = type(entries) == "table" and entries or {}
+			if #entries == 0 then
+				self:Text(parent, emptyText or "Nothing here yet.", 12, {
+					Color = "SubText",
 					Wrapped = true,
 					Size = UDim2.new(1, 0, 0, 38)
 				})
 				return
 			end
-			for _, D in ipairs(B) do
-				if type(D) == "table" then
-					local E0 = tostring(D.Title or D.Name or "Untitled")
-					local F0 = type(D.TabTitle) == "string" and D.TabTitle or ""
-					local G0 = type(D.Description) == "string" and D.Description or ""
-					local H0 = type(D.Type) == "string" and D.Type or "Control"
-					local I0 = (F0 ~= "" and F0 .. "  /  " or "") .. (G0 ~= "" and G0 or H0)
-					local E = self:Button(A, E0, nil, function()
-						self:Navigate(D)
+			for _, entry in ipairs(entries) do
+				if type(entry) == "table" then
+					local title = tostring(entry.Title or entry.Name or "Untitled")
+					local tabTitle = type(entry.TabTitle) == "string" and entry.TabTitle or ""
+					local description = type(entry.Description) == "string" and entry.Description or ""
+					local entryType = type(entry.Type) == "string" and entry.Type or "Control"
+					local subtitle = (tabTitle ~= "" and tabTitle .. "  /  " or "") .. (description ~= "" and description or entryType)
+					local row = self:Button(parent, title, nil, function()
+						self:Navigate(entry)
 						self:ShowPanel(false)
 					end, {Height = 42})
-				local F = E:FindFirstChild("Title")
-				if F then
-					F.Size = UDim2.new(1, -42, 0, 18)
-					F.Position = UDim2.fromOffset(8, 3)
+				local titleLabel = row:FindFirstChild("Title")
+				if titleLabel then
+					titleLabel.Size = UDim2.new(1, -42, 0, 18)
+					titleLabel.Position = UDim2.fromOffset(8, 3)
 				end
-				local H = E.ZIndex
-				self:Text(E, I0, 10, {
-					Color = Color3.fromRGB(151, 151, 165),
+				local zIndex = row.ZIndex
+				self:Text(row, subtitle, 10, {
+					Color = "SubText",
 					Size = UDim2.new(1, -42, 0, 16),
 					Position = UDim2.fromOffset(8, 21),
-					ZIndex = H + 1
+					ZIndex = zIndex + 1
 				})
-				local G = u("ImageButton", {
+				local favorite = New("ImageButton", {
 					Name = "Favorite",
-					Parent = E,
+					Parent = row,
 					Size = UDim2.fromOffset(26, 26),
 					Position = UDim2.new(1, -31, 0.5, -13),
 					BackgroundTransparency = 1,
 					AutoButtonColor = false,
-					Image = x.GetIcon("star"),
-					ImageColor3 = self:IsFavorite(D.Id) and Color3.fromRGB(255, 198, 82) or Color3.fromRGB(150, 150, 165),
-					ZIndex = H + 2
+					Image = Library.GetIcon("star"),
+					ImageColor3 = self:IsFavorite(entry.Id) and Color3.fromRGB(255, 198, 82) or Creator.GetThemeProperty("SubText"),
+					ZIndex = zIndex + 2
 				})
-				self:Bind(G.MouseButton1Click, function()
-					if D.Id then self:ToggleFavorite(D.Id) end
+				self:Bind(favorite.MouseButton1Click, function()
+					if entry.Id then self:ToggleFavorite(entry.Id) end
 					if self.PanelKind == "favorites" then self:RenderFavorites() else self:RenderSearch(self.SearchQuery or "") end
 				end)
 				end
 			end
 		end
-		function Workspace:RenderSearch(A)
-			A = type(A) == "string" and A or ""
+		function Workspace:RenderSearch(query)
+			query = type(query) == "string" and query or ""
 			-- Keep the legacy method, but route it through the same in-place
 			-- filtering path as the sidebar input. No proxy search results exist.
-			self:RenderSidebarSearch(A)
+			self:RenderSidebarSearch(query)
 		end
 		-- Legacy card helpers below are no longer used by live search. Search now
 		-- filters the original tabs and original controls in place.
@@ -4194,206 +4154,173 @@ local aa = {
 		function Workspace:ClearSearchSurface()
 			return nil
 		end
-		function Workspace:AddSearchControlCard(A, B)
-			-- Kept private for old callers, but intentionally never mounts cards.
-			if false then
-			local C, D = self:GetEntryDisplayText(A)
-			if C == "" then C = tostring(A.Title or A.Type or "Control") end
-			local E = self:GetTabDisplayTitle(A.Tab)
-			local F = tostring(A.Type or "Control")
-			local G = {
-				Toggle = "toggle-left", Button = "mouse-pointer-click", Input = "text-cursor-input", Dropdown = "chevron-down",
-				Slider = "sliders-horizontal", Keybind = "keyboard", Paragraph = "align-left", Colorpicker = "palette"
-			}
-			local H = self:Button(self.SearchSurface, C, G[F] or "search", function()
-				if self.SidebarSearch then self.SidebarSearch.Text = "" end
-				self:Navigate(A)
-			end, {
-				Height = 48, ZIndex = 101, Background = Color3.fromRGB(31, 31, 39), BackgroundTransparency = 0.05,
-				StrokeColor = Color3.fromRGB(89, 89, 105), StrokeTransparency = 0.62
-			})
-			H.LayoutOrder = B
-			local I = H:FindFirstChild("Title")
-			if I then
-				I.Size = UDim2.new(1, -42, 0, 19)
-				I.Position = UDim2.fromOffset(30, 3)
-			end
-			self:Text(H, D ~= "" and D or (E ~= "" and E or F), 10, {
-				Name = "Description", Color = Color3.fromRGB(163, 163, 176), Size = UDim2.new(1, -42, 0, 16),
-				Position = UDim2.fromOffset(30, 21), ZIndex = 102
-			})
-			self:Text(H, (E ~= "" and E .. "  •  " or "") .. F, 9, {
-				Name = "Type", Color = Color3.fromRGB(255, 142, 153), Size = UDim2.new(1, -42, 0, 13),
-				Position = UDim2.fromOffset(30, 34), ZIndex = 102
-			})
-			table.insert(self.SearchCards, H)
-			end
+		function Workspace:AddSearchControlCard(_entry, _order)
 			return nil
 		end
 		function Workspace:RenderSearchSurface()
 			-- Compatibility no-op. Sidebar search now works only with the real UI.
 			return nil
 		end
-		function Workspace:RenderSidebarSearch(A)
-			A = type(A) == "string" and A or ""
-			self.SearchQuery = A
-			local B = workspaceTrim(A)
+		function Workspace:RenderSidebarSearch(query)
+			query = type(query) == "string" and query or ""
+			self.SearchQuery = query
+			local trimmed = workspaceTrim(query)
 			if not self.Window then return end
-			if B == "" then
+			if trimmed == "" then
 				self.SearchActive, self.SearchMatchedTabs, self.SearchMatchedEntries, self.SearchDirectTabs = false, {}, {}, {}
 				self:RestoreSearchControlVisibility()
 				if self.Window.TabSelector then self.Window.TabSelector.Visible = true end
 				self:ApplyModes()
 				return
 			end
-			local C = self:FindEntries(B)
-			local D, E, F = {}, {}, {}
-			for _, G in ipairs(self.Tabs) do
-				if self:TabMatchesSearch(G, B) then
-					D[G.Id], E[G.Id] = true, true
+			local found = self:FindEntries(trimmed)
+			local matchedTabs, directTabs, matchedEntries = {}, {}, {}
+			for _, tab in ipairs(self.Tabs) do
+				if self:TabMatchesSearch(tab, trimmed) then
+					matchedTabs[tab.Id], directTabs[tab.Id] = true, true
 				end
 			end
-			for _, G in ipairs(C) do
-				if G.Tab and G.Tab.Id then D[G.Tab.Id] = true end
-				if G.Type ~= "Tab" and G.Id then F[G.Id] = true end
+			for _, entry in ipairs(found) do
+				if entry.Tab and entry.Tab.Id then matchedTabs[entry.Tab.Id] = true end
+				if entry.Type ~= "Tab" and entry.Id then matchedEntries[entry.Id] = true end
 			end
-			self.SearchActive, self.SearchMatchedTabs = true, D
-			self.SearchMatchedEntries, self.SearchDirectTabs = F, E
+			self.SearchActive, self.SearchMatchedTabs = true, matchedTabs
+			self.SearchMatchedEntries, self.SearchDirectTabs = matchedEntries, directTabs
 			if self.Window.TabSelector then self.Window.TabSelector.Visible = true end
 			self:ApplyModes()
-			local G
-			for _, H in ipairs(self.Tabs) do
-				if H.Selected then G = H break end
+			local selected
+			for _, tab in ipairs(self.Tabs) do
+				if tab.Selected then selected = tab break end
 			end
-			if not G or not D[G.Id] then
-				local H = {}
-				for _, I in ipairs(self.Tabs) do
-					if D[I.Id] then table.insert(H, I) end
+			if not selected or not matchedTabs[selected.Id] then
+				local candidates = {}
+				for _, tab in ipairs(self.Tabs) do
+					if matchedTabs[tab.Id] then table.insert(candidates, tab) end
 				end
-				table.sort(H, function(I, J)
-					return (I.Frame and I.Frame.LayoutOrder or 0) < (J.Frame and J.Frame.LayoutOrder or 0)
+				table.sort(candidates, function(left, right)
+					return (left.Frame and left.Frame.LayoutOrder or 0) < (right.Frame and right.Frame.LayoutOrder or 0)
 				end)
-				if H[1] and type(H[1].Select) == "function" then
-					H[1]:Select()
+				if candidates[1] and type(candidates[1].Select) == "function" then
+					candidates[1]:Select()
 					return
 				end
 			end
-			self:ApplySearchControlVisibility(G)
+			self:ApplySearchControlVisibility(selected)
 		end
-		function Workspace:QueueSidebarSearch(A)
-			A = type(A) == "string" and A or ""
+		function Workspace:QueueSidebarSearch(query)
+			query = type(query) == "string" and query or ""
 			self.SearchRenderRevision = (self.SearchRenderRevision or 0) + 1
-			local B = self.SearchRenderRevision
-			local function C()
-				if B ~= self.SearchRenderRevision then return end
-				local D, E = pcall(function() self:RenderSidebarSearch(A) end)
-				if not D then warn("[ATG Workspace] Search error: " .. tostring(E)) end
+			local revision = self.SearchRenderRevision
+			local function run()
+				if revision ~= self.SearchRenderRevision then return end
+				local ok, err = pcall(function() self:RenderSidebarSearch(query) end)
+				if not ok then warn("[ATG Workspace] Search error: " .. tostring(err)) end
 			end
-			if workspaceTrim(A) == "" then
-				C()
+			if workspaceTrim(query) == "" then
+				run()
 			else
 				-- Avoid re-filtering every tab/control for every keystroke while
 				-- keeping the delay too small to feel anything but instant.
-				task.delay(0.08, C)
+				task.delay(0.08, run)
 			end
 		end
 		function Workspace:RenderFavorites()
-			local A, B = self:BeginPanel("favorites", "Favorites"), {}
-			for _, C in ipairs(self.State.Favorites) do
-				local D = self.EntryById[C] or self.TabById[C]
-				if D then
-					if D.Type == "Tab" then
-						table.insert(B, {Id = D.Id, Title = D.Name, Description = "Tab", Type = "Tab", Tab = D})
+			local content, entries = self:BeginPanel("favorites", "Favorites"), {}
+			for _, id in ipairs(self.State.Favorites) do
+				local item = self.EntryById[id] or self.TabById[id]
+				if item then
+					if item.Type == "Tab" then
+						table.insert(entries, {Id = item.Id, Title = item.Name, Description = "Tab", Type = "Tab", Tab = item})
 					else
-						table.insert(B, D)
+						table.insert(entries, item)
 					end
 				end
 			end
-			if A then self:RenderEntries(A, B, "Search a control, then use the star to pin it here.") end
+			if content then self:RenderEntries(content, entries, "Search a control, then use the star to pin it here.") end
 		end
 		function Workspace:RenderRecent()
-			local A = self:BeginPanel("recent", "Recent")
-			if A then self:RenderEntries(A, self:FindEntries(""), "Your recent controls appear here.") end
+			local content = self:BeginPanel("recent", "Recent")
+			if content then self:RenderEntries(content, self:FindEntries(""), "Your recent controls appear here.") end
 		end
 		function Workspace:RenderHistory()
-			local A = self:BeginPanel("history", "Notification history")
-			if not A then return end
+			local content = self:BeginPanel("history", "Notification history")
+			if not content then return end
 			if #self.Notifications == 0 then
-				self:Text(A, "New notifications are saved here for this session.", 12, {
-					Color = Color3.fromRGB(154, 154, 168), Wrapped = true, Size = UDim2.new(1, 0, 0, 38)
+				self:Text(content, "New notifications are saved here for this session.", 12, {
+					Color = "SubText", Wrapped = true, Size = UDim2.new(1, 0, 0, 38)
 				})
 				return
 			end
-			for _, B in ipairs(self.Notifications) do
-				local C = self:Button(A, B.Title, "history", function() end, {Height = 41})
-				local D = C:FindFirstChild("Title")
-				if D then D.Size = UDim2.new(1, -38, 0, 18); D.Position = UDim2.fromOffset(30, 3) end
-				self:Text(C, B.Content, 10, {
-					Color = Color3.fromRGB(151, 151, 165), Size = UDim2.new(1, -38, 0, 16), Position = UDim2.fromOffset(30, 21), ZIndex = C.ZIndex + 1
+			for _, notification in ipairs(self.Notifications) do
+				local row = self:Button(content, notification.Title, "history", function() end, {Height = 41})
+				local titleLabel = row:FindFirstChild("Title")
+				if titleLabel then titleLabel.Size = UDim2.new(1, -38, 0, 18); titleLabel.Position = UDim2.fromOffset(30, 3) end
+				self:Text(row, notification.Content, 10, {
+					Color = "SubText", Size = UDim2.new(1, -38, 0, 16), Position = UDim2.fromOffset(30, 21), ZIndex = row.ZIndex + 1
 				})
 			end
 		end
 		function Workspace:RenderProfiles()
-			local A = self:BeginPanel("profiles", "Profiles")
-			if not A then return end
+			local content = self:BeginPanel("profiles", "Profiles")
+			if not content then return end
 			local storage = self:GetStorage()
 			if not storage or type(storage.CanUseFiles) ~= "function" or not storage:CanUseFiles() then
-				self:Text(A, "Session only - this executor cannot save files.", 10, {
+				self:Text(content, "Session only - this executor cannot save files.", 10, {
 					Color = Color3.fromRGB(187, 150, 103), Size = UDim2.new(1, 0, 0, 17)
 				})
 			end
-			local B = u("TextBox", {
-				Name = "ProfileName", Parent = A, Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(23, 23, 30),
+			local nameBox = New("TextBox", {
+				Name = "ProfileName", Parent = content, Size = UDim2.new(1, 0, 0, 30),
 				BackgroundTransparency = 0.04, BorderSizePixel = 0, ClearTextOnFocus = false, Text = self.ProfileDraft or "", PlaceholderText = "Profile name",
-				PlaceholderColor3 = Color3.fromRGB(133, 133, 149), TextColor3 = Color3.fromRGB(239, 239, 244), TextSize = 12,
-				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), TextXAlignment = Enum.TextXAlignment.Left, I18nSkip = true, ZIndex = A.ZIndex + 1
+				ThemeTag = {BackgroundColor3 = "DialogInput", TextColor3 = "Text", PlaceholderColor3 = "SubText"}, TextSize = 12,
+				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), TextXAlignment = Enum.TextXAlignment.Left, I18nSkip = true, ZIndex = content.ZIndex + 1
 			})
-			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = B})
-			u("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = B})
-			u("UIStroke", {Color = Color3.fromRGB(89, 89, 105), Transparency = 0.62, Parent = B})
-			self:Bind(B.FocusLost, function() self.ProfileDraft = B.Text end)
-			self:Button(A, "Save current settings", "bookmark-plus", function()
-				self.ProfileDraft = B.Text
-				local C, D = self:SaveProfile(B.Text)
-				if C then
-					x:Notify {Title = "Profiles", Content = "Profile saved.", Duration = 2}
+			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = nameBox})
+			New("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = nameBox})
+			New("UIStroke", {Transparency = 0.62, Parent = nameBox, ThemeTag = {Color = "DialogButtonBorder"}})
+			self:Bind(nameBox.FocusLost, function() self.ProfileDraft = nameBox.Text end)
+			self:Button(content, "Save current settings", "bookmark-plus", function()
+				self.ProfileDraft = nameBox.Text
+				local saved, saveError = self:SaveProfile(nameBox.Text)
+				if saved then
+					Library:Notify {Title = "Profiles", Content = "Profile saved.", Duration = 2}
 					self:RenderProfiles()
 				else
-					x:Notify {Title = "Profiles", Content = D, Duration = 3}
+					Library:Notify {Title = "Profiles", Content = saveError, Duration = 3}
 				end
 			end)
-			local C = {}
-			for _, D in ipairs(self.State.RecentProfiles) do
-				if self.State.Profiles[D] then table.insert(C, D) end
+			local recent = {}
+			for _, name in ipairs(self.State.RecentProfiles) do
+				if self.State.Profiles[name] then table.insert(recent, name) end
 			end
-			if #C > 0 then
-				self:Text(A, "Recent profiles", 10, {
-					Color = Color3.fromRGB(151, 151, 165), Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 18)
+			if #recent > 0 then
+				self:Text(content, "Recent profiles", 10, {
+					Color = "SubText", Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 18)
 				})
-				for _, D in ipairs(C) do
-					self:Button(A, D, "history", function()
-						local E, F = self:ApplyProfile(D)
-						x:Notify {Title = "Profiles", Content = E and ("Applied " .. D) or F, Duration = 2}
+				for _, name in ipairs(recent) do
+					self:Button(content, name, "history", function()
+						local applied, applyError = self:ApplyProfile(name)
+						Library:Notify {Title = "Profiles", Content = applied and ("Applied " .. name) or applyError, Duration = 2}
 						self:ShowPanel(false)
 					end)
 				end
 			end
-			local D = {}
-			for E in pairs(self.State.Profiles) do table.insert(D, E) end
-			table.sort(D)
-			for _, E in ipairs(D) do
-				local F = self:Button(A, E, "bookmark", function()
-					local G, H = self:ApplyProfile(E)
-					x:Notify {Title = "Profiles", Content = G and ("Applied " .. E) or H, Duration = 2}
+			local names = {}
+			for name in pairs(self.State.Profiles) do table.insert(names, name) end
+			table.sort(names)
+			for _, name in ipairs(names) do
+				local row = self:Button(content, name, "bookmark", function()
+					local applied, applyError = self:ApplyProfile(name)
+					Library:Notify {Title = "Profiles", Content = applied and ("Applied " .. name) or applyError, Duration = 2}
 					self:ShowPanel(false)
 				end)
-				local G = u("ImageButton", {
-					Parent = F, Size = UDim2.fromOffset(24, 24), Position = UDim2.new(1, -29, 0.5, -12), BackgroundTransparency = 1,
-					Image = x.GetIcon("x"), ImageColor3 = Color3.fromRGB(190, 130, 138), AutoButtonColor = false, ZIndex = F.ZIndex + 2
+				local deleteButton = New("ImageButton", {
+					Parent = row, Size = UDim2.fromOffset(24, 24), Position = UDim2.new(1, -29, 0.5, -12), BackgroundTransparency = 1,
+					Image = Library.GetIcon("x"), ImageColor3 = Color3.fromRGB(190, 130, 138), AutoButtonColor = false, ZIndex = row.ZIndex + 2
 				})
-				self:Bind(G.MouseButton1Click, function()
-					self:Confirm({Title = "Delete profile", Content = "Remove " .. E .. "?", ConfirmText = "Delete"}, function()
-						self.State.Profiles[E] = nil
+				self:Bind(deleteButton.MouseButton1Click, function()
+					self:Confirm({Title = "Delete profile", Content = "Remove " .. name .. "?", ConfirmText = "Delete"}, function()
+						self.State.Profiles[name] = nil
 						self:SaveSoon()
 						self:RenderProfiles()
 					end)
@@ -4401,22 +4328,22 @@ local aa = {
 			end
 		end
 		function Workspace:RenderWorkspaceMenu()
-			local A = self:BeginPanel("workspace", "Workspace")
-			if not A then return end
-			self:Button(A, "Compact sidebar: " .. (self.State.CompactMode and "On" or "Off"), "layout", function()
+			local content = self:BeginPanel("workspace", "Workspace")
+			if not content then return end
+			self:Button(content, "Compact sidebar: " .. (self.State.CompactMode and "On" or "Off"), "layout", function()
 				self:SetCompact(not self.State.CompactMode)
 				self:RenderWorkspaceMenu()
 			end)
-			self:Button(A, "Focus current tab: " .. (self.State.FocusMode and "On" or "Off"), "focus", function()
+			self:Button(content, "Focus current tab: " .. (self.State.FocusMode and "On" or "Off"), "focus", function()
 				self:SetFocus(not self.State.FocusMode)
 				self:RenderWorkspaceMenu()
 			end)
-			self:Button(A, "Smart confirmations: " .. (self.State.SmartConfirm == false and "Off" or "On"), "shield-check", function()
+			self:Button(content, "Smart confirmations: " .. (self.State.SmartConfirm == false and "Off" or "On"), "shield-check", function()
 				self.State.SmartConfirm = not self.State.SmartConfirm
 				self:SaveSoon()
 				self:RenderWorkspaceMenu()
 			end)
-			self:Button(A, "Recent controls", "history", function() self:RenderRecent() end)
+			self:Button(content, "Recent controls", "history", function() self:RenderRecent() end)
 		end
 		function Workspace:RefreshSurface()
 			if self.SearchActive then self:RenderSidebarSearch(self.SearchQuery or "") end
@@ -4425,83 +4352,64 @@ local aa = {
 			elseif self.PanelKind == "history" then self:RenderHistory()
 			elseif self.PanelKind == "profiles" then self:RenderProfiles()
 			elseif self.PanelKind == "workspace" then self:RenderWorkspaceMenu() end
-			if self.Palette and self.Palette.Visible then self:RenderPalette(self.PaletteInput.Text) end
 		end
 		function Workspace:CreatePanel()
-			local A = self.Window
-			self.Panel = u("CanvasGroup", {
-				Name = "ATGWorkspacePanel", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 260),
-				Position = UDim2.fromOffset(12, 82), BackgroundColor3 = Color3.fromRGB(20, 20, 27),
+			local window = self.Window
+			self.Panel = New("CanvasGroup", {
+				Name = "ATGWorkspacePanel", Parent = window.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 260),
+				Position = UDim2.fromOffset(12, 82), ThemeTag = {BackgroundColor3 = "DropdownHolder"},
 				BackgroundTransparency = 0.02, BorderSizePixel = 0, Visible = false, GroupTransparency = 1, ZIndex = 35
 			})
-			u("UICorner", {CornerRadius = UDim.new(0, 9), Parent = self.Panel})
-			u("UIStroke", {Color = Color3.fromRGB(124, 52, 62), Transparency = 0.35, Parent = self.Panel})
+			New("UICorner", {CornerRadius = UDim.new(0, 9), Parent = self.Panel})
+			New("UIStroke", {Transparency = 0.35, Parent = self.Panel, ThemeTag = {Color = "Accent"}})
 			self.PanelTitle = self:Text(self.Panel, "Workspace", 13, {
 				Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, -38, 0, 34), Position = UDim2.fromOffset(10, 0), ZIndex = 36
 			})
-			local B = u("ImageButton", {
+			local closeButton = New("ImageButton", {
 				Name = "Close", Parent = self.Panel, Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -27, 0, 6),
-				BackgroundTransparency = 1, Image = x.GetIcon("x"), ImageColor3 = Color3.fromRGB(178, 178, 191), AutoButtonColor = false, ZIndex = 37
+				BackgroundTransparency = 1, Image = Library.GetIcon("x"), ThemeTag = {ImageColor3 = "SubText"}, AutoButtonColor = false, ZIndex = 37
 			})
-			self:Connect(B.MouseButton1Click, function() self:ShowPanel(false) end)
-			self.PanelContent = u("ScrollingFrame", {
+			self:Connect(closeButton.MouseButton1Click, function() self:ShowPanel(false) end)
+			self.PanelContent = New("ScrollingFrame", {
 				Name = "Content", Parent = self.Panel, Size = UDim2.new(1, -16, 1, -46), Position = UDim2.fromOffset(8, 38),
 				BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 3,
-				ScrollBarImageColor3 = Color3.fromRGB(255, 93, 107), ScrollBarImageTransparency = 0.42, ZIndex = 36
+				ThemeTag = {ScrollBarImageColor3 = "Accent"}, ScrollBarImageTransparency = 0.42, ZIndex = 36
 			})
 		end
 		function Workspace:CreateChrome()
-			local A = self.Window
-			self.Sidebar = u("Frame", {
-				Name = "ATGWorkspaceSidebar", Parent = A.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 26),
+			local window = self.Window
+			self.Sidebar = New("Frame", {
+				Name = "ATGWorkspaceSidebar", Parent = window.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 26),
 				Position = UDim2.fromOffset(12, 52), BackgroundTransparency = 1, ZIndex = 20
 			})
-			self.SidebarSearch = u("TextBox", {
+			self.SidebarSearch = New("TextBox", {
 				Name = "Search", Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 0),
-				BackgroundColor3 = Color3.fromRGB(27, 27, 34), BackgroundTransparency = 0.1, BorderSizePixel = 0, ClearTextOnFocus = false,
-				Text = "", PlaceholderText = "Search...  Ctrl+K", PlaceholderColor3 = Color3.fromRGB(142, 142, 157), TextColor3 = Color3.fromRGB(240, 240, 244),
+				BackgroundTransparency = 0.1, BorderSizePixel = 0, ClearTextOnFocus = false,
+				Text = "", PlaceholderText = "Search...  Ctrl+K",
+				ThemeTag = {BackgroundColor3 = "DialogInput", TextColor3 = "Text", PlaceholderColor3 = "SubText"},
 				TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 21
 			})
-			u("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.SidebarSearch})
-			u("UIStroke", {Color = Color3.fromRGB(115, 55, 64), Transparency = 0.45, Parent = self.SidebarSearch})
-			u("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = self.SidebarSearch})
+			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.SidebarSearch})
+			New("UIStroke", {Transparency = 0.45, Parent = self.SidebarSearch, ThemeTag = {Color = "Accent"}})
+			New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = self.SidebarSearch})
 			self:UpdateSearchHint()
 			self:Connect(self.SidebarSearch:GetPropertyChangedSignal("Text"), function()
-				local B = self.SidebarSearch.Text
-				self:QueueSidebarSearch(B)
+				local text = self.SidebarSearch.Text
+				self:QueueSidebarSearch(text)
 			end)
-			A.TabArea.Position = UDim2.new(0, 12, 0, 88)
-			A.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -100)
+			window.TabArea.Position = UDim2.new(0, 12, 0, 88)
+			window.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -100)
 			self:CreatePanel()
 		end
-		function Workspace:RenderPalette(A)
-			if not self.PaletteContent then return end
-			self:ClearList(self.PaletteContent)
-			A = A or ""
-			local B = workspaceTrim(A):lower()
-			local C = {
-				{Title = "Open Favorites", Icon = "star", Match = "favorites favorite star", Action = function() self:ClosePalette(); self:RenderFavorites() end},
-				{Title = "Open Profiles", Icon = "bookmark", Match = "profiles profile config", Action = function() self:ClosePalette(); self:RenderProfiles() end},
-				{Title = "Notification history", Icon = "history", Match = "history notifications activity", Action = function() self:ClosePalette(); self:RenderHistory() end},
-				{Title = "Toggle compact sidebar", Icon = "layout-dashboard", Match = "compact sidebar layout", Action = function() self:SetCompact(not self.State.CompactMode); self:ClosePalette() end},
-				{Title = "Toggle focus mode", Icon = "focus", Match = "focus mode", Action = function() self:SetFocus(not self.State.FocusMode); self:ClosePalette() end}
-			}
-			for _, D in ipairs(C) do
-				if B == "" or D.Title:lower():find(B, 1, true) or D.Match:find(B, 1, true) then
-					self:Button(self.PaletteContent, D.Title, D.Icon, D.Action, {Height = 34, ZIndex = 94})
-				end
-			end
-			local D = self:FindEntries(A)
-			if #D > 0 then
-				self:Text(self.PaletteContent, B == "" and "Recent" or "Results", 10, {
-					Color = Color3.fromRGB(150, 150, 164), Weight = Enum.FontWeight.SemiBold, Size = UDim2.new(1, 0, 0, 20), ZIndex = 94
-				})
-				self:RenderEntries(self.PaletteContent, D, "")
-			end
-		end
+		-- The command palette was replaced by the sidebar search, which shows
+		-- the real controls. These stay as no-ops for old callers.
 		function Workspace:CreatePalette()
-			-- Retained as a harmless compatibility method. Search lives in the
-			-- sidebar so it can keep showing the original controls.
+			return nil
+		end
+		function Workspace:RenderPalette(_query)
+			return nil
+		end
+		function Workspace:ClosePalette()
 			return nil
 		end
 		function Workspace:OpenPalette()
@@ -4515,40 +4423,36 @@ local aa = {
 				end
 			end)
 		end
-		function Workspace:ClosePalette()
-			if not self.Palette or not self.Palette.Visible then return end
-			local A = l:Create(self.Palette, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {GroupTransparency = 1})
-			A:Play()
-			A.Completed:Connect(function()
-				if self.Palette and self.Palette.GroupTransparency >= 0.99 then self.Palette.Visible = false end
-			end)
-		end
-		function Workspace:Attach(A)
+		function Workspace:Attach(window)
 			if self.Window then return self end
-			self.Window = A
-			self.OriginalTabWidth = tonumber(A.TabWidth) or 180
+			self.Window = window
+			self.OriginalTabWidth = tonumber(window.TabWidth) or 180
 			self:Load()
-			self:CreateChrome()
+			-- Tabs and elements are always registered for the API; the search
+			-- box, its panel and Ctrl+K are opt-in with CreateWindow{Search = true}.
+			self.SearchEnabled = Library.SearchEnabled == true
+			if self.SearchEnabled then
+				self:CreateChrome()
+			end
 			self:SetCompact(self.State.CompactMode)
 			self:SetFocus(self.State.FocusMode)
-			self:Connect(k.InputBegan, function(B, C)
-				if B.UserInputType ~= Enum.UserInputType.Keyboard then return end
-				if B.KeyCode == Enum.KeyCode.Escape and self.Palette and self.Palette.Visible then self:ClosePalette(); return end
-				if not C and B.KeyCode == Enum.KeyCode.K and not k:GetFocusedTextBox() and
-					(k:IsKeyDown(Enum.KeyCode.LeftControl) or k:IsKeyDown(Enum.KeyCode.RightControl)) then
+			self:Connect(UserInputService.InputBegan, function(input, gameProcessed)
+				if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+				if self.SearchEnabled and not gameProcessed and input.KeyCode == Enum.KeyCode.K and not UserInputService:GetFocusedTextBox() and
+					(UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
 					self:OpenPalette()
 				end
 			end)
-			self:Connect(k.InputChanged, function(B)
-				if not self.Drag or not (B.UserInputType == Enum.UserInputType.MouseMovement or B.UserInputType == Enum.UserInputType.Touch) then return end
-				local C = B.Position - self.Drag.Start
-				if C.Magnitude > 6 then
+			self:Connect(UserInputService.InputChanged, function(input)
+				if not self.Drag or not (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then return end
+				local delta = input.Position - self.Drag.Start
+				if delta.Magnitude > 6 then
 					self.Drag.Moved = true
-					self:MoveDraggingTab(B.Position.Y)
+					self:MoveDraggingTab(input.Position.Y)
 				end
 			end)
-			self:Connect(k.InputEnded, function(B)
-				if self.Drag and (B.UserInputType == Enum.UserInputType.MouseButton1 or B.UserInputType == Enum.UserInputType.Touch) then
+			self:Connect(UserInputService.InputEnded, function(input)
+				if self.Drag and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
 					if self.Drag.Moved and self.Drag.Tab then self.Drag.Tab.SuppressClick = true end
 					self.Drag = nil
 				end
@@ -4556,13 +4460,13 @@ local aa = {
 			return self
 		end
 		function Workspace:Destroy()
-			for _, A in ipairs(self.Connections) do pcall(function() A:Disconnect() end) end
+			for _, connection in ipairs(self.Connections) do pcall(function() connection:Disconnect() end) end
 			self.Connections = {}
 			self.Window = nil
 			self.Tabs, self.TabById, self.Entries, self.EntryById = {}, {}, {}, {}
-			self.Sidebar, self.SidebarSearch, self.SidebarToolbar, self.ToolbarLayout = nil, nil, nil, nil
-			self.Panel, self.PanelContent, self.PanelTitle, self.Palette, self.PaletteInput, self.PaletteContent = nil, nil, nil, nil, nil, nil
-			self.SearchSurface, self.SearchSurfaceLayout, self.SearchCards, self.SearchMatchedTabs = nil, nil, nil, nil
+			self.Sidebar, self.SidebarSearch = nil, nil
+			self.Panel, self.PanelContent, self.PanelTitle = nil, nil, nil
+			self.SearchMatchedTabs = nil
 		end
 		-- Built-in floating minimize/open button. This replaces the old
 		-- per-script FluentToggleGui snippet and talks to this window directly
@@ -4600,239 +4504,254 @@ local aa = {
 				Modifier = Enum.KeyCode.LeftControl
 			}
 		}
-		local function mergeFloatingToggleConfig(A, B)
-			local C = {}
-			for D, E in pairs(A or {}) do
-				if type(E) == "table" then
-					C[D] = mergeFloatingToggleConfig(E, type(B) == "table" and B[D] or nil)
-				elseif type(B) == "table" and B[D] ~= nil then
-					C[D] = B[D]
+		local function mergeFloatingToggleConfig(defaults, overrides)
+			local merged = {}
+			for key, value in pairs(defaults or {}) do
+				if type(value) == "table" then
+					merged[key] = mergeFloatingToggleConfig(value, type(overrides) == "table" and overrides[key] or nil)
+				elseif type(overrides) == "table" and overrides[key] ~= nil then
+					merged[key] = overrides[key]
 				else
-					C[D] = E
+					merged[key] = value
 				end
 			end
-			if type(B) == "table" then
-				for D, E in pairs(B) do
-					if C[D] == nil then
-						C[D] = E
+			if type(overrides) == "table" then
+				for key, value in pairs(overrides) do
+					if merged[key] == nil then
+						merged[key] = value
 					end
 				end
 			end
-			return C
+			return merged
 		end
-		local function getFloatingToggleConfig(A)
-			local B
+		local function getFloatingToggleConfig(overrides)
+			local globalConfig
 			if type(getgenv) == "function" then
-				local C, D = pcall(getgenv)
-				if C and type(D) == "table" and type(D.ATGButtonUI) == "table" then
-					B = D.ATGButtonUI
+				local ok, environment = pcall(getgenv)
+				if ok and type(environment) == "table" and type(environment.ATGButtonUI) == "table" then
+					globalConfig = environment.ATGButtonUI
 				end
 			end
-			local C = mergeFloatingToggleConfig(mergeFloatingToggleConfig(FloatingToggleDefaults, B), A)
-			local function keyCodeOrDefault(D, E)
-				if typeof(D) == "EnumItem" then
-					return D
-				end
-				if type(D) == "string" and Enum.KeyCode[D] then
-					return Enum.KeyCode[D]
-				end
-				return E
+			local config = mergeFloatingToggleConfig(mergeFloatingToggleConfig(FloatingToggleDefaults, globalConfig), overrides)
+			local function keyCodeOrDefault(value, fallback)
+				return safeEnumItem(Enum.KeyCode, value) or fallback
 			end
-			C.Keybind.Key = keyCodeOrDefault(C.Keybind.Key, FloatingToggleDefaults.Keybind.Key)
-			C.Keybind.Modifier = keyCodeOrDefault(C.Keybind.Modifier, FloatingToggleDefaults.Keybind.Modifier)
-			return C
+			config.Keybind.Key = keyCodeOrDefault(config.Keybind.Key, FloatingToggleDefaults.Keybind.Key)
+			config.Keybind.Modifier = keyCodeOrDefault(config.Keybind.Modifier, FloatingToggleDefaults.Keybind.Modifier)
+			return config
 		end
-		local function floatingToggleSize(A)
-			local B = k.TouchEnabled and A.ButtonSize.Min or A.ButtonSize.Max
-			return UDim2.fromOffset(tonumber(B) or 42, tonumber(B) or 42)
+		local function floatingToggleSize(config)
+			local size = UserInputService.TouchEnabled and config.ButtonSize.Min or config.ButtonSize.Max
+			return UDim2.fromOffset(tonumber(size) or 42, tonumber(size) or 42)
 		end
-		local function floatingTogglePosition(A)
-			local B, C, D
-			if A.Position.Horizontal == "right" then
-				B, C, D = 1, -(tonumber(A.Position.OffsetX) or 140), 1
-			elseif A.Position.Horizontal == "center" then
-				B, C, D = 0.5, 0, 0.5
+		local function floatingTogglePosition(config)
+			local xScale, xOffset, anchorX
+			if config.Position.Horizontal == "right" then
+				xScale, xOffset, anchorX = 1, -(tonumber(config.Position.OffsetX) or 140), 1
+			elseif config.Position.Horizontal == "center" then
+				xScale, xOffset, anchorX = 0.5, 0, 0.5
 			else
-				B, C, D = 0, tonumber(A.Position.OffsetX) or 140, 0
+				xScale, xOffset, anchorX = 0, tonumber(config.Position.OffsetX) or 140, 0
 			end
-			local E, F, G
-			if A.Position.Vertical == "bottom" then
-				E, F, G = 1, -(tonumber(A.Position.OffsetY) or 140), 1
-			elseif A.Position.Vertical == "center" then
-				E, F, G = 0.5, 0, 0.5
+			local yScale, yOffset, anchorY
+			if config.Position.Vertical == "bottom" then
+				yScale, yOffset, anchorY = 1, -(tonumber(config.Position.OffsetY) or 140), 1
+			elseif config.Position.Vertical == "center" then
+				yScale, yOffset, anchorY = 0.5, 0, 0.5
 			else
-				E, F, G = 0, tonumber(A.Position.OffsetY) or 140, 0
+				yScale, yOffset, anchorY = 0, tonumber(config.Position.OffsetY) or 140, 0
 			end
-			return UDim2.new(B, C, E, F), Vector2.new(D, G)
+			return UDim2.new(xScale, xOffset, yScale, yOffset), Vector2.new(anchorX, anchorY)
 		end
 		local LegacyFloatingToggleNames = {
 			FluentToggleGui = true,
 			ATGToggleGui = true,
 			ATGFloatingToggleGui = true
 		}
-		local function isLegacyFloatingToggle(A)
-			local B = false
+		local function isLegacyFloatingToggle(candidate)
+			local matches = false
 			pcall(function()
-				B = A and A:IsA("ScreenGui") and A ~= w and LegacyFloatingToggleNames[A.Name] == true
+				matches = candidate and candidate:IsA("ScreenGui") and candidate ~= gui and LegacyFloatingToggleNames[candidate.Name] == true
 			end)
-			return B
+			return matches
 		end
 		local function getLegacyFloatingToggleParents()
-			local A = {}
+			local parents = {}
 			pcall(function()
-				table.insert(A, game:GetService("CoreGui"))
+				table.insert(parents, game:GetService("CoreGui"))
 			end)
 			pcall(function()
-				local B = game:GetService("Players").LocalPlayer
-				local C = B and B:FindFirstChildOfClass("PlayerGui")
-				if C then
-					table.insert(A, C)
+				local player = game:GetService("Players").LocalPlayer
+				local playerGui = player and player:FindFirstChildOfClass("PlayerGui")
+				if playerGui then
+					table.insert(parents, playerGui)
 				end
 			end)
-			return A
+			return parents
+		end
+		-- Removes floating toggles left by older ATG scripts. Only exact names in
+		-- LegacyFloatingToggleNames are removed, never other scripts' GUIs.
+		local function removeLegacyFloatingToggles()
+			for _, parent in ipairs(getLegacyFloatingToggleParents()) do
+				for _, child in ipairs(parent:GetChildren()) do
+					if isLegacyFloatingToggle(child) then
+						pcall(function()
+							child:Destroy()
+						end)
+					end
+				end
+			end
+			if getgenv then
+				pcall(function()
+					local environment = getgenv()
+					environment.ATGButtonUI = nil
+					environment.FluentToggleGui = nil
+					environment.ATGButtonUI_Running = false
+				end)
+			end
 		end
 		local function hasLegacyFloatingToggle()
-			for _, A in ipairs(getLegacyFloatingToggleParents()) do
-				for B in pairs(LegacyFloatingToggleNames) do
-					local C = A:FindFirstChild(B)
-					if isLegacyFloatingToggle(C) then
+			for _, parent in ipairs(getLegacyFloatingToggleParents()) do
+				for name in pairs(LegacyFloatingToggleNames) do
+					local child = parent:FindFirstChild(name)
+					if isLegacyFloatingToggle(child) then
 						return true
 					end
 				end
 			end
 			return false
 		end
-		function x.CreateFloatingToggle(A, B)
-			if x.FloatingToggle then
-				x.FloatingToggle:Destroy()
+		function Library.CreateFloatingToggle(_, overrides)
+			if Library.FloatingToggle then
+				Library.FloatingToggle:Destroy()
 			end
-			local C = getFloatingToggleConfig(B)
-			local D = C.Enabled ~= false and
-				(C.ForceShowButton or not k.KeyboardEnabled or (k.TouchEnabled and not k.KeyboardEnabled) or
-					(k.GamepadEnabled and not k.KeyboardEnabled))
-			if not D then
+			local config = getFloatingToggleConfig(overrides)
+			local shouldShow = config.Enabled ~= false and
+				(config.ForceShowButton or not UserInputService.KeyboardEnabled or (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) or
+					(UserInputService.GamepadEnabled and not UserInputService.KeyboardEnabled))
+			if not shouldShow then
 				return nil
 			end
-			if C.RespectExistingToggle ~= false and hasLegacyFloatingToggle() then
+			if config.RespectExistingToggle ~= false and hasLegacyFloatingToggle() then
 				return nil
 			end
 
-			local E = Instance.new("ImageButton")
-			E.Name = "ATGFloatingToggleButton"
-			E.Size = floatingToggleSize(C)
-			E.Position, E.AnchorPoint = floatingTogglePosition(C)
-			E.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-			E.BackgroundTransparency = 0
-			E.BorderSizePixel = 0
-			E.Image = tostring(C.ImageId or "")
-			E.Active = true
-			E.AutoButtonColor = true
-			E.ZIndex = 1000
-			E.Parent = w
-			local F = Instance.new("UICorner")
-			F.CornerRadius = UDim.new(0, 8)
-			F.Parent = E
-			local G = Instance.new("UIStroke")
-			G.Name = "ATGFloatingToggleStroke"
-			G.Thickness = tonumber(C.Stroke.BaseThickness) or 1
-			G.Transparency = tonumber(C.Stroke.BaseTransparency) or 0.05
-			G.LineJoinMode = Enum.LineJoinMode.Round
-			G.ZIndex = 1000
-			G.Parent = E
+			local button = Instance.new("ImageButton")
+			button.Name = "ATGFloatingToggleButton"
+			button.Size = floatingToggleSize(config)
+			button.Position, button.AnchorPoint = floatingTogglePosition(config)
+			button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+			button.BackgroundTransparency = 0
+			button.BorderSizePixel = 0
+			button.Image = tostring(config.ImageId or "")
+			button.Active = true
+			button.AutoButtonColor = true
+			button.ZIndex = 1000
+			button.Parent = gui
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 8)
+			corner.Parent = button
+			local stroke = Instance.new("UIStroke")
+			stroke.Name = "ATGFloatingToggleStroke"
+			stroke.Thickness = tonumber(config.Stroke.BaseThickness) or 1
+			stroke.Transparency = tonumber(config.Stroke.BaseTransparency) or 0.05
+			stroke.LineJoinMode = Enum.LineJoinMode.Round
+			stroke.ZIndex = 1000
+			stroke.Parent = button
 
 			local dragStateConnection
-			local H = {
-				Button = E,
-				Stroke = G,
-				Config = C,
+			local toggle = {
+				Button = button,
+				Stroke = stroke,
+				Config = config,
 				Connections = {},
 				Destroyed = false
 			}
-			local function I(J)
-				table.insert(H.Connections, J)
-				return J
+			local function track(connection)
+				table.insert(toggle.Connections, connection)
+				return connection
 			end
-			local function J()
-				if not E.Parent then
+			local function clampToViewport()
+				if not button.Parent then
 					return
 				end
-				local K = game:GetService("Workspace").CurrentCamera
-				local L = K and K.ViewportSize or Vector2.new(1280, 720)
-				local M, N = E.AbsoluteSize.X, E.AbsoluteSize.Y
-				if M <= 0 or N <= 0 then
+				local camera = game:GetService("Workspace").CurrentCamera
+				local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+				local width, height = button.AbsoluteSize.X, button.AbsoluteSize.Y
+				if width <= 0 or height <= 0 then
 					return
 				end
-				local O = math.clamp(E.AbsolutePosition.X, 0, math.max(0, L.X - M))
-				local P = math.clamp(E.AbsolutePosition.Y, 0, math.max(0, L.Y - N))
-				if math.abs(O - E.AbsolutePosition.X) > 0.5 or math.abs(P - E.AbsolutePosition.Y) > 0.5 then
-					E.AnchorPoint = Vector2.new(0, 0)
-					E.Position = UDim2.fromOffset(O, P)
+				local clampedX = math.clamp(button.AbsolutePosition.X, 0, math.max(0, viewport.X - width))
+				local clampedY = math.clamp(button.AbsolutePosition.Y, 0, math.max(0, viewport.Y - height))
+				if math.abs(clampedX - button.AbsolutePosition.X) > 0.5 or math.abs(clampedY - button.AbsolutePosition.Y) > 0.5 then
+					button.AnchorPoint = Vector2.new(0, 0)
+					button.Position = UDim2.fromOffset(clampedX, clampedY)
 				end
 			end
-			function H.Toggle()
-				if x.Window and type(x.Window.Minimize) == "function" then
-					x.Window:Minimize()
-				elseif x.Window and x.Window.Root then
-					x.Window.Root.Visible = not x.Window.Root.Visible
+			function toggle.Toggle()
+				if Library.Window and type(Library.Window.Minimize) == "function" then
+					Library.Window:Minimize()
+				elseif Library.Window and Library.Window.Root then
+					Library.Window.Root.Visible = not Library.Window.Root.Visible
 				end
 			end
-			function H.Destroy()
-				if H.Destroyed then
+			function toggle.Destroy()
+				if toggle.Destroyed then
 					return
 				end
-				H.Destroyed = true
+				toggle.Destroyed = true
 				if dragStateConnection then
 					pcall(function()
 						dragStateConnection:Disconnect()
 					end)
 					dragStateConnection = nil
 				end
-				for _, K in ipairs(H.Connections) do
+				for _, connection in ipairs(toggle.Connections) do
 					pcall(function()
-						K:Disconnect()
+						connection:Disconnect()
 					end)
 				end
-				H.Connections = {}
-				if E then
+				toggle.Connections = {}
+				if button then
 					pcall(function()
-						E:Destroy()
+						button:Destroy()
 					end)
 				end
-				if x.FloatingToggle == H then
-					x.FloatingToggle = nil
+				if Library.FloatingToggle == toggle then
+					Library.FloatingToggle = nil
 				end
 			end
-			x.FloatingToggle = H
-			if C.RespectExistingToggle ~= false then
-				for _, K in ipairs(getLegacyFloatingToggleParents()) do
-					I(
-						K.ChildAdded:Connect(function(L)
-							if isLegacyFloatingToggle(L) and not H.Destroyed then
-								H:Destroy()
+			Library.FloatingToggle = toggle
+			if config.RespectExistingToggle ~= false then
+				for _, parent in ipairs(getLegacyFloatingToggleParents()) do
+					track(
+						parent.ChildAdded:Connect(function(child)
+							if isLegacyFloatingToggle(child) and not toggle.Destroyed then
+								toggle:Destroy()
 							end
 						end)
 					)
 				end
 			end
 
-			local K, L, M, N = false, nil, nil, nil
-			I(
-				E.InputBegan:Connect(function(O)
-					if O.UserInputType == Enum.UserInputType.MouseButton1 or O.UserInputType == Enum.UserInputType.Touch then
+			local dragging, dragStart, startPosition, moved = false, nil, nil, nil
+			track(
+				button.InputBegan:Connect(function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 						if dragStateConnection then
 							pcall(function()
 								dragStateConnection:Disconnect()
 							end)
 							dragStateConnection = nil
 						end
-						K = true
-						L = O.Position
-						M = E.Position
-						N = false
-						dragStateConnection = O.Changed:Connect(function()
-							if O.UserInputState == Enum.UserInputState.End then
-								K = false
-								J()
+						dragging = true
+						dragStart = input.Position
+						startPosition = button.Position
+						moved = false
+						dragStateConnection = input.Changed:Connect(function()
+							if input.UserInputState == Enum.UserInputState.End then
+								dragging = false
+								clampToViewport()
 								local connection = dragStateConnection
 								dragStateConnection = nil
 								if connection then
@@ -4845,178 +4764,170 @@ local aa = {
 					end
 				end)
 			)
-			I(
-				k.InputChanged:Connect(function(O)
-					if K and (O.UserInputType == Enum.UserInputType.MouseMovement or O.UserInputType == Enum.UserInputType.Touch) and L and M then
-						local P = O.Position - L
-						if P.Magnitude > 6 then
-							N = true
+			track(
+				UserInputService.InputChanged:Connect(function(input)
+					if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStart and startPosition then
+						local delta = input.Position - dragStart
+						if delta.Magnitude > 6 then
+							moved = true
 						end
-						E.Position = UDim2.new(M.X.Scale, M.X.Offset + P.X, M.Y.Scale, M.Y.Offset + P.Y)
+						button.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
 					end
 				end)
 			)
-			I(
-				E.Activated:Connect(function()
-					if N then
-						N = false
+			track(
+				button.Activated:Connect(function()
+					if moved then
+						moved = false
 						return
 					end
-					H.Toggle()
+					toggle.Toggle()
 				end)
 			)
-			local O = 0
-			I(
-				i.RenderStepped:Connect(function(P)
-					O = O + P
-					if O < 0.05 or not G.Parent then
+			local elapsed = 0
+			-- Stroke animation (20 Hz). Heartbeat does not hold up rendering the
+			-- way RenderStepped does, and nothing is written while hidden.
+			track(
+				RunService.Heartbeat:Connect(function(deltaTime)
+					elapsed = elapsed + deltaTime
+					if elapsed < 0.05 or not stroke.Parent or not button.Visible or not gui.Enabled then
 						return
 					end
-					O = 0
-					local Q = os.clock()
-					local R = (Q * (tonumber(C.Stroke.HueSpeed) or 0.09)) % 1
-					local S = (math.sin(Q * (tonumber(C.Stroke.PulseSpeed) or 1) * math.pi * 2) + 1) / 2
-					G.Color = Color3.fromHSV(R, tonumber(C.Stroke.Saturation) or 0.95, tonumber(C.Stroke.Value) or 1)
-					G.Thickness = (tonumber(C.Stroke.BaseThickness) or 1) + S * (tonumber(C.Stroke.PulseThickness) or 1.5)
-					G.Transparency =
-						(tonumber(C.Stroke.BaseTransparency) or 0.05) + S * (tonumber(C.Stroke.PulseTransparency) or 0.12)
+					elapsed = 0
+					local now = os.clock()
+					local hue = (now * (tonumber(config.Stroke.HueSpeed) or 0.09)) % 1
+					local pulse = (math.sin(now * (tonumber(config.Stroke.PulseSpeed) or 1) * math.pi * 2) + 1) / 2
+					stroke.Color = Color3.fromHSV(hue, tonumber(config.Stroke.Saturation) or 0.95, tonumber(config.Stroke.Value) or 1)
+					stroke.Thickness = (tonumber(config.Stroke.BaseThickness) or 1) + pulse * (tonumber(config.Stroke.PulseThickness) or 1.5)
+					stroke.Transparency =
+						(tonumber(config.Stroke.BaseTransparency) or 0.05) + pulse * (tonumber(config.Stroke.PulseTransparency) or 0.12)
 				end)
 			)
-			local P = game:GetService("Workspace").CurrentCamera
-			if P then
-				I(
-					P:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-						E.Size = floatingToggleSize(C)
-						J()
+			local camera = game:GetService("Workspace").CurrentCamera
+			if camera then
+				track(
+					camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+						button.Size = floatingToggleSize(config)
+						clampToViewport()
 					end)
 				)
 			end
-			if C.Keybind.Enabled ~= false and k.KeyboardEnabled then
-				local modifierAlreadyToggledWindow = false
-				local function modifierMatchesWindowMinimizeKey()
-					local activeKey = x.MinimizeKey
-					if type(x.MinimizeKeybind) == "table" and x.MinimizeKeybind.Type == "Keybind" then
-						activeKey = x.MinimizeKeybind.Value
-					end
-					if activeKey == C.Keybind.Modifier then
-						return true
-					end
-					local modifierName
-					pcall(function()
-						modifierName = C.Keybind.Modifier.Name
-					end)
-					return type(activeKey) == "string" and activeKey == modifierName
-				end
-				I(
-					k.InputBegan:Connect(function(Q, R)
-						if not R and Q.UserInputType == Enum.UserInputType.Keyboard then
-							if Q.KeyCode == C.Keybind.Modifier then
-								-- Fluent's legacy default minimize bind is LeftControl.
-								-- It has already toggled the window before Ctrl+M arrives,
-								-- so suppress the second toggle from this handler.
-								modifierAlreadyToggledWindow = modifierMatchesWindowMinimizeKey() and not k:GetFocusedTextBox()
-							elseif Q.KeyCode == C.Keybind.Key and not k:GetFocusedTextBox() and
-								k:IsKeyDown(C.Keybind.Modifier) then
-								if not modifierAlreadyToggledWindow then
-									H.Toggle()
-								end
-							end
-						end
-					end)
-				)
-				I(
-					k.InputEnded:Connect(function(Q)
-						if Q.UserInputType == Enum.UserInputType.Keyboard and Q.KeyCode == C.Keybind.Modifier then
-							modifierAlreadyToggledWindow = false
+			if config.Keybind.Enabled ~= false and UserInputService.KeyboardEnabled then
+				track(
+					UserInputService.InputBegan:Connect(function(input, gameProcessed)
+						if not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard and
+							input.KeyCode == config.Keybind.Key and not UserInputService:GetFocusedTextBox() and
+							UserInputService:IsKeyDown(config.Keybind.Modifier) then
+							toggle.Toggle()
 						end
 					end)
 				)
 			end
-			task.defer(J)
-			return H
+			task.defer(clampToViewport)
+			return toggle
 		end
-		function x.SetFloatingToggleConfig(A, B)
-			if B == false then
-				if x.FloatingToggle then
-					x.FloatingToggle:Destroy()
+		function Library.SetFloatingToggleConfig(_, config)
+			if config == false then
+				if Library.FloatingToggle then
+					Library.FloatingToggle:Destroy()
 				end
 				return nil
 			end
-			return x:CreateFloatingToggle(B)
+			return Library:CreateFloatingToggle(config)
 		end
-		local z = {}
-		z.__index = z
-		z.__namecall = function(A, B, ...)
-			return z[B](...)
+		-- Button titles that ask for confirmation with CreateWindow{SmartConfirm = true}.
+		local DestructiveWords = {"delete", "remove", "reset", "clear", "wipe", "shutdown", "rejoin", "leave"}
+		local function looksDestructive(title)
+			title = tostring(title or ""):lower()
+			for _, word in ipairs(DestructiveWords) do
+				if title:find("%f[%w]" .. word .. "%f[%W]") then
+					return true
+				end
+			end
+			return false
 		end
-		for A, B in ipairs(q) do
-			z["Add" .. B.__type] = function(C, D, E)
-				B.Container = C.Container
-				B.Type = C.Type
-				B.ScrollFrame = C.ScrollFrame
-				B.Library = x
-				local F = type(E) == "table" and E or (type(D) == "table" and D or nil)
-				-- Smart confirmation can be explicit (Confirm = true/string/table),
-				-- or inferred only for obvious destructive labels. Scripts may use
-				-- SmartConfirm = false to opt a button out.
-				local H = F and F.Confirm
-				if B.__type == "Button" and F and H == nil and F.SmartConfirm ~= false then
-					local I = tostring(F.Title or ""):lower()
-					if I:find("delete", 1, true) or I:find("remove", 1, true) or I:find("reset", 1, true) or
-						I:find("clear", 1, true) or I:find("wipe", 1, true) or I:find("shutdown", 1, true) or
-						I:find("rejoin", 1, true) or I:find("leave", 1, true) then
-						H = {Title = "Please confirm", Content = "Continue with " .. tostring(F.Title) .. "?"}
+		local Elements = {}
+		Elements.__index = Elements
+		Elements.__namecall = function(_, methodName, ...)
+			return Elements[methodName](...)
+		end
+		for _, elementModule in ipairs(elementModules) do
+			Elements["Add" .. elementModule.__type] = function(parent, key, config)
+				elementModule.Container = parent.Container
+				elementModule.Type = parent.Type
+				elementModule.ScrollFrame = parent.ScrollFrame
+				elementModule.Library = Library
+				local options = type(config) == "table" and config or (type(key) == "table" and key or nil)
+				-- Confirmation is explicit (Confirm = true/string/table). Guessing it
+				-- from a destructive word in the title is opt-in with
+				-- CreateWindow{SmartConfirm = true}; SmartConfirm = false on a
+				-- button opts that button out.
+				local confirm = options and options.Confirm
+				if elementModule.__type == "Button" and options and confirm == nil and Library.SmartConfirm == true
+					and options.SmartConfirm ~= false and looksDestructive(options.Title) then
+					confirm = {Title = "Please confirm", Content = "Continue with " .. tostring(options.Title) .. "?"}
+				end
+				if elementModule.__type == "Button" and options and confirm and type(options.Callback) == "function" and not options._ATGConfirmWrapped then
+					options._ATGConfirmWrapped = true
+					local callback = options.Callback
+					options.Callback = function(...)
+						return Library.Workspace:Confirm(confirm, callback, ...)
 					end
 				end
-				if B.__type == "Button" and F and H and type(F.Callback) == "function" and not F._ATGConfirmWrapped then
-					F._ATGConfirmWrapped = true
-					local G = F.Callback
-					F.Callback = function(...)
-						return x.Workspace:Confirm(H, G, ...)
-					end
+				local element = elementModule:New(key, config)
+				if Library.Workspace then
+					Library.Workspace:RegisterElement(element, parent, options, elementModule.__type, type(key) == "string" and key or nil)
 				end
-				local G = B:New(D, E)
-				if x.Workspace then
-					x.Workspace:RegisterElement(G, C, F, B.__type, type(D) == "string" and D or nil)
-				end
-				return G
+				return element
 			end
 		end
-		x.Elements = z
-		function x.CreateWindow(C, D)
-			assert(D.Title, "Window - Missing Title")
-			if x.Window then
-				print "You cannot create more than one window."
-				return
+		Library.Elements = Elements
+		function Library.CreateWindow(_, config)
+			assert(config.Title, "Window - Missing Title")
+			if Library.Unloaded then
+				warn "CreateWindow: the interface was destroyed; load the library again to create a new window."
+				return nil
+			end
+			if Library.Window then
+				warn "CreateWindow: a window already exists; returning it."
+				return Library.Window
 			end
 			-- Optional and additive: old CreateWindow calls continue to work.
 			-- InterfaceManager normally configures this later, but accepting it
 			-- here gives standalone scripts an early, flicker-free setup path.
-			if type(D.I18n) == "table" or type(D.Customization) == "table" then
-				local F = D.I18n or D.Customization
+			if type(config.I18n) == "table" or type(config.Customization) == "table" then
+				local customization = config.I18n or config.Customization
 				CustomizationSystem:Configure {
-					Folder = F.Folder,
-					ScriptId = F.ScriptId,
-					SourceLocale = F.SourceLocale,
-					Locale = F.Locale,
-					Mode = F.Mode,
-					Enabled = F.Enabled,
-					EnableRemoteAssets = F.EnableRemoteAssets,
-					FontProfile = F.FontProfile,
-					FontTuning = F.FontTuning
+					Folder = customization.Folder,
+					ScriptId = customization.ScriptId,
+					SourceLocale = customization.SourceLocale,
+					Locale = customization.Locale,
+					Mode = customization.Mode,
+					Enabled = customization.Enabled,
+					EnableRemoteAssets = customization.EnableRemoteAssets,
+					FontProfile = customization.FontProfile,
+					FontTuning = customization.FontTuning
 				}
 			end
-			x.CurrentLanguage = CustomizationSystem.I18n.CurrentLocale
-			x.MinimizeKey = D.MinimizeKey
-			x.UseAcrylic = D.Acrylic
-			if D.Acrylic then
-				r.init()
+			Library.CurrentLanguage = CustomizationSystem.I18n.CurrentLocale
+			if config.MinimizeKey ~= nil then
+				Library.MinimizeKey = safeEnumItem(Enum.KeyCode, config.MinimizeKey) or Library.MinimizeKey
 			end
-			local E =
-				e(s.Window) {Parent = w, Size = D.Size, Title = D.Title, SubTitle = D.SubTitle, TabWidth = D.TabWidth}
-			E.Library = x
-			x.Window = E
-			if x.Workspace then
+			-- Opt-in extras (all off for scripts written before they existed).
+			Library.SmartConfirm = config.SmartConfirm == true
+			Library.SearchEnabled = config.Search == true
+			if config.Splash == true then
+				showSplash()
+			end
+			Library.UseAcrylic = config.Acrylic
+			if config.Acrylic then
+				Acrylic.init()
+			end
+			local window =
+				requireModule(Components.Window) {Parent = gui, Size = config.Size, Title = config.Title, SubTitle = config.SubTitle, TabWidth = config.TabWidth}
+			window.Library = Library
+			Library.Window = window
+			if Library.Workspace then
 				-- Scripts that never call CustomizationSystem:Configure leave
 				-- I18n.Scope at its "shared" default, which made every script's
 				-- Favorites / Recent / TabOrder bleed into every other script's
@@ -5028,217 +4939,234 @@ local aa = {
 				-- every game back into one shared scope.
 				local workspaceScope = CustomizationSystem.I18n.Scope
 				if workspaceScope == "shared" then
-					local subtitle = type(D.SubTitle) == "string" and D.SubTitle or ""
-					workspaceScope = tostring(D.Title or "shared") .. (subtitle ~= "" and (" " .. subtitle) or "")
+					local subtitle = type(config.SubTitle) == "string" and config.SubTitle or ""
+					workspaceScope = tostring(config.Title or "shared") .. (subtitle ~= "" and (" " .. subtitle) or "")
 				end
-				x.Workspace:Configure {ScriptId = workspaceScope}
-				x.Workspace:Attach(E)
+				Library.Workspace:Configure {ScriptId = workspaceScope}
+				Library.Workspace:Attach(window)
 			end
-			x:SetTheme(D.Theme)
-			if D.FloatingToggle ~= false then
-				local F = type(D.FloatingToggle) == "table" and D.FloatingToggle or nil
+			Library:SetTheme(config.Theme)
+			if config.FloatingToggle ~= false then
+				local floatingConfig = type(config.FloatingToggle) == "table" and config.FloatingToggle or nil
 				-- Give legacy scripts that append FluentToggleGui after CreateWindow
 				-- one scheduler turn to register it before we add our own button.
 				task.defer(function()
 					task.wait(0.25)
-					if not x.Unloaded and x.Window == E and not x.FloatingToggle then
-						x:CreateFloatingToggle(F)
+					if not Library.Unloaded and Library.Window == window and not Library.FloatingToggle then
+						Library:CreateFloatingToggle(floatingConfig)
 					end
 				end)
 			end
-			return E
+			return window
 		end
-		function x.SetTheme(C, D)
-			if x.Window and table.find(x.Themes, D) then
-				x.Theme = D
-				p.UpdateTheme()
+		function Library.SetTheme(_, themeName)
+			if Library.Window and table.find(Library.Themes, themeName) then
+				Library.Theme = themeName
+				Creator.UpdateTheme()
 			end
 		end
-		function x.Destroy(C)
-			if x.Window then
-				x.Unloaded = true
-				-- Invalidates and detaches any in-flight/queued translation work.
-				CustomizationSystem.I18n:CancelPending()
-				CustomizationSystem.I18n:ClearRegistry()
-				CustomizationSystem.Fonts:ClearRegistry()
-				if x.Workspace then
-					x.Workspace:Destroy()
-				end
-				if x.FloatingToggle then
-					x.FloatingToggle:Destroy()
-				end
-				if x.UseAcrylic then
-					x.Window.AcrylicPaint.Model:Destroy()
-				end
-				p.Disconnect()
-				x.GUI:Destroy()
+		function Library.Destroy(_)
+			if not Library.Window or Library.Unloaded then
+				return
 			end
+			Library.Unloaded = true
+			for _, handler in ipairs(unloadHandlers) do
+				if handler.Connected then
+					local ok, err = pcall(handler.Callback)
+					if not ok then
+						warn("OnUnload callback error:", err)
+					end
+				end
+			end
+			-- Invalidates and detaches any in-flight/queued translation work.
+			CustomizationSystem.I18n:CancelPending()
+			CustomizationSystem.I18n:ClearRegistry()
+			CustomizationSystem.Fonts:ClearRegistry()
+			if Library.Workspace then
+				Library.Workspace:Destroy()
+			end
+			if Library.FloatingToggle then
+				Library.FloatingToggle:Destroy()
+			end
+			removeLegacyFloatingToggles()
+			Library._CloseDropdowns()
+			if Library.UseAcrylic then
+				-- Acrylic.Disable only exists after Acrylic.init; it removes the
+				-- DepthOfFieldEffect the blur added to Lighting.
+				if type(Acrylic.Disable) == "function" then
+					pcall(Acrylic.Disable)
+				end
+				Library.Window.AcrylicPaint.Model:Destroy()
+			end
+			Creator.Disconnect()
+			Creator.StopRainbow()
+			Library.GUI:Destroy()
 		end
-		function x.ToggleAcrylic(C, D)
-			if x.Window then
-				if x.UseAcrylic then
-					x.Acrylic = D
-					x.Window.AcrylicPaint.Model.Transparency = D and 0.98 or 1
-					if D then
-						r.Enable()
+		function Library.ToggleAcrylic(_, enabled)
+			if Library.Window then
+				if Library.UseAcrylic then
+					Library.Acrylic = enabled
+					Library.Window.AcrylicPaint.Model.Transparency = enabled and 0.98 or 1
+					if enabled then
+						Acrylic.Enable()
 					else
-						r.Disable()
+						Acrylic.Disable()
 					end
 				end
 			end
 		end
-		function x.ToggleTransparency(C, D)
-			if x.Window then
-				x.Window.AcrylicPaint.Frame.Background.BackgroundTransparency = D and 0.35 or 0
+		function Library.ToggleTransparency(_, enabled)
+			if Library.Window then
+				Library.Window.AcrylicPaint.Frame.Background.BackgroundTransparency = enabled and 0.35 or 0
 			end
 		end
-		function x.Notify(C, D)
-			if x.Workspace then
-				x.Workspace:RecordNotification(D)
+		function Library.Notify(_, options)
+			if Library.Workspace then
+				Library.Workspace:RecordNotification(options)
 			end
-			return t:New(D)
+			return Notification:New(options)
 		end
 		if getgenv then
-			getgenv().Fluent = x
+			getgenv().Fluent = Library
 		end
-		return x
+		return Library
 	end,
 	function()
-		local c, d, e, f, g = b(2)
-		local h = {AcrylicBlur = e(d.AcrylicBlur), CreateAcrylic = e(d.CreateAcrylic), AcrylicPaint = e(d.AcrylicPaint)}
-		function h.init()
-			local i = Instance.new "DepthOfFieldEffect"
-			i.FarIntensity = 0
-			i.InFocusRadius = 0.1
-			i.NearIntensity = 1
-			local j = {}
-			function h.Enable()
-				for k, l in pairs(j) do
-					l.Enabled = false
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(2)
+		local Acrylic = {AcrylicBlur = requireModule(moduleScript.AcrylicBlur), CreateAcrylic = requireModule(moduleScript.CreateAcrylic), AcrylicPaint = requireModule(moduleScript.AcrylicPaint)}
+		function Acrylic.init()
+			local baseEffect = Instance.new "DepthOfFieldEffect"
+			baseEffect.FarIntensity = 0
+			baseEffect.InFocusRadius = 0.1
+			baseEffect.NearIntensity = 1
+			local depthOfFieldDefaults = {}
+			function Acrylic.Enable()
+				for _, effect in pairs(depthOfFieldDefaults) do
+					effect.Enabled = false
 				end
-				i.Parent = game:GetService "Lighting"
+				baseEffect.Parent = game:GetService "Lighting"
 			end
-			function h.Disable()
-				for k, l in pairs(j) do
-					l.Enabled = l.enabled
+			function Acrylic.Disable()
+				for _, effect in pairs(depthOfFieldDefaults) do
+					effect.Enabled = effect.enabled
 				end
-				i.Parent = nil
+				baseEffect.Parent = nil
 			end
-			local k = function()
-				local k = function(k)
-					if k:IsA "DepthOfFieldEffect" then
-						j[k] = {enabled = k.Enabled}
+			local registerDefaults = function()
+				local register = function(object)
+					if object:IsA "DepthOfFieldEffect" then
+						depthOfFieldDefaults[object] = {enabled = object.Enabled}
 					end
 				end
-				for l, m in pairs(game:GetService "Lighting":GetChildren()) do
-					k(m)
+				for _, child in pairs(game:GetService "Lighting":GetChildren()) do
+					register(child)
 				end
 				if game:GetService "Workspace".CurrentCamera then
-					for n, o in pairs(game:GetService "Workspace".CurrentCamera:GetChildren()) do
-						k(o)
+					for _, child in pairs(game:GetService "Workspace".CurrentCamera:GetChildren()) do
+						register(child)
 					end
 				end
 			end
-			k()
-			h.Enable()
+			registerDefaults()
+			Acrylic.Enable()
 		end
-		return h
+		return Acrylic
 	end,
 	function()
-		local c, d, e, f, g = b(3)
-		local h, i, j, k = e(d.Parent.Parent.Creator), e(d.Parent.CreateAcrylic), unpack(e(d.Parent.Utils))
-		local l = function(l)
-			local m = {}
-			l = l or 0.001
-			local n, o = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}, i()
-			o.Parent = workspace
-			local p, q = function(p, q)
-				n.topLeft = q
-				n.topRight = q + Vector2.new(p.X, 0)
-				n.bottomRight = q + p
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(3)
+		local Creator, createAcrylic, viewportPointToWorld, getOffset = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.CreateAcrylic), unpack(requireModule(moduleScript.Parent.Utils))
+		local createAcrylicBlur = function(distance)
+			local cleanups = {}
+			distance = distance or 0.001
+			local positions, model = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}, createAcrylic()
+			model.Parent = workspace
+			local updatePositions, render = function(size, position)
+				positions.topLeft = position
+				positions.topRight = position + Vector2.new(size.X, 0)
+				positions.bottomRight = position + size
 			end, function()
-				local p = game:GetService "Workspace".CurrentCamera
-				if p then
-					p = p.CFrame
+				local cameraCFrame = game:GetService "Workspace".CurrentCamera
+				if cameraCFrame then
+					cameraCFrame = cameraCFrame.CFrame
 				end
-				local q = p
-				if not q then
-					q = CFrame.new()
+				local resolvedCFrame = cameraCFrame
+				if not resolvedCFrame then
+					resolvedCFrame = CFrame.new()
 				end
-				local r, s, t, u = q, n.topLeft, n.topRight, n.bottomRight
-				local v, w, x = j(s, l), j(t, l), j(u, l)
-				local y, z = (w - v).Magnitude, (w - x).Magnitude
-				o.CFrame = CFrame.fromMatrix((v + x) / 2, r.XVector, r.YVector, r.ZVector)
-				o.Mesh.Scale = Vector3.new(y, z, 0)
+				local viewCFrame, topLeft, topRight, bottomRight = resolvedCFrame, positions.topLeft, positions.topRight, positions.bottomRight
+				local topLeft3D, topRight3D, bottomRight3D = viewportPointToWorld(topLeft, distance), viewportPointToWorld(topRight, distance), viewportPointToWorld(bottomRight, distance)
+				local width, height = (topRight3D - topLeft3D).Magnitude, (topRight3D - bottomRight3D).Magnitude
+				model.CFrame = CFrame.fromMatrix((topLeft3D + bottomRight3D) / 2, viewCFrame.XVector, viewCFrame.YVector, viewCFrame.ZVector)
+				model.Mesh.Scale = Vector3.new(width, height, 0)
 			end
-			local r, s = function(r)
-				local s = k()
-				local t, u = r.AbsoluteSize - Vector2.new(s, s), r.AbsolutePosition + Vector2.new(s / 2, s / 2)
-				p(t, u)
-				task.spawn(q)
+			local onChange, renderOnChange = function(frame)
+				local offset = getOffset()
+				local size, position = frame.AbsoluteSize - Vector2.new(offset, offset), frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
+				updatePositions(size, position)
+				task.spawn(render)
 			end, function()
-				local r = game:GetService "Workspace".CurrentCamera
-				if not r then
+				local camera = game:GetService "Workspace".CurrentCamera
+				if not camera then
 					return
 				end
-				table.insert(m, r:GetPropertyChangedSignal "CFrame":Connect(q))
-				table.insert(m, r:GetPropertyChangedSignal "ViewportSize":Connect(q))
-				table.insert(m, r:GetPropertyChangedSignal "FieldOfView":Connect(q))
-				task.spawn(q)
+				table.insert(cleanups, camera:GetPropertyChangedSignal "CFrame":Connect(render))
+				table.insert(cleanups, camera:GetPropertyChangedSignal "ViewportSize":Connect(render))
+				table.insert(cleanups, camera:GetPropertyChangedSignal "FieldOfView":Connect(render))
+				task.spawn(render)
 			end
-			o.Destroying:Connect(
+			model.Destroying:Connect(
 				function()
-					for t, u in m do
+					for _, connection in cleanups do
 						pcall(
 							function()
-								u:Disconnect()
+								connection:Disconnect()
 							end
 						)
 					end
 				end
 			)
-			s()
-			return r, o
+			renderOnChange()
+			return onChange, model
 		end
-		return function(m)
-			local n, o, p = {}, l(m)
-			local q = h.New("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
-			h.AddSignal(
-				q:GetPropertyChangedSignal "AbsolutePosition",
+		return function(distance)
+			local Blur, onChange, model = {}, createAcrylicBlur(distance)
+			local frame = Creator.New("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
+			Creator.AddSignal(
+				frame:GetPropertyChangedSignal "AbsolutePosition",
 				function()
-					o(q)
+					onChange(frame)
 				end
 			)
-			h.AddSignal(
-				q:GetPropertyChangedSignal "AbsoluteSize",
+			Creator.AddSignal(
+				frame:GetPropertyChangedSignal "AbsoluteSize",
 				function()
-					o(q)
+					onChange(frame)
 				end
 			)
-			n.AddParent = function(r)
-				h.AddSignal(
-					r:GetPropertyChangedSignal "Visible",
+			Blur.AddParent = function(parentFrame)
+				Creator.AddSignal(
+					parentFrame:GetPropertyChangedSignal "Visible",
 					function()
-						n.SetVisibility(r.Visible)
+						Blur.SetVisibility(parentFrame.Visible)
 					end
 				)
 			end
-			n.SetVisibility = function(r)
-				p.Transparency = r and 0.98 or 1
+			Blur.SetVisibility = function(visible)
+				model.Transparency = visible and 0.98 or 1
 			end
-			n.Frame = q
-			n.Model = p
-			return n
+			Blur.Frame = frame
+			Blur.Model = model
+			return Blur
 		end
 	end,
 	function()
-		local c, d, e, f, g = b(4)
-		local h, i = e(d.Parent.Parent.Creator), e(d.Parent.AcrylicBlur)
-		local j = h.New
-		return function(k)
-			local l = {}
-			l.Frame =
-				j(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(4)
+		local Creator, AcrylicBlur = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.AcrylicBlur)
+		local New = Creator.New
+		return function(_props)
+			local Paint = {}
+			Paint.Frame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromScale(1, 1),
@@ -5247,7 +5175,7 @@ local aa = {
 						BorderSizePixel = 0
 					},
 					{
-						j(
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://8992230677",
@@ -5261,8 +5189,8 @@ local aa = {
 								ImageTransparency = 0.7
 							}
 						),
-						j("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						j(
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New(
 							"Frame",
 							{
 								BackgroundTransparency = 0.45,
@@ -5270,9 +5198,9 @@ local aa = {
 								Name = "Background",
 								ThemeTag = {BackgroundColor3 = "AcrylicMain"}
 							},
-							{j("UICorner", {CornerRadius = UDim.new(0, 8)})}
+							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 						),
-						j(
+						New(
 							"Frame",
 							{
 								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -5280,11 +5208,11 @@ local aa = {
 								Size = UDim2.fromScale(1, 1)
 							},
 							{
-								j("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								j("UIGradient", {Rotation = 90, ThemeTag = {Color = "AcrylicGradient"}})
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								New("UIGradient", {Rotation = 90, ThemeTag = {Color = "AcrylicGradient"}})
 							}
 						),
-						j(
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://9968344105",
@@ -5294,9 +5222,9 @@ local aa = {
 								Size = UDim2.fromScale(1, 1),
 								BackgroundTransparency = 1
 							},
-							{j("UICorner", {CornerRadius = UDim.new(0, 8)})}
+							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 						),
-						j(
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://9968344227",
@@ -5307,36 +5235,36 @@ local aa = {
 								BackgroundTransparency = 1,
 								ThemeTag = {ImageTransparency = "AcrylicNoise"}
 							},
-							{j("UICorner", {CornerRadius = UDim.new(0, 8)})}
+							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 						),
-						j(
+						New(
 							"Frame",
 							{BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2},
 							{
-								j("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								j("UIStroke", {Transparency = 0.5, Thickness = 1, ThemeTag = {Color = "AcrylicBorder"}})
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								New("UIStroke", {Transparency = 0.5, Thickness = 1, ThemeTag = {Color = "AcrylicBorder"}})
 							}
 						)
 					}
 				)
-			local m
-			if e(d.Parent.Parent).UseAcrylic then
-				m = i()
-				m.Frame.Parent = l.Frame
-				l.Model = m.Model
-				l.AddParent = m.AddParent
-				l.SetVisibility = m.SetVisibility
+			local blur
+			if requireModule(moduleScript.Parent.Parent).UseAcrylic then
+				blur = AcrylicBlur()
+				blur.Frame.Parent = Paint.Frame
+				Paint.Model = blur.Model
+				Paint.AddParent = blur.AddParent
+				Paint.SetVisibility = blur.SetVisibility
 			end
-			return l
+			return Paint
 		end
 	end,
 	function()
-		local c, d, e, f, g = b(5)
-		local h = d.Parent.Parent
-		local i = e(h.Creator)
-		local j = function()
-			local j =
-				i.New(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(5)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local createAcrylic = function()
+			local part =
+				Creator.New(
 					"Part",
 					{
 						Name = "Body",
@@ -5349,28 +5277,28 @@ local aa = {
 						CastShadow = false,
 						Transparency = 0.98
 					},
-					{i.New("SpecialMesh", {MeshType = Enum.MeshType.Brick, Offset = Vector3.new(0, 0, -1E-6)})}
+					{Creator.New("SpecialMesh", {MeshType = Enum.MeshType.Brick, Offset = Vector3.new(0, 0, -1E-6)})}
 				)
-			return j
+			return part
 		end
-		return j
+		return createAcrylic
 	end,
 	function()
-		local c, d, e, f, g = b(6)
-		local h, i = function(h, i, j, k, l)
-			return (h - i) * (l - k) / (j - i) + k
-		end, function(h, i)
-			local j = game:GetService "Workspace".CurrentCamera:ScreenPointToRay(h.X, h.Y)
-			return j.Origin + j.Direction * i
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(6)
+		local map, viewportPointToWorld = function(value, inMin, inMax, outMin, outMax)
+			return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
+		end, function(location, distance)
+			local ray = game:GetService "Workspace".CurrentCamera:ScreenPointToRay(location.X, location.Y)
+			return ray.Origin + ray.Direction * distance
 		end
-		local j = function()
-			local j = game:GetService "Workspace".CurrentCamera.ViewportSize.Y
-			return h(j, 0, 2560, 8, 56)
+		local getOffset = function()
+			local viewportHeight = game:GetService "Workspace".CurrentCamera.ViewportSize.Y
+			return map(viewportHeight, 0, 2560, 8, 56)
 		end
-		return {i, j}
+		return {viewportPointToWorld, getOffset}
 	end,
 	[8] = function()
-		local c, d, e, f, g = b(8)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(8)
 		return {
 			Close = "rbxassetid://9886659671",
 			Min = "rbxassetid://9886659276",
@@ -5379,15 +5307,15 @@ local aa = {
 		}
 	end,
 	[9] = function()
-		local c, d, e, f, g = b(9)
-		local h = d.Parent.Parent
-		local i, j = e(h.Packages.Flipper), e(h.Creator)
-		local k, l = j.New, i.Spring.new
-		return function(m, n, o)
-			o = o or false
-			local p = {}
-			p.Title =
-				k(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(9)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New, Spring = Creator.New, Flipper.Spring.new
+		return function(_theme, parent, dialogCheck)
+			dialogCheck = dialogCheck or false
+			local Button = {}
+			Button.Title =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
@@ -5403,19 +5331,19 @@ local aa = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			p.HoverFrame =
-				k(
+			Button.HoverFrame =
+				New(
 					"Frame",
 					{Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ThemeTag = {BackgroundColor3 = "Hover"}},
-					{k("UICorner", {CornerRadius = UDim.new(0, 8)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 				)
-			p.Frame =
-				k(
+			Button.Frame =
+				New(
 					"TextButton",
-					{Size = UDim2.new(0, 0, 0, 32), Parent = n, ThemeTag = {BackgroundColor3 = "DialogButton"}},
+					{Size = UDim2.new(0, 0, 0, 32), Parent = parent, ThemeTag = {BackgroundColor3 = "DialogButton"}},
 					{
-						k("UICorner", {CornerRadius = UDim.new(0, 4)}),
-						k(
+						New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+						New(
 							"UIStroke",
 							{
 								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -5423,68 +5351,68 @@ local aa = {
 								ThemeTag = {Color = "DialogButtonBorder"}
 							}
 						),
-						p.HoverFrame,
-						p.Title
+						Button.HoverFrame,
+						Button.Title
 					}
 				)
-			local q, r = j.SpringMotor(1, p.HoverFrame, "BackgroundTransparency", o)
-			j.AddSignal(
-				p.Frame.MouseEnter,
+			local motor, setTransparency = Creator.SpringMotor(1, Button.HoverFrame, "BackgroundTransparency", dialogCheck)
+			Creator.AddSignal(
+				Button.Frame.MouseEnter,
 				function()
-					r(0.97)
+					setTransparency(0.97)
 				end
 			)
-			j.AddSignal(
-				p.Frame.MouseLeave,
+			Creator.AddSignal(
+				Button.Frame.MouseLeave,
 				function()
-					r(1)
+					setTransparency(1)
 				end
 			)
-			j.AddSignal(
-				p.Frame.MouseButton1Down,
+			Creator.AddSignal(
+				Button.Frame.MouseButton1Down,
 				function()
-					r(1)
+					setTransparency(1)
 				end
 			)
-			j.AddSignal(
-				p.Frame.MouseButton1Up,
+			Creator.AddSignal(
+				Button.Frame.MouseButton1Up,
 				function()
-					r(0.97)
+					setTransparency(0.97)
 				end
 			)
-			return p
+			return Button
 		end
 	end,
 	[10] = function()
-		local c, d, e, f, g = b(10)
-		local h, i, j, k =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(10)
+		local UserInputService, mouse, camera, Root =
 			game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
 		game:GetService "Workspace".CurrentCamera,
-		d.Parent.Parent
-		local l, m = e(k.Packages.Flipper), e(k.Creator)
-		local n, o, p, q = l.Spring.new, l.Instant.new, m.New, {Window = nil}
-		function q.Init(r, s)
-			q.Window = s
-			return q
+		moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local Spring, Instant, New, Dialog = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {Window = nil}
+		function Dialog.Init(_self, window)
+			Dialog.Window = window
+			return Dialog
 		end
-		function q.Create(r)
-			local s = {Buttons = 0}
-			s.TintFrame =
-				p(
+		function Dialog.Create(_self)
+			local NewDialog = {Buttons = 0}
+			NewDialog.TintFrame =
+				New(
 					"TextButton",
 					{
 						Text = "",
 						Size = UDim2.fromScale(1, 1),
 						BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 						BackgroundTransparency = 1,
-						Parent = q.Window.Root
+						Parent = Dialog.Window.Root
 					},
-					{p("UICorner", {CornerRadius = UDim.new(0, 8)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
 				)
-			local t, u = m.SpringMotor(1, s.TintFrame, "BackgroundTransparency", true)
-			s.ButtonHolder =
-				p(
+			local tintMotor, setTintTransparency = Creator.SpringMotor(1, NewDialog.TintFrame, "BackgroundTransparency", true)
+			NewDialog.ButtonHolder =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, -40, 1, -40),
@@ -5493,7 +5421,7 @@ local aa = {
 						BackgroundTransparency = 1
 					},
 					{
-						p(
+						New(
 							"UIListLayout",
 							{
 								Padding = UDim.new(0, 10),
@@ -5504,8 +5432,8 @@ local aa = {
 						)
 					}
 				)
-			s.ButtonHolderFrame =
-				p(
+			NewDialog.ButtonHolderFrame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 0, 70),
@@ -5513,12 +5441,12 @@ local aa = {
 						ThemeTag = {BackgroundColor3 = "DialogHolder"}
 					},
 					{
-						p("Frame", {Size = UDim2.new(1, 0, 0, 1), ThemeTag = {BackgroundColor3 = "DialogHolderLine"}}),
-						s.ButtonHolder
+						New("Frame", {Size = UDim2.new(1, 0, 0, 1), ThemeTag = {BackgroundColor3 = "DialogHolderLine"}}),
+						NewDialog.ButtonHolder
 					}
 				)
-			s.Title =
-				p(
+			NewDialog.Title =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -5537,82 +5465,84 @@ local aa = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			s.Scale = p("UIScale", {Scale = 1})
-			local v, w = m.SpringMotor(1.1, s.Scale, "Scale")
-			s.Root =
-				p(
+			NewDialog.Scale = New("UIScale", {Scale = 1})
+			local scaleMotor, setScale = Creator.SpringMotor(1.1, NewDialog.Scale, "Scale")
+			NewDialog.Root =
+				New(
 					"CanvasGroup",
 					{
 						Size = UDim2.fromOffset(300, 165),
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.fromScale(0.5, 0.5),
 						GroupTransparency = 1,
-						Parent = s.TintFrame,
+						Parent = NewDialog.TintFrame,
 						ThemeTag = {BackgroundColor3 = "Dialog"}
 					},
 					{
-						p("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						p("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "DialogBorder"}}),
-						s.Scale,
-						s.Title,
-						s.ButtonHolderFrame
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "DialogBorder"}}),
+						NewDialog.Scale,
+						NewDialog.Title,
+						NewDialog.ButtonHolderFrame
 					}
 				)
-			local x, y = m.SpringMotor(1, s.Root, "GroupTransparency")
-			function s.Open(z)
-				e(k).DialogOpen = true
-				s.Scale.Scale = 1.1
-				u(0.75)
-				y(0)
-				w(1)
+			local rootMotor, setRootTransparency = Creator.SpringMotor(1, NewDialog.Root, "GroupTransparency")
+			function NewDialog.Open(_self)
+				requireModule(Root).DialogOpen = true
+				NewDialog.Scale.Scale = 1.1
+				setTintTransparency(0.75)
+				setRootTransparency(0)
+				setScale(1)
 			end
-			function s.Close(z)
-				e(k).DialogOpen = false
-				u(1)
-				y(1)
-				w(1.1)
-				s.Root.UIStroke:Destroy()
-				task.wait(0.15)
-				s.TintFrame:Destroy()
+			function NewDialog.Close(_self)
+				requireModule(Root).DialogOpen = false
+				setTintTransparency(1)
+				setRootTransparency(1)
+				setScale(1.1)
+				NewDialog.Root.UIStroke:Destroy()
+				task.delay(0.15, function()
+					NewDialog.TintFrame:Destroy()
+				end)
 			end
-			function s.Button(z, A, B)
-				s.Buttons = s.Buttons + 1
-				A = A or "Button"
-				B = B or function()
+			function NewDialog.Button(_self, title, callback)
+				NewDialog.Buttons = NewDialog.Buttons + 1
+				title = title or "Button"
+				callback = callback or function()
 				end
-				local C = e(k.Components.Button)("", s.ButtonHolder, true)
-				C.Title.Text = A
-				for D, E in next, s.ButtonHolder:GetChildren() do
-					if E:IsA "TextButton" then
-						E.Size = UDim2.new(1 / s.Buttons, -(((s.Buttons - 1) * 10) / s.Buttons), 0, 32)
+				local button = requireModule(Root.Components.Button)("", NewDialog.ButtonHolder, true)
+				button.Title.Text = title
+				TranslationSystem:Register(button.Title, title, "Text")
+				for _, child in next, NewDialog.ButtonHolder:GetChildren() do
+					if child:IsA "TextButton" then
+						child.Size = UDim2.new(1 / NewDialog.Buttons, -(((NewDialog.Buttons - 1) * 10) / NewDialog.Buttons), 0, 32)
 					end
 				end
-				m.AddSignal(
-					C.Frame.MouseButton1Click,
+				Creator.AddSignal(
+					button.Frame.MouseButton1Click,
 					function()
-						e(k):SafeCallback(B)
+						requireModule(Root):SafeCallback(callback)
 						pcall(
 							function()
-								s:Close()
+								NewDialog:Close()
 							end
 						)
 					end
 				)
-				return C
+				return button
 			end
-			return s
+			return NewDialog
 		end
-		return q
+		return Dialog
 	end,
 	[11] = function()
-		local c, d, e, f, g = b(11)
-		local h = d.Parent.Parent
-		local i, j = e(h.Packages.Flipper), e(h.Creator)
-		local k, l = j.New, i.Spring.new
-		return function(m, n, o, p)
-			local q = {}
-			q.TitleLabel =
-				k(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(11)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New, Spring = Creator.New, Flipper.Spring.new
+		return function(title, desc, parent, hover)
+			local Element = {}
+			Element.TitleLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -5620,7 +5550,7 @@ local aa = {
 							Enum.FontWeight.Medium,
 							Enum.FontStyle.Normal
 						),
-						Text = m,
+						Text = title,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
 						TextWrapped = true,
@@ -5632,12 +5562,12 @@ local aa = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			q.DescLabel =
-				k(
+			Element.DescLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-						Text = n,
+						Text = desc,
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
 						TextWrapped = true,
@@ -5649,8 +5579,8 @@ local aa = {
 						ThemeTag = {TextColor3 = "SubText"}
 					}
 				)
-			q.LabelHolder =
-				k(
+			Element.LabelHolder =
+				New(
 					"Frame",
 					{
 						AutomaticSize = Enum.AutomaticSize.Y,
@@ -5660,17 +5590,17 @@ local aa = {
 						Size = UDim2.new(1, -28, 0, 0)
 					},
 					{
-						k(
+						New(
 							"UIListLayout",
 							{SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center}
 						),
-						k("UIPadding", {PaddingBottom = UDim.new(0, 13), PaddingTop = UDim.new(0, 13)}),
-						q.TitleLabel,
-						q.DescLabel
+						New("UIPadding", {PaddingBottom = UDim.new(0, 13), PaddingTop = UDim.new(0, 13)}),
+						Element.TitleLabel,
+						Element.DescLabel
 					}
 				)
-			q.Border =
-				k(
+			Element.Border =
+				New(
 					"UIStroke",
 					{
 						Transparency = 0.5,
@@ -5679,109 +5609,117 @@ local aa = {
 						ThemeTag = {Color = "ElementBorder"}
 					}
 				)
-			q.Frame =
-				k(
+			Element.Frame =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.new(1, 0, 0, 0),
 						BackgroundTransparency = 0.89,
 						BackgroundColor3 = Color3.fromRGB(130, 130, 130),
-						Parent = o,
+						Parent = parent,
 						AutomaticSize = Enum.AutomaticSize.Y,
 						Text = "",
 						LayoutOrder = 7,
 						ThemeTag = {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"}
 					},
-					{k("UICorner", {CornerRadius = UDim.new(0, 4)}), q.Border, q.LabelHolder}
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), Element.Border, Element.LabelHolder}
 				)
-			function q.SetTitle(r, s)
-				q.TitleLabel.Text = s
+			-- Text set after the element is built is runtime text (status, counters,
+			-- player names), so it is registered as dynamic.
+			local built = false
+			function Element.SetTitle(_self, text)
+				Element.TitleLabel.Text = text
 				-- Register with Translation System
-				TranslationSystem:Register(q.TitleLabel, s, "Text")
+				TranslationSystem:Register(Element.TitleLabel, text, "Text", {Dynamic = built})
 			end
-			function q.SetDesc(r, s)
-				if s == nil then
-					s = ""
+			function Element.SetDesc(_self, text)
+				if text == nil then
+					text = ""
 				end
-				if s == "" then
-					q.DescLabel.Visible = false
+				if text == "" then
+					Element.DescLabel.Visible = false
 				else
-					q.DescLabel.Visible = true
+					Element.DescLabel.Visible = true
 				end
-				q.DescLabel.Text = s
+				Element.DescLabel.Text = text
 				-- Register with Translation System
-				if s ~= "" then
-					TranslationSystem:Register(q.DescLabel, s, "Text")
+				if text ~= "" then
+					TranslationSystem:Register(Element.DescLabel, text, "Text", {Dynamic = built})
 				end
 			end
-			function q.Destroy(r)
-				q.Frame:Destroy()
+			function Element.Destroy(_self)
+				Element.Frame:Destroy()
 			end
-			q:SetTitle(m)
-			q:SetDesc(n)
-			if p then
-				local r, s, t =
-					h.Themes,
-				j.SpringMotor(
-					j.GetThemeProperty "ElementTransparency",
-					q.Frame,
+			Element:SetTitle(title)
+			Element:SetDesc(desc)
+			built = true
+			if hover then
+				local _themes, motor, setTransparency =
+					Root.Themes,
+				Creator.SpringMotor(
+					Creator.GetThemeProperty "ElementTransparency",
+					Element.Frame,
 					"BackgroundTransparency",
 					false,
 					true
 				)
-				j.AddSignal(
-					q.Frame.MouseEnter,
+				Creator.AddSignal(
+					Element.Frame.MouseEnter,
 					function()
-						t(j.GetThemeProperty "ElementTransparency" - j.GetThemeProperty "HoverChange")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency" - Creator.GetThemeProperty "HoverChange")
 					end
 				)
-				j.AddSignal(
-					q.Frame.MouseLeave,
+				Creator.AddSignal(
+					Element.Frame.MouseLeave,
 					function()
-						t(j.GetThemeProperty "ElementTransparency")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency")
 					end
 				)
-				j.AddSignal(
-					q.Frame.MouseButton1Down,
+				Creator.AddSignal(
+					Element.Frame.MouseButton1Down,
 					function()
-						t(j.GetThemeProperty "ElementTransparency" + j.GetThemeProperty "HoverChange")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency" + Creator.GetThemeProperty "HoverChange")
 					end
 				)
-				j.AddSignal(
-					q.Frame.MouseButton1Up,
+				Creator.AddSignal(
+					Element.Frame.MouseButton1Up,
 					function()
-						t(j.GetThemeProperty "ElementTransparency" - j.GetThemeProperty "HoverChange")
+						setTransparency(Creator.GetThemeProperty "ElementTransparency" - Creator.GetThemeProperty "HoverChange")
 					end
 				)
 			end
-			return q
+			return Element
 		end
 	end,
 	[12] = function()
-		local c, d, e, f, g = b(12)
-		local h = d.Parent.Parent
-		local i, j, k = e(h.Packages.Flipper), e(h.Creator), e(h.Acrylic)
-		local l, m, n, o = i.Spring.new, i.Instant.new, j.New, {}
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(12)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator, Acrylic = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic)
+		local Spring, Instant, New, Notification = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {}
 
-		function o.Init(p, q)
-			-- Responsive width: smaller on mobile
-			local viewportSize = workspace.CurrentCamera.ViewportSize
-			local isMobile = viewportSize.X < 600
-			local notifWidth = isMobile and 280 or 340
-			local sideMargin = isMobile and 10 or 30
+		function Notification.Init(_self, gui)
+			-- Responsive width: smaller on mobile, recomputed when the screen
+			-- rotates or the window is resized.
+			local camera = workspace.CurrentCamera
+			local function layout()
+				local isMobile = camera.ViewportSize.X < 600
+				local sideMargin = isMobile and 10 or 30
+				return UDim2.new(1, -sideMargin, 1, -sideMargin), UDim2.new(0, isMobile and 280 or 340, 1, -sideMargin)
+			end
+			local position, size = layout()
 
-			o.Holder =
-				n(
+			Notification.Holder =
+				New(
 					"Frame",
 					{
-						Position = UDim2.new(1, -sideMargin, 1, -sideMargin),
-						Size = UDim2.new(0, notifWidth, 1, -sideMargin),
+						Position = position,
+						Size = size,
 						AnchorPoint = Vector2.new(1, 1),
 						BackgroundTransparency = 1,
-						Parent = q
+						Parent = gui
 					},
 					{
-						n(
+						New(
 							"UIListLayout",
 							{
 								HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -5792,78 +5730,82 @@ local aa = {
 						)
 					}
 				)
+			Creator.AddSignal(camera:GetPropertyChangedSignal("ViewportSize"), function()
+				Notification.Holder.Position, Notification.Holder.Size = layout()
+			end)
 		end
 
-		function o.New(p, q)
-			q.Title = q.Title or "Notification"
-			q.Content = q.Content or "Content"
-			q.SubContent = q.SubContent or ""
-			q.Duration = q.Duration or nil
-			q.Buttons = q.Buttons or {}
+		function Notification.New(_self, config)
+			config.Title = config.Title or "Notification"
+			config.Content = config.Content or "Content"
+			config.SubContent = config.SubContent or ""
+			config.Duration = config.Duration or nil
+			config.Buttons = config.Buttons or {}
 
 			-- Store originals for translation
-			local originalTitle = q.Title
-			local originalContent = q.Content
-			local originalSubContent = q.SubContent
+			local originalTitle = config.Title
+			local originalContent = config.Content
+			local originalSubContent = config.SubContent
 
-			local r = {Closed = false}
-			r.AcrylicPaint = k.AcrylicPaint()
+			local NewNotification = {Closed = false}
+			NewNotification.AcrylicPaint = Acrylic.AcrylicPaint()
 
 			-- Icon & color mapping
-			local s = "rbxassetid://10723415903"
-			local t = Color3.fromRGB(76, 194, 255)
+			local icon = "rbxassetid://10723415903"
+			local accentColor = Color3.fromRGB(76, 194, 255)
 
-			if q.Title:lower():find("success") or q.Title:lower():find("complete") then
-				s = "rbxassetid://10709790387"
-				t = Color3.fromRGB(50, 205, 50)
-			elseif q.Title:lower():find("error") or q.Title:lower():find("fail") then
-				s = "rbxassetid://10734933655"
-				t = Color3.fromRGB(255, 60, 80)
-			elseif q.Title:lower():find("warn") then
-				s = "rbxassetid://10709753149"
-				t = Color3.fromRGB(255, 180, 0)
+			if config.Title:lower():find("success") or config.Title:lower():find("complete") then
+				icon = "rbxassetid://10709790387"
+				accentColor = Color3.fromRGB(50, 205, 50)
+			elseif config.Title:lower():find("error") or config.Title:lower():find("fail") then
+				icon = "rbxassetid://10734933655"
+				accentColor = Color3.fromRGB(255, 60, 80)
+			elseif config.Title:lower():find("warn") then
+				icon = "rbxassetid://10709753149"
+				accentColor = Color3.fromRGB(255, 180, 0)
 			end
 
-			r.IconFrame =
-				n(
+			NewNotification.IconFrame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromOffset(40, 40),
 						Position = UDim2.fromOffset(10, 10),
-						BackgroundColor3 = t,
+						BackgroundColor3 = accentColor,
 						BackgroundTransparency = 0.88,
 						BorderSizePixel = 0
 					},
 					{
-						n("UICorner", {CornerRadius = UDim.new(0, 10)}),
-						n(
+						New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+						New(
 							"UIStroke",
 							{
-								Color = t,
+								Color = accentColor,
 								Transparency = 0.7,
 								Thickness = 1
 							}
 						),
-						n(
+						New(
 							"ImageLabel",
 							{
 								Size = UDim2.fromOffset(22, 22),
 								Position = UDim2.fromScale(0.5, 0.5),
 								AnchorPoint = Vector2.new(0.5, 0.5),
 								BackgroundTransparency = 1,
-								Image = s,
-								ImageColor3 = t
+								Image = icon,
+								ImageColor3 = accentColor
 							}
 						)
 					}
 				)
 
-			r.Title =
-				n(
+			NewNotification.Title =
+				New(
 					"TextLabel",
 					{
 						Position = UDim2.new(0, 58, 0, 12),
-						Text = q.Title,
+						Text = config.Title,
+						I18nDynamic = true,
 						RichText = true,
 						TextTransparency = 0,
 						FontFace = Font.new(
@@ -5880,11 +5822,11 @@ local aa = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			-- Register Title for translation
-			TranslationSystem:Register(r.Title, originalTitle, "Text")
+			-- Register Title for translation (notification text is dynamic)
+			TranslationSystem:Register(NewNotification.Title, originalTitle, "Text", {Dynamic = true})
 
-			r.ContentLabel =
-				n(
+			NewNotification.ContentLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -5892,7 +5834,8 @@ local aa = {
 							Enum.FontWeight.Regular,
 							Enum.FontStyle.Normal
 						),
-						Text = q.Content,
+						Text = config.Content,
+						I18nDynamic = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 12,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -5904,14 +5847,15 @@ local aa = {
 					}
 				)
 			-- Register Content for translation
-			TranslationSystem:Register(r.ContentLabel, originalContent, "Text")
+			TranslationSystem:Register(NewNotification.ContentLabel, originalContent, "Text", {Dynamic = true})
 
-			r.SubContentLabel =
-				n(
+			NewNotification.SubContentLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
-						Text = q.SubContent,
+						Text = config.SubContent,
+						I18nDynamic = true,
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -5924,11 +5868,11 @@ local aa = {
 				)
 			-- Register SubContent for translation
 			if originalSubContent ~= "" then
-				TranslationSystem:Register(r.SubContentLabel, originalSubContent, "Text")
+				TranslationSystem:Register(NewNotification.SubContentLabel, originalSubContent, "Text", {Dynamic = true})
 			end
 
-			r.LabelHolder =
-				n(
+			NewNotification.LabelHolder =
+				New(
 					"Frame",
 					{
 						AutomaticSize = Enum.AutomaticSize.Y,
@@ -5937,7 +5881,7 @@ local aa = {
 						Size = UDim2.new(1, -68, 0, 0)
 					},
 					{
-						n(
+						New(
 							"UIListLayout",
 							{
 								SortOrder = Enum.SortOrder.LayoutOrder,
@@ -5945,14 +5889,14 @@ local aa = {
 								Padding = UDim.new(0, 3)
 							}
 						),
-						r.ContentLabel,
-						r.SubContentLabel
+						NewNotification.ContentLabel,
+						NewNotification.SubContentLabel
 					}
 				)
 
 			-- Buttons container (dynamic)
-			r.ButtonHolder =
-				n(
+			NewNotification.ButtonHolder =
+				New(
 					"Frame",
 					{
 						AutomaticSize = Enum.AutomaticSize.Y,
@@ -5961,7 +5905,7 @@ local aa = {
 						Size = UDim2.new(1, -68, 0, 0)
 					},
 					{
-						n(
+						New(
 							"UIListLayout",
 							{
 								SortOrder = Enum.SortOrder.LayoutOrder,
@@ -5974,14 +5918,14 @@ local aa = {
 				)
 
 			-- Create each dynamic button
-			if #q.Buttons > 0 then
-				for _, btnData in ipairs(q.Buttons) do
+			if #config.Buttons > 0 then
+				for _, btnData in ipairs(config.Buttons) do
 					local text = btnData.Text or "Button"
 					local color = btnData.Color or Color3.fromRGB(100, 100, 255)
 					-- estimate width (simple): clamp by text length - smaller for mobile
 					local estWidth = math.clamp(#tostring(text) * 7 + 20, 64, 140)
 
-					local btnStroke = n(
+					local btnStroke = New(
 						"UIStroke",
 						{
 							Color = color,
@@ -5992,7 +5936,7 @@ local aa = {
 					)
 
 					local btn =
-						n(
+						New(
 							"TextButton",
 							{
 								Text = text,
@@ -6010,23 +5954,23 @@ local aa = {
 								AutoButtonColor = false
 							},
 							{
-								n("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
 								btnStroke
 							}
 						)
 
 					-- hover spring with smoother animation
-					local _, btnSet = j.SpringMotor(0.05, btn, "BackgroundTransparency")
-					local _, btnStrokeSet = j.SpringMotor(0.5, btnStroke, "Transparency")
+					local _, btnSet = Creator.SpringMotor(0.05, btn, "BackgroundTransparency")
+					local _, btnStrokeSet = Creator.SpringMotor(0.5, btnStroke, "Transparency")
 
-					j.AddSignal(
+					Creator.AddSignal(
 						btn.MouseEnter,
 						function()
 							btnSet(0)
 							btnStrokeSet(0.2)
 						end
 					)
-					j.AddSignal(
+					Creator.AddSignal(
 						btn.MouseLeave,
 						function()
 							btnSet(0.05)
@@ -6035,7 +5979,7 @@ local aa = {
 					)
 
 					-- click behaviour
-					j.AddSignal(
+					Creator.AddSignal(
 						btn.MouseButton1Click,
 						function()
 							-- safe call to callback
@@ -6047,37 +5991,37 @@ local aa = {
 							end
 							-- default close unless btnData.KeepOpen == true
 							if not btnData.KeepOpen then
-								r:Close()
+								NewNotification:Close()
 							end
 						end
 					)
 
 					-- parent into holder
-					btn.Parent = r.ButtonHolder
+					btn.Parent = NewNotification.ButtonHolder
 				end
 			end
 
-			r.ProgressBar =
-				n(
+			NewNotification.ProgressBar =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 0, 4),
 						Position = UDim2.new(0, 0, 1, -4),
-						BackgroundColor3 = t,
+						BackgroundColor3 = accentColor,
 						BackgroundTransparency = 0.5,
 						BorderSizePixel = 0
 					},
 					{
-						n("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						n(
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New(
 							"UIGradient",
 							{
 								Color = ColorSequence.new({
-									ColorSequenceKeypoint.new(0, t),
+									ColorSequenceKeypoint.new(0, accentColor),
 									ColorSequenceKeypoint.new(1, Color3.fromRGB(
-										math.min(t.R * 255 * 1.2, 255),
-										math.min(t.G * 255 * 1.2, 255),
-										math.min(t.B * 255 * 1.2, 255)
+										math.min(accentColor.R * 255 * 1.2, 255),
+										math.min(accentColor.G * 255 * 1.2, 255),
+										math.min(accentColor.B * 255 * 1.2, 255)
 										))
 								})
 							}
@@ -6085,8 +6029,8 @@ local aa = {
 					}
 				)
 
-			r.CloseButton =
-				n(
+			NewNotification.CloseButton =
+				New(
 					"TextButton",
 					{
 						Text = "",
@@ -6097,8 +6041,8 @@ local aa = {
 						ThemeTag = {BackgroundColor3 = "Element"}
 					},
 					{
-						n("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						n(
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New(
 							"ImageLabel",
 							{
 								Image = "rbxassetid://10747384394",
@@ -6112,8 +6056,8 @@ local aa = {
 					}
 				)
 
-			r.Shadow =
-				n(
+			NewNotification.Shadow =
+				New(
 					"ImageLabel",
 					{
 						Size = UDim2.new(1, 40, 1, 40),
@@ -6129,175 +6073,175 @@ local aa = {
 				)
 
 			-- Include ButtonHolder in Root children so it renders
-			r.Root =
-				n(
+			NewNotification.Root =
+				New(
 					"Frame",
 					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Position = UDim2.fromScale(1, 0)},
 					{
-						r.Shadow,
-						r.AcrylicPaint.Frame,
-						r.IconFrame,
-						r.Title,
-						r.CloseButton,
-						r.LabelHolder,
-						r.ButtonHolder,
-						r.ProgressBar
+						NewNotification.Shadow,
+						NewNotification.AcrylicPaint.Frame,
+						NewNotification.IconFrame,
+						NewNotification.Title,
+						NewNotification.CloseButton,
+						NewNotification.LabelHolder,
+						NewNotification.ButtonHolder,
+						NewNotification.ProgressBar
 					}
 				)
 
-			if q.Content == "" then
-				r.ContentLabel.Visible = false
+			if config.Content == "" then
+				NewNotification.ContentLabel.Visible = false
 			end
-			if q.SubContent == "" then
-				r.SubContentLabel.Visible = false
+			if config.SubContent == "" then
+				NewNotification.SubContentLabel.Visible = false
 			end
 
-			r.Holder =
-				n("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 100), Parent = o.Holder}, {r.Root})
+			NewNotification.Holder =
+				New("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 100), Parent = Notification.Holder}, {NewNotification.Root})
 
-			local u = i.GroupMotor.new({Scale = 1, Offset = 80, Rotation = 8, Opacity = 0})
-			u:onStep(
-				function(v)
-					r.Root.Position = UDim2.new(v.Scale, v.Offset, 0, 0)
-					r.Root.Rotation = v.Rotation
-					r.Root.BackgroundTransparency = v.Opacity
-					if r.AcrylicPaint and r.AcrylicPaint.Frame then
-						r.AcrylicPaint.Frame.BackgroundTransparency = v.Opacity
+			local motor = Flipper.GroupMotor.new({Scale = 1, Offset = 80, Rotation = 8, Opacity = 0})
+			motor:onStep(
+				function(values)
+					NewNotification.Root.Position = UDim2.new(values.Scale, values.Offset, 0, 0)
+					NewNotification.Root.Rotation = values.Rotation
+					NewNotification.Root.BackgroundTransparency = values.Opacity
+					if NewNotification.AcrylicPaint and NewNotification.AcrylicPaint.Frame then
+						NewNotification.AcrylicPaint.Frame.BackgroundTransparency = values.Opacity
 					end
 				end
 			)
 
-			j.AddSignal(
-				r.CloseButton.MouseButton1Click,
+			Creator.AddSignal(
+				NewNotification.CloseButton.MouseButton1Click,
 				function()
-					r:Close()
+					NewNotification:Close()
 				end
 			)
 
-			local w, x = j.SpringMotor(0.92, r.CloseButton, "BackgroundTransparency")
-			j.AddSignal(
-				r.CloseButton.MouseEnter,
+			local closeMotor, setCloseTransparency = Creator.SpringMotor(0.92, NewNotification.CloseButton, "BackgroundTransparency")
+			Creator.AddSignal(
+				NewNotification.CloseButton.MouseEnter,
 				function()
-					x(0.8)
+					setCloseTransparency(0.8)
 				end
 			)
-			j.AddSignal(
-				r.CloseButton.MouseLeave,
+			Creator.AddSignal(
+				NewNotification.CloseButton.MouseLeave,
 				function()
-					x(0.92)
+					setCloseTransparency(0.92)
 				end
 			)
 
-			function r.Open(y)
-				local z = r.LabelHolder.AbsoluteSize.Y
-				local extraForButtons = (#q.Buttons > 0) and 36 or 0
-				r.Holder.Size = UDim2.new(1, 0, 0, math.max(60, 50 + z + extraForButtons))
+			function NewNotification.Open(_self)
+				local labelHeight = NewNotification.LabelHolder.AbsoluteSize.Y
+				local extraForButtons = (#config.Buttons > 0) and 36 or 0
+				NewNotification.Holder.Size = UDim2.new(1, 0, 0, math.max(60, 50 + labelHeight + extraForButtons))
 
 				-- Improved slide-in animation with fade
-				u:setGoal(
+				motor:setGoal(
 					{
-						Scale = l(0, {frequency = 6, dampingRatio = 0.75}),
-						Offset = l(0, {frequency = 6, dampingRatio = 0.75}),
-						Rotation = l(0, {frequency = 7, dampingRatio = 0.85}),
-						Opacity = l(1, {frequency = 8, dampingRatio = 0.9})
+						Scale = Spring(0, {frequency = 6, dampingRatio = 0.75}),
+						Offset = Spring(0, {frequency = 6, dampingRatio = 0.75}),
+						Rotation = Spring(0, {frequency = 7, dampingRatio = 0.85}),
+						Opacity = Spring(1, {frequency = 8, dampingRatio = 0.9})
 					}
 				)
 
 				-- Icon bounce animation - smoother and smaller
-				r.IconFrame.Size = UDim2.fromOffset(0, 0)
-				local A = game:GetService("TweenService")
-				local B = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-				task.wait(0.15)
-				A:Create(r.IconFrame, B, {Size = UDim2.fromOffset(40, 40)}):Play()
+				NewNotification.IconFrame.Size = UDim2.fromOffset(0, 0)
+				-- Runs on its own thread so Notify returns without yielding.
+				local TweenService = game:GetService("TweenService")
+				local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+				task.delay(0.15, function()
+					TweenService:Create(NewNotification.IconFrame, tweenInfo, {Size = UDim2.fromOffset(40, 40)}):Play()
 
-				-- Subtle glow effect on icon
-				task.spawn(function()
+					-- Subtle glow effect on icon
 					task.wait(0.2)
-					local iconFrame = r.IconFrame
-					A:Create(iconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					local iconFrame = NewNotification.IconFrame
+					TweenService:Create(iconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{BackgroundTransparency = 0.75}):Play()
 				end)
 			end
 
-			function r.Close(y)
-				if not r.Closed then
-					r.Closed = true
+			function NewNotification.Close(_self)
+				if not NewNotification.Closed then
+					NewNotification.Closed = true
 					task.spawn(
 						function()
 							-- Improved slide-out with fade and rotation
-							u:setGoal(
+							motor:setGoal(
 								{
-									Scale = l(1, {frequency = 7, dampingRatio = 0.8}),
-									Offset = l(100, {frequency = 7, dampingRatio = 0.8}),
-									Rotation = l(-8, {frequency = 8, dampingRatio = 0.85}),
-									Opacity = l(0, {frequency = 6, dampingRatio = 1})
+									Scale = Spring(1, {frequency = 7, dampingRatio = 0.8}),
+									Offset = Spring(100, {frequency = 7, dampingRatio = 0.8}),
+									Rotation = Spring(-8, {frequency = 8, dampingRatio = 0.85}),
+									Opacity = Spring(0, {frequency = 6, dampingRatio = 1})
 								}
 							)
 
 							-- Icon shrink animation
-							local A = game:GetService("TweenService")
-							A:Create(r.IconFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+							local TweenService = game:GetService("TweenService")
+							TweenService:Create(NewNotification.IconFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 								{Size = UDim2.fromOffset(0, 0)}):Play()
 
 							task.wait(0.6)
-							if e(h).UseAcrylic then
-								if r.AcrylicPaint and r.AcrylicPaint.Model then
-									r.AcrylicPaint.Model:Destroy()
+							if requireModule(Root).UseAcrylic then
+								if NewNotification.AcrylicPaint and NewNotification.AcrylicPaint.Model then
+									NewNotification.AcrylicPaint.Model:Destroy()
 								end
 							end
-							if r.Holder and r.Holder.Destroy then
-								r.Holder:Destroy()
+							if NewNotification.Holder and NewNotification.Holder.Destroy then
+								NewNotification.Holder:Destroy()
 							end
 						end
 					)
 				end
 			end
 
-			r:Open()
+			NewNotification:Open()
 
-			if q.Duration then
-				r.ProgressBar.Size = UDim2.new(1, 0, 0, 4)
-				local A = game:GetService("TweenService")
-				local B = TweenInfo.new(q.Duration, Enum.EasingStyle.Linear)
-				A:Create(r.ProgressBar, B, {Size = UDim2.new(0, 0, 0, 4)}):Play()
+			if config.Duration then
+				NewNotification.ProgressBar.Size = UDim2.new(1, 0, 0, 4)
+				local TweenService = game:GetService("TweenService")
+				local tweenInfo = TweenInfo.new(config.Duration, Enum.EasingStyle.Linear)
+				TweenService:Create(NewNotification.ProgressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 4)}):Play()
 				task.delay(
-					q.Duration,
+					config.Duration,
 					function()
-						r:Close()
+						NewNotification:Close()
 					end
 				)
 			end
 
-			return r
+			return NewNotification
 		end
 
-		return o
+		return Notification
 	end,
 	[13] = function()
-		local c, d, e, f, g = b(13)
-		local h = d.Parent.Parent
-		local i = e(h.Creator)
-		local j = i.New
-		return function(k, l)
-			local m = {}
-			m.Visible = true
-			m.Layout = j("UIListLayout", {Padding = UDim.new(0, 5)})
-			m.Container =
-				j(
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(13)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New = Creator.New
+		return function(title, parent)
+			local Section = {}
+			Section.Visible = true
+			Section.Layout = New("UIListLayout", {Padding = UDim.new(0, 5)})
+			Section.Container =
+				New(
 					"Frame",
 					{Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 24), BackgroundTransparency = 1},
-					{m.Layout}
+					{Section.Layout}
 				)
-			m.Root =
-				j(
+			Section.Root =
+				New(
 					"Frame",
-					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 7, Parent = l},
+					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 7, Parent = parent},
 					{
-						j(
+						New(
 							"TextLabel",
 							{
 								RichText = true,
-								Text = k,
+								Text = title,
 								TextTransparency = 0,
 								FontFace = Font.new(
 									"rbxassetid://12187365364",
@@ -6312,76 +6256,76 @@ local aa = {
 								ThemeTag = {TextColor3 = "Text"}
 							}
 						),
-						m.Container
+						Section.Container
 					}
 				)
-			i.AddSignal(
-				m.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
+			Creator.AddSignal(
+				Section.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					m.Container.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y)
-					if m.Visible then
-						m.Root.Size = UDim2.new(1, 0, 0, m.Layout.AbsoluteContentSize.Y + 25)
+					Section.Container.Size = UDim2.new(1, 0, 0, Section.Layout.AbsoluteContentSize.Y)
+					if Section.Visible then
+						Section.Root.Size = UDim2.new(1, 0, 0, Section.Layout.AbsoluteContentSize.Y + 25)
 					end
 				end
 			)
-			m.SetVisible = function(n)
-				m.Visible = n == true
-				m.Root.Visible = m.Visible
-				m.Root.Size = UDim2.new(1, 0, 0, m.Visible and (m.Layout.AbsoluteContentSize.Y + 25) or 0)
+			Section.SetVisible = function(visible)
+				Section.Visible = visible == true
+				Section.Root.Visible = Section.Visible
+				Section.Root.Size = UDim2.new(1, 0, 0, Section.Visible and (Section.Layout.AbsoluteContentSize.Y + 25) or 0)
 			end
-			return m
+			return Section
 		end
 	end,
 	[14] = function()
-		local c, d, e, f, g = b(14)
-		local h = d.Parent.Parent
-		local i, j = e(h.Packages.Flipper), e(h.Creator)
-		local k, l, m, n, o =
-			j.New,
-		i.Spring.new,
-		i.Instant.new,
-		h.Components,
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(14)
+		local Root = moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New, Spring, Instant, Components, TabModule =
+			Creator.New,
+		Flipper.Spring.new,
+		Flipper.Instant.new,
+		Root.Components,
 		{Window = nil, Tabs = {}, Containers = {}, SelectedTab = 0, TabCount = 0}
-		function o.Init(p, q)
-			o.Window = q
-			return o
+		function TabModule.Init(_self, window)
+			TabModule.Window = window
+			return TabModule
 		end
-		function o.GetCurrentTabPos(p)
-			local q, r = o.Window.TabHolder.AbsolutePosition.Y, o.Tabs[o.SelectedTab].Frame.AbsolutePosition.Y
-			return r - q
+		function TabModule.GetCurrentTabPos(_self)
+			local tabHolderY, tabY = TabModule.Window.TabHolder.AbsolutePosition.Y, TabModule.Tabs[TabModule.SelectedTab].Frame.AbsolutePosition.Y
+			return tabY - tabHolderY
 		end
-		function o.New(p, q, r, s)
-			local t, u = e(h), o.Window
-			local v = t.Elements
-			o.TabCount = o.TabCount + 1
-			local w, x = o.TabCount, {Selected = false, Name = q, Type = "Tab", Index = o.TabCount}
-			x.Id = "tab-" .. tostring(w) .. "-" .. tostring(q)
-			if t:GetIcon(r) then
-				r = t:GetIcon(r)
+		function TabModule.New(_self, title, icon, parent)
+			local Library, window = requireModule(Root), TabModule.Window
+			local elements = Library.Elements
+			TabModule.TabCount = TabModule.TabCount + 1
+			local tabIndex, Tab = TabModule.TabCount, {Selected = false, Name = title, Type = "Tab", Index = TabModule.TabCount}
+			Tab.Id = "tab-" .. tostring(tabIndex) .. "-" .. tostring(title)
+			if Library:GetIcon(icon) then
+				icon = Library:GetIcon(icon)
 			end
-			if r == "" or nil then
-				r = nil
+			if icon == "" then
+				icon = nil
 			end
-			x.Frame =
-				k(
+			Tab.Frame =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.new(1, 0, 0, 34),
-						Name = "ATGTab_" .. tostring(w),
-						LayoutOrder = w,
+						Name = "ATGTab_" .. tostring(tabIndex),
+						LayoutOrder = tabIndex,
 						BackgroundTransparency = 1,
-						Parent = s,
+						Parent = parent,
 						ThemeTag = {BackgroundColor3 = "Tab"}
 					},
 					{
-						k("UICorner", {CornerRadius = UDim.new(0, 6)}),
-						k(
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New(
 							"TextLabel",
 							{
 								Name = "TabLabel",
 								AnchorPoint = Vector2.new(0, 0.5),
-								Position = r and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
-								Text = q,
+								Position = icon and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
+								Text = title,
 								RichText = true,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextTransparency = 0,
@@ -6398,7 +6342,7 @@ local aa = {
 								ThemeTag = {TextColor3 = "Text"}
 							}
 						),
-						k(
+						New(
 							"ImageLabel",
 							{
 								Name = "TabIcon",
@@ -6406,27 +6350,27 @@ local aa = {
 								Size = UDim2.fromOffset(16, 16),
 								Position = UDim2.new(0, 8, 0.5, 0),
 								BackgroundTransparency = 1,
-								Image = r and r or nil,
+								Image = icon and icon or nil,
 								ThemeTag = {ImageColor3 = "Text"}
 							}
 						)
 					}
 				)
-			x.Label = x.Frame:FindFirstChild("TabLabel")
-			x.IconObject = x.Frame:FindFirstChild("TabIcon")
+			Tab.Label = Tab.Frame:FindFirstChild("TabLabel")
+			Tab.IconObject = Tab.Frame:FindFirstChild("TabIcon")
 			-- Translate the sidebar label as well as the large selected-tab title,
 			-- allowing navigation search to match the language users actually see.
-			if x.Label then
-				TranslationSystem:Register(x.Label, q, "Text")
+			if Tab.Label then
+				TranslationSystem:Register(Tab.Label, title, "Text")
 			end
-			local y = k("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
-			x.ContainerFrame =
-				k(
+			local listLayout = New("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
+			Tab.ContainerFrame =
+				New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.fromScale(1, 1),
 						BackgroundTransparency = 1,
-						Parent = u.ContainerHolder,
+						Parent = window.ContainerHolder,
 						Visible = false,
 						BottomImage = "rbxassetid://6889812791",
 						MidImage = "rbxassetid://6889812721",
@@ -6439,8 +6383,8 @@ local aa = {
 						ScrollingDirection = Enum.ScrollingDirection.Y
 					},
 					{
-						y,
-						k(
+						listLayout,
+						New(
 							"UIPadding",
 							{
 								PaddingRight = UDim.new(0, 10),
@@ -6451,122 +6395,126 @@ local aa = {
 						)
 					}
 				)
-			j.AddSignal(
-				y:GetPropertyChangedSignal "AbsoluteContentSize",
+			Creator.AddSignal(
+				listLayout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					x.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, y.AbsoluteContentSize.Y + 2)
+					Tab.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 2)
 				end
 			)
-			x.Motor, x.SetTransparency = j.SpringMotor(1, x.Frame, "BackgroundTransparency")
-			j.AddSignal(
-				x.Frame.MouseEnter,
+			Tab.Motor, Tab.SetTransparency = Creator.SpringMotor(1, Tab.Frame, "BackgroundTransparency")
+			Creator.AddSignal(
+				Tab.Frame.MouseEnter,
 				function()
-					x.SetTransparency(x.Selected and 0.85 or 0.89)
+					Tab.SetTransparency(Tab.Selected and 0.85 or 0.89)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseLeave,
+			Creator.AddSignal(
+				Tab.Frame.MouseLeave,
 				function()
-					x.SetTransparency(x.Selected and 0.89 or 1)
+					Tab.SetTransparency(Tab.Selected and 0.89 or 1)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseButton1Down,
+			Creator.AddSignal(
+				Tab.Frame.MouseButton1Down,
 				function()
-					x.SetTransparency(0.92)
+					Tab.SetTransparency(0.92)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseButton1Up,
+			Creator.AddSignal(
+				Tab.Frame.MouseButton1Up,
 				function()
-					x.SetTransparency(x.Selected and 0.85 or 0.89)
+					Tab.SetTransparency(Tab.Selected and 0.85 or 0.89)
 				end
 			)
-			j.AddSignal(
-				x.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				Tab.Frame.MouseButton1Click,
 				function()
-					if x.SuppressClick then
-						x.SuppressClick = false
+					if Tab.SuppressClick then
+						Tab.SuppressClick = false
 						return
 					end
-					o:SelectTab(w)
+					TabModule:SelectTab(tabIndex)
 				end
 			)
-			o.Containers[w] = x.ContainerFrame
-			o.Tabs[w] = x
-			x.Container = x.ContainerFrame
-			x.ScrollFrame = x.Container
-			x.Select = function()
-				o:SelectTab(w)
+			TabModule.Containers[tabIndex] = Tab.ContainerFrame
+			TabModule.Tabs[tabIndex] = Tab
+			Tab.Container = Tab.ContainerFrame
+			Tab.ScrollFrame = Tab.Container
+			Tab.Select = function()
+				TabModule:SelectTab(tabIndex)
 			end
-			local function decorateSectionTitle(z)
-				return z
+			local function decorateSectionTitle(sectionTitle)
+				return sectionTitle
 			end
-			function x.AddSection(z, A)
-				local B, C = {Type = "Section"}, e(n.Section)(decorateSectionTitle(A), x.Container)
-				B.Container = C.Container
+			function Tab.AddSection(_self, sectionTitle)
+				local Section, sectionComponent = {Type = "Section"}, requireModule(Components.Section)(decorateSectionTitle(sectionTitle), Tab.Container)
+				Section.Container = sectionComponent.Container
 				-- Expose the section frame as an optional, backwards-compatible
 				-- handle. Addons can use LayoutOrder/Visible without depending on
 				-- private descendants of the tab.
-				B.Root = C.Root
-				B.SetVisible = function(D, E)
-					return C.SetVisible(type(D) == "boolean" and D or E)
+				Section.Root = sectionComponent.Root
+				Section.SetVisible = function(selfOrVisible, visible)
+					return sectionComponent.SetVisible(type(selfOrVisible) == "boolean" and selfOrVisible or visible)
 				end
-				B.ScrollFrame = x.Container
-				B.Tab = x
-				B.TabId = x.Id
-				B.TabTitle = x.Name
-				setmetatable(B, v)
-				return B
+				Section.ScrollFrame = Tab.Container
+				Section.Tab = Tab
+				Section.TabId = Tab.Id
+				Section.TabTitle = Tab.Name
+				setmetatable(Section, elements)
+				return Section
 			end
-			setmetatable(x, v)
-			return x
+			setmetatable(Tab, elements)
+			return Tab
 		end
-		function o.SelectTab(p, q)
-			local r = o.Window
-			o.SelectedTab = q
-			for s, t in next, o.Tabs do
-				t.SetTransparency(1)
-				t.Selected = false
+		function TabModule.SelectTab(_self, tabIndex)
+			local window = TabModule.Window
+			local library = requireModule(Root)
+			if type(library._CloseDropdowns) == "function" then
+				library._CloseDropdowns()
 			end
-			o.Tabs[q].SetTransparency(0.89)
-			o.Tabs[q].Selected = true
-			local w = e(h)
-			if w.Workspace and type(w.Workspace.TouchTab) == "function" then
-				w.Workspace:TouchTab(o.Tabs[q])
+			TabModule.SelectedTab = tabIndex
+			for _, tab in next, TabModule.Tabs do
+				tab.SetTransparency(1)
+				tab.Selected = false
 			end
-			r.TabDisplay.Text = o.Tabs[q].Name
-			TranslationSystem:Register(r.TabDisplay, o.Tabs[q].Name, "Text")
-			r.SelectorPosMotor:setGoal(l(o:GetCurrentTabPos(), {frequency = 6}))
+			TabModule.Tabs[tabIndex].SetTransparency(0.89)
+			TabModule.Tabs[tabIndex].Selected = true
+			local Library = requireModule(Root)
+			if Library.Workspace and type(Library.Workspace.TouchTab) == "function" then
+				Library.Workspace:TouchTab(TabModule.Tabs[tabIndex])
+			end
+			window.TabDisplay.Text = TabModule.Tabs[tabIndex].Name
+			TranslationSystem:Register(window.TabDisplay, TabModule.Tabs[tabIndex].Name, "Text")
+			window.SelectorPosMotor:setGoal(Spring(TabModule:GetCurrentTabPos(), {frequency = 6}))
 			task.spawn(
 				function()
-					r.ContainerPosMotor:setGoal(l(110, {frequency = 10}))
-					r.ContainerBackMotor:setGoal(l(1, {frequency = 10}))
+					window.ContainerPosMotor:setGoal(Spring(110, {frequency = 10}))
+					window.ContainerBackMotor:setGoal(Spring(1, {frequency = 10}))
 					task.wait(0.15)
-					for u, v in next, o.Containers do
-						v.Visible = false
+					for _, container in next, TabModule.Containers do
+						container.Visible = false
 					end
-					o.Containers[q].Visible = true
-					r.ContainerPosMotor:setGoal(l(94, {frequency = 5}))
-					r.ContainerBackMotor:setGoal(l(0, {frequency = 8}))
+					TabModule.Containers[tabIndex].Visible = true
+					window.ContainerPosMotor:setGoal(Spring(94, {frequency = 5}))
+					window.ContainerBackMotor:setGoal(Spring(0, {frequency = 8}))
 				end
 			)
 		end
-		return o
+		return TabModule
 	end,
 	[15] = function()
-		local c, d, e, f, g = b(15)
-		local TextService, i = game:GetService("TextService"), d.Parent.Parent
-		local j, k = e(i.Packages.Flipper), e(i.Creator)
-		local New = k.New
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(15)
+		local TextService, Root = game:GetService("TextService"), moduleScript.Parent.Parent
+		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local New = Creator.New
 		local TweenService = game:GetService("TweenService")
 
-		return function(parent, n)
-			n = n or false
-			local o = {}
+		return function(parent, acrylic)
+			acrylic = acrylic or false
+			local Textbox = {}
 
 			-- Input (TextBox) - font size 16 to match CSS
-			o.Input =
+			Textbox.Input =
 				New(
 					"TextBox",
 					{
@@ -6591,7 +6539,7 @@ local aa = {
 				)
 
 			-- Container frame (clips descendants)
-			o.Container =
+			Textbox.Container =
 				New(
 					"Frame",
 					{
@@ -6601,7 +6549,7 @@ local aa = {
 						Size = UDim2.new(1, -16, 1, 0),
 						ZIndex = 1
 					},
-					{o.Input}
+					{Textbox.Input}
 				)
 
 			-- Main frame stroke & corner radius (we'll reuse corner radius for the lines)
@@ -6612,8 +6560,8 @@ local aa = {
 				{
 					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					Thickness = 1.2,
-					Transparency = n and 0.5 or 0.65,
-					ThemeTag = {Color = n and "InElementBorder" or "DialogButtonBorder"},
+					Transparency = acrylic and 0.5 or 0.65,
+					ThemeTag = {Color = acrylic and "InElementBorder" or "DialogButtonBorder"},
 					ZIndex = 1
 				}
 			)
@@ -6622,33 +6570,33 @@ local aa = {
 			local originalStrokeColor = frameStroke.Color
 
 			-- Main frame
-			o.Frame =
+			Textbox.Frame =
 				New(
 					"Frame",
 					{
 						Size = UDim2.new(0, 0, 0, 36),
-						BackgroundTransparency = n and 0.92 or 0,
+						BackgroundTransparency = acrylic and 0.92 or 0,
 						Parent = parent,
-						ThemeTag = {BackgroundColor3 = n and "Input" or "DialogInput"},
+						ThemeTag = {BackgroundColor3 = acrylic and "Input" or "DialogInput"},
 						ZIndex = 0
 					},
 					{
 						New("UICorner", {CornerRadius = frameCornerRadius}),
 						frameStroke,
-						o.Container
+						Textbox.Container
 					}
 				)
 
 			-- Base line (จาง ๆ) — now inset and with UICorner soปลายโค้งตามกล่องหลัก
 			local inset = 3 -- same inset we use for highlight, so ends line up
-			o.BaseLine =
+			Textbox.BaseLine =
 				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, -2 * inset, 0, 2), -- full width minus inset each side
 						Position = UDim2.new(0, inset, 1, -2),
 						AnchorPoint = Vector2.new(0, 0),
-						BackgroundColor3 = Color3.fromRGB(255, 255, 255), -- white
+						BackgroundColor3 = Creator.GetThemeProperty("Text"),
 						BackgroundTransparency = 0.85, -- default: very faint
 						ZIndex = 1
 					},
@@ -6656,35 +6604,35 @@ local aa = {
 						New("UICorner", {CornerRadius = frameCornerRadius}) -- ทำให้ปลายโค้งตามกล่องหลัก
 					}
 				)
-			o.BaseLine.Parent = o.Frame
+			Textbox.BaseLine.Parent = Textbox.Frame
 
 			-- Highlight / underline (ไฮไลต์สีน้ำเงิน) - starts width 0, also rounded
-			o.Highlight =
+			Textbox.Highlight =
 				New(
 					"Frame",
 					{
 						Size = UDim2.new(0, 0, 0, 2), -- start at width 0
 						Position = UDim2.new(0, inset, 1, -2), -- same inset as baseline
 						AnchorPoint = Vector2.new(0, 0),
-						BackgroundColor3 = Color3.fromRGB(0, 123, 255), -- #007bff
 						BackgroundTransparency = 0,
-						ZIndex = 2
+						ZIndex = 2,
+						ThemeTag = {BackgroundColor3 = acrylic and "InputIndicator" or "DialogInputLine"}
 					},
 					{
 						New("UICorner", {CornerRadius = frameCornerRadius}) -- ปลายโค้ง
 					}
 				)
-			o.Highlight.Parent = o.Frame
+			Textbox.Highlight.Parent = Textbox.Frame
 
 			-- Floating label (input-label)
-			o.Label =
+			Textbox.Label =
 				New(
 					"TextLabel",
 					{
 						Text = "",
 						Font = Enum.Font.Gotham,
 						TextSize = 16,
-						TextColor3 = Color3.fromRGB(204, 204, 204),
+						TextColor3 = Creator.GetThemeProperty("SubText"),
 						TextTransparency = 1, -- เริ่มโปร่งตาม CSS
 						BackgroundTransparency = 1,
 						Size = UDim2.new(1, -24, 0, 18),
@@ -6695,7 +6643,7 @@ local aa = {
 						TextYAlignment = Enum.TextYAlignment.Center
 					}
 				)
-			o.Label.Parent = o.Frame
+			Textbox.Label.Parent = Textbox.Frame
 
 			-- Helper tweens to match CSS transitions: duration 0.3, easing "ease" -> use Sine Out
 			local TWEEN_TIME = 0.3
@@ -6707,18 +6655,18 @@ local aa = {
 				instant = instant or false
 				local targetPos = UDim2.new(0, 12, 0, -20) -- top: -20px
 				local targetSize = 12
-				local color = Color3.fromRGB(0, 123, 255) -- #007bff
+				local color = Creator.GetThemeProperty("Accent")
 				if instant then
-					o.Label.Position = targetPos
-					o.Label.TextSize = targetSize
-					o.Label.TextColor3 = color
-					o.Label.TextTransparency = 0
+					Textbox.Label.Position = targetPos
+					Textbox.Label.TextSize = targetSize
+					Textbox.Label.TextColor3 = color
+					Textbox.Label.TextTransparency = 0
 				else
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
 						Position = targetPos,
 						TextTransparency = 0
 					}):Play()
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = targetSize, TextColor3 = color}):Play()
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = targetSize, TextColor3 = color}):Play()
 				end
 			end
 
@@ -6726,18 +6674,18 @@ local aa = {
 				instant = instant or false
 				local originPos = UDim2.new(0, 12, 0, 0) -- top: 0
 				local originSize = 16
-				local originColor = Color3.fromRGB(204, 204, 204)
+				local originColor = Creator.GetThemeProperty("SubText")
 				if instant then
-					o.Label.Position = originPos
-					o.Label.TextSize = originSize
-					o.Label.TextColor3 = originColor
-					o.Label.TextTransparency = 1
+					Textbox.Label.Position = originPos
+					Textbox.Label.TextSize = originSize
+					Textbox.Label.TextColor3 = originColor
+					Textbox.Label.TextTransparency = 1
 				else
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {
 						Position = originPos,
 						TextTransparency = 1
 					}):Play()
-					TweenService:Create(o.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = originSize, TextColor3 = originColor}):Play()
+					TweenService:Create(Textbox.Label, TweenInfo.new(TWEEN_TIME, EASING, DIR), {TextSize = originSize, TextColor3 = originColor}):Play()
 				end
 			end
 
@@ -6747,10 +6695,10 @@ local aa = {
 				local target = UDim2.new(1, -2 * inset, 0, 2)
 				local targetPos = UDim2.new(0, inset, 1, -2)
 				if instant then
-					o.Highlight.Size = target
-					o.Highlight.Position = targetPos
+					Textbox.Highlight.Size = target
+					Textbox.Highlight.Position = targetPos
 				else
-					TweenService:Create(o.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = targetPos}):Play()
+					TweenService:Create(Textbox.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = targetPos}):Play()
 				end
 			end
 
@@ -6759,10 +6707,10 @@ local aa = {
 				local target = UDim2.new(0, 0, 0, 2)
 				local pos = UDim2.new(0, inset, 1, -2)
 				if instant then
-					o.Highlight.Size = target
-					o.Highlight.Position = pos
+					Textbox.Highlight.Size = target
+					Textbox.Highlight.Position = pos
 				else
-					TweenService:Create(o.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = pos}):Play()
+					TweenService:Create(Textbox.Highlight, TweenInfo.new(TWEEN_TIME, EASING, DIR), {Size = target, Position = pos}):Play()
 				end
 			end
 
@@ -6770,20 +6718,20 @@ local aa = {
 			local function emphasizeBaseLine(instant)
 				instant = instant or false
 				if instant then
-					o.BaseLine.BackgroundTransparency = 0.6
-					o.BaseLine.BackgroundColor3 = Color3.fromRGB(240, 240, 240) -- เล็กน้อยเข้มขึ้น
+					Textbox.BaseLine.BackgroundTransparency = 0.6
+					Textbox.BaseLine.BackgroundColor3 = Creator.GetThemeProperty("Text")
 				else
-					TweenService:Create(o.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6, BackgroundColor3 = Color3.fromRGB(240, 240, 240)}):Play()
+					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6, BackgroundColor3 = Creator.GetThemeProperty("Text")}):Play()
 				end
 			end
 
 			local function deEmphasizeBaseLine(instant)
 				instant = instant or false
 				if instant then
-					o.BaseLine.BackgroundTransparency = 0.85
-					o.BaseLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					Textbox.BaseLine.BackgroundTransparency = 0.85
+					Textbox.BaseLine.BackgroundColor3 = Creator.GetThemeProperty("Text")
 				else
-					TweenService:Create(o.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.85, BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+					TweenService:Create(Textbox.BaseLine, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.85, BackgroundColor3 = Creator.GetThemeProperty("Text")}):Play()
 				end
 			end
 
@@ -6791,8 +6739,8 @@ local aa = {
 			-- The old calculation ran before AbsoluteSize/TextBounds had settled,
 			-- which could leave a focused input at a negative X offset until blur.
 			local function setInputOffset(offset)
-				if o.Input.Position.X.Offset ~= offset or o.Input.Position.Y.Offset ~= 0 then
-					o.Input.Position = UDim2.fromOffset(offset, 0)
+				if Textbox.Input.Position.X.Offset ~= offset or Textbox.Input.Position.Y.Offset ~= 0 then
+					Textbox.Input.Position = UDim2.fromOffset(offset, 0)
 				end
 			end
 
@@ -6801,12 +6749,12 @@ local aa = {
 					return 0
 				end
 
-				local inputFont = o.Input.Font
+				local inputFont = Textbox.Input.Font
 				if inputFont ~= Enum.Font.Unknown then
 					local measured, textSize = pcall(function()
 						return TextService:GetTextSize(
 							beforeCursor,
-							o.Input.TextSize,
+							Textbox.Input.TextSize,
 							inputFont,
 							Vector2.new(math.huge, math.huge)
 						)
@@ -6819,7 +6767,7 @@ local aa = {
 				-- Custom FontFace reports Enum.Font.Unknown to TextService. Use the
 				-- rendered TextBounds for a safe approximation instead of emitting
 				-- an error or shifting all input text outside its clipped container.
-				local fullText = o.Input.Text
+				local fullText = Textbox.Input.Text
 				if textWidth > 0 and #fullText > 0 then
 					return textWidth * math.clamp(#beforeCursor / #fullText, 0, 1)
 				end
@@ -6828,7 +6776,7 @@ local aa = {
 
 			local function adjustInputPosition()
 				local pad = 2
-				local width = o.Container.AbsoluteSize.X
+				local width = Textbox.Container.AbsoluteSize.X
 				if width <= 2 * pad then
 					-- Layout has not resolved yet. Leave the input in a safe position;
 					-- AbsoluteSize will trigger a second pass once it is visible.
@@ -6836,20 +6784,20 @@ local aa = {
 					return
 				end
 
-				local textWidth = math.max(0, o.Input.TextBounds.X)
-				if not o.Input:IsFocused() or textWidth <= width - 2 * pad then
+				local textWidth = math.max(0, Textbox.Input.TextBounds.X)
+				if not Textbox.Input:IsFocused() or textWidth <= width - 2 * pad then
 					setInputOffset(pad)
 					return
 				end
 
-				local cursorPosition = o.Input.CursorPosition
+				local cursorPosition = Textbox.Input.CursorPosition
 				if not cursorPosition or cursorPosition < 1 then
 					return
 				end
 
-				local beforeCursor = string.sub(o.Input.Text, 1, cursorPosition - 1)
+				local beforeCursor = string.sub(Textbox.Input.Text, 1, cursorPosition - 1)
 				local cursorWidth = getCursorWidth(beforeCursor, textWidth)
-				local targetOffset = o.Input.Position.X.Offset
+				local targetOffset = Textbox.Input.Position.X.Offset
 				local cursorX = targetOffset + cursorWidth
 				local rightEdge = width - pad
 				if cursorX < pad then
@@ -6865,15 +6813,15 @@ local aa = {
 			end
 
 			task.spawn(adjustInputPosition)
-			k.AddSignal(o.Input:GetPropertyChangedSignal("Text"), adjustInputPosition)
-			k.AddSignal(o.Input:GetPropertyChangedSignal("CursorPosition"), adjustInputPosition)
-			k.AddSignal(o.Container:GetPropertyChangedSignal("AbsoluteSize"), adjustInputPosition)
+			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("Text"), adjustInputPosition)
+			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("CursorPosition"), adjustInputPosition)
+			Creator.AddSignal(Textbox.Container:GetPropertyChangedSignal("AbsoluteSize"), adjustInputPosition)
 			pcall(function()
-				k.AddSignal(o.Input:GetPropertyChangedSignal("TextBounds"), adjustInputPosition)
+				Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("TextBounds"), adjustInputPosition)
 			end)
 
 			-- Focus behavior: match CSS :focus rules (0.3s transitions), plus our extra emphasis
-			k.AddSignal(o.Input.Focused, function()
+			Creator.AddSignal(Textbox.Input.Focused, function()
 				adjustInputPosition()
 				floatLabel(false)
 				expandHighlight(false)
@@ -6885,17 +6833,17 @@ local aa = {
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 					Transparency = 0.2,
 					Thickness = 1.6,
-					Color = Color3.fromRGB(40, 120, 215) -- subtle darker blue-ish stroke on focus
+					Color = Creator.GetThemeProperty("Accent")
 				}):Play()
 
-				TweenService:Create(o.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = n and 0.88 or 0}):Play()
-				k.OverrideTag(o.Frame, {BackgroundColor3 = n and "InputFocused" or "DialogHolder"})
-				k.OverrideTag(o.Highlight, {BackgroundColor3 = "Accent"})
+				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.88 or 0}):Play()
+				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "InputFocused" or "DialogHolder"})
+				Creator.OverrideTag(Textbox.Highlight, {BackgroundColor3 = "Accent"})
 			end)
 
-			k.AddSignal(o.Input.FocusLost, function()
+			Creator.AddSignal(Textbox.Input.FocusLost, function()
 				adjustInputPosition()
-				local hasText = o.Input.Text and #o.Input.Text > 0
+				local hasText = Textbox.Input.Text and #Textbox.Input.Text > 0
 				if not hasText then
 					sinkLabel(false)
 				else
@@ -6909,35 +6857,35 @@ local aa = {
 
 				-- Stroke return: revert color/transparency/thickness back
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-					Transparency = n and 0.5 or 0.65,
+					Transparency = acrylic and 0.5 or 0.65,
 					Thickness = 1.2,
 					Color = originalStrokeColor
 				}):Play()
 
-				TweenService:Create(o.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = n and 0.92 or 0}):Play()
-				k.OverrideTag(o.Frame, {BackgroundColor3 = n and "Input" or "DialogInput"})
-				k.OverrideTag(o.Highlight, {BackgroundColor3 = n and "InputIndicator" or "DialogInputLine"})
+				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.92 or 0}):Play()
+				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "Input" or "DialogInput"})
+				Creator.OverrideTag(Textbox.Highlight, {BackgroundColor3 = acrylic and "InputIndicator" or "DialogInputLine"})
 			end)
 
 			-- Text change: emphasize baseline while typing
-			k.AddSignal(o.Input:GetPropertyChangedSignal("Text"), function()
-				if o.Input.Text and #o.Input.Text > 0 then
+			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("Text"), function()
+				if Textbox.Input.Text and #Textbox.Input.Text > 0 then
 					-- if user types and the field is focused we keep baseline emphasized
-					if o.Input:IsFocused() then
+					if Textbox.Input:IsFocused() then
 						emphasizeBaseLine(false)
 					else
 						-- if not focused but has text keep label floated
 						floatLabel(false)
 					end
 				else
-					if not o.Input:IsFocused() then
+					if not Textbox.Input:IsFocused() then
 						deEmphasizeBaseLine(false)
 					end
 				end
 			end)
 
 			-- initial state: follow CSS initial
-			if o.Input.Text and #o.Input.Text > 0 then
+			if Textbox.Input.Text and #Textbox.Input.Text > 0 then
 				floatLabel(true)
 				collapseHighlight(true)
 				deEmphasizeBaseLine(true)
@@ -6947,42 +6895,42 @@ local aa = {
 				deEmphasizeBaseLine(true)
 			end
 
-			return o
+			return Textbox
 		end
 	end,
 
 	[16] = function()
-		local c, d, e, f, g = b(16)
-		local h, i = d.Parent.Parent, e(d.Parent.Assets)
-		local j, k = e(h.Creator), e(h.Packages.Flipper)
-		local l, m = j.New, j.AddSignal
-		return function(n)
-			local o, p, q =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(16)
+		local Root, Assets = moduleScript.Parent.Parent, requireModule(moduleScript.Parent.Assets)
+		local Creator, Flipper = requireModule(Root.Creator), requireModule(Root.Packages.Flipper)
+		local New, AddSignal = Creator.New, Creator.AddSignal
+		return function(config)
+			local TitleBar, Library, BarButton =
 				{},
-			e(h),
-			function(o, p, q, r)
-				local s = {
-					Callback = r or function()
+			requireModule(Root),
+			function(icon, position, parent, callback)
+				local Button = {
+					Callback = callback or function()
 					end
 				}
-				s.Frame =
-					l(
+				Button.Frame =
+					New(
 						"TextButton",
 						{
 							Size = UDim2.new(0, 34, 1, -8),
 							AnchorPoint = Vector2.new(1, 0),
 							BackgroundTransparency = 1,
-							Parent = q,
-							Position = p,
+							Parent = parent,
+							Position = position,
 							Text = "",
 							ThemeTag = {BackgroundColor3 = "Text"}
 						},
 						{
-							l("UICorner", {CornerRadius = UDim.new(0, 7)}),
-							l(
+							New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+							New(
 								"ImageLabel",
 								{
-									Image = o,
+									Image = icon,
 									Size = UDim2.fromOffset(16, 16),
 									Position = UDim2.fromScale(0.5, 0.5),
 									AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6993,49 +6941,49 @@ local aa = {
 							)
 						}
 					)
-				local t, u = j.SpringMotor(1, s.Frame, "BackgroundTransparency")
-				m(
-					s.Frame.MouseEnter,
+				local motor, setTransparency = Creator.SpringMotor(1, Button.Frame, "BackgroundTransparency")
+				AddSignal(
+					Button.Frame.MouseEnter,
 					function()
-						u(0.94)
+						setTransparency(0.94)
 					end
 				)
-				m(
-					s.Frame.MouseLeave,
+				AddSignal(
+					Button.Frame.MouseLeave,
 					function()
-						u(1, true)
+						setTransparency(1, true)
 					end
 				)
-				m(
-					s.Frame.MouseButton1Down,
+				AddSignal(
+					Button.Frame.MouseButton1Down,
 					function()
-						u(0.96)
+						setTransparency(0.96)
 					end
 				)
-				m(
-					s.Frame.MouseButton1Up,
+				AddSignal(
+					Button.Frame.MouseButton1Up,
 					function()
-						u(0.94)
+						setTransparency(0.94)
 					end
 				)
-				m(s.Frame.MouseButton1Click, s.Callback)
-				s.SetCallback = function(v)
-					s.Callback = v
+				AddSignal(Button.Frame.MouseButton1Click, Button.Callback)
+				Button.SetCallback = function(callback)
+					Button.Callback = callback
 				end
-				return s
+				return Button
 			end
-			o.Frame =
-				l(
+			TitleBar.Frame =
+				New(
 					"Frame",
-					{Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = n.Parent},
+					{Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = config.Parent},
 					{
-						l(
+						New(
 							"Frame",
 							-- ขยับซ้ายเล็กน้อย: Position 16 -> 8, ลด margin ขวาให้สมดุล
 							{Size = UDim2.new(1, -8, 1, 0), Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1},
 							{
 								-- UIListLayout: แนวนอนและจัดกึ่งกลางแนวตั้ง
-								l(
+								New(
 									"UIListLayout",
 									{
 										Padding = UDim.new(0, 6),
@@ -7045,11 +6993,11 @@ local aa = {
 									}
 								),
 								-- ไอคอนขนาดใหญ่ขึ้นและจัดด้วย layout
-								l(
+								New(
 									"ImageLabel",
 									{
 										Name = "WindowIcon",
-										Image = n.Icon or "rbxassetid://90989180960460",
+										Image = config.Icon or "rbxassetid://90989180960460",
 										Size = UDim2.fromOffset(32, 32), -- ขยายเป็น 32x32
 										BackgroundTransparency = 1,
 										LayoutOrder = 1,
@@ -7058,11 +7006,11 @@ local aa = {
 									}
 								),
 								-- Title (ขนาดฟอนต์เพิ่มเล็กน้อย)
-								l(
+								New(
 									"TextLabel",
 									{
 										RichText = true,
-										Text = n.Title or "",
+										Text = config.Title or "",
 										FontFace = Font.new(
 											"rbxasset://fonts/families/GothamSSm.json",
 											Enum.FontWeight.Regular,
@@ -7078,11 +7026,11 @@ local aa = {
 									}
 								),
 								-- SubTitle (ถ้ามี)
-								l(
+								New(
 									"TextLabel",
 									{
 										RichText = true,
-										Text = n.SubTitle or "",
+										Text = config.SubTitle or "",
 										TextTransparency = 0.4,
 										FontFace = Font.new(
 											"rbxasset://fonts/families/GothamSSm.json",
@@ -7100,7 +7048,7 @@ local aa = {
 								)
 							}
 						),
-						l(
+						New(
 							"Frame",
 							{
 								BackgroundTransparency = 0.5,
@@ -7112,97 +7060,23 @@ local aa = {
 					}
 				)
 
-			-- Close: now does a full cleanup + destroy related UI
-			o.CloseButton =
-				q(
-					i.Close,
+			-- Close: asks, then unloads the interface.
+			TitleBar.CloseButton =
+				BarButton(
+					Assets.Close,
 					UDim2.new(1, -4, 0, 4),
-					o.Frame,
+					TitleBar.Frame,
 					function()
-						p.Window:Dialog {
+						Library.Window:Dialog {
 							Title = "Close",
 							Content = "Are you sure you want to unload the interface?",
 							Buttons = {
 								{
 									Title = "Yes",
 									Callback = function()
-										-- 1) Destroy the primary window/object (p)
-										pcall(
-											function()
-												if p and type(p.Destroy) == "function" then
-													p:Destroy()
-												end
-											end
-										)
-
-										-- 2) Try to destroy global Window if present
-										pcall(
-											function()
-												if Window and type(Window.Destroy) == "function" then
-													Window:Destroy()
-												end
-											end
-										)
-										pcall(
-											function()
-												Window = nil
-											end
-										)
-
-										-- 3) Remove any toggle UI or helper GUIs we created (search CoreGui and PlayerGui)
-										local function destroyMarked(parent)
-											for _, gui in ipairs(parent:GetChildren()) do
-												if gui:IsA("ScreenGui") then
-													local name = (gui.Name or ""):lower()
-													if
-														name:find("fluent") or name:find("atg") or name:find("fluenttoggle") or
-														name:find("fluenttogglegui")
-													then
-														pcall(
-															function()
-																gui:Destroy()
-															end
-														)
-													end
-												end
-											end
-										end
-										pcall(
-											function()
-												destroyMarked(game:GetService("CoreGui"))
-											end
-										)
-										pcall(
-											function()
-												destroyMarked(playerGui)
-											end
-										)
-
-										-- 4) Clear getgenv config / flags that might keep loops running
-										if getgenv then
-											pcall(
-												function()
-													getgenv().ATGButtonUI = nil
-												end
-											)
-											pcall(
-												function()
-													getgenv().FluentToggleGui = nil
-												end
-											)
-											pcall(
-												function()
-													getgenv().ATGButtonUI_Running = false
-												end
-											)
-										end
-
-										-- 5) Try to force-garbage collect some global resources (best-effort)
-										pcall(
-											function()
-												collectgarbage("collect")
-											end
-										)
+										-- Library:Destroy does all cleanup, the same as a
+										-- script calling Fluent:Destroy().
+										Library:Destroy()
 									end
 								},
 								{Title = "No"}
@@ -7211,55 +7085,65 @@ local aa = {
 					end
 				)
 
-			o.MaxButton =
-				q(
-					i.Max,
+			TitleBar.MaxButton =
+				BarButton(
+					Assets.Max,
 					UDim2.new(1, -40, 0, 4),
-					o.Frame,
+					TitleBar.Frame,
 					function()
-						n.Window.Maximize(not n.Window.Maximized)
+						config.Window.Maximize(not config.Window.Maximized)
 					end
 				)
-			o.MinButton =
-				q(
-					i.Min,
+			TitleBar.MinButton =
+				BarButton(
+					Assets.Min,
 					UDim2.new(1, -80, 0, 4),
-					o.Frame,
+					TitleBar.Frame,
 					function()
-						p.Window:Minimize()
+						Library.Window:Minimize()
 					end
 				)
-			return o
+			return TitleBar
 		end
 	end,
 	[17] = function()
-		local c, d, e, f, g = b(17)
-		local h, i, j, k =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(17)
+		local UserInputService, mouse, camera, Root =
 			game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
 		game:GetService "Workspace".CurrentCamera,
-		d.Parent.Parent
-		local l, m, n, o, p = e(k.Packages.Flipper), e(k.Creator), e(k.Acrylic), e(d.Parent.Assets), d.Parent
-		local q, r, s = l.Spring.new, l.Instant.new, m.New
-		return function(t)
-			local u, v, w, x, y, z =
-				e(k),
+		moduleScript.Parent.Parent
+		local Flipper, Creator, Acrylic, Assets, Components = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic), requireModule(moduleScript.Parent.Assets), moduleScript.Parent
+		local Spring, Instant, New = Flipper.Spring.new, Flipper.Instant.new, Creator.New
+		-- Space kept between the window and the screen edges on small screens,
+		-- and how much of the title bar must stay on screen while dragging.
+		local SCREEN_MARGIN = 16
+		local VISIBLE_TITLE = 40
+		return function(config)
+			-- A window larger than the screen is shrunk to fit (phones).
+			local viewport = camera.ViewportSize
+			config.Size = UDim2.fromOffset(
+				math.max(200, math.min(config.Size.X.Offset, viewport.X - SCREEN_MARGIN * 2)),
+				math.max(160, math.min(config.Size.Y.Offset, viewport.Y - SCREEN_MARGIN * 2))
+			)
+			local Library, Window, dragging, dragInput, mousePos, startPos =
+				requireModule(Root),
 			{
 				Minimized = false,
 				Maximized = false,
-				Size = t.Size,
+				Size = config.Size,
 				CurrentPos = 0,
 				Position = UDim2.fromOffset(
-					j.ViewportSize.X / 2 - t.Size.X.Offset / 2,
-					j.ViewportSize.Y / 2 - t.Size.Y.Offset / 2
+					camera.ViewportSize.X / 2 - config.Size.X.Offset / 2,
+					camera.ViewportSize.Y / 2 - config.Size.Y.Offset / 2
 				)
 			},
 			false
-			local A, B = false
-			local C = false
-			v.AcrylicPaint = n.AcrylicPaint()
-			local D, E =
-				s(
+			local resizing, resizePos = false
+			local minimizeNotified = false
+			Window.AcrylicPaint = Acrylic.AcrylicPaint()
+			local selector, resizeStartFrame =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromOffset(4, 0),
@@ -7268,14 +7152,14 @@ local aa = {
 						AnchorPoint = Vector2.new(0, 0.5),
 						ThemeTag = {BackgroundColor3 = "Accent"}
 					},
-					{s("UICorner", {CornerRadius = UDim.new(0, 2)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 2)})}
 				),
-			s(
+			New(
 				"Frame",
 				{Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Position = UDim2.new(1, -20, 1, -20)}
 			)
-			v.TabHolder =
-				s(
+			Window.TabHolder =
+				New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.fromScale(1, 1),
@@ -7286,26 +7170,26 @@ local aa = {
 						CanvasSize = UDim2.fromScale(0, 0),
 						ScrollingDirection = Enum.ScrollingDirection.Y
 					},
-					{s("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})}
+					{New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})}
 				)
-			local F =
-				s(
+			local tabFrame =
+				New(
 					"Frame",
 					{
-						Size = UDim2.new(0, t.TabWidth, 1, -66),
+						Size = UDim2.new(0, config.TabWidth, 1, -66),
 						Position = UDim2.new(0, 12, 0, 54),
 						BackgroundTransparency = 1,
 						ClipsDescendants = true
 					},
-					{v.TabHolder, D}
+					{Window.TabHolder, selector}
 				)
-			v.TabArea = F
+			Window.TabArea = tabFrame
 			-- Expose the existing selector only as an optional visual handle.
 			-- Workspace search can hide it while the tab rail shows live matches.
-			v.TabSelector = D
-			v.TabWidth = t.TabWidth
-			v.TabDisplay =
-				s(
+			Window.TabSelector = selector
+			Window.TabWidth = config.TabWidth
+			Window.TabDisplay =
+				New(
 					"TextLabel",
 					{
 						RichText = true,
@@ -7317,244 +7201,291 @@ local aa = {
 						TextXAlignment = "Left",
 						TextYAlignment = "Center",
 						Size = UDim2.new(1, -16, 0, 28),
-						Position = UDim2.fromOffset(t.TabWidth + 26, 56),
+						Position = UDim2.fromOffset(config.TabWidth + 26, 56),
 						BackgroundTransparency = 1,
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			v.ContainerHolder =
-				s(
+			Window.ContainerHolder =
+				New(
 					"CanvasGroup",
 					{
-						Size = UDim2.new(1, -t.TabWidth - 32, 1, -102),
-						Position = UDim2.fromOffset(t.TabWidth + 26, 90),
+						Size = UDim2.new(1, -config.TabWidth - 32, 1, -102),
+						Position = UDim2.fromOffset(config.TabWidth + 26, 90),
 						BackgroundTransparency = 1
 					}
 				)
-			v.Root =
-				s(
+			Window.Root =
+				New(
 					"Frame",
-					{BackgroundTransparency = 1, Size = v.Size, Position = v.Position, Parent = t.Parent},
-					{v.AcrylicPaint.Frame, v.TabDisplay, v.ContainerHolder, F, E}
+					{BackgroundTransparency = 1, Size = Window.Size, Position = Window.Position, Parent = config.Parent},
+					{Window.AcrylicPaint.Frame, Window.TabDisplay, Window.ContainerHolder, tabFrame, resizeStartFrame}
 				)
-			v.TitleBar = e(d.Parent.TitleBar) {Title = t.Title, SubTitle = t.SubTitle, Parent = v.Root, Window = v}
-			if e(k).UseAcrylic then
-				v.AcrylicPaint.AddParent(v.Root)
+			Window.TitleBar = requireModule(moduleScript.Parent.TitleBar) {Title = config.Title, SubTitle = config.SubTitle, Parent = Window.Root, Window = Window}
+			if requireModule(Root).UseAcrylic then
+				Window.AcrylicPaint.AddParent(Window.Root)
 			end
-			local G, H =
-				l.GroupMotor.new {X = v.Size.X.Offset, Y = v.Size.Y.Offset},
-			l.GroupMotor.new {X = v.Position.X.Offset, Y = v.Position.Y.Offset}
-			v.SelectorPosMotor = l.SingleMotor.new(17)
-			v.SelectorSizeMotor = l.SingleMotor.new(0)
-			v.ContainerBackMotor = l.SingleMotor.new(0)
-			v.ContainerPosMotor = l.SingleMotor.new(94)
-			G:onStep(
-				function(I)
-					v.Root.Size = UDim2.new(0, I.X, 0, I.Y)
+			local sizeMotor, posMotor =
+				Flipper.GroupMotor.new {X = Window.Size.X.Offset, Y = Window.Size.Y.Offset},
+			Flipper.GroupMotor.new {X = Window.Position.X.Offset, Y = Window.Position.Y.Offset}
+			Window.SelectorPosMotor = Flipper.SingleMotor.new(17)
+			Window.SelectorSizeMotor = Flipper.SingleMotor.new(0)
+			Window.ContainerBackMotor = Flipper.SingleMotor.new(0)
+			Window.ContainerPosMotor = Flipper.SingleMotor.new(94)
+			sizeMotor:onStep(
+				function(size)
+					Window.Root.Size = UDim2.new(0, size.X, 0, size.Y)
 				end
 			)
-			H:onStep(
-				function(I)
-					v.Root.Position = UDim2.new(0, I.X, 0, I.Y)
+			posMotor:onStep(
+				function(position)
+					Window.Root.Position = UDim2.new(0, position.X, 0, position.Y)
 				end
 			)
-			local I, J = 0, 0
-			v.SelectorPosMotor:onStep(
-				function(K)
-					D.Position = UDim2.new(0, 0, 0, K + 17)
-					local L = tick()
-					local M = L - J
-					if I ~= nil then
-						v.SelectorSizeMotor:setGoal(q((math.abs(K - I) / (M * 60)) + 16))
-						I = K
+			local lastValue, lastTime = 0, 0
+			Window.SelectorPosMotor:onStep(
+				function(value)
+					selector.Position = UDim2.new(0, 0, 0, value + 17)
+					local now = os.clock()
+					local deltaTime = now - lastTime
+					if lastValue ~= nil then
+						Window.SelectorSizeMotor:setGoal(Spring((math.abs(value - lastValue) / (deltaTime * 60)) + 16))
+						lastValue = value
 					end
-					J = L
+					lastTime = now
 				end
 			)
-			v.SelectorSizeMotor:onStep(
-				function(K)
-					D.Size = UDim2.new(0, 4, 0, K)
+			Window.SelectorSizeMotor:onStep(
+				function(value)
+					selector.Size = UDim2.new(0, 4, 0, value)
 				end
 			)
-			v.ContainerBackMotor:onStep(
-				function(K)
-					v.ContainerHolder.GroupTransparency = K
+			Window.ContainerBackMotor:onStep(
+				function(value)
+					Window.ContainerHolder.GroupTransparency = value
 				end
 			)
-			v.ContainerPosMotor:onStep(
-				function(K)
-					v.ContainerHolder.Position = UDim2.fromOffset(t.TabWidth + 26, K)
+			Window.ContainerPosMotor:onStep(
+				function(value)
+					Window.ContainerHolder.Position = UDim2.fromOffset(config.TabWidth + 26, value)
 				end
 			)
 			-- Public, additive layout hook used by the workspace toolbar.  Keeping
 			-- this inside Window means compact mode does not fight the existing
 			-- Flipper position motor when a tab is selected.
-			function v.SetTabWidth(M, N)
-				N = math.clamp(tonumber(N) or t.TabWidth, 52, 320)
-				t.TabWidth = N
-				v.TabWidth = N
-				F.Size = UDim2.new(0, N, 1, F.Size.Y.Offset)
-				v.TabDisplay.Position = UDim2.fromOffset(N + 26, 56)
-				v.ContainerHolder.Size = UDim2.new(1, -N - 32, 1, -102)
-				v.ContainerHolder.Position = UDim2.fromOffset(N + 26, v.ContainerPosMotor:getValue())
+			function Window.SetTabWidth(_self, width)
+				width = math.clamp(tonumber(width) or config.TabWidth, 52, 320)
+				config.TabWidth = width
+				Window.TabWidth = width
+				tabFrame.Size = UDim2.new(0, width, 1, tabFrame.Size.Y.Offset)
+				Window.TabDisplay.Position = UDim2.fromOffset(width + 26, 56)
+				Window.ContainerHolder.Size = UDim2.new(1, -width - 32, 1, -102)
+				Window.ContainerHolder.Position = UDim2.fromOffset(width + 26, Window.ContainerPosMotor:getValue())
 			end
-			local K, L
-			v.Maximize = function(M, N, O)
-				v.Maximized = M
-				v.TitleBar.MaxButton.Frame.Icon.Image = M and o.Restore or o.Max
-				if M then
-					K = v.Size.X.Offset
-					L = v.Size.Y.Offset
+			local oldSizeX, oldSizeY
+			Window.Maximize = function(maximized, noPos, instant)
+				Window.Maximized = maximized
+				Window.TitleBar.MaxButton.Frame.Icon.Image = maximized and Assets.Restore or Assets.Max
+				if maximized then
+					oldSizeX = Window.Size.X.Offset
+					oldSizeY = Window.Size.Y.Offset
 				end
-				local P, Q = M and j.ViewportSize.X or K, M and j.ViewportSize.Y or L
-				G:setGoal {
-					X = l[O and "Instant" or "Spring"].new(P, {frequency = 6}),
-					Y = l[O and "Instant" or "Spring"].new(Q, {frequency = 6})
+				local sizeX, sizeY = maximized and camera.ViewportSize.X or oldSizeX, maximized and camera.ViewportSize.Y or oldSizeY
+				sizeMotor:setGoal {
+					X = Flipper[instant and "Instant" or "Spring"].new(sizeX, {frequency = 6}),
+					Y = Flipper[instant and "Instant" or "Spring"].new(sizeY, {frequency = 6})
 				}
-				v.Size = UDim2.fromOffset(P, Q)
-				if not N then
-					H:setGoal {
-						X = q(M and 0 or v.Position.X.Offset, {frequency = 6}),
-						Y = q(M and 0 or v.Position.Y.Offset, {frequency = 6})
+				Window.Size = UDim2.fromOffset(sizeX, sizeY)
+				if not noPos then
+					posMotor:setGoal {
+						X = Spring(maximized and 0 or Window.Position.X.Offset, {frequency = 6}),
+						Y = Spring(maximized and 0 or Window.Position.Y.Offset, {frequency = 6})
 					}
 				end
 			end
-			m.AddSignal(
-				v.TitleBar.Frame.InputBegan,
-				function(M)
-					if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
-						w = true
-						y = M.Position
-						z = v.Root.Position
-						if v.Maximized then
-							z =
+			Creator.AddSignal(
+				Window.TitleBar.Frame.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = true
+						mousePos = input.Position
+						startPos = Window.Root.Position
+						if Window.Maximized then
+							startPos =
 								UDim2.fromOffset(
-									i.X - (i.X * ((K - 100) / v.Root.AbsoluteSize.X)),
-									i.Y - (i.Y * (L / v.Root.AbsoluteSize.Y))
+									mouse.X - (mouse.X * ((oldSizeX - 100) / Window.Root.AbsoluteSize.X)),
+									mouse.Y - (mouse.Y * (oldSizeY / Window.Root.AbsoluteSize.Y))
 								)
 						end
-						M.Changed:Connect(
+						input.Changed:Connect(
 							function()
-								if M.UserInputState == Enum.UserInputState.End then
-									w = false
+								if input.UserInputState == Enum.UserInputState.End then
+									dragging = false
 								end
 							end
 						)
 					end
 				end
 			)
-			m.AddSignal(
-				v.TitleBar.Frame.InputChanged,
-				function(M)
+			Creator.AddSignal(
+				Window.TitleBar.Frame.InputChanged,
+				function(input)
 					if
-						M.UserInputType == Enum.UserInputType.MouseMovement or
-						M.UserInputType == Enum.UserInputType.Touch
+						input.UserInputType == Enum.UserInputType.MouseMovement or
+						input.UserInputType == Enum.UserInputType.Touch
 					then
-						x = M
+						dragInput = input
 					end
 				end
 			)
-			m.AddSignal(
-				E.InputBegan,
-				function(M)
-					if M.UserInputType == Enum.UserInputType.MouseButton1 or M.UserInputType == Enum.UserInputType.Touch then
-						A = true
-						B = M.Position
+			Creator.AddSignal(
+				resizeStartFrame.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						resizing = true
+						resizePos = input.Position
 					end
 				end
 			)
-			m.AddSignal(
-				h.InputChanged,
-				function(M)
-					if M == x and w then
-						local N = M.Position - y
-						v.Position = UDim2.fromOffset(z.X.Offset + N.X, z.Y.Offset + N.Y)
-						H:setGoal {X = r(v.Position.X.Offset), Y = r(v.Position.Y.Offset)}
-						if v.Maximized then
-							v.Maximize(false, true, true)
+			Creator.AddSignal(
+				UserInputService.InputChanged,
+				function(input)
+					if input == dragInput and dragging then
+						local delta = input.Position - mousePos
+						-- Keep part of the title bar on screen so the window can
+						-- always be dragged back.
+						local screen = camera.ViewportSize
+						local width = Window.Size.X.Offset
+						local x = math.clamp(startPos.X.Offset + delta.X, VISIBLE_TITLE - width, math.max(VISIBLE_TITLE - width, screen.X - VISIBLE_TITLE))
+						local y = math.clamp(startPos.Y.Offset + delta.Y, 0, math.max(0, screen.Y - VISIBLE_TITLE))
+						Window.Position = UDim2.fromOffset(x, y)
+						posMotor:setGoal {X = Instant(Window.Position.X.Offset), Y = Instant(Window.Position.Y.Offset)}
+						if Window.Maximized then
+							Window.Maximize(false, true, true)
 						end
 					end
 					if
-						(M.UserInputType == Enum.UserInputType.MouseMovement or
-							M.UserInputType == Enum.UserInputType.Touch) and
-						A
+						(input.UserInputType == Enum.UserInputType.MouseMovement or
+							input.UserInputType == Enum.UserInputType.Touch) and
+						resizing
 					then
-						local N, O = M.Position - B, v.Size
-						local P = Vector3.new(O.X.Offset, O.Y.Offset, 0) + Vector3.new(1, 1, 0) * N
-						local Q = Vector2.new(math.clamp(P.X, 470, 2048), math.clamp(P.Y, 380, 2048))
-						G:setGoal {X = l.Instant.new(Q.X), Y = l.Instant.new(Q.Y)}
+						local delta, startSize = input.Position - resizePos, Window.Size
+						local targetSize = Vector3.new(startSize.X.Offset, startSize.Y.Offset, 0) + Vector3.new(1, 1, 0) * delta
+						-- The minimum size shrinks on screens smaller than it.
+						local screen = camera.ViewportSize
+						local minimumX = math.max(200, math.min(470, screen.X - SCREEN_MARGIN * 2))
+						local minimumY = math.max(160, math.min(380, screen.Y - SCREEN_MARGIN * 2))
+						local clampedSize = Vector2.new(math.clamp(targetSize.X, minimumX, 2048), math.clamp(targetSize.Y, minimumY, 2048))
+						sizeMotor:setGoal {X = Flipper.Instant.new(clampedSize.X), Y = Flipper.Instant.new(clampedSize.Y)}
 					end
 				end
 			)
-			m.AddSignal(
-				h.InputEnded,
-				function(M)
-					if A == true or M.UserInputType == Enum.UserInputType.Touch then
-						A = false
-						v.Size = UDim2.fromOffset(G:getValue().X, G:getValue().Y)
+			Creator.AddSignal(
+				UserInputService.InputEnded,
+				function(input)
+					if resizing == true or input.UserInputType == Enum.UserInputType.Touch then
+						resizing = false
+						Window.Size = UDim2.fromOffset(sizeMotor:getValue().X, sizeMotor:getValue().Y)
 					end
 				end
 			)
-			m.AddSignal(
-				v.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize",
+			Creator.AddSignal(
+				Window.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					v.TabHolder.CanvasSize = UDim2.new(0, 0, 0, v.TabHolder.UIListLayout.AbsoluteContentSize.Y)
+					Window.TabHolder.CanvasSize = UDim2.new(0, 0, 0, Window.TabHolder.UIListLayout.AbsoluteContentSize.Y)
 				end
 			)
-			m.AddSignal(
-				h.InputBegan,
-				function(M)
-					local function toggleMinimize()
-						-- Ctrl is Fluent's legacy default.  Give Ctrl+K one short
-						-- chord window so command search does not minimize first.
-						if M.KeyCode == Enum.KeyCode.LeftControl or M.KeyCode == Enum.KeyCode.RightControl then
-							task.delay(0.16, function()
-								if h:IsKeyDown(M.KeyCode) and not h:IsKeyDown(Enum.KeyCode.K) and not h:GetFocusedTextBox() then
-									v:Minimize()
-								end
-							end)
-						else
-							v:Minimize()
-						end
+			-- Minimize key. A modifier key (Ctrl, Shift, Alt) minimizes when it is
+			-- released, and only if nothing else was pressed while it was held, so
+			-- Ctrl+K, Ctrl+M, Ctrl+W or Ctrl+click never minimize. Other keys
+			-- minimize as soon as they are pressed. Keys are compared by name.
+			local modifierKeyNames = {
+				LeftControl = true,
+				RightControl = true,
+				LeftShift = true,
+				RightShift = true,
+				LeftAlt = true,
+				RightAlt = true
+			}
+			local function isMinimizeKey(input)
+				local keybind = Library.MinimizeKeybind
+				if type(keybind) == "table" and keybind.Type == "Keybind" then
+					return input.KeyCode.Name == keybind.Value
+				end
+				local key = Library.MinimizeKey
+				if type(key) == "string" then
+					return input.KeyCode.Name == key
+				end
+				return key ~= nil and input.KeyCode == key
+			end
+			local heldModifier, heldChord = nil, false
+			Creator.AddSignal(
+				UserInputService.InputBegan,
+				function(input)
+					if heldModifier and input.KeyCode.Name ~= heldModifier and input.UserInputType ~= Enum.UserInputType.Focus then
+						heldChord = true
 					end
-					if
-						type(u.MinimizeKeybind) == "table" and u.MinimizeKeybind.Type == "Keybind" and
-						not h:GetFocusedTextBox()
-					then
-						if M.KeyCode.Name == u.MinimizeKeybind.Value then
-							toggleMinimize()
-						end
-					elseif M.KeyCode == u.MinimizeKey and not h:GetFocusedTextBox() then
-						toggleMinimize()
+					if not isMinimizeKey(input) or UserInputService:GetFocusedTextBox() then
+						return
+					end
+					if modifierKeyNames[input.KeyCode.Name] then
+						heldModifier, heldChord = input.KeyCode.Name, false
+					else
+						Window:Minimize()
 					end
 				end
 			)
-			function v.Minimize(M)
-				v.Minimized = not v.Minimized
-				v.Root.Visible = not v.Minimized
-				if not C then
-					C = true
-					local N = u.MinimizeKeybind and u.MinimizeKeybind.Value or u.MinimizeKey.Name
-					u:Notify {Title = "Interface", Content = "Press " .. N .. " to toggle the inteface.", Duration = 6}
+			Creator.AddSignal(
+				UserInputService.InputEnded,
+				function(input)
+					if heldModifier == nil or input.KeyCode.Name ~= heldModifier then
+						return
+					end
+					local chord = heldChord
+					heldModifier, heldChord = nil, false
+					if not chord and not UserInputService:GetFocusedTextBox() then
+						Window:Minimize()
+					end
+				end
+			)
+			Creator.AddSignal(
+				UserInputService.WindowFocusReleased,
+				function()
+					heldModifier, heldChord = nil, false
+				end
+			)
+			function Window.Minimize(_self)
+				Window.Minimized = not Window.Minimized
+				if Window.Minimized and type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
+				Window.Root.Visible = not Window.Minimized
+				if not minimizeNotified then
+					minimizeNotified = true
+					local key = Library.MinimizeKeybind and Library.MinimizeKeybind.Value or Library.MinimizeKey
+					if typeof(key) == "EnumItem" then
+						key = key.Name
+					end
+					Library:Notify {Title = "Interface", Content = "Press " .. tostring(key) .. " to toggle the interface.", Duration = 6}
 				end
 			end
-			function v.Destroy(M)
-				if e(k).UseAcrylic then
-					v.AcrylicPaint.Model:Destroy()
+			function Window.Destroy(_self)
+				if requireModule(Root).UseAcrylic then
+					Window.AcrylicPaint.Model:Destroy()
 				end
-				v.Root:Destroy()
+				Window.Root:Destroy()
 			end
-			local M = e(p.Dialog):Init(v)
-			function v.Dialog(N, O)
-				local P = M:Create()
-				P.Title.Text = O.Title
-				TranslationSystem:Register(P.Title, O.Title, "Text")
-				local Q =
-					s(
+			local DialogModule = requireModule(Components.Dialog):Init(Window)
+			function Window.Dialog(_self, dialogConfig)
+				local dialog = DialogModule:Create()
+				dialog.Title.Text = dialogConfig.Title
+				TranslationSystem:Register(dialog.Title, dialogConfig.Title, "Text")
+				local content =
+					New(
 						"TextLabel",
 						{
 							FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-							Text = O.Content,
+							Text = dialogConfig.Content,
 							TextColor3 = Color3.fromRGB(240, 240, 240),
 							TextSize = 14,
 							TextXAlignment = Enum.TextXAlignment.Left,
@@ -7562,60 +7493,60 @@ local aa = {
 							Size = UDim2.new(1, -40, 1, 0),
 							Position = UDim2.fromOffset(20, 60),
 							BackgroundTransparency = 1,
-							Parent = P.Root,
+							Parent = dialog.Root,
 							ClipsDescendants = false,
 							ThemeTag = {TextColor3 = "Text"}
 						}
 					)
-				s(
+				New(
 					"UISizeConstraint",
-					{MinSize = Vector2.new(300, 165), MaxSize = Vector2.new(620, math.huge), Parent = P.Root}
+					{MinSize = Vector2.new(300, 165), MaxSize = Vector2.new(620, math.huge), Parent = dialog.Root}
 				)
-				P.Root.Size = UDim2.fromOffset(Q.TextBounds.X + 40, 165)
-				if Q.TextBounds.X + 40 > v.Size.X.Offset - 120 then
-					P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, 165)
-					Q.TextWrapped = true
-					P.Root.Size = UDim2.fromOffset(v.Size.X.Offset - 120, Q.TextBounds.Y + 150)
+				dialog.Root.Size = UDim2.fromOffset(content.TextBounds.X + 40, 165)
+				if content.TextBounds.X + 40 > Window.Size.X.Offset - 120 then
+					dialog.Root.Size = UDim2.fromOffset(Window.Size.X.Offset - 120, 165)
+					content.TextWrapped = true
+					dialog.Root.Size = UDim2.fromOffset(Window.Size.X.Offset - 120, content.TextBounds.Y + 150)
 				end
-				for R, S in next, O.Buttons do
-					P:Button(S.Title, S.Callback)
+				for _, button in next, dialogConfig.Buttons do
+					dialog:Button(button.Title, button.Callback)
 				end
-				P:Open()
+				dialog:Open()
 			end
-			local N = e(p.Tab):Init(v)
-			function v.AddTab(O, P)
-				local Q = N:New(P.Title, P.Icon, v.TabHolder)
-				if v.Library and v.Library.Workspace and type(v.Library.Workspace.RegisterTab) == "function" then
-					v.Library.Workspace:RegisterTab(Q, P)
+			local TabModule = requireModule(Components.Tab):Init(Window)
+			function Window.AddTab(_self, tabConfig)
+				local tab = TabModule:New(tabConfig.Title, tabConfig.Icon, Window.TabHolder)
+				if Window.Library and Window.Library.Workspace and type(Window.Library.Workspace.RegisterTab) == "function" then
+					Window.Library.Workspace:RegisterTab(tab, tabConfig)
 				end
-				return Q
+				return tab
 			end
-			function v.SelectTab(O, P)
-				if type(P) == "table" and type(P.Index) == "number" then
-					N:SelectTab(P.Index)
-				elseif type(P) == "number" then
-					N:SelectTab(P)
+			function Window.SelectTab(_self, tab)
+				if type(tab) == "table" and type(tab.Index) == "number" then
+					TabModule:SelectTab(tab.Index)
+				elseif type(tab) == "number" then
+					TabModule:SelectTab(tab)
 				else
-					N:SelectTab(1)
+					TabModule:SelectTab(1)
 				end
 			end
-			m.AddSignal(
-				v.TabHolder:GetPropertyChangedSignal "CanvasPosition",
+			Creator.AddSignal(
+				Window.TabHolder:GetPropertyChangedSignal "CanvasPosition",
 				function()
-					I = N:GetCurrentTabPos() + 16
-					J = 0
-					v.SelectorPosMotor:setGoal(r(N:GetCurrentTabPos()))
+					lastValue = TabModule:GetCurrentTabPos() + 16
+					lastTime = 0
+					Window.SelectorPosMotor:setGoal(Instant(TabModule:GetCurrentTabPos()))
 				end
 			)
-			return v
+			return Window
 		end
 	end,
 	[18] = function()
-		local c, d, e, f, g = b(18)
-		local h = d.Parent
-		local i, j, k =
-			e(h.Themes),
-		e(h.Packages.Flipper),
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(18)
+		local Root = moduleScript.Parent
+		local Themes, Flipper, Creator =
+			requireModule(Root.Themes),
+		requireModule(Root.Packages.Flipper),
 		{
 			Registry = {},
 			Signals = {},
@@ -7677,124 +7608,246 @@ local aa = {
 				}
 			}
 		}
-		local l = function(l, m)
-			if m.ThemeTag then
-				k.AddThemeObject(l, m.ThemeTag)
+		local applyCustomProps = function(object, props)
+			if props.ThemeTag then
+				Creator.AddThemeObject(object, props.ThemeTag)
 			end
 		end
-		function k.AddSignal(m, n)
-			table.insert(k.Signals, m:Connect(n))
-		end
-		function k.Disconnect()
-			for m = #k.Signals, 1, -1 do
-				local n = table.remove(k.Signals, m)
-				n:Disconnect()
-			end
-		end
-		function k.GetThemeProperty(m)
-			if i[e(h).Theme][m] then
-				return i[e(h).Theme][m]
-			end
-			return i.Dark[m]
-		end
-		function k.UpdateTheme()
-			for m, n in next, k.Registry do
-				for o, p in next, n.Properties do
-					m[o] = k.GetThemeProperty(p)
+		-- Connections to destroyed instances are already disconnected; drop them
+		-- whenever the list has doubled so it stays proportional to live ones.
+		local nextSignalPrune = 64
+		local function pruneSignals()
+			local signals, kept = Creator.Signals, 0
+			for index = 1, #signals do
+				local connection = signals[index]
+				if connection.Connected ~= false then
+					kept = kept + 1
+					signals[kept] = connection
 				end
 			end
-			for o, p in next, k.TransparencyMotors do
-				p:setGoal(j.Instant.new(k.GetThemeProperty "ElementTransparency"))
+			for index = #signals, kept + 1, -1 do
+				signals[index] = nil
+			end
+			nextSignalPrune = math.max(64, kept * 2)
+		end
+		function Creator.AddSignal(signal, callback)
+			local connection = signal:Connect(callback)
+			table.insert(Creator.Signals, connection)
+			if #Creator.Signals >= nextSignalPrune then
+				pruneSignals()
+			end
+			return connection
+		end
+		function Creator.Disconnect()
+			for index = #Creator.Signals, 1, -1 do
+				local connection = table.remove(Creator.Signals, index)
+				connection:Disconnect()
 			end
 		end
-		function k.AddThemeObject(m, n)
-			local o = #k.Registry + 1
-			local p = {Object = m, Properties = n, Idx = o}
-			k.Registry[m] = p
-			for q, r in next, n do
-				m[q] = k.GetThemeProperty(r)
+		-- RGB theme: while it is active, these keys (the accent and border
+		-- colors) cycle through the rainbow about ten times a second.
+		local RAINBOW_KEYS = {
+			Accent = true,
+			AcrylicBorder = true,
+			TitleBarLine = true,
+			ElementBorder = true,
+			InElementBorder = true,
+			DropdownBorder = true,
+			InputIndicator = true,
+			DialogHolderLine = true,
+			DialogButtonBorder = true,
+			DialogBorder = true,
+			DialogInputLine = true
+		}
+		-- Objects with at least one property bound to a rainbow key.
+		local rainbowTargets = {}
+		local rainbowColor = nil
+		local rainbowConnection = nil
+		local function usesRainbowKey(properties)
+			for _, themeKey in next, properties do
+				if RAINBOW_KEYS[themeKey] then
+					return true
+				end
 			end
-			return m
+			return false
 		end
-		function k.OverrideTag(m, n)
-			if k.Registry[m] then
-				k.Registry[m].Properties = n
+		local function rainbowNow()
+			return Color3.fromHSV((os.clock() * 0.1) % 1, 0.85, 1)
+		end
+		local function stepRainbow()
+			rainbowColor = rainbowNow()
+			for object in next, rainbowTargets do
+				local data = Creator.Registry[object]
+				if data then
+					for property, themeKey in next, data.Properties do
+						if RAINBOW_KEYS[themeKey] then
+							object[property] = rainbowColor
+						end
+					end
+				end
+			end
+		end
+		local function stopRainbow()
+			if rainbowConnection then
+				rainbowConnection:Disconnect()
+				rainbowConnection = nil
+			end
+			rainbowColor = nil
+		end
+		local function startRainbow()
+			if rainbowConnection then
+				return
+			end
+			rainbowColor = rainbowNow()
+			local elapsed = 0
+			rainbowConnection = game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
+				elapsed = elapsed + deltaTime
+				if elapsed < 0.1 then
+					return
+				end
+				elapsed = 0
+				local library = requireModule(Root)
+				if library.Window and library.Window.Minimized then
+					return
+				end
+				stepRainbow()
+			end)
+		end
+		Creator.StopRainbow = stopRainbow
+		function Creator.GetThemeProperty(property)
+			if rainbowColor and RAINBOW_KEYS[property] then
+				return rainbowColor
+			end
+			if Themes[requireModule(Root).Theme][property] then
+				return Themes[requireModule(Root).Theme][property]
+			end
+			return Themes.Dark[property]
+		end
+		function Creator.UpdateTheme()
+			local theme = Themes[requireModule(Root).Theme]
+			if theme and theme.IsRGB then
+				startRainbow()
 			else
-				k.AddThemeObject(m, n)
+				stopRainbow()
 			end
-			k.UpdateTheme()
+			for object, data in next, Creator.Registry do
+				for property, themeKey in next, data.Properties do
+					object[property] = Creator.GetThemeProperty(themeKey)
+				end
+			end
+			for _, motor in next, Creator.TransparencyMotors do
+				motor:setGoal(Flipper.Instant.new(Creator.GetThemeProperty "ElementTransparency"))
+			end
 		end
-		function k.New(m, n, o)
-			local p = Instance.new(m)
-			for q, r in next, k.DefaultProperties[m] or {} do
-				p[q] = r
+		function Creator.AddThemeObject(object, properties)
+			local idx = #Creator.Registry + 1
+			local data = {Object = object, Properties = properties, Idx = idx}
+			if Creator.Registry[object] == nil then
+				-- Forget destroyed objects so the registry does not keep them alive.
+				object.Destroying:Connect(function()
+					Creator.Registry[object] = nil
+					rainbowTargets[object] = nil
+				end)
 			end
-			for s, t in next, n or {} do
+			Creator.Registry[object] = data
+			rainbowTargets[object] = usesRainbowKey(properties) or nil
+			for property, themeKey in next, properties do
+				object[property] = Creator.GetThemeProperty(themeKey)
+			end
+			return object
+		end
+		-- Re-tags one object and applies only its properties. Re-theming every
+		-- object here made each toggle click cost O(elements) and reset the
+		-- hover state of every other element.
+		function Creator.OverrideTag(object, properties)
+			local data = Creator.Registry[object]
+			if data then
+				data.Properties = properties
+				rainbowTargets[object] = usesRainbowKey(properties) or nil
+				for property, themeKey in next, properties do
+					object[property] = Creator.GetThemeProperty(themeKey)
+				end
+			else
+				Creator.AddThemeObject(object, properties)
+			end
+		end
+		function Creator.New(className, properties, children)
+			local object = Instance.new(className)
+			for name, value in next, Creator.DefaultProperties[className] or {} do
+				object[name] = value
+			end
+			for name, value in next, properties or {} do
 				-- These are creation metadata for the customization layer, not
 				-- Roblox Instance properties.
-				if s ~= "ThemeTag" and s ~= "I18nKey" and s ~= "I18nContext" and s ~= "I18nSkip"
-					and s ~= "FontRole" then
-					p[s] = t
+				if name ~= "ThemeTag" and name ~= "I18nKey" and name ~= "I18nContext" and name ~= "I18nSkip"
+					and name ~= "I18nDynamic" and name ~= "FontRole" then
+					object[name] = value
 				end
 			end
-			for u, v in next, o or {} do
-				v.Parent = p
+			for _, child in next, children or {} do
+				child.Parent = object
 			end
-			l(p, n)
+			applyCustomProps(object, properties)
 			-- Registers only once at creation, then updates only on a real
 			-- language/font change. This avoids expensive descendant scans.
-			CustomizationSystem.I18n:AutoRegister(p, n)
-			return p
+			CustomizationSystem.I18n:AutoRegister(object, properties)
+			return object
 		end
-		function k.SpringMotor(m, n, o, p, s)
-			p = p or false
-			s = s or false
-			local t = j.SingleMotor.new(m)
-			t:onStep(
-				function(u)
-					n[o] = u
+		function Creator.SpringMotor(initial, instance, property, ignoreDialogCheck, resetOnThemeChange)
+			ignoreDialogCheck = ignoreDialogCheck or false
+			resetOnThemeChange = resetOnThemeChange or false
+			local motor = Flipper.SingleMotor.new(initial)
+			motor:onStep(
+				function(value)
+					instance[property] = value
 				end
 			)
-			if s then
-				table.insert(k.TransparencyMotors, t)
+			if resetOnThemeChange then
+				table.insert(Creator.TransparencyMotors, motor)
+				instance.Destroying:Connect(function()
+					local index = table.find(Creator.TransparencyMotors, motor)
+					if index then
+						table.remove(Creator.TransparencyMotors, index)
+					end
+				end)
 			end
-			local u = function(u, v)
-				v = v or false
-				if not p then
-					if not v then
-						if o == "BackgroundTransparency" and e(h).DialogOpen then
+			local setValue = function(value, ignore)
+				ignore = ignore or false
+				if not ignoreDialogCheck then
+					if not ignore then
+						if property == "BackgroundTransparency" and requireModule(Root).DialogOpen then
 							return
 						end
 					end
 				end
-				t:setGoal(j.Spring.new(u, {frequency = 8}))
+				motor:setGoal(Flipper.Spring.new(value, {frequency = 8}))
 			end
-			return t, u
+			return motor, setValue
 		end
-		return k
+		return Creator
 	end,
 	[19] = function()
-		local c, d, e, f, g = b(19)
-		local h = {}
-		for i, j in next, d:GetChildren() do
-			table.insert(h, e(j))
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(19)
+		local Elements = {}
+		for _, child in next, moduleScript:GetChildren() do
+			table.insert(Elements, requireModule(child))
 		end
-		return h
+		return Elements
 	end,
 	[20] = function()
-		local c, d, e, f, g = b(20)
-		local h = d.Parent.Parent
-		local i = e(h.Creator)
-		local j, k, l = i.New, h.Components, {}
-		l.__index = l
-		l.__type = "Button"
-		function l.New(m, n)
-			assert(n.Title, "Button - Missing Title")
-			n.Callback = n.Callback or function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(20)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Button"
+		function Element.New(parent, config)
+			assert(config.Title, "Button - Missing Title")
+			config.Callback = config.Callback or function()
 			end
-			local o = e(k.Element)(n.Title, n.Description, m.Container, true)
-			local p =
-				j(
+			local buttonFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			local icon =
+				New(
 					"ImageLabel",
 					{
 						Image = "rbxassetid://10709791437",
@@ -7802,94 +7855,95 @@ local aa = {
 						AnchorPoint = Vector2.new(1, 0.5),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						BackgroundTransparency = 1,
-						Parent = o.Frame,
+						Parent = buttonFrame.Frame,
 						ThemeTag = {ImageColor3 = "Text"}
 					}
 				)
-			i.AddSignal(
-				o.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				buttonFrame.Frame.MouseButton1Click,
 				function()
-					m.Library:SafeCallback(n.Callback)
+					parent.Library._TouchElement(buttonFrame)
+					parent.Library:SafeCallback(config.Callback)
 				end
 			)
-			return o
+			return buttonFrame
 		end
-		return l
+		return Element
 	end,
 	[21] = function()
-		local c, d, e, f, g = b(21)
-		local h, i, j, k =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(21)
+		local UserInputService, TouchInputService, RunService, Players =
 			game:GetService "UserInputService",
 		game:GetService "TouchInputService",
 		game:GetService "RunService",
 		game:GetService "Players"
-		local l, m = j.RenderStepped, k.LocalPlayer
-		local n, o = m:GetMouse(), d.Parent.Parent
-		local p = e(o.Creator)
-		local s, t, u = p.New, o.Components, {}
-		u.__index = u
-		u.__type = "Colorpicker"
-		function u.New(v, w, x)
-			local y = v.Library
-			assert(x.Title, "Colorpicker - Missing Title")
-			assert(x.Default, "AddColorPicker: Missing default value.")
-			local z = {
-				Value = x.Default,
-				Transparency = x.Transparency or 0,
+		local RenderStepped, LocalPlayer = RunService.RenderStepped, Players.LocalPlayer
+		local mouse, Root = LocalPlayer:GetMouse(), moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Colorpicker"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Colorpicker - Missing Title")
+			assert(config.Default, "AddColorPicker: Missing default value.")
+			local Colorpicker = {
+				Value = config.Default,
+				Transparency = config.Transparency or 0,
 				Type = "Colorpicker",
-				Title = type(x.Title) == "string" and x.Title or "Colorpicker",
-				Callback = x.Callback or function(z)
+				Title = type(config.Title) == "string" and config.Title or "Colorpicker",
+				Callback = config.Callback or function(_color)
 				end
 			}
-			function z.SetHSVFromRGB(A, B)
-				local C, D, E = Color3.toHSV(B)
-				z.Hue = C
-				z.Sat = D
-				z.Vib = E
+			function Colorpicker.SetHSVFromRGB(_self, color)
+				local hue, sat, vib = Color3.toHSV(color)
+				Colorpicker.Hue = hue
+				Colorpicker.Sat = sat
+				Colorpicker.Vib = vib
 			end
-			z:SetHSVFromRGB(z.Value)
-			local A = e(t.Element)(x.Title, x.Description, v.Container, true)
-			z.SetTitle = A.SetTitle
-			z.SetDesc = A.SetDesc
-			z.Frame = A.Frame
-			local B =
-				s(
+			Colorpicker:SetHSVFromRGB(Colorpicker.Value)
+			local colorpickerFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			Colorpicker.SetTitle = colorpickerFrame.SetTitle
+			Colorpicker.SetDesc = colorpickerFrame.SetDesc
+			Colorpicker.Frame = colorpickerFrame.Frame
+			local displayFrame =
+				New(
 					"Frame",
-					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = z.Value, Parent = A.Frame},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colorpicker.Value, Parent = colorpickerFrame.Frame},
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
 				)
-			local aa, ab =
-				s(
+			local displayFrameHolder, createColorDialog =
+				New(
 					"ImageLabel",
 					{
 						Size = UDim2.fromOffset(26, 26),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
-						Parent = A.Frame,
+						Parent = colorpickerFrame.Frame,
 						Image = "http://www.roblox.com/asset/?id=14204231522",
 						ImageTransparency = 0.45,
 						ScaleType = Enum.ScaleType.Tile,
 						TileSize = UDim2.fromOffset(40, 40)
 					},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)}), B}
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), displayFrame}
 				),
 			function()
-				local C = e(t.Dialog):Create()
-				C.Title.Text = z.Title
-				C.Root.Size = UDim2.fromOffset(430, 330)
-				local D, E, F, G, H, I =
-					z.Hue,
-				z.Sat,
-				z.Vib,
-				z.Transparency,
+				local dialog = requireModule(Components.Dialog):Create()
+				dialog.Title.Text = Colorpicker.Title
+				dialog.Root.Size = UDim2.fromOffset(430, 330)
+				local hue, sat, vib, transparency, createInput, createInputLabel =
+					Colorpicker.Hue,
+				Colorpicker.Sat,
+				Colorpicker.Vib,
+				Colorpicker.Transparency,
 				function()
-					local D = e(t.Textbox)()
-					D.Frame.Parent = C.Root
-					D.Frame.Size = UDim2.new(0, 90, 0, 32)
-					return D
+					local box = requireModule(Components.Textbox)()
+					box.Frame.Parent = dialog.Root
+					box.Frame.Size = UDim2.new(0, 90, 0, 32)
+					return box
 				end,
-				function(D, E)
-					return s(
+				function(text, position)
+					return New(
 						"TextLabel",
 						{
 							FontFace = Font.new(
@@ -7897,24 +7951,24 @@ local aa = {
 								Enum.FontWeight.Medium,
 								Enum.FontStyle.Normal
 							),
-							Text = D,
+							Text = text,
 							TextColor3 = Color3.fromRGB(240, 240, 240),
 							TextSize = 13,
 							TextXAlignment = Enum.TextXAlignment.Left,
 							Size = UDim2.new(1, 0, 0, 32),
-							Position = E,
+							Position = position,
 							BackgroundTransparency = 1,
-							Parent = C.Root,
+							Parent = dialog.Root,
 							ThemeTag = {TextColor3 = "Text"}
 						}
 					)
 				end
-				local J, K =
+				local getRGB, satCursor =
 					function()
-						local J = Color3.fromHSV(D, E, F)
-						return {R = math.floor(J.r * 255), G = math.floor(J.g * 255), B = math.floor(J.b * 255)}
+						local color = Color3.fromHSV(hue, sat, vib)
+						return {R = math.floor(color.r * 255), G = math.floor(color.g * 255), B = math.floor(color.b * 255)}
 					end,
-				s(
+				New(
 					"ImageLabel",
 					{
 						Size = UDim2.new(0, 18, 0, 18),
@@ -7924,30 +7978,30 @@ local aa = {
 						Image = "http://www.roblox.com/asset/?id=4805639000"
 					}
 				)
-				local L, M =
-					s(
+				local satVibMap, oldColorFrame =
+					New(
 						"ImageLabel",
 						{
 							Size = UDim2.fromOffset(180, 160),
 							Position = UDim2.fromOffset(20, 55),
 							Image = "rbxassetid://4155801252",
-							BackgroundColor3 = z.Value,
+							BackgroundColor3 = Colorpicker.Value,
 							BackgroundTransparency = 0,
-							Parent = C.Root
+							Parent = dialog.Root
 						},
-						{s("UICorner", {CornerRadius = UDim.new(0, 4)}), K}
+						{New("UICorner", {CornerRadius = UDim.new(0, 4)}), satCursor}
 					),
-				s(
+				New(
 					"Frame",
 					{
-						BackgroundColor3 = z.Value,
+						BackgroundColor3 = Colorpicker.Value,
 						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = z.Transparency
+						BackgroundTransparency = Colorpicker.Transparency
 					},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
 				)
-				local N, O =
-					s(
+				local oldColorFrameChecker, dialogDisplayFrame =
+					New(
 						"ImageLabel",
 						{
 							Image = "http://www.roblox.com/asset/?id=14204231522",
@@ -7957,21 +8011,21 @@ local aa = {
 							BackgroundTransparency = 1,
 							Position = UDim2.fromOffset(112, 220),
 							Size = UDim2.fromOffset(88, 24),
-							Parent = C.Root
+							Parent = dialog.Root
 						},
 						{
-							s("UICorner", {CornerRadius = UDim.new(0, 4)}),
-							s("UIStroke", {Thickness = 2, Transparency = 0.75}),
-							M
+							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+							New("UIStroke", {Thickness = 2, Transparency = 0.75}),
+							oldColorFrame
 						}
 					),
-				s(
+				New(
 					"Frame",
-					{BackgroundColor3 = z.Value, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0},
-					{s("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{BackgroundColor3 = Colorpicker.Value, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0},
+					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
 				)
-				local P, Q =
-					s(
+				local dialogDisplayFrameChecker, sequenceTable =
+					New(
 						"ImageLabel",
 						{
 							Image = "http://www.roblox.com/asset/?id=14204231522",
@@ -7981,21 +8035,21 @@ local aa = {
 							BackgroundTransparency = 1,
 							Position = UDim2.fromOffset(20, 220),
 							Size = UDim2.fromOffset(88, 24),
-							Parent = C.Root
+							Parent = dialog.Root
 						},
 						{
-							s("UICorner", {CornerRadius = UDim.new(0, 4)}),
-							s("UIStroke", {Thickness = 2, Transparency = 0.75}),
-							O
+							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+							New("UIStroke", {Thickness = 2, Transparency = 0.75}),
+							dialogDisplayFrame
 						}
 					),
 				{}
-				for R = 0, 1, 0.1 do
-					table.insert(Q, ColorSequenceKeypoint.new(R, Color3.fromHSV(R, 1, 1)))
+				for step = 0, 1, 0.1 do
+					table.insert(sequenceTable, ColorSequenceKeypoint.new(step, Color3.fromHSV(step, 1, 1)))
 				end
-				local R, S =
-					s("UIGradient", {Color = ColorSequence.new(Q), Rotation = 90}),
-				s(
+				local hueSliderGradient, hueDragHolder =
+					New("UIGradient", {Color = ColorSequence.new(sequenceTable), Rotation = 90}),
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 1, -10),
@@ -8003,43 +8057,43 @@ local aa = {
 						BackgroundTransparency = 1
 					}
 				)
-				local T, U, V =
-					s(
+				local hueDrag, hueSlider, hexInput =
+					New(
 						"ImageLabel",
 						{
 							Size = UDim2.fromOffset(14, 14),
 							Image = "http://www.roblox.com/asset/?id=12266946128",
-							Parent = S,
+							Parent = hueDragHolder,
 							ThemeTag = {ImageColor3 = "DialogInput"}
 						}
 					),
-				s(
+				New(
 					"Frame",
-					{Size = UDim2.fromOffset(12, 190), Position = UDim2.fromOffset(210, 55), Parent = C.Root},
-					{s("UICorner", {CornerRadius = UDim.new(1, 0)}), R, S}
+					{Size = UDim2.fromOffset(12, 190), Position = UDim2.fromOffset(210, 55), Parent = dialog.Root},
+					{New("UICorner", {CornerRadius = UDim.new(1, 0)}), hueSliderGradient, hueDragHolder}
 				),
-				H()
-				V.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 55)
-				I("Hex", UDim2.fromOffset(x.Transparency and 360 or 340, 55))
-				local W = H()
-				W.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 95)
-				I("Red", UDim2.fromOffset(x.Transparency and 360 or 340, 95))
-				local X = H()
-				X.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 135)
-				I("Green", UDim2.fromOffset(x.Transparency and 360 or 340, 135))
-				local Y = H()
-				Y.Frame.Position = UDim2.fromOffset(x.Transparency and 260 or 240, 175)
-				I("Blue", UDim2.fromOffset(x.Transparency and 360 or 340, 175))
-				local Z
-				if x.Transparency then
-					Z = H()
-					Z.Frame.Position = UDim2.fromOffset(260, 215)
-					I("Alpha", UDim2.fromOffset(360, 215))
+				createInput()
+				hexInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 55)
+				createInputLabel("Hex", UDim2.fromOffset(config.Transparency and 360 or 340, 55))
+				local redInput = createInput()
+				redInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 95)
+				createInputLabel("Red", UDim2.fromOffset(config.Transparency and 360 or 340, 95))
+				local greenInput = createInput()
+				greenInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 135)
+				createInputLabel("Green", UDim2.fromOffset(config.Transparency and 360 or 340, 135))
+				local blueInput = createInput()
+				blueInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 175)
+				createInputLabel("Blue", UDim2.fromOffset(config.Transparency and 360 or 340, 175))
+				local alphaInput
+				if config.Transparency then
+					alphaInput = createInput()
+					alphaInput.Frame.Position = UDim2.fromOffset(260, 215)
+					createInputLabel("Alpha", UDim2.fromOffset(360, 215))
 				end
-				local _, aa, ab
-				if x.Transparency then
-					local ac =
-						s(
+				local transparencySlider, transparencyDrag, transparencyColor
+				if config.Transparency then
+					local transparencyDragHolder =
+						New(
 							"Frame",
 							{
 								Size = UDim2.new(1, 0, 1, -10),
@@ -8047,22 +8101,22 @@ local aa = {
 								BackgroundTransparency = 1
 							}
 						)
-					aa =
-						s(
+					transparencyDrag =
+						New(
 							"ImageLabel",
 							{
 								Size = UDim2.fromOffset(14, 14),
 								Image = "http://www.roblox.com/asset/?id=12266946128",
-								Parent = ac,
+								Parent = transparencyDragHolder,
 								ThemeTag = {ImageColor3 = "DialogInput"}
 							}
 						)
-					ab =
-						s(
+					transparencyColor =
+						New(
 							"Frame",
 							{Size = UDim2.fromScale(1, 1)},
 							{
-								s(
+								New(
 									"UIGradient",
 									{
 										Transparency = NumberSequence.new {
@@ -8072,21 +8126,21 @@ local aa = {
 										Rotation = 270
 									}
 								),
-								s("UICorner", {CornerRadius = UDim.new(1, 0)})
+								New("UICorner", {CornerRadius = UDim.new(1, 0)})
 							}
 						)
-					_ =
-						s(
+					transparencySlider =
+						New(
 							"Frame",
 							{
 								Size = UDim2.fromOffset(12, 190),
 								Position = UDim2.fromOffset(230, 55),
-								Parent = C.Root,
+								Parent = dialog.Root,
 								BackgroundTransparency = 1
 							},
 							{
-								s("UICorner", {CornerRadius = UDim.new(1, 0)}),
-								s(
+								New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+								New(
 									"ImageLabel",
 									{
 										Image = "http://www.roblox.com/asset/?id=14204231522",
@@ -8095,243 +8149,244 @@ local aa = {
 										TileSize = UDim2.fromOffset(40, 40),
 										BackgroundTransparency = 1,
 										Size = UDim2.fromScale(1, 1),
-										Parent = C.Root
+										Parent = dialog.Root
 									},
-									{s("UICorner", {CornerRadius = UDim.new(1, 0)})}
+									{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
 								),
-								ab,
-								ac
+								transparencyColor,
+								transparencyDragHolder
 							}
 						)
 				end
-				local ac = function()
-					L.BackgroundColor3 = Color3.fromHSV(D, 1, 1)
-					T.Position = UDim2.new(0, -1, D, -6)
-					K.Position = UDim2.new(E, 0, 1 - F, 0)
-					O.BackgroundColor3 = Color3.fromHSV(D, E, F)
-					V.Input.Text = "#" .. Color3.fromHSV(D, E, F):ToHex()
-					W.Input.Text = J().R
-					X.Input.Text = J().G
-					Y.Input.Text = J().B
-					if x.Transparency then
-						ab.BackgroundColor3 = Color3.fromHSV(D, E, F)
-						O.BackgroundTransparency = G
-						aa.Position = UDim2.new(0, -1, 1 - G, -6)
-						Z.Input.Text = e(o):Round((1 - G) * 100, 0) .. "%"
+				local display = function()
+					satVibMap.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+					hueDrag.Position = UDim2.new(0, -1, hue, -6)
+					satCursor.Position = UDim2.new(sat, 0, 1 - vib, 0)
+					dialogDisplayFrame.BackgroundColor3 = Color3.fromHSV(hue, sat, vib)
+					hexInput.Input.Text = "#" .. Color3.fromHSV(hue, sat, vib):ToHex()
+					redInput.Input.Text = getRGB().R
+					greenInput.Input.Text = getRGB().G
+					blueInput.Input.Text = getRGB().B
+					if config.Transparency then
+						transparencyColor.BackgroundColor3 = Color3.fromHSV(hue, sat, vib)
+						dialogDisplayFrame.BackgroundTransparency = transparency
+						transparencyDrag.Position = UDim2.new(0, -1, 1 - transparency, -6)
+						alphaInput.Input.Text = requireModule(Root):Round((1 - transparency) * 100, 0) .. "%"
 					end
 				end
-				p.AddSignal(
-					V.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae, af = pcall(Color3.fromHex, V.Input.Text)
-							if ae and typeof(af) == "Color3" then
-								D, E, F = Color3.toHSV(af)
+				Creator.AddSignal(
+					hexInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local ok, result = pcall(Color3.fromHex, hexInput.Input.Text)
+							if ok and typeof(result) == "Color3" then
+								hue, sat, vib = Color3.toHSV(result)
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				p.AddSignal(
-					W.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae = J()
-							local af, ag = pcall(Color3.fromRGB, W.Input.Text, ae.G, ae.B)
-							if af and typeof(ag) == "Color3" then
-								if tonumber(W.Input.Text) <= 255 then
-									D, E, F = Color3.toHSV(ag)
+				Creator.AddSignal(
+					redInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local rgb = getRGB()
+							local ok, result = pcall(Color3.fromRGB, redInput.Input.Text, rgb.G, rgb.B)
+							if ok and typeof(result) == "Color3" then
+								if tonumber(redInput.Input.Text) <= 255 then
+									hue, sat, vib = Color3.toHSV(result)
 								end
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				p.AddSignal(
-					X.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae = J()
-							local af, ag = pcall(Color3.fromRGB, ae.R, X.Input.Text, ae.B)
-							if af and typeof(ag) == "Color3" then
-								if tonumber(X.Input.Text) <= 255 then
-									D, E, F = Color3.toHSV(ag)
+				Creator.AddSignal(
+					greenInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local rgb = getRGB()
+							local ok, result = pcall(Color3.fromRGB, rgb.R, greenInput.Input.Text, rgb.B)
+							if ok and typeof(result) == "Color3" then
+								if tonumber(greenInput.Input.Text) <= 255 then
+									hue, sat, vib = Color3.toHSV(result)
 								end
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				p.AddSignal(
-					Y.Input.FocusLost,
-					function(ad)
-						if ad then
-							local ae = J()
-							local af, ag = pcall(Color3.fromRGB, ae.R, ae.G, Y.Input.Text)
-							if af and typeof(ag) == "Color3" then
-								if tonumber(Y.Input.Text) <= 255 then
-									D, E, F = Color3.toHSV(ag)
+				Creator.AddSignal(
+					blueInput.Input.FocusLost,
+					function(enter)
+						if enter then
+							local rgb = getRGB()
+							local ok, result = pcall(Color3.fromRGB, rgb.R, rgb.G, blueInput.Input.Text)
+							if ok and typeof(result) == "Color3" then
+								if tonumber(blueInput.Input.Text) <= 255 then
+									hue, sat, vib = Color3.toHSV(result)
 								end
 							end
 						end
-						ac()
+						display()
 					end
 				)
-				if x.Transparency then
-					p.AddSignal(
-						Z.Input.FocusLost,
-						function(ad)
-							if ad then
+				if config.Transparency then
+					Creator.AddSignal(
+						alphaInput.Input.FocusLost,
+						function(enter)
+							if enter then
 								pcall(
 									function()
-										local ae = tonumber(Z.Input.Text)
-										if ae >= 0 and ae <= 100 then
-											G = 1 - ae * 0.01
+										local alpha = tonumber(alphaInput.Input.Text)
+										if alpha >= 0 and alpha <= 100 then
+											transparency = 1 - alpha * 0.01
 										end
 									end
 								)
 							end
-							ac()
+							display()
 						end
 					)
 				end
-				p.AddSignal(
-					L.InputBegan,
-					function(ad)
+				Creator.AddSignal(
+					satVibMap.InputBegan,
+					function(input)
 						if
-							ad.UserInputType == Enum.UserInputType.MouseButton1 or
-							ad.UserInputType == Enum.UserInputType.Touch
+							input.UserInputType == Enum.UserInputType.MouseButton1 or
+							input.UserInputType == Enum.UserInputType.Touch
 						then
-							while h:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-								local ae = L.AbsolutePosition.X
-								local af = ae + L.AbsoluteSize.X
-								local ag, ah = math.clamp(n.X, ae, af), L.AbsolutePosition.Y
-								local ai = ah + L.AbsoluteSize.Y
-								local aj = math.clamp(n.Y, ah, ai)
-								E = (ag - ae) / (af - ae)
-								F = 1 - ((aj - ah) / (ai - ah))
-								ac()
-								l:Wait()
+							while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+								local minX = satVibMap.AbsolutePosition.X
+								local maxX = minX + satVibMap.AbsoluteSize.X
+								local mouseX, minY = math.clamp(mouse.X, minX, maxX), satVibMap.AbsolutePosition.Y
+								local maxY = minY + satVibMap.AbsoluteSize.Y
+								local mouseY = math.clamp(mouse.Y, minY, maxY)
+								sat = (mouseX - minX) / (maxX - minX)
+								vib = 1 - ((mouseY - minY) / (maxY - minY))
+								display()
+								RenderStepped:Wait()
 							end
 						end
 					end
 				)
-				p.AddSignal(
-					U.InputBegan,
-					function(ad)
+				Creator.AddSignal(
+					hueSlider.InputBegan,
+					function(input)
 						if
-							ad.UserInputType == Enum.UserInputType.MouseButton1 or
-							ad.UserInputType == Enum.UserInputType.Touch
+							input.UserInputType == Enum.UserInputType.MouseButton1 or
+							input.UserInputType == Enum.UserInputType.Touch
 						then
-							while h:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-								local ae = U.AbsolutePosition.Y
-								local af = ae + U.AbsoluteSize.Y
-								local ag = math.clamp(n.Y, ae, af)
-								D = ((ag - ae) / (af - ae))
-								ac()
-								l:Wait()
+							while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+								local minY = hueSlider.AbsolutePosition.Y
+								local maxY = minY + hueSlider.AbsoluteSize.Y
+								local mouseY = math.clamp(mouse.Y, minY, maxY)
+								hue = ((mouseY - minY) / (maxY - minY))
+								display()
+								RenderStepped:Wait()
 							end
 						end
 					end
 				)
-				if x.Transparency then
-					p.AddSignal(
-						_.InputBegan,
-						function(ad)
-							if ad.UserInputType == Enum.UserInputType.MouseButton1 then
-								while h:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-									local ae = _.AbsolutePosition.Y
-									local af = ae + _.AbsoluteSize.Y
-									local ag = math.clamp(n.Y, ae, af)
-									G = 1 - ((ag - ae) / (af - ae))
-									ac()
-									l:Wait()
+				if config.Transparency then
+					Creator.AddSignal(
+						transparencySlider.InputBegan,
+						function(input)
+							if input.UserInputType == Enum.UserInputType.MouseButton1 then
+								while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+									local minY = transparencySlider.AbsolutePosition.Y
+									local maxY = minY + transparencySlider.AbsoluteSize.Y
+									local mouseY = math.clamp(mouse.Y, minY, maxY)
+									transparency = 1 - ((mouseY - minY) / (maxY - minY))
+									display()
+									RenderStepped:Wait()
 								end
 							end
 						end
 					)
 				end
-				ac()
-				C:Button(
+				display()
+				dialog:Button(
 					"Done",
 					function()
-						z:SetValue({D, E, F}, G)
+						Colorpicker:SetValue({hue, sat, vib}, transparency)
+						Library._TouchElement(Colorpicker)
 					end
 				)
-				C:Button "Cancel"
-				C:Open()
+				dialog:Button "Cancel"
+				dialog:Open()
 			end
-			function z.Display(ac)
-				z.Value = Color3.fromHSV(z.Hue, z.Sat, z.Vib)
-				B.BackgroundColor3 = z.Value
-				B.BackgroundTransparency = z.Transparency
-				u.Library:SafeCallback(z.Callback, z.Value)
-				u.Library:SafeCallback(z.Changed, z.Value)
+			function Colorpicker.Display(_self)
+				Colorpicker.Value = Color3.fromHSV(Colorpicker.Hue, Colorpicker.Sat, Colorpicker.Vib)
+				displayFrame.BackgroundColor3 = Colorpicker.Value
+				displayFrame.BackgroundTransparency = Colorpicker.Transparency
+				Element.Library:SafeCallback(Colorpicker.Callback, Colorpicker.Value)
+				Element.Library:SafeCallback(Colorpicker.Changed, Colorpicker.Value)
 			end
-			function z.SetValue(ac, ad, ae)
-				local af = Color3.fromHSV(ad[1], ad[2], ad[3])
-				z.Transparency = ae or 0
-				z:SetHSVFromRGB(af)
-				z:Display()
+			function Colorpicker.SetValue(_self, hsv, transparency)
+				local color = Color3.fromHSV(hsv[1], hsv[2], hsv[3])
+				Colorpicker.Transparency = transparency or 0
+				Colorpicker:SetHSVFromRGB(color)
+				Colorpicker:Display()
 			end
-			function z.SetValueRGB(ac, ad, ae)
-				z.Transparency = ae or 0
-				z:SetHSVFromRGB(ad)
-				z:Display()
+			function Colorpicker.SetValueRGB(_self, color, transparency)
+				Colorpicker.Transparency = transparency or 0
+				Colorpicker:SetHSVFromRGB(color)
+				Colorpicker:Display()
 			end
-			function z.OnChanged(ac, ad)
-				z.Changed = ad
-				ad(z.Value)
+			function Colorpicker.OnChanged(_self, callback)
+				Colorpicker.Changed = callback
+				callback(Colorpicker.Value)
 			end
-			function z.Destroy(ac)
-				A:Destroy()
-				y.Options[w] = nil
+			function Colorpicker.Destroy(_self)
+				colorpickerFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			p.AddSignal(
-				A.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				colorpickerFrame.Frame.MouseButton1Click,
 				function()
-					ab()
+					createColorDialog()
 				end
 			)
-			z:Display()
-			y.Options[w] = z
-			return z
+			Colorpicker:Display()
+			Library.Options[idx] = Colorpicker
+			return Colorpicker
 		end
-		return u
+		return Element
 	end,
 	[22] = function()
-		local aa, ab, ac, ad, ae = b(22)
-		local af, ag, ah, ai, aj =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(22)
+		local TweenService, UserInputService, mouse, camera, Root =
 			game:GetService "TweenService",
 		game:GetService "UserInputService",
 		game:GetService "Players".LocalPlayer:GetMouse(),
 		game:GetService "Workspace".CurrentCamera,
-		ab.Parent.Parent
-		local c, d = ac(aj.Creator), ac(aj.Packages.Flipper)
-		local e, f, g = c.New, aj.Components, {}
-		g.__index = g
-		g.__type = "Dropdown"
-		function g.New(h, i, j)
-			local k, l, m =
-				h.Library,
+		moduleScript.Parent.Parent
+		local Creator, Flipper = requireModule(Root.Creator), requireModule(Root.Packages.Flipper)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Dropdown"
+		function Element.New(parent, idx, config)
+			local Library, Dropdown, dropdownFrame =
+				parent.Library,
 			{
-				Values = j.Values,
-				Value = j.Default,
-				Multi = j.Multi,
+				Values = config.Values,
+				Value = (config.Multi and {}) or config.Default,
+				Multi = config.Multi,
 				Buttons = {},
 				Opened = false,
 				Type = "Dropdown",
 				SearchText = "",
-				Callback = j.Callback or function()
+				Callback = config.Callback or function()
 				end
 			},
-			ac(f.Element)(j.Title, j.Description, h.Container, false)
-			m.DescLabel.Size = UDim2.new(1, -170, 0, 14)
-			l.SetTitle = m.SetTitle
-			l.SetDesc = m.SetDesc
-			l.Frame = m.Frame
-			local n, o =
-				e(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			dropdownFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+			Dropdown.SetTitle = dropdownFrame.SetTitle
+			Dropdown.SetDesc = dropdownFrame.SetDesc
+			Dropdown.Frame = dropdownFrame.Frame
+			local dropdownDisplay, dropdownIcon =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -8353,7 +8408,7 @@ local aa = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				),
-			e(
+			New(
 				"ImageLabel",
 				{
 					Image = "rbxassetid://10709790948",
@@ -8364,8 +8419,8 @@ local aa = {
 					ThemeTag = {ImageColor3 = "SubText"}
 				}
 			)
-			local p =
-				e(
+			local dropdownInner =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(160, 34),
@@ -8373,12 +8428,12 @@ local aa = {
 						AnchorPoint = Vector2.new(1, 0.5),
 						BackgroundTransparency = 0.9,
 						ClipsDescendants = true,
-						Parent = m.Frame,
+						Parent = dropdownFrame.Frame,
 						ThemeTag = {BackgroundColor3 = "DropdownFrame"}
 					},
 					{
-						e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						e(
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New(
 							"UIStroke",
 							{
 								Transparency = 0.5,
@@ -8386,8 +8441,8 @@ local aa = {
 								ThemeTag = {Color = "InElementBorder"}
 							}
 						),
-						o,
-						n
+						dropdownIcon,
+						dropdownDisplay
 					}
 				)
 			local textService = game:GetService("TextService")
@@ -8413,23 +8468,23 @@ local aa = {
 					selectedLabelScrollTween:Cancel()
 					selectedLabelScrollTween = nil
 				end
-				n.TextTruncate = Enum.TextTruncate.AtEnd
-				n.Size = selectedLabelDefaultSize
-				n.Position = selectedLabelDefaultPosition
+				dropdownDisplay.TextTruncate = Enum.TextTruncate.AtEnd
+				dropdownDisplay.Size = selectedLabelDefaultSize
+				dropdownDisplay.Position = selectedLabelDefaultPosition
 			end
 			local function startSelectedLabelScroll()
-				local visibleWidth = math.max(p.AbsoluteSize.X - 30, 0)
-				local textWidth = getTextWidth(n, n.Text) + 8
+				local visibleWidth = math.max(dropdownInner.AbsoluteSize.X - 30, 0)
+				local textWidth = getTextWidth(dropdownDisplay, dropdownDisplay.Text) + 8
 				if textWidth <= visibleWidth then
 					return
 				end
 				stopSelectedLabelScroll()
-				n.TextTruncate = Enum.TextTruncate.None
-				n.Size = UDim2.fromOffset(textWidth, 14)
+				dropdownDisplay.TextTruncate = Enum.TextTruncate.None
+				dropdownDisplay.Size = UDim2.fromOffset(textWidth, 14)
 				local travel = textWidth - visibleWidth
 				selectedLabelScrollTween =
-					af:Create(
-						n,
+					TweenService:Create(
+						dropdownDisplay,
 						TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
 						{Position = UDim2.new(0, 8 - travel, 0.5, 0)}
 					)
@@ -8437,7 +8492,7 @@ local aa = {
 			end
 
 			-- Search Box
-			local searchBoxStroke = e(
+			local searchBoxStroke = New(
 				"UIStroke",
 				{
 					Transparency = 0.5,
@@ -8447,7 +8502,7 @@ local aa = {
 			)
 
 			local searchBox =
-				e(
+				New(
 					"TextBox",
 					{
 						Size = UDim2.new(1, -50, 0, 34),
@@ -8463,15 +8518,16 @@ local aa = {
 						ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text"}
 					},
 					{
-						e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						e("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
 						searchBoxStroke
 					}
 				)
+			TranslationSystem:Register(searchBox, "🔍 Search...", "PlaceholderText")
 
 			-- Clear Button (X)
 			local clearButton =
-				e(
+				New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(0, 0),
@@ -8486,8 +8542,8 @@ local aa = {
 						ThemeTag = {BackgroundColor3 = "DialogButton"}
 					},
 					{
-						e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						e(
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						New(
 							"UIStroke",
 							{
 								Transparency = 1,
@@ -8501,23 +8557,22 @@ local aa = {
 			-- Select All Button (เฉพาะ Multi-select)
 			local selectAllButton = nil
 
-			if j.Multi then
+			if config.Multi then
 				selectAllButton =
-					e(
+					New(
 						"TextButton",
 						{
 							Size = UDim2.new(1, -10, 0, 28),
 							Position = UDim2.fromOffset(5, 44),
 							BackgroundTransparency = 0.9,
 							Text = "✅ Select All",
-							TextColor3 = Color3.fromRGB(76, 194, 255),
 							TextSize = 13,
 							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
-							ThemeTag = {BackgroundColor3 = "DialogButton"}
+							ThemeTag = {BackgroundColor3 = "DialogButton", TextColor3 = "Accent"}
 						},
 						{
-							e("UICorner", {CornerRadius = UDim.new(0, 8)}),
-							e(
+							New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+							New(
 								"UIStroke",
 								{
 									Transparency = 0.5,
@@ -8529,12 +8584,12 @@ local aa = {
 					)
 			end
 
-			local s = e("UIListLayout", {Padding = UDim.new(0, 4)})
-			local scrollYPos = j.Multi and 77 or 44
-			local scrollYSize = j.Multi and -82 or -49
+			local dropdownListLayout = New("UIListLayout", {Padding = UDim.new(0, 4)})
+			local scrollYPos = config.Multi and 77 or 44
+			local scrollYSize = config.Multi and -82 or -49
 
-			local t =
-				e(
+			local dropdownScrollFrame =
+				New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.new(1, -10, 1, scrollYSize),
@@ -8549,15 +8604,15 @@ local aa = {
 						CanvasSize = UDim2.fromScale(0, 0),
 						ThemeTag = {ScrollBarImageColor3 = "Accent"}
 					},
-					{s}
+					{dropdownListLayout}
 				)
 
 			local uChildren = {
 				searchBox,
 				clearButton,
-				t,
-				e("UICorner", {CornerRadius = UDim.new(0, 7)}),
-				e(
+				dropdownScrollFrame,
+				New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+				New(
 					"UIStroke",
 					{
 						Thickness = 1.5,
@@ -8565,7 +8620,7 @@ local aa = {
 						ThemeTag = {Color = "DropdownBorder"}
 					}
 				),
-				e(
+				New(
 					"ImageLabel",
 					{
 						BackgroundTransparency = 1,
@@ -8580,36 +8635,36 @@ local aa = {
 				)
 			}
 
-			if j.Multi then
+			if config.Multi then
 				table.insert(uChildren, selectAllButton)
 			end
 
-			local u =
-				e(
+			local dropdownHolderFrame =
+				New(
 					"Frame",
 					{Size = UDim2.fromScale(1, 0.5), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
 					uChildren
 				)
 
-			local v =
-				e(
+			local dropdownHolderCanvas =
+				New(
 					"Frame",
 					{
 						BackgroundTransparency = 1,
 						Size = UDim2.fromOffset(170, 250),
-						Parent = h.Library.GUI,
+						Parent = parent.Library.GUI,
 						Visible = false
 					},
-					{u, e("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 320)})}
+					{dropdownHolderFrame, New("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 320)})}
 				)
-			table.insert(k.OpenFrames, v)
+			table.insert(Library.OpenFrames, dropdownHolderCanvas)
 
 			-- Position dropdown with smart positioning
-			local w = function()
-				local mainFrame = p.AbsolutePosition
-				local mainSize = p.AbsoluteSize
+			local recalculateListPosition = function()
+				local mainFrame = dropdownInner.AbsolutePosition
+				local mainSize = dropdownInner.AbsoluteSize
 				local dropdownWidth = 170
-				local viewportSize = ai.ViewportSize
+				local viewportSize = camera.ViewportSize
 
 				-- Try right side first
 				local xPos = mainFrame.X + mainSize.X + 10
@@ -8628,7 +8683,7 @@ local aa = {
 				local yPos = mainFrame.Y - 5
 
 				-- Make sure Y position is within screen
-				local maxY = viewportSize.Y - v.AbsoluteSize.Y - 10
+				local maxY = viewportSize.Y - dropdownHolderCanvas.AbsoluteSize.Y - 10
 				if yPos > maxY then
 					yPos = maxY
 				end
@@ -8636,316 +8691,149 @@ local aa = {
 					yPos = 10
 				end
 
-				v.Position = UDim2.fromOffset(xPos, yPos)
+				dropdownHolderCanvas.Position = UDim2.fromOffset(xPos, yPos)
 			end
 
-			local x = 170
-			local y = function()
+			local listSizeX = 170
+			local recalculateListSize = function()
 				local maxHeight = 280
-				local contentHeight = s.AbsoluteContentSize.Y + (j.Multi and 87 or 54)
+				local contentHeight = dropdownListLayout.AbsoluteContentSize.Y + (config.Multi and 87 or 54)
 				local finalHeight = math.min(contentHeight, maxHeight)
-				v.Size = UDim2.fromOffset(x, finalHeight)
+				dropdownHolderCanvas.Size = UDim2.fromOffset(listSizeX, finalHeight)
 			end
 
-			local z = function()
-				t.CanvasSize = UDim2.fromOffset(0, s.AbsoluteContentSize.Y)
+			local recalculateCanvasSize = function()
+				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, dropdownListLayout.AbsoluteContentSize.Y)
 			end
-			local searchDebounce = nil
+			local searchRevision = 0
 			local dropdownBuilt = false
-			local virtualScrollDebounce = nil
-			local virtualRowHeight = 38
-			local virtualThreshold = 10
-			local virtualBuffer = 4
-			local virtualEnabled = false
+			-- Rows in list order. Searching shows or hides these rows instead of
+			-- rebuilding them, so typing creates no instances.
+			local dropdownRows = {}
+			local function applySearchFilter()
+				local query = Dropdown.SearchText
+				for _, row in ipairs(dropdownRows) do
+					local shown = query == "" or row.SearchTarget:find(query, 1, true) ~= nil
+					if row.Button.Visible ~= shown then
+						row.Button.Visible = shown
+						if not shown then
+							-- MouseLeave may not fire for a row hidden under the mouse.
+							row:ResetHover()
+						end
+					end
+				end
+				recalculateCanvasSize()
+				recalculateListSize()
+			end
 			local function rebuildDropdown()
-				l:BuildDropdownList()
+				Dropdown:BuildDropdownList()
 				dropdownBuilt = true
 			end
 
-			w()
-			y()
-			c.AddSignal(p:GetPropertyChangedSignal "AbsolutePosition", w)
+			recalculateListPosition()
+			recalculateListSize()
+
+			-- Follow the button and close on outside clicks only while open, so
+			-- closed dropdowns cost nothing when the window moves or on input.
+			local openConnections = {}
+			local function closeOnOutsideInput(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if Dropdown.Opened then
+						local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
+						local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
+
+						-- Check if click is outside dropdown and outside button
+						local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
+						local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
+
+						if outsideDropdown and outsideButton then
+							Dropdown:Close()
+						end
+					end
+				end
+			end
+			local function connectWhileOpen()
+				table.insert(openConnections, Creator.AddSignal(dropdownInner:GetPropertyChangedSignal "AbsolutePosition", recalculateListPosition))
+				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, closeOnOutsideInput))
+				table.insert(openConnections, Creator.AddSignal(dropdownListLayout:GetPropertyChangedSignal "AbsoluteContentSize", function()
+					recalculateCanvasSize()
+					recalculateListSize()
+				end))
+			end
+			local function disconnectWhileOpen()
+				for index = #openConnections, 1, -1 do
+					openConnections[index]:Disconnect()
+					openConnections[index] = nil
+				end
+			end
 
 			-- Arrow rotation animation
-			local arrowRotation = d.SingleMotor.new(0)
+			local arrowRotation = Flipper.SingleMotor.new(0)
 			arrowRotation:onStep(function(rot)
-				o.Rotation = rot
+				dropdownIcon.Rotation = rot
 			end)
 
 			-- Toggle dropdown on click
-			c.AddSignal(
-				p.MouseEnter,
+			Creator.AddSignal(
+				dropdownInner.MouseEnter,
 				function()
 					startSelectedLabelScroll()
 				end
 			)
 
-			c.AddSignal(
-				p.MouseLeave,
+			Creator.AddSignal(
+				dropdownInner.MouseLeave,
 				function()
 					stopSelectedLabelScroll()
 				end
 			)
 
-			c.AddSignal(
-				p.MouseButton1Click,
+			Creator.AddSignal(
+				dropdownInner.MouseButton1Click,
 				function()
-					if l.Opened then
-						l:Close()
+					if Dropdown.Opened then
+						Dropdown:Close()
 					else
-						l:Open()
-					end
-				end
-			)
-
-			c.AddSignal(
-				ag.InputBegan,
-				function(A)
-					if A.UserInputType == Enum.UserInputType.MouseButton1 or A.UserInputType == Enum.UserInputType.Touch then
-						if l.Opened then
-							local B, C = u.AbsolutePosition, u.AbsoluteSize
-							local pB, pC = p.AbsolutePosition, p.AbsoluteSize
-
-							-- Check if click is outside dropdown and outside button
-							local outsideDropdown = ah.X < B.X or ah.X > B.X + C.X or ah.Y < B.Y or ah.Y > B.Y + C.Y
-							local outsideButton = ah.X < pB.X or ah.X > pB.X + pC.X or ah.Y < pB.Y or ah.Y > pB.Y + pC.Y
-
-							if outsideDropdown and outsideButton then
-								l:Close()
-							end
-						end
+						Dropdown:Open()
 					end
 				end
 			)
 
 			-- Search box focus animation
-			c.AddSignal(
+			Creator.AddSignal(
 				searchBox.Focused,
 				function()
-					af:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
+					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
 				end
 			)
 
-			c.AddSignal(
+			Creator.AddSignal(
 				searchBox.FocusLost,
 				function()
-					af:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
 				end
 			)
 
-			-- Search functionality with debounce for better performance
-			c.AddSignal(
+			-- Search: several text changes in one frame rebuild the list once.
+			Creator.AddSignal(
 				searchBox:GetPropertyChangedSignal("Text"),
 				function()
-					if searchDebounce then
-						searchDebounce:Disconnect()
-					end
-
-					searchDebounce = game:GetService("RunService").Heartbeat:Connect(function()
-						if searchDebounce then
-							searchDebounce:Disconnect()
-							searchDebounce = nil
+					searchRevision = searchRevision + 1
+					local revision = searchRevision
+					task.defer(function()
+						if revision ~= searchRevision then
+							return
 						end
-
-						l.SearchText = searchBox.Text:lower()
-						t.CanvasPosition = Vector2.new(0, 0)
-						dropdownBuilt = false
-						if l.Opened then
+						Dropdown.SearchText = searchBox.Text:lower()
+						dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
+						if dropdownBuilt then
+							applySearchFilter()
+						elseif Dropdown.Opened then
 							rebuildDropdown()
 						end
 					end)
 				end
 			)
-
-			c.AddSignal(
-				t:GetPropertyChangedSignal("CanvasPosition"),
-				function()
-					if not virtualEnabled or not l.Opened or not dropdownBuilt then
-						return
-					end
-					if virtualScrollDebounce then
-						virtualScrollDebounce:Disconnect()
-					end
-					virtualScrollDebounce = game:GetService("RunService").Heartbeat:Connect(function()
-						if virtualScrollDebounce then
-							virtualScrollDebounce:Disconnect()
-							virtualScrollDebounce = nil
-						end
-						rebuildDropdown()
-					end)
-				end
-			)
-
-			-- Clear button functionality with hover effects
-			local _, clearBgTransparency = c.SpringMotor(0.9, clearButton, "BackgroundTransparency")
-
-			c.AddSignal(
-				clearButton.MouseEnter,
-				function()
-					clearBgTransparency(0.8)
-					-- Scale up slightly on hover
-					af:Create(
-						clearButton,
-						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Size = UDim2.fromOffset(38, 38)}
-					):Play()
-				end
-			)
-
-			c.AddSignal(
-				clearButton.MouseLeave,
-				function()
-					clearBgTransparency(0.9)
-					-- Scale back to normal
-					af:Create(
-						clearButton,
-						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Size = UDim2.fromOffset(34, 34)}
-					):Play()
-				end
-			)
-
-			c.AddSignal(
-				clearButton.MouseButton1Click,
-				function()
-					-- Bounce animation on click
-					local bounceSequence = af:Create(
-						clearButton,
-						TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Size = UDim2.fromOffset(30, 30)}
-					)
-					bounceSequence:Play()
-					bounceSequence.Completed:Connect(function()
-						af:Create(
-							clearButton,
-							TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-							{Size = UDim2.fromOffset(34, 34)}
-						):Play()
-					end)
-
-					if j.Multi then
-						l.Value = {}
-					else
-						l.Value = nil
-					end
-
-					-- Update buttons without rebuilding
-					for button, buttonData in pairs(l.Buttons) do
-						buttonData:UpdateButton()
-					end
-
-					l:Display()
-					k:SafeCallback(l.Callback, l.Value)
-					k:SafeCallback(l.Changed, l.Value)
-				end
-			)
-
-			-- Select All button functionality with hover effect
-			if j.Multi and selectAllButton then
-				local _, selectAllTransparency = c.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
-
-				c.AddSignal(
-					selectAllButton.MouseEnter,
-					function()
-						selectAllTransparency(0.85)
-					end
-				)
-
-				c.AddSignal(
-					selectAllButton.MouseLeave,
-					function()
-						selectAllTransparency(0.9)
-					end
-				)
-
-				c.AddSignal(
-					selectAllButton.MouseButton1Click,
-					function()
-						-- Get all visible values (filtered by search)
-						for _, value in pairs(l.Values) do
-							if l.SearchText == "" or value:lower():find(l.SearchText, 1, true) then
-								l.Value[value] = true
-							end
-						end
-
-						-- Update buttons without rebuilding
-						for button, buttonData in pairs(l.Buttons) do
-							buttonData:UpdateButton()
-						end
-
-						l:Display()
-						k:SafeCallback(l.Callback, l.Value)
-						k:SafeCallback(l.Changed, l.Value)
-					end
-				)
-			end
-
-			local searchDelay = 0.15 -- 150ms delay
-
-			-- Drag-select state for multi-select
-			local isDragging = false
-			local dragStartValue = false
-
-			-- Clear button animation helper
-			local clearButtonStroke = clearButton:FindFirstChildOfClass("UIStroke")
-			local isClearButtonVisible = false
-
-			local function showClearButton()
-				if isClearButtonVisible then return end
-				isClearButtonVisible = true
-				clearButton.Visible = true
-
-				-- Animate size, transparency, and rotation
-				af:Create(
-					clearButton,
-					TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-					{
-						Size = UDim2.fromOffset(34, 34),
-						BackgroundTransparency = 0.9,
-						TextTransparency = 0,
-						Rotation = 0
-					}
-				):Play()
-
-				if clearButtonStroke then
-					af:Create(
-						clearButtonStroke,
-						TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Transparency = 0.5}
-					):Play()
-				end
-			end
-
-			local function hideClearButton()
-				if not isClearButtonVisible then return end
-				isClearButtonVisible = false
-
-				-- Animate out with rotation
-				local hideTween = af:Create(
-					clearButton,
-					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-					{
-						Size = UDim2.fromOffset(0, 0),
-						BackgroundTransparency = 1,
-						TextTransparency = 1,
-						Rotation = 90
-					}
-				)
-
-				if clearButtonStroke then
-					af:Create(
-						clearButtonStroke,
-						TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-						{Transparency = 1}
-					):Play()
-				end
-
-				hideTween:Play()
-				hideTween.Completed:Connect(function()
-					clearButton.Visible = false
-					clearButton.Rotation = -90
-				end)
-			end
 
 			-- Parse color code from text
 			local function parseColorCode(text)
@@ -8962,142 +8850,323 @@ local aa = {
 				return nil, text
 			end
 
-			local A = h.ScrollFrame
-			function l.Open(B)
-				if l.Opened then
+			-- Multi values arrive as a list {"A", "B"} or as a set {A = true}
+			-- (SaveManager). Returns a set of the entries that are in Values.
+			local function toSelectionSet(value)
+				local set = {}
+				if type(value) == "table" then
+					for key, item in next, value do
+						local candidate = item
+						if type(item) == "boolean" then
+							candidate = item and key or nil
+						end
+						if candidate ~= nil and table.find(Dropdown.Values, candidate) then
+							set[candidate] = true
+						end
+					end
+				end
+				return set
+			end
+
+			-- A single-choice dropdown can only become empty with AllowNull.
+			local canClear = config.Multi or config.AllowNull
+
+			-- Clear button functionality with hover effects
+			local _, clearBgTransparency = Creator.SpringMotor(0.9, clearButton, "BackgroundTransparency")
+
+			Creator.AddSignal(
+				clearButton.MouseEnter,
+				function()
+					clearBgTransparency(0.8)
+					-- Scale up slightly on hover
+					TweenService:Create(
+						clearButton,
+						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{Size = UDim2.fromOffset(38, 38)}
+					):Play()
+				end
+			)
+
+			Creator.AddSignal(
+				clearButton.MouseLeave,
+				function()
+					clearBgTransparency(0.9)
+					-- Scale back to normal
+					TweenService:Create(
+						clearButton,
+						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{Size = UDim2.fromOffset(34, 34)}
+					):Play()
+				end
+			)
+
+			Creator.AddSignal(
+				clearButton.MouseButton1Click,
+				function()
+					if not canClear then
+						return
+					end
+					-- Bounce animation on click
+					local bounceSequence = TweenService:Create(
+						clearButton,
+						TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{Size = UDim2.fromOffset(30, 30)}
+					)
+					bounceSequence:Play()
+					bounceSequence.Completed:Connect(function()
+						TweenService:Create(
+							clearButton,
+							TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{Size = UDim2.fromOffset(34, 34)}
+						):Play()
+					end)
+
+					if config.Multi then
+						Dropdown.Value = {}
+					else
+						Dropdown.Value = nil
+					end
+
+					-- Update buttons without rebuilding
+					for button, buttonData in pairs(Dropdown.Buttons) do
+						buttonData:UpdateButton()
+					end
+
+					Dropdown:Display()
+					Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+					Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+					Library._TouchElement(Dropdown)
+				end
+			)
+
+			-- Select All button functionality with hover effect
+			if config.Multi and selectAllButton then
+				local _, selectAllTransparency = Creator.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
+
+				Creator.AddSignal(
+					selectAllButton.MouseEnter,
+					function()
+						selectAllTransparency(0.85)
+					end
+				)
+
+				Creator.AddSignal(
+					selectAllButton.MouseLeave,
+					function()
+						selectAllTransparency(0.9)
+					end
+				)
+
+				Creator.AddSignal(
+					selectAllButton.MouseButton1Click,
+					function()
+						-- Get all visible values (filtered by search)
+						for _, value in pairs(Dropdown.Values) do
+							local _, cleanText = parseColorCode(value)
+							if Dropdown.SearchText == "" or cleanText:lower():find(Dropdown.SearchText, 1, true) then
+								Dropdown.Value[value] = true
+							end
+						end
+
+						-- Update buttons without rebuilding
+						for button, buttonData in pairs(Dropdown.Buttons) do
+							buttonData:UpdateButton()
+						end
+
+						Dropdown:Display()
+						Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+						Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+						Library._TouchElement(Dropdown)
+					end
+				)
+			end
+
+			-- Clear button animation helper
+			local clearButtonStroke = clearButton:FindFirstChildOfClass("UIStroke")
+			local isClearButtonVisible = false
+
+			local function showClearButton()
+				if isClearButtonVisible then return end
+				isClearButtonVisible = true
+				clearButton.Visible = true
+
+				-- Animate size, transparency, and rotation
+				TweenService:Create(
+					clearButton,
+					TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{
+						Size = UDim2.fromOffset(34, 34),
+						BackgroundTransparency = 0.9,
+						TextTransparency = 0,
+						Rotation = 0
+					}
+				):Play()
+
+				if clearButtonStroke then
+					TweenService:Create(
+						clearButtonStroke,
+						TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{Transparency = 0.5}
+					):Play()
+				end
+			end
+
+			local function hideClearButton()
+				if not isClearButtonVisible then return end
+				isClearButtonVisible = false
+
+				-- Animate out with rotation
+				local hideTween = TweenService:Create(
+					clearButton,
+					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+					{
+						Size = UDim2.fromOffset(0, 0),
+						BackgroundTransparency = 1,
+						TextTransparency = 1,
+						Rotation = 90
+					}
+				)
+
+				if clearButtonStroke then
+					TweenService:Create(
+						clearButtonStroke,
+						TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+						{Transparency = 1}
+					):Play()
+				end
+
+				hideTween:Play()
+				hideTween.Completed:Connect(function()
+					clearButton.Visible = false
+					clearButton.Rotation = -90
+				end)
+			end
+
+
+			local scrollFrame = parent.ScrollFrame
+			function Dropdown.Open(_self)
+				if Dropdown.Opened then
 					return
 				end
-				l.Opened = true
-				A.ScrollingEnabled = false
-				v.Visible = true
+				Dropdown.Opened = true
+				Library._OpenDropdowns[Dropdown] = true
+				connectWhileOpen()
+				scrollFrame.ScrollingEnabled = false
+				dropdownHolderCanvas.Visible = true
 				searchBox.Text = ""
-				l.SearchText = ""
-				t.CanvasPosition = Vector2.new(0, 0)
+				Dropdown.SearchText = ""
+				dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 				if not dropdownBuilt then
 					rebuildDropdown()
+				else
+					applySearchFilter()
 				end
-				w()
-				y()
+				recalculateListPosition()
+				recalculateListSize()
 
 				-- Arrow rotation animation
-				arrowRotation:setGoal(d.Spring.new(180, {frequency = 4, dampingRatio = 0.8}))
+				arrowRotation:setGoal(Flipper.Spring.new(180, {frequency = 4, dampingRatio = 0.8}))
 
 				-- Open animation with Back easing
-				u.Size = UDim2.fromScale(1, 0.3)
-				af:Create(
-					u,
+				dropdownHolderFrame.Size = UDim2.fromScale(1, 0.3)
+				TweenService:Create(
+					dropdownHolderFrame,
 					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Size = UDim2.fromScale(1, 1)}
 				):Play()
 			end
 
-			function l.Close(B)
-				if not l.Opened then
+			function Dropdown.Close(_self)
+				if not Dropdown.Opened then
 					return
 				end
-				l.Opened = false
-				A.ScrollingEnabled = true
+				Dropdown.Opened = false
+				Library._OpenDropdowns[Dropdown] = nil
+				disconnectWhileOpen()
+				scrollFrame.ScrollingEnabled = true
 
 				-- Arrow rotation animation
-				arrowRotation:setGoal(d.Spring.new(0, {frequency = 4, dampingRatio = 0.8}))
+				arrowRotation:setGoal(Flipper.Spring.new(0, {frequency = 4, dampingRatio = 0.8}))
 
 				local closeTween =
-					af:Create(
-						u,
+					TweenService:Create(
+						dropdownHolderFrame,
 						TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 						{Size = UDim2.fromScale(1, 0.3)}
 					)
 				closeTween:Play()
 				closeTween.Completed:Connect(
 					function()
-						v.Visible = false
+						dropdownHolderCanvas.Visible = false
 					end
 				)
 			end
 
-			function l.Display(B)
-				local C, D = l.Values, ""
+			function Dropdown.Display(_self)
+				local values, text = Dropdown.Values, ""
 				local hasSelection = false
-				if j.Multi then
-					for E, F in next, C do
-						if l.Value[F] then
+				if config.Multi then
+					for _, value in next, values do
+						if Dropdown.Value[value] then
 							-- Remove color code for display
-							local _, cleanText = parseColorCode(F)
-							D = D .. cleanText .. ", "
+							local _, cleanText = parseColorCode(value)
+							text = text .. cleanText .. ", "
 							hasSelection = true
 						end
 					end
-					D = D:sub(1, #D - 2)
+					text = text:sub(1, #text - 2)
 				else
 					-- Remove color code for display
-					local displayText = l.Value or ""
+					local displayText = Dropdown.Value or ""
 					if displayText ~= "" then
 						local _, cleanText = parseColorCode(displayText)
 						displayText = cleanText
 					end
-					D = displayText
-					hasSelection = l.Value ~= nil and l.Value ~= ""
+					text = displayText
+					hasSelection = Dropdown.Value ~= nil and Dropdown.Value ~= ""
 				end
 				stopSelectedLabelScroll()
-				n.Text = (D == "" and "--" or D)
+				dropdownDisplay.Text = (text == "" and "--" or text)
 
 				-- Animate clear button visibility
-				if hasSelection then
+				if hasSelection and canClear then
 					showClearButton()
 				else
 					hideClearButton()
 				end
 			end
-			function l.GetActiveValues(B)
-				if j.Multi then
-					local C = {}
-					for D, E in next, l.Value do
-						table.insert(C, D)
+			function Dropdown.GetActiveValues(_self)
+				if config.Multi then
+					local active = {}
+					for value, _ in next, Dropdown.Value do
+						table.insert(active, value)
 					end
-					return C
+					return active
 				else
-					return l.Value and 1 or 0
+					return Dropdown.Value and 1 or 0
 				end
 			end
-			function l.BuildDropdownList(B)
-				local C, D = l.Values, {}
-				for E, F in next, t:GetChildren() do
-					if not F:IsA "UIListLayout" then
-						F:Destroy()
+			function Dropdown.BuildDropdownList(_self)
+				local values, buttons = Dropdown.Values, {}
+				for _, child in next, dropdownScrollFrame:GetChildren() do
+					if not child:IsA "UIListLayout" then
+						child:Destroy()
 					end
 				end
-				l.Buttons = {}
+				Dropdown.Buttons = {}
+				dropdownRows = {}
 				local renderItems = {}
-				for _, value in next, C do
+				for _, value in next, values do
 					local customColor, cleanText = parseColorCode(value)
-					local searchTarget = cleanText:lower()
-					if l.SearchText == "" or searchTarget:find(l.SearchText, 1, true) then
-						table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
-					end
+					table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
 				end
 
-				local totalItems = #renderItems
-				local useVirtual = virtualEnabled and totalItems > virtualThreshold
-				local startIndex, endIndex = 1, totalItems
-				if useVirtual then
-					startIndex = math.max(1, math.floor(t.CanvasPosition.Y / virtualRowHeight) + 1 - virtualBuffer)
-					startIndex = math.min(startIndex, math.max(totalItems, 1))
-					local visibleCount = math.ceil(math.max(t.AbsoluteSize.Y, 1) / virtualRowHeight) + (virtualBuffer * 2)
-					endIndex = math.min(totalItems, startIndex + visibleCount)
-					local topHeight = (startIndex - 1) * virtualRowHeight
-					if topHeight > 0 then
-						e("Frame", {Size = UDim2.new(1, -10, 0, topHeight), BackgroundTransparency = 1, Parent = t})
-					end
-				end
-
-				local G = 0
-				for H = startIndex, endIndex do
-					local item = renderItems[H]
+				for index = 1, #renderItems do
+					local item = renderItems[index]
 					if item then
-						local I = item.Value
+						local value = item.Value
 						local customColor, cleanText = item.CustomColor, item.CleanText
-						local J = {}
-						G = G + 1
+						local row = {}
 
 						-- Use custom color for background if provided
 						local bgColor = Color3.fromRGB(255, 255, 255)
@@ -9114,8 +9183,8 @@ local aa = {
 							bgTransparency = 0.65  -- โปร่งใส 65% (ลดลงจาก 85% เพื่อให้เห็นสีชัดขึ้น)
 						end
 
-						local K, L =
-							e(
+						local buttonSelector, buttonLabel =
+							New(
 								"Frame",
 								{
 									Size = UDim2.fromOffset(5, 14),
@@ -9125,8 +9194,8 @@ local aa = {
 									ThemeTag = {BackgroundColor3 = "Accent"}
 								},
 								{
-									e("UICorner", {CornerRadius = UDim.new(0, 2)}),
-									e(
+									New("UICorner", {CornerRadius = UDim.new(0, 2)}),
+									New(
 										"UIGradient",
 										{
 											Color = ColorSequence.new({
@@ -9138,7 +9207,7 @@ local aa = {
 									)
 								}
 							),
-						e(
+						New(
 							"TextLabel",
 							{
 								FontFace = Font.new(
@@ -9166,7 +9235,7 @@ local aa = {
 							}
 						)
 						local labelClip =
-							e(
+							New(
 								"Frame",
 								{
 									Size = UDim2.new(1, -24, 1, 0),
@@ -9174,10 +9243,10 @@ local aa = {
 									BackgroundTransparency = 1,
 									ClipsDescendants = true
 								},
-								{L}
+								{buttonLabel}
 							)
-						local M, N =
-							(e(
+						local button, selected =
+							(New(
 								"TextButton",
 								{
 									Size = UDim2.new(1, -10, 0, 34),
@@ -9186,14 +9255,14 @@ local aa = {
 									ClipsDescendants = true,
 									ZIndex = 23,
 									Text = "",
-									Parent = t,
+									Parent = dropdownScrollFrame,
 									ThemeTag = customColor and {} or {BackgroundColor3 = "DropdownOption"}
 								},
 								{
-									K,
+									buttonSelector,
 									labelClip,
-									e("UICorner", {CornerRadius = UDim.new(0, 6)}),
-									e(
+									New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+									New(
 										"UIStroke",
 										{
 											Thickness = 1.2,
@@ -9204,10 +9273,10 @@ local aa = {
 									)
 								}
 								))
-						if j.Multi then
-							N = l.Value[I]
+						if config.Multi then
+							selected = Dropdown.Value[value]
 						else
-							N = l.Value == I
+							selected = Dropdown.Value == value
 						end
 
 						-- ปรับค่า transparency ตามว่ามีสีกำหนดหรือไม่
@@ -9215,8 +9284,8 @@ local aa = {
 						local hoverTransparency = customColor and math.max(bgTransparency - 0.2, 0.3) or 0.89
 						local selectedTransparency = customColor and math.max(bgTransparency - 0.3, 0.2) or 0.89
 
-						local O, P = c.SpringMotor(defaultTransparency, M, "BackgroundTransparency")
-						local Q, R = c.SpringMotor(1, K, "BackgroundTransparency")
+						local backMotor, setBackTransparency = Creator.SpringMotor(defaultTransparency, button, "BackgroundTransparency")
+						local selMotor, setSelTransparency = Creator.SpringMotor(1, buttonSelector, "BackgroundTransparency")
 						local labelDefaultPosition = UDim2.fromOffset(0, 0)
 						local labelDefaultSize = UDim2.fromScale(1, 1)
 						local labelScrollTween = nil
@@ -9225,302 +9294,325 @@ local aa = {
 								labelScrollTween:Cancel()
 								labelScrollTween = nil
 							end
-							L.TextTruncate = Enum.TextTruncate.AtEnd
-							L.Size = labelDefaultSize
-							L.Position = labelDefaultPosition
+							buttonLabel.TextTruncate = Enum.TextTruncate.AtEnd
+							buttonLabel.Size = labelDefaultSize
+							buttonLabel.Position = labelDefaultPosition
 						end
 						local function startLabelScroll()
 							local visibleWidth = math.max(labelClip.AbsoluteSize.X, 0)
-							local textWidth = getTextWidth(L, cleanText) + 6
+							local textWidth = getTextWidth(buttonLabel, cleanText) + 6
 							if textWidth <= visibleWidth then
 								return
 							end
 							stopLabelScroll()
-							L.TextTruncate = Enum.TextTruncate.None
-							L.Size = UDim2.fromOffset(textWidth, M.AbsoluteSize.Y)
+							buttonLabel.TextTruncate = Enum.TextTruncate.None
+							buttonLabel.Size = UDim2.fromOffset(textWidth, button.AbsoluteSize.Y)
 							local travel = textWidth - visibleWidth
 							labelScrollTween =
-								af:Create(
-									L,
+								TweenService:Create(
+									buttonLabel,
 									TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
 									{Position = UDim2.fromOffset(-travel, 0)}
 								)
 							labelScrollTween:Play()
 						end
-						local S = d.SingleMotor.new(6)
-						S:onStep(
-							function(T)
-								K.Size = UDim2.new(0, 5, 0, T)
+						local selectorSizeMotor = Flipper.SingleMotor.new(6)
+						selectorSizeMotor:onStep(
+							function(size)
+								buttonSelector.Size = UDim2.new(0, 5, 0, size)
 							end
 						)
-						c.AddSignal(
-							M.MouseEnter,
+						local hovered = false
+						Creator.AddSignal(
+							button.MouseEnter,
 							function()
-								P(N and selectedTransparency or hoverTransparency)
+								hovered = true
+								setBackTransparency(selected and selectedTransparency or hoverTransparency)
 								startLabelScroll()
 							end
 						)
-						c.AddSignal(
-							M.MouseLeave,
+						Creator.AddSignal(
+							button.MouseLeave,
 							function()
-								P(N and selectedTransparency or defaultTransparency)
+								hovered = false
+								setBackTransparency(selected and selectedTransparency or defaultTransparency)
 								stopLabelScroll()
 							end
 						)
-						c.AddSignal(
-							M.MouseButton1Down,
+						Creator.AddSignal(
+							button.MouseButton1Down,
 							function()
-								P(customColor and 0.3 or 0.92)
+								setBackTransparency(customColor and 0.3 or 0.92)
 							end
 						)
-						c.AddSignal(
-							M.MouseButton1Up,
+						Creator.AddSignal(
+							button.MouseButton1Up,
 							function()
-								P(N and selectedTransparency or hoverTransparency)
+								setBackTransparency(selected and selectedTransparency or hoverTransparency)
 							end
 						)
-						function J.UpdateButton(T)
-							if j.Multi then
-								N = l.Value[I]
-								if N then
-									P(selectedTransparency)
+						function row.ResetHover(_self)
+							if not hovered then
+								return
+							end
+							hovered = false
+							setBackTransparency(selected and selectedTransparency or defaultTransparency)
+							stopLabelScroll()
+						end
+						function row.UpdateButton(_self)
+							if config.Multi then
+								selected = Dropdown.Value[value]
+								if selected then
+									setBackTransparency(selectedTransparency)
 								end
 							else
-								N = l.Value == I
-								P(N and selectedTransparency or defaultTransparency)
+								selected = Dropdown.Value == value
+								setBackTransparency(selected and selectedTransparency or defaultTransparency)
 							end
-							S:setGoal(d.Spring.new(N and 16 or 6, {frequency = 6, dampingRatio = 0.8}))
-							R(N and 0 or 1)
+							selectorSizeMotor:setGoal(Flipper.Spring.new(selected and 16 or 6, {frequency = 6, dampingRatio = 0.8}))
+							setSelTransparency(selected and 0 or 1)
 						end
-						L.InputBegan:Connect(
-							function(T)
-								if
-									T.UserInputType == Enum.UserInputType.MouseButton1 or
-									T.UserInputType == Enum.UserInputType.Touch
-								then
-									local U = not N
-									if l:GetActiveValues() == 1 and not U and not j.AllowNull then
+						-- Select on Activated (release), not on press, so a finger that
+						-- starts a scroll on a row does not pick it. Activated still
+						-- fires after a scroll, so it is ignored when the list moved
+						-- between press and release. The press is recorded from the
+						-- row and from its label, whichever receives it.
+						local canvasAtPress = nil
+						local function recordPress(input)
+							if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+								canvasAtPress = dropdownScrollFrame.CanvasPosition
+							end
+						end
+						button.InputBegan:Connect(recordPress)
+						buttonLabel.InputBegan:Connect(recordPress)
+						button.Activated:Connect(
+							function()
+								local pressedAt = canvasAtPress
+								canvasAtPress = nil
+								local scrolled = pressedAt ~= nil and (dropdownScrollFrame.CanvasPosition - pressedAt).Magnitude > 4
+								if not scrolled then
+									local newSelected = not selected
+									if Dropdown:GetActiveValues() == 1 and not newSelected and not config.AllowNull then
 									else
-										if j.Multi then
-											N = U
-											l.Value[I] = N and true or nil
+										if config.Multi then
+											selected = newSelected
+											Dropdown.Value[value] = selected and true or nil
 										else
-											N = U
-											l.Value = N and I or nil
-											for V, W in next, D do
-												W:UpdateButton()
+											selected = newSelected
+											Dropdown.Value = selected and value or nil
+											for _, otherRow in next, buttons do
+												otherRow:UpdateButton()
 											end
 										end
-										J:UpdateButton()
-										l:Display()
-										k:SafeCallback(l.Callback, l.Value)
-										k:SafeCallback(l.Changed, l.Value)
+										row:UpdateButton()
+										Dropdown:Display()
+										Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+										Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+										Library._TouchElement(Dropdown)
 									end
 								end
 							end
 						)
-						J:UpdateButton()
-						D[M] = J
-						l.Buttons[M] = J
+						row:UpdateButton()
+						row.Button = button
+						row.SearchTarget = cleanText:lower()
+						table.insert(dropdownRows, row)
+						buttons[button] = row
+						Dropdown.Buttons[button] = row
 					end
 				end
-				if useVirtual then
-					local bottomHeight = (totalItems - endIndex) * virtualRowHeight
-					if bottomHeight > 0 then
-						e("Frame", {Size = UDim2.new(1, -10, 0, bottomHeight), BackgroundTransparency = 1, Parent = t})
-					end
-				end
-				l:Display()
-				z()
-				y()
+				Dropdown:Display()
+				applySearchFilter()
 			end
-			function l.SetValues(B, C)
-				if C then
-					l.Values = C
+			function Dropdown.SetValues(_self, values)
+				if values then
+					Dropdown.Values = values
 				end
-				t.CanvasPosition = Vector2.new(0, 0)
+				dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
 				dropdownBuilt = false
-				if l.Opened then
+				if Dropdown.Opened then
 					rebuildDropdown()
 				end
-				l:Display()
+				Dropdown:Display()
 			end
-			function l.OnChanged(B, C)
-				l.Changed = C
-				C(l.Value)
+			function Dropdown.OnChanged(_self, callback)
+				Dropdown.Changed = callback
+				callback(Dropdown.Value)
 			end
-			function l.SetValue(B, C)
-				if l.Multi then
-					local D = {}
-					if type(C) == "table" then
-						for E, F in next, C do
-							if F and table.find(l.Values, E) then
-								D[E] = true
-							end
-						end
-					end
-					l.Value = D
+			function Dropdown.SetValue(_self, value)
+				if Dropdown.Multi then
+					Dropdown.Value = toSelectionSet(value)
 				else
-					if not C then
-						l.Value = nil
-					elseif table.find(l.Values, C) then
-						l.Value = C
+					if not value then
+						Dropdown.Value = nil
+					elseif table.find(Dropdown.Values, value) then
+						Dropdown.Value = value
 					end
 				end
 				dropdownBuilt = false
-				if l.Opened then
+				if Dropdown.Opened then
 					rebuildDropdown()
 				end
-				l:Display()
-				k:SafeCallback(l.Callback, l.Value)
-				k:SafeCallback(l.Changed, l.Value)
+				Dropdown:Display()
+				Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+				Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 			end
-			function l.Destroy(B)
-				m:Destroy()
-				k.Options[i] = nil
+			function Dropdown.Destroy(_self)
+				dropdownFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			l:Display()
-			local B = {}
-			if type(j.Default) == "string" then
-				local C = table.find(l.Values, j.Default)
-				if C then
-					table.insert(B, C)
+			Dropdown:Display()
+			local defaultIndexes = {}
+			if type(config.Default) == "string" then
+				local index = table.find(Dropdown.Values, config.Default)
+				if index then
+					table.insert(defaultIndexes, index)
 				end
-			elseif type(j.Default) == "table" then
-				for C, D in next, j.Default do
-					local E = table.find(l.Values, D)
-					if E then
-						table.insert(B, E)
+			elseif type(config.Default) == "table" then
+				for key, defaultValue in next, config.Default do
+					-- Accept both {"A", "B"} and {A = true}.
+					local item = defaultValue
+					if type(defaultValue) == "boolean" then
+						item = defaultValue and key or nil
+					end
+					local index = item ~= nil and table.find(Dropdown.Values, item)
+					if index then
+						table.insert(defaultIndexes, index)
 					end
 				end
-			elseif type(j.Default) == "number" and l.Values[j.Default] ~= nil then
-				table.insert(B, j.Default)
+			elseif type(config.Default) == "number" and Dropdown.Values[config.Default] ~= nil then
+				table.insert(defaultIndexes, config.Default)
 			end
-			if next(B) then
-				for C = 1, #B do
-					local D = B[C]
-					if j.Multi then
-						l.Value[l.Values[D]] = true
+			if next(defaultIndexes) then
+				for i = 1, #defaultIndexes do
+					local valueIndex = defaultIndexes[i]
+					if config.Multi then
+						Dropdown.Value[Dropdown.Values[valueIndex]] = true
 					else
-						l.Value = l.Values[D]
+						Dropdown.Value = Dropdown.Values[valueIndex]
 					end
-					if not j.Multi then
+					if not config.Multi then
 						break
 					end
 				end
-				l:Display()
+				Dropdown:Display()
 			end
-			k.Options[i] = l
-			return l
+			Library.Options[idx] = Dropdown
+			return Dropdown
 		end
-		return g
+		return Element
 	end,
 	[23] = function()
-		local aa, ab, ac, ad, ae = b(23)
-		local af = ab.Parent.Parent
-		local ag = ac(af.Creator)
-		local ah, ai, aj, c = ag.New, ag.AddSignal, af.Components, {}
-		c.__index = c
-		c.__type = "Input"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "Input - Missing Title")
-			f.Callback = f.Callback or function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(23)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, AddSignal, Components, Element = Creator.New, Creator.AddSignal, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Input"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Input - Missing Title")
+			config.Callback = config.Callback or function()
 			end
-			local h, i =
+			local Input, inputFrame =
 				{
-					Value = f.Default or "",
-					Numeric = f.Numeric or false,
-					Finished = f.Finished or false,
-					Callback = f.Callback or function(h)
+					Value = config.Default or "",
+					Numeric = config.Numeric or false,
+					Finished = config.Finished or false,
+					Callback = config.Callback or function(_value)
 					end,
 					Type = "Input"
 				},
-			ac(aj.Element)(f.Title, f.Description, d.Container, false)
-			h.SetTitle = i.SetTitle
-			h.SetDesc = i.SetDesc
-			h.Frame = i.Frame
-			local j = ac(aj.Textbox)(i.Frame, true)
-			j.Frame.Position = UDim2.new(1, -10, 0.5, 0)
-			j.Frame.AnchorPoint = Vector2.new(1, 0.5)
-			j.Frame.Size = UDim2.fromOffset(160, 30)
-			j.Input.Text = f.Default or ""
-			j.Input.PlaceholderText = f.Placeholder or ""
-			local k = j.Input
-			function h.SetValue(l, m)
-				if f.MaxLength and #m > f.MaxLength then
-					m = m:sub(1, f.MaxLength)
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			Input.SetTitle = inputFrame.SetTitle
+			Input.SetDesc = inputFrame.SetDesc
+			Input.Frame = inputFrame.Frame
+			local textbox = requireModule(Components.Textbox)(inputFrame.Frame, true)
+			textbox.Frame.Position = UDim2.new(1, -10, 0.5, 0)
+			textbox.Frame.AnchorPoint = Vector2.new(1, 0.5)
+			textbox.Frame.Size = UDim2.fromOffset(160, 30)
+			textbox.Input.Text = config.Default or ""
+			textbox.Input.PlaceholderText = config.Placeholder or ""
+			local inputBox = textbox.Input
+			function Input.SetValue(_self, text)
+				if config.MaxLength and #text > config.MaxLength then
+					text = text:sub(1, config.MaxLength)
 				end
-				if h.Numeric then
-					if (not tonumber(m)) and m:len() > 0 then
-						m = h.Value
+				if Input.Numeric then
+					if (not tonumber(text)) and text:len() > 0 then
+						text = Input.Value
 					end
 				end
-				h.Value = m
-				k.Text = m
-				g:SafeCallback(h.Callback, h.Value)
-				g:SafeCallback(h.Changed, h.Value)
+				Input.Value = text
+				inputBox.Text = text
+				Library:SafeCallback(Input.Callback, Input.Value)
+				Library:SafeCallback(Input.Changed, Input.Value)
 			end
-			if h.Finished then
-				ai(
-					k.FocusLost,
+			if Input.Finished then
+				AddSignal(
+					inputBox.FocusLost,
 					function()
 						-- Finished inputs should commit when focus leaves for any reason.
 						-- Roblox only sets this event argument for Enter, so requiring it
 						-- made clicks/taps outside the field silently discard the value.
-						h:SetValue(k.Text)
+						Input:SetValue(inputBox.Text)
+						Library._TouchElement(Input)
 					end
 				)
 			else
-				ai(
-					k:GetPropertyChangedSignal "Text",
+				AddSignal(
+					inputBox:GetPropertyChangedSignal "Text",
 					function()
-						h:SetValue(k.Text)
+						Input:SetValue(inputBox.Text)
+						-- Text also changes when a script calls SetValue.
+						if inputBox:IsFocused() then
+							Library._TouchElement(Input)
+						end
 					end
 				)
 			end
-			function h.OnChanged(l, m)
-				h.Changed = m
-				m(h.Value)
+			function Input.OnChanged(_self, callback)
+				Input.Changed = callback
+				callback(Input.Value)
 			end
-			function h.Destroy(l)
-				i:Destroy()
-				g.Options[e] = nil
+			function Input.Destroy(_self)
+				inputFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			g.Options[e] = h
-			return h
+			Library.Options[idx] = Input
+			return Input
 		end
-		return c
+		return Element
 	end,
 	[24] = function()
-		local aa, ab, ac, ad, ae = b(24)
-		local af, ag = game:GetService "UserInputService", ab.Parent.Parent
-		local ah = ac(ag.Creator)
-		local ai, aj, c = ah.New, ag.Components, {}
-		c.__index = c
-		c.__type = "Keybind"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "KeyBind - Missing Title")
-			assert(f.Default, "KeyBind - Missing default value.")
-			local h, i, j =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(24)
+		local UserInputService, Root = game:GetService "UserInputService", moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Keybind"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "KeyBind - Missing Title")
+			assert(config.Default, "KeyBind - Missing default value.")
+			local Keybind, picking, keybindFrame =
 				{
-					Value = f.Default,
+					Value = config.Default,
 					Toggled = false,
-					Mode = f.Mode or "Toggle",
+					Mode = config.Mode or "Toggle",
 					Type = "Keybind",
-					Callback = f.Callback or function(h)
+					Callback = config.Callback or function(_toggled)
 					end,
-					ChangedCallback = f.ChangedCallback or function(h)
+					ChangedCallback = config.ChangedCallback or function(_key)
 					end
 				},
 			false,
-			ac(aj.Element)(f.Title, f.Description, d.Container, true)
-			h.SetTitle = j.SetTitle
-			h.SetDesc = j.SetDesc
-			h.Frame = j.Frame
-			local k =
-				ai(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			Keybind.SetTitle = keybindFrame.SetTitle
+			Keybind.SetDesc = keybindFrame.SetDesc
+			Keybind.Frame = keybindFrame.Frame
+			local keybindDisplayLabel =
+				New(
 					"TextLabel",
 					{
 						FontFace = Font.new(
@@ -9528,7 +9620,7 @@ local aa = {
 							Enum.FontWeight.Regular,
 							Enum.FontStyle.Normal
 						),
-						Text = f.Default,
+						Text = config.Default,
 						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
@@ -9542,22 +9634,22 @@ local aa = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			local l =
-				ai(
+			local keybindDisplayFrame =
+				New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(0, 30),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
 						BackgroundTransparency = 0.9,
-						Parent = j.Frame,
+						Parent = keybindFrame.Frame,
 						AutomaticSize = Enum.AutomaticSize.X,
 						ThemeTag = {BackgroundColor3 = "Keybind"}
 					},
 					{
-						ai("UICorner", {CornerRadius = UDim.new(0, 5)}),
-						ai("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
-						ai(
+						New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+						New(
 							"UIStroke",
 							{
 								Transparency = 0.5,
@@ -9565,87 +9657,100 @@ local aa = {
 								ThemeTag = {Color = "InElementBorder"}
 							}
 						),
-						k
+						keybindDisplayLabel
 					}
 				)
-			function h.GetState(m)
-				if af:GetFocusedTextBox() and h.Mode ~= "Always" then
+			function Keybind.GetState(_self)
+				if UserInputService:GetFocusedTextBox() and Keybind.Mode ~= "Always" then
 					return false
 				end
-				if h.Mode == "Always" then
+				if Keybind.Mode == "Always" then
 					return true
-				elseif h.Mode == "Hold" then
-					if h.Value == "None" then
+				elseif Keybind.Mode == "Hold" then
+					if Keybind.Value == "None" then
 						return false
 					end
-					local n = h.Value
-					if n == "MouseLeft" or n == "MouseRight" then
-						return n == "MouseLeft" and af:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or
-							n == "MouseRight" and af:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+					local key = Keybind.Value
+					if key == "MouseLeft" or key == "MouseRight" then
+						return key == "MouseLeft" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or
+							key == "MouseRight" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
 					else
-						return af:IsKeyDown(Enum.KeyCode[h.Value])
+						local found, keyCode = pcall(function()
+							return Enum.KeyCode[key]
+						end)
+						return found and keyCode ~= nil and UserInputService:IsKeyDown(keyCode)
 					end
 				else
-					return h.Toggled
+					return Keybind.Toggled
 				end
 			end
-			function h.SetValue(m, n, o)
-				n = n or h.Key
-				o = o or h.Mode
-				k.Text = n
-				h.Value = n
-				h.Mode = o
+			function Keybind.SetValue(_self, key, mode)
+				key = key or Keybind.Value
+				mode = mode or Keybind.Mode
+				keybindDisplayLabel.Text = key
+				Keybind.Value = key
+				Keybind.Mode = mode
 			end
-			function h.OnClick(m, n)
-				h.Clicked = n
+			function Keybind.OnClick(_self, callback)
+				Keybind.Clicked = callback
 			end
-			function h.OnChanged(m, n)
-				h.Changed = n
-				n(h.Value)
+			function Keybind.OnChanged(_self, callback)
+				Keybind.Changed = callback
+				callback(Keybind.Value)
 			end
-			function h.DoClick(m)
-				g:SafeCallback(h.Callback, h.Toggled)
-				g:SafeCallback(h.Clicked, h.Toggled)
+			function Keybind.DoClick(_self)
+				Library:SafeCallback(Keybind.Callback, Keybind.Toggled)
+				Library:SafeCallback(Keybind.Clicked, Keybind.Toggled)
 			end
-			function h.Destroy(m)
-				j:Destroy()
-				g.Options[e] = nil
+			function Keybind.Destroy(_self)
+				keybindFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			ah.AddSignal(
-				l.InputBegan,
-				function(m)
-					if m.UserInputType == Enum.UserInputType.MouseButton1 or m.UserInputType == Enum.UserInputType.Touch then
-						i = true
-						k.Text = "..."
-						wait(0.2)
-						local n
-						n =
-							af.InputBegan:Connect(
-								function(o)
-									local p
-									if o.UserInputType == Enum.UserInputType.Keyboard then
-										p = o.KeyCode.Name
-									elseif o.UserInputType == Enum.UserInputType.MouseButton1 then
-										p = "MouseLeft"
-									elseif o.UserInputType == Enum.UserInputType.MouseButton2 then
-										p = "MouseRight"
+			Creator.AddSignal(
+				keybindDisplayFrame.InputBegan,
+				function(input)
+					if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
+						and not picking then
+						picking = true
+						keybindDisplayLabel.Text = "..."
+						task.wait(0.2)
+						-- The first key or mouse button pressed is picked when it is
+						-- released. Touch and gamepad input cannot be bound, so they
+						-- cancel picking and keep the current key.
+						local beganConnection
+						beganConnection =
+							UserInputService.InputBegan:Connect(
+								function(keyInput)
+									local key
+									if keyInput.UserInputType == Enum.UserInputType.Keyboard then
+										key = keyInput.KeyCode.Name
+									elseif keyInput.UserInputType == Enum.UserInputType.MouseButton1 then
+										key = "MouseLeft"
+									elseif keyInput.UserInputType == Enum.UserInputType.MouseButton2 then
+										key = "MouseRight"
 									end
-									local s
-									s =
-									af.InputEnded:Connect(
-										function(t)
+									beganConnection:Disconnect()
+									if key == nil then
+										picking = false
+										keybindDisplayLabel.Text = Keybind.Value
+										return
+									end
+									local endedConnection
+									endedConnection =
+									UserInputService.InputEnded:Connect(
+										function(endInput)
 											if
-												t.KeyCode.Name == p or
-												p == "MouseLeft" and t.UserInputType == Enum.UserInputType.MouseButton1 or
-												p == "MouseRight" and t.UserInputType == Enum.UserInputType.MouseButton2
+												endInput.KeyCode.Name == key or
+												key == "MouseLeft" and endInput.UserInputType == Enum.UserInputType.MouseButton1 or
+												key == "MouseRight" and endInput.UserInputType == Enum.UserInputType.MouseButton2
 											then
-												i = false
-												k.Text = p
-												h.Value = p
-												g:SafeCallback(h.ChangedCallback, t.KeyCode or t.UserInputType)
-												g:SafeCallback(h.Changed, t.KeyCode or t.UserInputType)
-												n:Disconnect()
-												s:Disconnect()
+												picking = false
+												keybindDisplayLabel.Text = key
+												Keybind.Value = key
+												Library._TouchElement(Keybind)
+												Library:SafeCallback(Keybind.ChangedCallback, endInput.KeyCode or endInput.UserInputType)
+												Library:SafeCallback(Keybind.Changed, endInput.KeyCode or endInput.UserInputType)
+												endedConnection:Disconnect()
 											end
 										end
 									)
@@ -9654,83 +9759,83 @@ local aa = {
 					end
 				end
 			)
-			ah.AddSignal(
-				af.InputBegan,
-				function(m)
-					if not i and not af:GetFocusedTextBox() then
-						if h.Mode == "Toggle" then
-							local n = h.Value
-							if n == "MouseLeft" or n == "MouseRight" then
+			Creator.AddSignal(
+				UserInputService.InputBegan,
+				function(input)
+					if not picking and not UserInputService:GetFocusedTextBox() then
+						if Keybind.Mode == "Toggle" then
+							local key = Keybind.Value
+							if key == "MouseLeft" or key == "MouseRight" then
 								if
-									n == "MouseLeft" and m.UserInputType == Enum.UserInputType.MouseButton1 or
-									n == "MouseRight" and m.UserInputType == Enum.UserInputType.MouseButton2
+									key == "MouseLeft" and input.UserInputType == Enum.UserInputType.MouseButton1 or
+									key == "MouseRight" and input.UserInputType == Enum.UserInputType.MouseButton2
 								then
-									h.Toggled = not h.Toggled
-									h:DoClick()
+									Keybind.Toggled = not Keybind.Toggled
+									Keybind:DoClick()
 								end
-							elseif m.UserInputType == Enum.UserInputType.Keyboard then
-								if m.KeyCode.Name == n then
-									h.Toggled = not h.Toggled
-									h:DoClick()
+							elseif input.UserInputType == Enum.UserInputType.Keyboard then
+								if input.KeyCode.Name == key then
+									Keybind.Toggled = not Keybind.Toggled
+									Keybind:DoClick()
 								end
 							end
 						end
 					end
 				end
 			)
-			g.Options[e] = h
-			return h
+			Library.Options[idx] = Keybind
+			return Keybind
 		end
-		return c
+		return Element
 	end,
 	[25] = function()
-		local aa, ab, ac, ad, ae = b(25)
-		local af = ab.Parent.Parent
-		local ag, ah, ai, aj = af.Components, ac(af.Packages.Flipper), ac(af.Creator), {}
-		aj.__index = aj
-		aj.__type = "Paragraph"
-		function aj.New(c, d)
-			assert(d.Title, "Paragraph - Missing Title")
-			d.Content = d.Content or ""
-			local e = ac(ag.Element)(d.Title, d.Content, aj.Container, false)
-			e.Frame.BackgroundTransparency = 0.92
-			e.Border.Transparency = 0.6
-			return e
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(25)
+		local Root = moduleScript.Parent.Parent
+		local Components, Flipper, Creator, Paragraph = Root.Components, requireModule(Root.Packages.Flipper), requireModule(Root.Creator), {}
+		Paragraph.__index = Paragraph
+		Paragraph.__type = "Paragraph"
+		function Paragraph.New(_self, config)
+			assert(config.Title, "Paragraph - Missing Title")
+			config.Content = config.Content or ""
+			local paragraph = requireModule(Components.Element)(config.Title, config.Content, Paragraph.Container, false)
+			paragraph.Frame.BackgroundTransparency = 0.92
+			paragraph.Border.Transparency = 0.6
+			return paragraph
 		end
-		return aj
+		return Paragraph
 	end,
 	[26] = function()
-		local aa, ab, ac, ad, ae = b(26)
-		local af, ag = game:GetService "UserInputService", ab.Parent.Parent
-		local ah = ac(ag.Creator)
-		local ai, aj, c = ah.New, ag.Components, {}
-		c.__index = c
-		c.__type = "Slider"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "Slider - Missing Title.")
-			assert(f.Default, "Slider - Missing default value.")
-			assert(f.Min, "Slider - Missing minimum value.")
-			assert(f.Max, "Slider - Missing maximum value.")
-			assert(f.Rounding, "Slider - Missing rounding value.")
-			local h, i, j =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(26)
+		local UserInputService, Root = game:GetService "UserInputService", moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Slider"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Slider - Missing Title.")
+			assert(config.Default, "Slider - Missing default value.")
+			assert(config.Min, "Slider - Missing minimum value.")
+			assert(config.Max, "Slider - Missing maximum value.")
+			assert(config.Rounding, "Slider - Missing rounding value.")
+			local Slider, dragging, sliderFrame =
 				{
 					Value = nil,
-					Min = f.Min,
-					Max = f.Max,
-					Rounding = f.Rounding,
-					Callback = f.Callback or function(h)
+					Min = config.Min,
+					Max = config.Max,
+					Rounding = config.Rounding,
+					Callback = config.Callback or function(_value)
 					end,
 					Type = "Slider"
 				},
 			false,
-			ac(aj.Element)(f.Title, f.Description, d.Container, false)
-			j.DescLabel.Size = UDim2.new(1, -170, 0, 14)
-			h.SetTitle = j.SetTitle
-			h.SetDesc = j.SetDesc
-			h.Frame = j.Frame
-			local k =
-				ai(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			sliderFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+			Slider.SetTitle = sliderFrame.SetTitle
+			Slider.SetDesc = sliderFrame.SetDesc
+			Slider.Frame = sliderFrame.Frame
+			local sliderDot =
+				New(
 					"ImageLabel",
 					{
 						AnchorPoint = Vector2.new(0, 0.5),
@@ -9742,18 +9847,18 @@ local aa = {
 				)
 
 			-- แก้ตรงนี้: เปลี่ยนจาก TextLabel -> TextBox เพื่อให้พิมพ์ค่าได้
-			local l, m, n =
-				ai(
+			local sliderRail, sliderFill, sliderDisplay =
+				New(
 					"Frame",
 					{BackgroundTransparency = 1, Position = UDim2.fromOffset(7, 0), Size = UDim2.new(1, -14, 1, 0)},
-					{k}
+					{sliderDot}
 				),
-			ai(
+			New(
 				"Frame",
 				{Size = UDim2.new(0, 0, 1, 0), ThemeTag = {BackgroundColor3 = "Accent"}},
-				{ai("UICorner", {CornerRadius = UDim.new(1, 0)})}
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
 			),
-			ai(
+			New(
 				"TextBox",
 				{
 					FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
@@ -9771,28 +9876,27 @@ local aa = {
 					AnchorPoint = Vector2.new(1, 0.5),
 					ThemeTag = {TextColor3 = "SubText"},
 					-- Allow numbers input; keyboard will show on mobile
-					ClearTextOnFocus = false,
 					TextEditable = true
 				}
 			)
 
-			local o =
-				ai(
+			local sliderInner =
+				New(
 					"Frame",
 					{
 						Size = UDim2.new(1, 0, 0, 4),
 						AnchorPoint = Vector2.new(1, 0.5),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						BackgroundTransparency = 0.4,
-						Parent = j.Frame,
+						Parent = sliderFrame.Frame,
 						ThemeTag = {BackgroundColor3 = "SliderRail"}
 					},
 					{
-						ai("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						ai("UISizeConstraint", {MaxSize = Vector2.new(150, math.huge)}),
-						n,
-						m,
-						l
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New("UISizeConstraint", {MaxSize = Vector2.new(150, math.huge)}),
+						sliderDisplay,
+						sliderFill,
+						sliderRail
 					}
 				)
 
@@ -9800,117 +9904,150 @@ local aa = {
 			local editingNumber = false
 
 			-- ถ้าคลิกที่ไอคอน จะเริ่ม drag (เหมือนเดิม)
-			ah.AddSignal(
-				k.InputBegan,
-				function(p)
-					if p.UserInputType == Enum.UserInputType.MouseButton1 or p.UserInputType == Enum.UserInputType.Touch then
-						i = true
+			Creator.AddSignal(
+				sliderDot.InputBegan,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = true
+						Library._TouchElement(Slider)
 					end
 				end
 			)
-			ah.AddSignal(
-				k.InputEnded,
-				function(p)
-					if p.UserInputType == Enum.UserInputType.MouseButton1 or p.UserInputType == Enum.UserInputType.Touch then
-						i = false
+			Creator.AddSignal(
+				sliderDot.InputEnded,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = false
+					end
+				end
+			)
+			-- Pressing anywhere on the rail sets the value and starts a drag. The
+			-- rail is 4 px tall, so an invisible 24 px area catches the press.
+			local railHitArea = New("Frame", {
+				Name = "HitArea",
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.fromScale(0, 0.5),
+				Size = UDim2.new(1, 0, 0, 24),
+				Parent = sliderRail
+			})
+			Creator.AddSignal(
+				railHitArea.InputBegan,
+				function(input)
+					if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
+						and not editingNumber and sliderRail.AbsoluteSize.X > 0 then
+						dragging = true
+						local ratio = math.clamp((input.Position.X - sliderRail.AbsolutePosition.X) / sliderRail.AbsoluteSize.X, 0, 1)
+						Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
+						Library._TouchElement(Slider)
+					end
+				end
+			)
+			-- A drag that started on the rail ends wherever the pointer is lifted.
+			Creator.AddSignal(
+				UserInputService.InputEnded,
+				function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						dragging = false
 					end
 				end
 			)
 
 			-- ขณะพิมพ์ หยุดตอบสนองการลาก
-			n.Focused:Connect(
+			sliderDisplay.Focused:Connect(
 				function()
 					editingNumber = true
 					-- ป้องกันค่า i (drag) ขณะพิมพ์
-					i = false
+					dragging = false
 				end
 			)
 
-			n.FocusLost:Connect(
+			sliderDisplay.FocusLost:Connect(
 				function(enterPressed)
 					editingNumber = false
 					-- ถ้ากด Enter หรือคลิกออก ให้อ่านค่าและอัปเดต slider
-					local text = n.Text
+					local text = sliderDisplay.Text
 					-- support comma เป็นจุดทศนิยมด้วย (เช่น "1,5")
 					text = tostring(text):gsub(",", ".")
 					local num = tonumber(text)
 					if num then
-						local newVal = g:Round(math.clamp(num, h.Min, h.Max), h.Rounding)
-						h:SetValue(newVal)
+						local newVal = Library:Round(math.clamp(num, Slider.Min, Slider.Max), Slider.Rounding)
+						Slider:SetValue(newVal)
+						Library._TouchElement(Slider)
 					else
 						-- revert to current value
-						if h.Value ~= nil then
-							n.Text = tostring(h.Value)
+						if Slider.Value ~= nil then
+							sliderDisplay.Text = tostring(Slider.Value)
 						else
-							n.Text = tostring(f.Default)
+							sliderDisplay.Text = tostring(config.Default)
 						end
 					end
 				end
 			)
 
-			ah.AddSignal(
-				af.InputChanged,
-				function(p)
+			Creator.AddSignal(
+				UserInputService.InputChanged,
+				function(input)
 					if editingNumber then
 						return
 					end
 					if
-						i and
-						(p.UserInputType == Enum.UserInputType.MouseMovement or
-							p.UserInputType == Enum.UserInputType.Touch)
+						dragging and
+						(input.UserInputType == Enum.UserInputType.MouseMovement or
+							input.UserInputType == Enum.UserInputType.Touch)
 					then
-						local s = math.clamp((p.Position.X - l.AbsolutePosition.X) / l.AbsoluteSize.X, 0, 1)
-						h:SetValue(h.Min + ((h.Max - h.Min) * s))
+						local ratio = math.clamp((input.Position.X - sliderRail.AbsolutePosition.X) / sliderRail.AbsoluteSize.X, 0, 1)
+						Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
 					end
 				end
 			)
-			function h.OnChanged(p, s)
-				h.Changed = s
-				s(h.Value)
+			function Slider.OnChanged(_self, callback)
+				Slider.Changed = callback
+				callback(Slider.Value)
 			end
-			function h.SetValue(p, s)
-				p.Value = g:Round(math.clamp(s, h.Min, h.Max), h.Rounding)
-				k.Position = UDim2.new((p.Value - h.Min) / (h.Max - h.Min), -7, 0.5, 0)
-				m.Size = UDim2.fromScale((p.Value - h.Min) / (h.Max - h.Min), 1)
+			function Slider.SetValue(target, value)
+				target.Value = Library:Round(math.clamp(value, Slider.Min, Slider.Max), Slider.Rounding)
+				sliderDot.Position = UDim2.new((target.Value - Slider.Min) / (Slider.Max - Slider.Min), -7, 0.5, 0)
+				sliderFill.Size = UDim2.fromScale((target.Value - Slider.Min) / (Slider.Max - Slider.Min), 1)
 				-- อัปเดตข้อความใน TextBox ให้ตรงค่า
-				n.Text = tostring(p.Value)
-				g:SafeCallback(h.Callback, p.Value)
-				g:SafeCallback(h.Changed, p.Value)
+				sliderDisplay.Text = tostring(target.Value)
+				Library:SafeCallback(Slider.Callback, target.Value)
+				Library:SafeCallback(Slider.Changed, target.Value)
 			end
-			function h.Destroy(p)
-				j:Destroy()
-				g.Options[e] = nil
+			function Slider.Destroy(_self)
+				sliderFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			h:SetValue(f.Default)
-			g.Options[e] = h
-			return h
+			Slider:SetValue(config.Default)
+			Library.Options[idx] = Slider
+			return Slider
 		end
-		return c
+		return Element
 	end,
 	[27] = function()
-		local aa, ab, ac, ad, ae = b(27)
-		local af, ag = game:GetService "TweenService", ab.Parent.Parent
-		local ah = ac(ag.Creator)
-		local ai, aj, c = ah.New, ag.Components, {}
-		c.__index = c
-		c.__type = "Toggle"
-		function c.New(d, e, f)
-			local g = d.Library
-			assert(f.Title, "Toggle - Missing Title")
-			local h, i =
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(27)
+		local TweenService, Root = game:GetService "TweenService", moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Toggle"
+		function Element.New(parent, idx, config)
+			local Library = parent.Library
+			assert(config.Title, "Toggle - Missing Title")
+			local Toggle, toggleFrame =
 				{
-					Value = f.Default or false,
-					Callback = f.Callback or function(h)
+					Value = config.Default or false,
+					Callback = config.Callback or function(_value)
 					end,
 					Type = "Toggle"
 				},
-			ac(aj.Element)(f.Title, f.Description, d.Container, true)
-			i.DescLabel.Size = UDim2.new(1, -54, 0, 14)
-			h.SetTitle = i.SetTitle
-			h.SetDesc = i.SetDesc
-			h.Frame = i.Frame
-			local j, k =
-				ai(
+			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			toggleFrame.DescLabel.Size = UDim2.new(1, -54, 0, 14)
+			Toggle.SetTitle = toggleFrame.SetTitle
+			Toggle.SetDesc = toggleFrame.SetDesc
+			Toggle.Frame = toggleFrame.Frame
+			local toggleCircle, toggleBorder =
+				New(
 					"ImageLabel",
 					{
 						AnchorPoint = Vector2.new(0, 0.5),
@@ -9921,61 +10058,62 @@ local aa = {
 						ThemeTag = {ImageColor3 = "ToggleSlider"}
 					}
 				),
-			ai("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "ToggleSlider"}})
-			local l =
-				ai(
+			New("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "ToggleSlider"}})
+			local toggleSlider =
+				New(
 					"Frame",
 					{
 						Size = UDim2.fromOffset(36, 18),
 						AnchorPoint = Vector2.new(1, 0.5),
 						Position = UDim2.new(1, -10, 0.5, 0),
-						Parent = i.Frame,
+						Parent = toggleFrame.Frame,
 						BackgroundTransparency = 1,
 						ThemeTag = {BackgroundColor3 = "Accent"}
 					},
-					{ai("UICorner", {CornerRadius = UDim.new(0, 9)}), k, j}
+					{New("UICorner", {CornerRadius = UDim.new(0, 9)}), toggleBorder, toggleCircle}
 				)
-			function h.OnChanged(m, n)
-				h.Changed = n
-				n(h.Value)
+			function Toggle.OnChanged(_self, callback)
+				Toggle.Changed = callback
+				callback(Toggle.Value)
 			end
-			function h.SetValue(m, n)
-				n = not (not n)
-				h.Value = n
-				ah.OverrideTag(k, {Color = h.Value and "Accent" or "ToggleSlider"})
-				ah.OverrideTag(j, {ImageColor3 = h.Value and "ToggleToggled" or "ToggleSlider"})
-				af:Create(
-					j,
+			function Toggle.SetValue(_self, value)
+				value = not (not value)
+				Toggle.Value = value
+				Creator.OverrideTag(toggleBorder, {Color = Toggle.Value and "Accent" or "ToggleSlider"})
+				Creator.OverrideTag(toggleCircle, {ImageColor3 = Toggle.Value and "ToggleToggled" or "ToggleSlider"})
+				TweenService:Create(
+					toggleCircle,
 					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{Position = UDim2.new(0, h.Value and 19 or 2, 0.5, 0)}
+					{Position = UDim2.new(0, Toggle.Value and 19 or 2, 0.5, 0)}
 				):Play()
-				af:Create(
-					l,
+				TweenService:Create(
+					toggleSlider,
 					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{BackgroundTransparency = h.Value and 0 or 1}
+					{BackgroundTransparency = Toggle.Value and 0 or 1}
 				):Play()
-				j.ImageTransparency = h.Value and 0 or 0.5
-				g:SafeCallback(h.Callback, h.Value)
-				g:SafeCallback(h.Changed, h.Value)
+				toggleCircle.ImageTransparency = Toggle.Value and 0 or 0.5
+				Library:SafeCallback(Toggle.Callback, Toggle.Value)
+				Library:SafeCallback(Toggle.Changed, Toggle.Value)
 			end
-			function h.Destroy(m)
-				i:Destroy()
-				g.Options[e] = nil
+			function Toggle.Destroy(_self)
+				toggleFrame:Destroy()
+				Library.Options[idx] = nil
 			end
-			ah.AddSignal(
-				i.Frame.MouseButton1Click,
+			Creator.AddSignal(
+				toggleFrame.Frame.MouseButton1Click,
 				function()
-					h:SetValue(not h.Value)
+					Toggle:SetValue(not Toggle.Value)
+					Library._TouchElement(Toggle)
 				end
 			)
-			h:SetValue(h.Value)
-			g.Options[e] = h
-			return h
+			Toggle:SetValue(Toggle.Value)
+			Library.Options[idx] = Toggle
+			return Toggle
 		end
-		return c
+		return Element
 	end,
 	[28] = function()
-		local aa, ab, ac, ad, ae = b(28)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(28)
 		return {
 			assets = {
 				["lucide-accessibility"] = "rbxassetid://10709751939",
@@ -10803,693 +10941,357 @@ local aa = {
 		}
 	end,
 	[30] = function()
-		local aa, ab, ac, ad, ae = b(30)
-		local af = {
-			SingleMotor = ac(ab.SingleMotor),
-			GroupMotor = ac(ab.GroupMotor),
-			Instant = ac(ab.Instant),
-			Linear = ac(ab.Linear),
-			Spring = ac(ab.Spring),
-			isMotor = ac(ab.isMotor)
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(30)
+		local Flipper = {
+			SingleMotor = requireModule(moduleScript.SingleMotor),
+			GroupMotor = requireModule(moduleScript.GroupMotor),
+			Instant = requireModule(moduleScript.Instant),
+			Linear = requireModule(moduleScript.Linear),
+			Spring = requireModule(moduleScript.Spring),
+			isMotor = requireModule(moduleScript.isMotor)
 		}
-		return af
+		return Flipper
 	end,
 	[31] = function()
-		local aa, ab, ac, ad, ae = b(31)
-		local af, ag, ah, ai = game:GetService "RunService", ac(ab.Parent.Signal), function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(31)
+		local RunService, Signal, noop, BaseMotor = game:GetService "RunService", requireModule(moduleScript.Parent.Signal), function()
 		end, {}
-		ai.__index = ai
-		function ai.new()
-			return setmetatable({_onStep = ag.new(), _onStart = ag.new(), _onComplete = ag.new()}, ai)
+		BaseMotor.__index = BaseMotor
+		function BaseMotor.new()
+			return setmetatable({_onStep = Signal.new(), _onStart = Signal.new(), _onComplete = Signal.new()}, BaseMotor)
 		end
-		function ai.onStep(aj, c)
-			return aj._onStep:connect(c)
+		function BaseMotor.onStep(motor, handler)
+			return motor._onStep:connect(handler)
 		end
-		function ai.onStart(aj, c)
-			return aj._onStart:connect(c)
+		function BaseMotor.onStart(motor, handler)
+			return motor._onStart:connect(handler)
 		end
-		function ai.onComplete(aj, c)
-			return aj._onComplete:connect(c)
+		function BaseMotor.onComplete(motor, handler)
+			return motor._onComplete:connect(handler)
 		end
-		function ai.start(aj)
-			if not aj._connection then
-				aj._connection =
-					af.RenderStepped:Connect(
-						function(c)
-							aj:step(c)
-						end
-					)
+		-- Running motors are stepped, in start order, from one RenderStepped
+		-- connection that exists only while something is animating. A motor
+		-- whose step errors is stopped so it cannot block the others.
+		local runningMotors = {}
+		local schedulerConnection = nil
+		local function stepRunningMotors(deltaTime)
+			for _, motor in ipairs(table.clone(runningMotors)) do
+				if motor._running then
+					local ok, err = pcall(motor.step, motor, deltaTime)
+					if not ok then
+						motor:stop()
+						task.spawn(error, err, 0)
+					end
+				end
+			end
+			if #runningMotors == 0 and schedulerConnection then
+				schedulerConnection:Disconnect()
+				schedulerConnection = nil
 			end
 		end
-		function ai.stop(aj)
-			if aj._connection then
-				aj._connection:Disconnect()
-				aj._connection = nil
+		function BaseMotor.start(motor)
+			if not motor._running then
+				motor._running = true
+				table.insert(runningMotors, motor)
+				if not schedulerConnection then
+					schedulerConnection = RunService.RenderStepped:Connect(stepRunningMotors)
+				end
 			end
 		end
-		ai.destroy = ai.stop
-		ai.step = ah
-		ai.getValue = ah
-		ai.setGoal = ah
-		function ai.__tostring(aj)
+		function BaseMotor.stop(motor)
+			if motor._running then
+				motor._running = false
+				local index = table.find(runningMotors, motor)
+				if index then
+					table.remove(runningMotors, index)
+				end
+			end
+		end
+		BaseMotor.destroy = BaseMotor.stop
+		BaseMotor.step = noop
+		BaseMotor.getValue = noop
+		BaseMotor.setGoal = noop
+		function BaseMotor.__tostring(_motor)
 			return "Motor"
 		end
-		return ai
-	end,
-	[32] = function()
-		local aa, ab, ac, ad, ae = b(32)
-		return function()
-			local af, ag = game:GetService "RunService", ac(ab.Parent.BaseMotor)
-			describe(
-				"connection management",
-				function()
-					local ah = ag.new()
-					it(
-						"should hook up connections on :start()",
-						function()
-							ah:start()
-							expect(typeof(ah._connection)).to.equal "RBXScriptConnection"
-						end
-					)
-					it(
-						"should remove connections on :stop() or :destroy()",
-						function()
-							ah:stop()
-							expect(ah._connection).to.equal(nil)
-						end
-					)
-				end
-			)
-			it(
-				"should call :step() with deltaTime",
-				function()
-					local ah, ai = (ag.new())
-					function ah.step(aj, ...)
-						ai = {...}
-						ah:stop()
-					end
-					ah:start()
-					local aj = af.RenderStepped:Wait()
-					af.RenderStepped:Wait()
-					expect(ai).to.be.ok()
-					expect(ai[1]).to.equal(aj)
-				end
-			)
-		end
+		return BaseMotor
 	end,
 	[33] = function()
-		local aa, ab, ac, ad, ae = b(33)
-		local af, ag, ah = ac(ab.Parent.BaseMotor), ac(ab.Parent.SingleMotor), ac(ab.Parent.isMotor)
-		local ai = setmetatable({}, af)
-		ai.__index = ai
-		local aj = function(aj)
-			if ah(aj) then
-				return aj
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(33)
+		local BaseMotor, SingleMotor, isMotor = requireModule(moduleScript.Parent.BaseMotor), requireModule(moduleScript.Parent.SingleMotor), requireModule(moduleScript.Parent.isMotor)
+		local GroupMotor = setmetatable({}, BaseMotor)
+		GroupMotor.__index = GroupMotor
+		local toMotor = function(value)
+			if isMotor(value) then
+				return value
 			end
-			local c = typeof(aj)
-			if c == "number" then
-				return ag.new(aj, false)
-			elseif c == "table" then
-				return ai.new(aj, false)
+			local valueType = typeof(value)
+			if valueType == "number" then
+				return SingleMotor.new(value, false)
+			elseif valueType == "table" then
+				return GroupMotor.new(value, false)
 			end
-			error(("Unable to convert %q to motor; type %s is unsupported"):format(aj, c), 2)
+			error(("Unable to convert %q to motor; type %s is unsupported"):format(value, valueType), 2)
 		end
-		function ai.new(c, d)
-			assert(c, "Missing argument #1: initialValues")
-			assert(typeof(c) == "table", "initialValues must be a table!")
+		function GroupMotor.new(initialValues, useImplicitConnections)
+			assert(initialValues, "Missing argument #1: initialValues")
+			assert(typeof(initialValues) == "table", "initialValues must be a table!")
 			assert(
-				not c.step,
+				not initialValues.step,
 				[[initialValues contains disallowed property "step". Did you mean to put a table of values here?]]
 			)
-			local e = setmetatable(af.new(), ai)
-			if d ~= nil then
-				e._useImplicitConnections = d
+			local motor = setmetatable(BaseMotor.new(), GroupMotor)
+			if useImplicitConnections ~= nil then
+				motor._useImplicitConnections = useImplicitConnections
 			else
-				e._useImplicitConnections = true
+				motor._useImplicitConnections = true
 			end
-			e._complete = true
-			e._motors = {}
-			for f, g in pairs(c) do
-				e._motors[f] = aj(g)
+			motor._complete = true
+			motor._motors = {}
+			for key, value in pairs(initialValues) do
+				motor._motors[key] = toMotor(value)
 			end
-			return e
+			return motor
 		end
-		function ai.step(c, d)
-			if c._complete then
+		function GroupMotor.step(motor, deltaTime)
+			if motor._complete then
 				return true
 			end
-			local e = true
-			for f, g in pairs(c._motors) do
-				local h = g:step(d)
-				if not h then
-					e = false
+			local allComplete = true
+			for _, childMotor in pairs(motor._motors) do
+				local complete = childMotor:step(deltaTime)
+				if not complete then
+					allComplete = false
 				end
 			end
-			c._onStep:fire(c:getValue())
-			if e then
-				if c._useImplicitConnections then
-					c:stop()
+			motor._onStep:fire(motor:getValue())
+			if allComplete then
+				if motor._useImplicitConnections then
+					motor:stop()
 				end
-				c._complete = true
-				c._onComplete:fire()
+				motor._complete = true
+				motor._onComplete:fire()
 			end
-			return e
+			return allComplete
 		end
-		function ai.setGoal(c, d)
+		function GroupMotor.setGoal(motor, goals)
 			assert(
-				not d.step,
+				not goals.step,
 				[[goals contains disallowed property "step". Did you mean to put a table of goals here?]]
 			)
-			c._complete = false
-			c._onStart:fire()
-			for e, f in pairs(d) do
-				local g = assert(c._motors[e], ("Unknown motor for key %s"):format(e))
-				g:setGoal(f)
+			motor._complete = false
+			motor._onStart:fire()
+			for key, goal in pairs(goals) do
+				local childMotor = assert(motor._motors[key], ("Unknown motor for key %s"):format(key))
+				childMotor:setGoal(goal)
 			end
-			if c._useImplicitConnections then
-				c:start()
+			if motor._useImplicitConnections then
+				motor:start()
 			end
 		end
-		function ai.getValue(c)
-			local d = {}
-			for e, f in pairs(c._motors) do
-				d[e] = f:getValue()
+		function GroupMotor.getValue(motor)
+			local values = {}
+			for key, childMotor in pairs(motor._motors) do
+				values[key] = childMotor:getValue()
 			end
-			return d
+			return values
 		end
-		function ai.__tostring(c)
+		function GroupMotor.__tostring(_motor)
 			return "Motor(Group)"
 		end
-		return ai
-	end,
-	[34] = function()
-		local aa, ab, ac, ad, ae = b(34)
-		return function()
-			local af, ag, ah = ac(ab.Parent.GroupMotor), ac(ab.Parent.Instant), ac(ab.Parent.Spring)
-			it(
-				"should complete when all child motors are complete",
-				function()
-					local ai = af.new({A = 1, B = 2}, false)
-					expect(ai._complete).to.equal(true)
-					ai:setGoal {A = ag.new(3), B = ah.new(4, {frequency = 7.5, dampingRatio = 1})}
-					expect(ai._complete).to.equal(false)
-					ai:step(1.6666666666666665E-2)
-					expect(ai._complete).to.equal(false)
-					for aj = 1, 30 do
-						ai:step(1.6666666666666665E-2)
-					end
-					expect(ai._complete).to.equal(true)
-				end
-			)
-			it(
-				"should start when the goal is set",
-				function()
-					local ai, aj = af.new({A = 0}, false), false
-					ai:onStart(
-						function()
-							aj = not aj
-						end
-					)
-					ai:setGoal {A = ag.new(1)}
-					expect(aj).to.equal(true)
-					ai:setGoal {A = ag.new(1)}
-					expect(aj).to.equal(false)
-				end
-			)
-			it(
-				"should properly return all values",
-				function()
-					local ai = af.new({A = 1, B = 2}, false)
-					local aj = ai:getValue()
-					expect(aj.A).to.equal(1)
-					expect(aj.B).to.equal(2)
-				end
-			)
-			it(
-				"should error when a goal is given to GroupMotor.new",
-				function()
-					local ai =
-						pcall(
-							function()
-								af.new(ag.new(0))
-							end
-						)
-					expect(ai).to.equal(false)
-				end
-			)
-			it(
-				[[should error when a single goal is provided to GroupMotor:step]],
-				function()
-					local ai =
-						pcall(
-							function()
-								af.new {a = 1}:setGoal(ag.new(0))
-							end
-						)
-					expect(ai).to.equal(false)
-				end
-			)
-		end
+		return GroupMotor
 	end,
 	[35] = function()
-		local aa, ab, ac, ad, ae = b(35)
-		local af = {}
-		af.__index = af
-		function af.new(ag)
-			return setmetatable({_targetValue = ag}, af)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(35)
+		local Instant = {}
+		Instant.__index = Instant
+		function Instant.new(targetValue)
+			return setmetatable({_targetValue = targetValue}, Instant)
 		end
-		function af.step(ag)
-			return {complete = true, value = ag._targetValue}
+		function Instant.step(instant)
+			return {complete = true, value = instant._targetValue}
 		end
-		return af
-	end,
-	[36] = function()
-		local aa, ab, ac, ad, ae = b(36)
-		return function()
-			local af = ac(ab.Parent.Instant)
-			it(
-				"should return a completed state with the provided value",
-				function()
-					local ag = af.new(1.23)
-					local ah = ag:step(0.1, {value = 0, complete = false})
-					expect(ah.complete).to.equal(true)
-					expect(ah.value).to.equal(1.23)
-				end
-			)
-		end
+		return Instant
 	end,
 	[37] = function()
-		local aa, ab, ac, ad, ae = b(37)
-		local af = {}
-		af.__index = af
-		function af.new(ag, ah)
-			assert(ag, "Missing argument #1: targetValue")
-			ah = ah or {}
-			return setmetatable({_targetValue = ag, _velocity = ah.velocity or 1}, af)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(37)
+		local Linear = {}
+		Linear.__index = Linear
+		function Linear.new(targetValue, options)
+			assert(targetValue, "Missing argument #1: targetValue")
+			options = options or {}
+			return setmetatable({_targetValue = targetValue, _velocity = options.velocity or 1}, Linear)
 		end
-		function af.step(ag, ah, ai)
-			local aj, c, d = ah.value, ag._velocity, ag._targetValue
-			local e = ai * c
-			local f = e >= math.abs(d - aj)
-			aj = aj + e * (d > aj and 1 or -1)
-			if f then
-				aj = ag._targetValue
-				c = 0
+		function Linear.step(linear, state, dt)
+			local position, velocity, goal = state.value, linear._velocity, linear._targetValue
+			local delta = dt * velocity
+			local complete = delta >= math.abs(goal - position)
+			position = position + delta * (goal > position and 1 or -1)
+			if complete then
+				position = linear._targetValue
+				velocity = 0
 			end
-			return {complete = f, value = aj, velocity = c}
+			return {complete = complete, value = position, velocity = velocity}
 		end
-		return af
-	end,
-	[38] = function()
-		local aa, ab, ac, ad, ae = b(38)
-		return function()
-			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Linear)
-			describe(
-				"completed state",
-				function()
-					local ah, ai = af.new(0, false), ag.new(1, {velocity = 1})
-					ah:setGoal(ai)
-					for aj = 1, 60 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should complete",
-						function()
-							expect(ah._state.complete).to.equal(true)
-						end
-					)
-					it(
-						"should be exactly the goal value when completed",
-						function()
-							expect(ah._state.value).to.equal(1)
-						end
-					)
-				end
-			)
-			describe(
-				"uncompleted state",
-				function()
-					local ah, ai = af.new(0, false), ag.new(1, {velocity = 1})
-					ah:setGoal(ai)
-					for aj = 1, 59 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should be uncomplete",
-						function()
-							expect(ah._state.complete).to.equal(false)
-						end
-					)
-				end
-			)
-			describe(
-				"negative velocity",
-				function()
-					local ah, ai = af.new(1, false), ag.new(0, {velocity = 1})
-					ah:setGoal(ai)
-					for aj = 1, 60 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should complete",
-						function()
-							expect(ah._state.complete).to.equal(true)
-						end
-					)
-					it(
-						"should be exactly the goal value when completed",
-						function()
-							expect(ah._state.value).to.equal(0)
-						end
-					)
-				end
-			)
-		end
+		return Linear
 	end,
 	[39] = function()
-		local aa, ab, ac, ad, ae = b(39)
-		local af = {}
-		af.__index = af
-		function af.new(ag, ah)
-			return setmetatable({signal = ag, connected = true, _handler = ah}, af)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(39)
+		local Connection = {}
+		Connection.__index = Connection
+		function Connection.new(signal, handler)
+			return setmetatable({signal = signal, connected = true, _handler = handler}, Connection)
 		end
-		function af.disconnect(ag)
-			if ag.connected then
-				ag.connected = false
-				for ah, ai in pairs(ag.signal._connections) do
-					if ai == ag then
-						table.remove(ag.signal._connections, ah)
+		function Connection.disconnect(connection)
+			if connection.connected then
+				connection.connected = false
+				for index, other in pairs(connection.signal._connections) do
+					if other == connection then
+						table.remove(connection.signal._connections, index)
 						return
 					end
 				end
 			end
 		end
-		local ag = {}
-		ag.__index = ag
-		function ag.new()
-			return setmetatable({_connections = {}, _threads = {}}, ag)
+		local Signal = {}
+		Signal.__index = Signal
+		function Signal.new()
+			return setmetatable({_connections = {}, _threads = {}}, Signal)
 		end
-		function ag.fire(ah, ...)
-			for ai, aj in pairs(ah._connections) do
-				aj._handler(...)
+		function Signal.fire(signal, ...)
+			for _, connection in pairs(signal._connections) do
+				connection._handler(...)
 			end
-			for c, d in pairs(ah._threads) do
-				coroutine.resume(d, ...)
+			for _, thread in pairs(signal._threads) do
+				coroutine.resume(thread, ...)
 			end
-			ah._threads = {}
+			signal._threads = {}
 		end
-		function ag.connect(ah, aj)
-			local c = af.new(ah, aj)
-			table.insert(ah._connections, c)
-			return c
+		function Signal.connect(signal, handler)
+			local connection = Connection.new(signal, handler)
+			table.insert(signal._connections, connection)
+			return connection
 		end
-		function ag.wait(ah)
-			table.insert(ah._threads, coroutine.running())
+		function Signal.wait(signal)
+			table.insert(signal._threads, coroutine.running())
 			return coroutine.yield()
 		end
-		return ag
-	end,
-	[40] = function()
-		local aa, ab, ac, ad, ae = b(40)
-		return function()
-			local af = ac(ab.Parent.Signal)
-			it(
-				"should invoke all connections, instantly",
-				function()
-					local ag, ah, aj = (af.new())
-					ag:connect(
-						function(c)
-							ah = c
-						end
-					)
-					ag:connect(
-						function(c)
-							aj = c
-						end
-					)
-					ag:fire "hello"
-					expect(ah).to.equal "hello"
-					expect(aj).to.equal "hello"
-				end
-			)
-			it(
-				"should return values when :wait() is called",
-				function()
-					local ag = af.new()
-					spawn(
-						function()
-							ag:fire(123, "hello")
-						end
-					)
-					local ah, aj = ag:wait()
-					expect(ah).to.equal(123)
-					expect(aj).to.equal "hello"
-				end
-			)
-			it(
-				"should properly handle disconnections",
-				function()
-					local ag, ah = af.new(), false
-					local aj =
-						ag:connect(
-							function()
-								ah = true
-							end
-						)
-					aj:disconnect()
-					ag:fire()
-					expect(ah).to.equal(false)
-				end
-			)
-		end
+		return Signal
 	end,
 	[41] = function()
-		local aa, ab, ac, ad, ae = b(41)
-		local af = ac(ab.Parent.BaseMotor)
-		local ag = setmetatable({}, af)
-		ag.__index = ag
-		function ag.new(ah, aj)
-			assert(ah, "Missing argument #1: initialValue")
-			assert(typeof(ah) == "number", "initialValue must be a number!")
-			local c = setmetatable(af.new(), ag)
-			if aj ~= nil then
-				c._useImplicitConnections = aj
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(41)
+		local BaseMotor = requireModule(moduleScript.Parent.BaseMotor)
+		local SingleMotor = setmetatable({}, BaseMotor)
+		SingleMotor.__index = SingleMotor
+		function SingleMotor.new(initialValue, useImplicitConnections)
+			assert(initialValue, "Missing argument #1: initialValue")
+			assert(typeof(initialValue) == "number", "initialValue must be a number!")
+			local motor = setmetatable(BaseMotor.new(), SingleMotor)
+			if useImplicitConnections ~= nil then
+				motor._useImplicitConnections = useImplicitConnections
 			else
-				c._useImplicitConnections = true
+				motor._useImplicitConnections = true
 			end
-			c._goal = nil
-			c._state = {complete = true, value = ah}
-			return c
+			motor._goal = nil
+			motor._state = {complete = true, value = initialValue}
+			return motor
 		end
-		function ag.step(ah, aj)
-			if ah._state.complete then
+		function SingleMotor.step(motor, deltaTime)
+			if motor._state.complete then
 				return true
 			end
-			local c = ah._goal:step(ah._state, aj)
-			ah._state = c
-			ah._onStep:fire(c.value)
-			if c.complete then
-				if ah._useImplicitConnections then
-					ah:stop()
+			local newState = motor._goal:step(motor._state, deltaTime)
+			motor._state = newState
+			motor._onStep:fire(newState.value)
+			if newState.complete then
+				if motor._useImplicitConnections then
+					motor:stop()
 				end
-				ah._onComplete:fire()
+				motor._onComplete:fire()
 			end
-			return c.complete
+			return newState.complete
 		end
-		function ag.getValue(ah)
-			return ah._state.value
+		function SingleMotor.getValue(motor)
+			return motor._state.value
 		end
-		function ag.setGoal(ah, aj)
-			ah._state.complete = false
-			ah._goal = aj
-			ah._onStart:fire()
-			if ah._useImplicitConnections then
-				ah:start()
+		function SingleMotor.setGoal(motor, goal)
+			motor._state.complete = false
+			motor._goal = goal
+			motor._onStart:fire()
+			if motor._useImplicitConnections then
+				motor:start()
 			end
 		end
-		function ag.__tostring(ah)
+		function SingleMotor.__tostring(_motor)
 			return "Motor(Single)"
 		end
-		return ag
-	end,
-	[42] = function()
-		local aa, ab, ac, ad, ae = b(42)
-		return function()
-			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Instant)
-			it(
-				"should assign new state on step",
-				function()
-					local ah = af.new(0, false)
-					ah:setGoal(ag.new(5))
-					ah:step(1.6666666666666665E-2)
-					expect(ah._state.complete).to.equal(true)
-					expect(ah._state.value).to.equal(5)
-				end
-			)
-			it(
-				[[should invoke onComplete listeners when the goal is completed]],
-				function()
-					local ah, aj = af.new(0, false), false
-					ah:onComplete(
-						function()
-							aj = true
-						end
-					)
-					ah:setGoal(ag.new(5))
-					ah:step(1.6666666666666665E-2)
-					expect(aj).to.equal(true)
-				end
-			)
-			it(
-				"should start when the goal is set",
-				function()
-					local ah, aj = af.new(0, false), false
-					ah:onStart(
-						function()
-							aj = not aj
-						end
-					)
-					ah:setGoal(ag.new(5))
-					expect(aj).to.equal(true)
-					ah:setGoal(ag.new(5))
-					expect(aj).to.equal(false)
-				end
-			)
-		end
+		return SingleMotor
 	end,
 	[43] = function()
-		local aa, ab, ac, ad, ae = b(43)
-		local af, ag, ah, aj = 0.001, 0.001, 0.0001, {}
-		aj.__index = aj
-		function aj.new(c, d)
-			assert(c, "Missing argument #1: targetValue")
-			d = d or {}
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(43)
+		local VELOCITY_THRESHOLD, POSITION_THRESHOLD, EPS, Spring = 0.001, 0.001, 0.0001, {}
+		Spring.__index = Spring
+		function Spring.new(targetValue, options)
+			assert(targetValue, "Missing argument #1: targetValue")
+			options = options or {}
 			return setmetatable(
-				{_targetValue = c, _frequency = d.frequency or 4, _dampingRatio = d.dampingRatio or 1},
-				aj
+				{_targetValue = targetValue, _frequency = options.frequency or 4, _dampingRatio = options.dampingRatio or 1},
+				Spring
 			)
 		end
-		function aj.step(c, d, e)
-			local f, g, h, i, j = c._dampingRatio, c._frequency * 2 * math.pi, c._targetValue, d.value, d.velocity or 0
-			local k, l, m, n = i - h, (math.exp(-f * g * e))
-			if f == 1 then
-				m = (k * (1 + g * e) + j * e) * l + h
-				n = (j * (1 - g * e) - k * (g * g * e)) * l
-			elseif f < 1 then
-				local o = math.sqrt(1 - f * f)
-				local p, s, t = math.cos(g * o * e), (math.sin(g * o * e))
-				if o > ah then
-					t = s / o
+		function Spring.step(spring, state, dt)
+			local damping, frequency, goal, p0, v0 = spring._dampingRatio, spring._frequency * 2 * math.pi, spring._targetValue, state.value, state.velocity or 0
+			local offset, decay, p1, v1 = p0 - goal, (math.exp(-damping * frequency * dt))
+			if damping == 1 then
+				p1 = (offset * (1 + frequency * dt) + v0 * dt) * decay + goal
+				v1 = (v0 * (1 - frequency * dt) - offset * (frequency * frequency * dt)) * decay
+			elseif damping < 1 then
+				local dampedRoot = math.sqrt(1 - damping * damping)
+				local cosTerm, sinTerm, sinOverRoot = math.cos(frequency * dampedRoot * dt), (math.sin(frequency * dampedRoot * dt))
+				if dampedRoot > EPS then
+					sinOverRoot = sinTerm / dampedRoot
 				else
-					local u = e * g
-					t = u + ((u * u) * (o * o) * (o * o) / 20 - o * o) * (u * u * u) / 6
+					local angle = dt * frequency
+					sinOverRoot = angle + ((angle * angle) * (dampedRoot * dampedRoot) * (dampedRoot * dampedRoot) / 20 - dampedRoot * dampedRoot) * (angle * angle * angle) / 6
 				end
-				local u
-				if g * o > ah then
-					u = s / (g * o)
+				local sinOverFreqRoot
+				if frequency * dampedRoot > EPS then
+					sinOverFreqRoot = sinTerm / (frequency * dampedRoot)
 				else
-					local v = g * o
-					u = e + ((e * e) * (v * v) * (v * v) / 20 - v * v) * (e * e * e) / 6
+					local freqRoot = frequency * dampedRoot
+					sinOverFreqRoot = dt + ((dt * dt) * (freqRoot * freqRoot) * (freqRoot * freqRoot) / 20 - freqRoot * freqRoot) * (dt * dt * dt) / 6
 				end
-				m = (k * (p + f * t) + j * u) * l + h
-				n = (j * (p - t * f) - k * (t * g)) * l
+				p1 = (offset * (cosTerm + damping * sinOverRoot) + v0 * sinOverFreqRoot) * decay + goal
+				v1 = (v0 * (cosTerm - sinOverRoot * damping) - offset * (sinOverRoot * frequency)) * decay
 			else
-				local o = math.sqrt(f * f - 1)
-				local p, s = -g * (f - o), -g * (f + o)
-				local t = (j - k * p) / (2 * g * o)
-				local u = k - t
-				local v, w = u * math.exp(p * e), t * math.exp(s * e)
-				m = v + w + h
-				n = v * p + w * s
+				local dampedRoot = math.sqrt(damping * damping - 1)
+				local r1, r2 = -frequency * (damping - dampedRoot), -frequency * (damping + dampedRoot)
+				local co2 = (v0 - offset * r1) / (2 * frequency * dampedRoot)
+				local co1 = offset - co2
+				local e1, e2 = co1 * math.exp(r1 * dt), co2 * math.exp(r2 * dt)
+				p1 = e1 + e2 + goal
+				v1 = e1 * r1 + e2 * r2
 			end
-			local o = math.abs(n) < af and math.abs(m - h) < ag
-			return {complete = o, value = o and h or m, velocity = n}
+			local complete = math.abs(v1) < VELOCITY_THRESHOLD and math.abs(p1 - goal) < POSITION_THRESHOLD
+			return {complete = complete, value = complete and goal or p1, velocity = v1}
 		end
-		return aj
-	end,
-	[44] = function()
-		local aa, ab, ac, ad, ae = b(44)
-		return function()
-			local af, ag = ac(ab.Parent.SingleMotor), ac(ab.Parent.Spring)
-			describe(
-				"completed state",
-				function()
-					local ah, aj = af.new(0, false), ag.new(1, {frequency = 2, dampingRatio = 0.75})
-					ah:setGoal(aj)
-					for c = 1, 100 do
-						ah:step(1.6666666666666665E-2)
-					end
-					it(
-						"should complete",
-						function()
-							expect(ah._state.complete).to.equal(true)
-						end
-					)
-					it(
-						"should be exactly the goal value when completed",
-						function()
-							expect(ah._state.value).to.equal(1)
-						end
-					)
-				end
-			)
-			it(
-				"should inherit velocity",
-				function()
-					local ah = af.new(0, false)
-					ah._state = {complete = false, value = 0, velocity = -5}
-					local aj = ag.new(1, {frequency = 2, dampingRatio = 1})
-					ah:setGoal(aj)
-					ah:step(1.6666666666666665E-2)
-					expect(ah._state.velocity < 0).to.equal(true)
-				end
-			)
-		end
+		return Spring
 	end,
 	[45] = function()
-		local aa, ab, ac, ad, ae = b(45)
-		local af = function(af)
-			local ag = tostring(af):match "^Motor%((.+)%)$"
-			if ag then
-				return true, ag
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(45)
+		local isMotor = function(value)
+			local motorType = tostring(value):match "^Motor%((.+)%)$"
+			if motorType then
+				return true, motorType
 			else
 				return false
 			end
 		end
-		return af
-	end,
-	[46] = function()
-		local aa, ab, ac, ad, ae = b(46)
-		return function()
-			local af, ag, ah = ac(ab.Parent.isMotor), ac(ab.Parent.SingleMotor), ac(ab.Parent.GroupMotor)
-			local aj, c = ag.new(0), ah.new {}
-			it(
-				"should properly detect motors",
-				function()
-					expect(af(aj)).to.equal(true)
-					expect(af(c)).to.equal(true)
-				end
-			)
-			it(
-				"shouldn't detect things that aren't motors",
-				function()
-					expect(af {}).to.equal(false)
-				end
-			)
-			it(
-				"should return the proper motor type",
-				function()
-					local d, e = af(aj)
-					local f, g = af(c)
-					expect(e).to.equal "Single"
-					expect(g).to.equal "Group"
-				end
-			)
-		end
+		return isMotor
 	end,
 	[47] = function()
-		local aa, ab, ac, ad, ae = b(47)
-		local af = {
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(47)
+		local Themes = {
 			Names = {
 				"Dark",
 				"Darker",
@@ -11514,14 +11316,14 @@ local aa = {
 				"RGB"
 			}
 		}
-		for ag, ah in next, ab:GetChildren() do
-			local aj = ac(ah)
-			af[aj.Name] = aj
+		for _, child in next, moduleScript:GetChildren() do
+			local theme = requireModule(child)
+			Themes[theme.Name] = theme
 		end
-		return af
+		return Themes
 	end,
 	[48] = function()
-		local aa, ab, ac, ad, ae = b(48)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(48)
 		return {
 			Name = "Amethyst",
 			Accent = Color3.fromRGB(147, 51, 234),
@@ -11561,7 +11363,7 @@ local aa = {
 		}
 	end,
 	[49] = function()
-		local aa, ab, ac, ad, ae = b(49)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(49)
 		return {
 			Name = "Aqua",
 			Accent = Color3.fromRGB(0, 255, 255),
@@ -11601,7 +11403,7 @@ local aa = {
 		}
 	end,
 	[50] = function()
-		local aa, ab, ac, ad, ae = b(50)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(50)
 		return {
 			Name = "Dark V2",
 			Accent = Color3.fromRGB(96, 205, 255),
@@ -11641,7 +11443,7 @@ local aa = {
 		}
 	end,
 	[51] = function()
-		local aa, ab, ac, ad, ae = b(51)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(51)
 		return {
 			Name = "Darker V2",
 			Accent = Color3.fromRGB(72, 138, 182),
@@ -11681,7 +11483,7 @@ local aa = {
 		}
 	end,
 	[52] = function()
-		local aa, ab, ac, ad, ae = b(52)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(52)
 		return {
 			Name = "Light",
 			Accent = Color3.fromRGB(0, 103, 192),
@@ -11721,7 +11523,7 @@ local aa = {
 		}
 	end,
 	[53] = function()
-		local aa, ab, ac, ad, ae = b(53)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(53)
 		return {
 			Name = "Rose",
 			Accent = Color3.fromRGB(255, 20, 147),
@@ -11761,7 +11563,7 @@ local aa = {
 		}
 	end,
 	[54] = function()
-		local aa, ab, ac, ad, ae = b(54)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(54)
 		return {
 			Name = "Ocean",
 			Accent = Color3.fromRGB(0, 191, 255),
@@ -11801,7 +11603,7 @@ local aa = {
 		}
 	end,
 	[55] = function()
-		local aa, ab, ac, ad, ae = b(55)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(55)
 		return {
 			Name = "Forest",
 			Accent = Color3.fromRGB(50, 205, 50),
@@ -11841,7 +11643,7 @@ local aa = {
 		}
 	end,
 	[56] = function()
-		local aa, ab, ac, ad, ae = b(56)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(56)
 		return {
 			Name = "Sunset",
 			Accent = Color3.fromRGB(255, 140, 0),
@@ -11881,7 +11683,7 @@ local aa = {
 		}
 	end,
 	[57] = function()
-		local aa, ab, ac, ad, ae = b(57)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(57)
 		return {
 			Name = "Midnight",
 			Accent = Color3.fromRGB(180, 200, 255), -- slightly cooler accent for contrast
@@ -11921,7 +11723,7 @@ local aa = {
 		}
 	end,
 	[58] = function()
-		local aa, ab, ac, ad, ae = b(58)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(58)
 		return {
 			Name = "Cherry",
 			Accent = Color3.fromRGB(255, 0, 102),
@@ -11961,7 +11763,7 @@ local aa = {
 		}
 	end,
 	[59] = function()
-		local aa, ab, ac, ad, ae = b(59)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(59)
 		return {
 			Name = "Lavender",
 			Accent = Color3.fromRGB(180, 120, 255),
@@ -12001,7 +11803,7 @@ local aa = {
 		}
 	end,
 	[60] = function()
-		local aa, ab, ac, ad, ae = b(60)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(60)
 		return {
 			Name = "Gold",
 			Accent = Color3.fromRGB(255, 215, 0),
@@ -12041,7 +11843,7 @@ local aa = {
 		}
 	end,
 	[61] = function()
-		local aa, ab, ac, ad, ae = b(61)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(61)
 		return {
 			Name = "Mint",
 			Accent = Color3.fromRGB(0, 255, 200),
@@ -12081,7 +11883,7 @@ local aa = {
 		}
 	end,
 	[62] = function()
-		local aa, ab, ac, ad, ae = b(62)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(62)
 		return {
 			Name = "Crimson",
 			Accent = Color3.fromRGB(255, 0, 60),
@@ -12121,7 +11923,7 @@ local aa = {
 		}
 	end,
 	[63] = function()
-		local aa, ab, ac, ad, ae = b(63)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(63)
 		return {
 			Name = "Sapphire",
 			Accent = Color3.fromRGB(0, 120, 255),
@@ -12161,7 +11963,7 @@ local aa = {
 		}
 	end,
 	[64] = function()
-		local aa, ab, ac, ad, ae = b(64)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(64)
 		return {
 			Name = "Peach",
 			Accent = Color3.fromRGB(255, 160, 120),
@@ -12201,7 +12003,7 @@ local aa = {
 		}
 	end,
 	[65] = function()
-		local aa, ab, ac, ad, ae = b(65)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(65)
 		return {
 			Name = "Galaxy",
 			Accent = Color3.fromRGB(180, 100, 255),
@@ -12241,7 +12043,7 @@ local aa = {
 		}
 	end,
 	[66] = function()
-		local aa, ab, ac, ad, ae = b(66)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(66)
 		-- RGB Theme with animated rainbow colors flag
 		return {
 			Name = "RGB",
@@ -12283,7 +12085,7 @@ local aa = {
 		}
 	end,
 	[67] = function()
-		local aa, ab, ac, ad, ae = b(67)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(67)
 		return {
 			Name = "Dark",
 			Accent = Color3.fromRGB(96, 205, 255),
@@ -12323,7 +12125,7 @@ local aa = {
 		}
 	end,
 	[68] = function()
-		local aa, ab, ac, ad, ae = b(68)
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(68)
 		return {
 			Name = "Darker",
 			Accent = Color3.fromRGB(72, 138, 182),
@@ -12352,7 +12154,7 @@ local aa = {
 	end
 }
 do
-	local ab, ac, ad, ae, af, ag, ah, aj, c, e, f, g, h, i, j, k =
+	local task, setmetatable, error, newproxy, getmetatable, next, table, unpack, coroutine, scriptGlobal, luaType, nativeRequire, pcall, nativeGetfenv, nativeSetfenv, rawget =
 		task,
 	setmetatable,
 	error,
@@ -12369,254 +12171,254 @@ do
 	getfenv,
 	setfenv,
 	rawget
-	local l, m, n, o, p, s, t, u, v, w, x = ah.insert, ah.remove, ah.freeze or function(l)
-		return l
-	end, ab and ab.defer or function(l, ...)
-		local m = c.create(l)
-		c.resume(m, ...)
-		return m
+	local tableInsert, tableRemove, freeze, defer, runtimeVersion, instanceById, moduleFunctionOf, moduleResults, scriptsToRun, sharedTable, childrenOf = table.insert, table.remove, table.freeze or function(value)
+		return value
+	end, task and task.defer or function(callback, ...)
+		local thread = coroutine.create(callback)
+		coroutine.resume(thread, ...)
+		return thread
 	end, "0.0.0-venv", {}, {}, {}, {}, {}, {}
-	local y, z = {
-		GetChildren = function(y)
-			local z, A = x[y], {}
-			for B in ag, z do
-				l(A, B)
+	local virtualMethods, boundMethods = {
+		GetChildren = function(instance)
+			local children, result = childrenOf[instance], {}
+			for child in next, children do
+				tableInsert(result, child)
 			end
-			return A
+			return result
 		end,
-		FindFirstChild = function(y, z)
-			if not z then
-				ad("Argument 1 missing or nil", 2)
+		FindFirstChild = function(instance, name)
+			if not name then
+				error("Argument 1 missing or nil", 2)
 			end
-			for A in ag, x[y] do
-				if A.Name == z then
-					return A
+			for child in next, childrenOf[instance] do
+				if child.Name == name then
+					return child
 				end
 			end
 			return
 		end,
-		GetFullName = function(y)
-			local z, A = y.Name, y.Parent
-			while A do
-				z = A.Name .. "." .. z
-				A = A.Parent
+		GetFullName = function(instance)
+			local fullName, parent = instance.Name, instance.Parent
+			while parent do
+				fullName = parent.Name .. "." .. fullName
+				parent = parent.Parent
 			end
-			return "VirtualEnv." .. z
+			return "VirtualEnv." .. fullName
 		end
 	},
 	{}
-	for A, B in ag, y do
-		z[A] = function(C, ...)
-			if not x[C] then
-				ad("Expected ':' not '.' calling member function " .. A, 1)
+	for methodName, method in next, virtualMethods do
+		boundMethods[methodName] = function(instance, ...)
+			if not childrenOf[instance] then
+				error("Expected ':' not '.' calling member function " .. methodName, 1)
 			end
-			return B(C, ...)
+			return method(instance, ...)
 		end
 	end
-	local C = function(C, D, E)
-		local F, G, H, I, J = ac({}, {__mode = "k"}), function(F)
-			ad(F .. " is not a valid (virtual) member of " .. C .. " \"" .. D .. "\"", 1)
-		end, function(F)
-			ad("Unable to assign (virtual) property " .. F .. ". Property is read only", 1)
-		end, (ae(true))
-		local K = af(I)
-		K.__index = function(L, M)
-			if M == "ClassName" then
-				return C
-			elseif M == "Name" then
-				return D
-			elseif M == "Parent" then
-				return E
-			elseif C == "StringValue" and M == "Value" then
-				return J
+	local createVirtualInstance = function(className, instanceName, parentInstance)
+		local children, invalidMember, readOnly, proxy, stringValue = setmetatable({}, {__mode = "k"}), function(member)
+			error(member .. " is not a valid (virtual) member of " .. className .. " \"" .. instanceName .. "\"", 1)
+		end, function(property)
+			error("Unable to assign (virtual) property " .. property .. ". Property is read only", 1)
+		end, (newproxy(true))
+		local metatable = getmetatable(proxy)
+		metatable.__index = function(_, key)
+			if key == "ClassName" then
+				return className
+			elseif key == "Name" then
+				return instanceName
+			elseif key == "Parent" then
+				return parentInstance
+			elseif className == "StringValue" and key == "Value" then
+				return stringValue
 			else
-				local N = z[M]
-				if N then
-					return N
+				local method = boundMethods[key]
+				if method then
+					return method
 				end
 			end
-			for N in ag, F do
-				if N.Name == M then
-					return N
+			for child in next, children do
+				if child.Name == key then
+					return child
 				end
 			end
-			G(M)
+			invalidMember(key)
 		end
-		K.__newindex = function(L, M, N)
-			if M == "ClassName" then
-				H(M)
-			elseif M == "Name" then
-				D = N
-			elseif M == "Parent" then
-				if N == I then
+		metatable.__newindex = function(_, key, value)
+			if key == "ClassName" then
+				readOnly(key)
+			elseif key == "Name" then
+				instanceName = value
+			elseif key == "Parent" then
+				if value == proxy then
 					return
 				end
-				if E ~= nil then
-					x[E][I] = nil
+				if parentInstance ~= nil then
+					childrenOf[parentInstance][proxy] = nil
 				end
-				E = N
-				if N ~= nil then
-					x[N][I] = true
+				parentInstance = value
+				if value ~= nil then
+					childrenOf[value][proxy] = true
 				end
-			elseif C == "StringValue" and M == "Value" then
-				J = N
+			elseif className == "StringValue" and key == "Value" then
+				stringValue = value
 			else
-				G(M)
+				invalidMember(key)
 			end
 		end
-		K.__tostring = function()
-			return D
+		metatable.__tostring = function()
+			return instanceName
 		end
-		x[I] = F
-		if E ~= nil then
-			x[E][I] = true
+		childrenOf[proxy] = children
+		if parentInstance ~= nil then
+			childrenOf[parentInstance][proxy] = true
 		end
-		return I
+		return proxy
 	end
-	local function D(E, F)
-		local G, H, I, J = E[1], E[2], E[3], E[4]
-		local K = m(I, 1)
-		local L = C(H, K, F)
-		s[G] = L
-		if I then
-			for M, N in ag, I do
-				L[M] = N
+	local function buildTree(entry, parent)
+		local id, className, properties, childEntries = entry[1], entry[2], entry[3], entry[4]
+		local name = tableRemove(properties, 1)
+		local instance = createVirtualInstance(className, name, parent)
+		instanceById[id] = instance
+		if properties then
+			for property, propertyValue in next, properties do
+				instance[property] = propertyValue
 			end
 		end
-		if J then
-			for M, N in ag, J do
-				D(N, L)
+		if childEntries then
+			for _, childEntry in next, childEntries do
+				buildTree(childEntry, instance)
 			end
 		end
-		return L
+		return instance
 	end
-	local E = {}
-	for F, G in ag, a do
-		l(E, D(G))
+	local roots = {}
+	for _, entry in next, moduleTree do
+		tableInsert(roots, buildTree(entry))
 	end
-	for H, I in ag, aa do
-		local J = s[H]
-		t[J] = I
-		local K = J.ClassName
-		if K == "LocalScript" or K == "Script" then
-			l(v, J)
+	for id, moduleFunction in next, moduleFunctions do
+		local instance = instanceById[id]
+		moduleFunctionOf[instance] = moduleFunction
+		local className = instance.ClassName
+		if className == "LocalScript" or className == "Script" then
+			tableInsert(scriptsToRun, instance)
 		end
 	end
-	local J = function(J)
-		local K, L = J.ClassName, u[J]
-		if L and K == "ModuleScript" then
-			return aj(L)
+	local loadModule = function(instance)
+		local className, cached = instance.ClassName, moduleResults[instance]
+		if cached and className == "ModuleScript" then
+			return unpack(cached)
 		end
-		local M = t[J]
-		if not M then
+		local moduleFunction = moduleFunctionOf[instance]
+		if not moduleFunction then
 			return
 		end
-		if K == "LocalScript" or K == "Script" then
-			M()
+		if className == "LocalScript" or className == "Script" then
+			moduleFunction()
 			return
 		else
-			local N = {M()}
-			u[J] = N
-			return aj(N)
+			local results = {moduleFunction()}
+			moduleResults[instance] = results
+			return unpack(results)
 		end
 	end
-	function b(K)
-		local L = s[K]
-		local M = t[L]
-		if not M then
+	function moduleContext(id)
+		local instance = instanceById[id]
+		local moduleFunction = moduleFunctionOf[instance]
+		if not moduleFunction then
 			return
 		end
-		local N, O, P, Q, R, S, T =
+		local envReady, maui, moduleScript, requireModule, globalEnv, moduleEnv, buildEnvironment =
 			false,
-		n {
-			Version = p,
-			Script = e,
-			Shared = w,
+		freeze {
+			Version = runtimeVersion,
+			Script = scriptGlobal,
+			Shared = sharedTable,
 			GetScript = function()
-				return e
+				return scriptGlobal
 			end,
 			GetShared = function()
-				return w
+				return sharedTable
 			end
 		},
-		L,
-		function(N, ...)
-			if x[N] and N.ClassName == "ModuleScript" and t[N] then
-				return J(N)
+		instance,
+		function(target, ...)
+			if childrenOf[target] and target.ClassName == "ModuleScript" and moduleFunctionOf[target] then
+				return loadModule(target)
 			end
-			return g(N, ...)
+			return nativeRequire(target, ...)
 		end
-		local U, V = function(U, ...)
-			if not N then
-				T()
+		local virtualGetfenv, virtualSetfenv = function(level, ...)
+			if not envReady then
+				buildEnvironment()
 			end
-			if f(U) == "number" and U >= 0 then
-				if U == 0 then
-					return S
+			if luaType(level) == "number" and level >= 0 then
+				if level == 0 then
+					return moduleEnv
 				else
-					U = U + 1
-					local V, W = h(i, U)
-					if V and W == R then
-						return S
+					level = level + 1
+					local ok, env = pcall(nativeGetfenv, level)
+					if ok and env == globalEnv then
+						return moduleEnv
 					end
 				end
 			end
-			return i(U, ...)
-		end, function(U, V, ...)
-			if not N then
-				T()
+			return nativeGetfenv(level, ...)
+		end, function(level, newEnv, ...)
+			if not envReady then
+				buildEnvironment()
 			end
-			if f(U) == "number" and U >= 0 then
-				if U == 0 then
-					return j(S, V)
+			if luaType(level) == "number" and level >= 0 then
+				if level == 0 then
+					return nativeSetfenv(moduleEnv, newEnv)
 				else
-					U = U + 1
-					local W, X = h(i, U)
-					if W and X == R then
-						return j(S, V)
+					level = level + 1
+					local ok, env = pcall(nativeGetfenv, level)
+					if ok and env == globalEnv then
+						return nativeSetfenv(moduleEnv, newEnv)
 					end
 				end
 			end
-			return j(U, V, ...)
+			return nativeSetfenv(level, newEnv, ...)
 		end
-		function T()
-			R = i(0)
-			local W = {maui = O, script = P, require = Q, getfenv = U, setfenv = V}
-			S =
-				ac(
+		function buildEnvironment()
+			globalEnv = nativeGetfenv(0)
+			local injected = {maui = maui, script = moduleScript, require = requireModule, getfenv = virtualGetfenv, setfenv = virtualSetfenv}
+			moduleEnv =
+				setmetatable(
 					{},
 					{
-						__index = function(X, Y)
-							local Z = k(S, Y)
-							if Z ~= nil then
-								return Z
+						__index = function(_, key)
+							local raw = rawget(moduleEnv, key)
+							if raw ~= nil then
+								return raw
 							end
-							local _ = W[Y]
-							if _ ~= nil then
-								return _
+							local injectedValue = injected[key]
+							if injectedValue ~= nil then
+								return injectedValue
 							end
-							return R[Y]
+							return globalEnv[key]
 						end
 					}
 				)
-			j(M, S)
-			N = true
+			nativeSetfenv(moduleFunction, moduleEnv)
+			envReady = true
 		end
-		return O, P, Q, U, V
+		return maui, moduleScript, requireModule, virtualGetfenv, virtualSetfenv
 	end
-	for K, L in ag, v do
-		o(J, L)
+	for _, scriptInstance in next, scriptsToRun do
+		defer(loadModule, scriptInstance)
 	end
 	do
-		local M
-		for N, O in ag, E do
-			if O.ClassName == "ModuleScript" and O.Name == "MainModule" then
-				M = O
+		local mainModule
+		for _, root in next, roots do
+			if root.ClassName == "ModuleScript" and root.Name == "MainModule" then
+				mainModule = root
 				break
 			end
 		end
-		if M then
-			return J(M)
+		if mainModule then
+			return loadModule(mainModule)
 		end
 	end
 end
