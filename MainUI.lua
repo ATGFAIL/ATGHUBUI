@@ -6898,7 +6898,6 @@ local moduleFunctions = {
 			return Textbox
 		end
 	end,
-
 	[16] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(16)
 		local Root, Assets = moduleScript.Parent.Parent, requireModule(moduleScript.Parent.Assets)
@@ -11316,9 +11315,19 @@ local moduleFunctions = {
 				"RGB"
 			}
 		}
+		local extraNames = {}
 		for _, child in next, moduleScript:GetChildren() do
 			local theme = requireModule(child)
-			Themes[theme.Name] = theme
+			if theme and theme.Name then
+				Themes[theme.Name] = theme
+				if not table.find(Themes.Names, theme.Name) and not table.find(extraNames, theme.Name) then
+					table.insert(extraNames, theme.Name)
+				end
+			end
+		end
+		table.sort(extraNames)
+		for _, name in next, extraNames do
+			table.insert(Themes.Names, name)
 		end
 		return Themes
 	end,
