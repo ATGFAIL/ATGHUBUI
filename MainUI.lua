@@ -250,9 +250,12 @@ local TranslationSystem = {
 ]]
 local CustomizationSystem = {}
 do
-    local HttpService = game:GetService("HttpService")
+    local cloneRef = cloneref or clonereference or function(instance)
+        return instance
+    end
+    local HttpService = cloneRef(game:GetService("HttpService"))
     local localizationOk, LocalizationService = pcall(function()
-        return game:GetService("LocalizationService")
+        return cloneRef(game:GetService("LocalizationService"))
     end)
 
     local function getExecutorGlobal(name)
@@ -697,39 +700,43 @@ do
 
     -- A translation shown in a RichText label is escaped unless the source
     -- text already uses markup, so a pack or server cannot inject tags.
-    local function forDisplay(entry, translated)
+    local function forDisplay(textObject, entry, translated)
         local source = entry.OriginalText
         if type(translated) ~= "string" or source:find("<", 1, true) or source:find("&[%w#]+;") then
             return translated
         end
         local richText = false
-        pcall(function()
-            richText = entry.Object.RichText == true
-        end)
+        if textObject then
+            pcall(function()
+                richText = textObject.RichText == true
+            end)
+        end
         if not richText then
             return translated
         end
         return (translated:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
     end
 
-    local function setEntryText(entry, text, expectedRevision)
+    local function setEntryText(textObject, entry, text, expectedRevision)
         if expectedRevision and expectedRevision ~= I18n.Revision then
             return
         end
-        if not entry or not entry.Object then
+        if not textObject or not entry then
             return
         end
         local changed = false
-        pcall(function()
-            if entry.Object[entry.Property] ~= text then
-                entry.Object[entry.Property] = text
+        if textObject[entry.Property] ~= text then
+            local ok = pcall(function()
+                textObject[entry.Property] = text
+            end)
+            if ok then
                 changed = true
             end
-        end)
+        end
         if changed and FontManager:NeedsApply() then
-            local fontEntry = FontManager.Registry[entry.Object]
+            local fontEntry = FontManager.Registry[textObject]
             if fontEntry then
-                FontManager:ApplyObject(fontEntry)
+                FontManager:ApplyObject(textObject, fontEntry)
             end
         end
     end
@@ -1090,8 +1097,13 @@ do
         TranslationSystem.CurrentLanguage = locale
         if type(getgenv) == "function" then
             local ok, environment = pcall(getgenv)
-            if ok and type(environment) == "table" and type(environment.Fluent) == "table" then
-                environment.Fluent.CurrentLanguage = locale
+            if ok and type(environment) == "table" then
+                if type(environment.Fluent) == "table" then
+                    environment.Fluent.CurrentLanguage = locale
+                end
+                if type(environment.Acryven) == "table" then
+                    environment.Acryven.CurrentLanguage = locale
+                end
             end
         end
         self:UpdateAllText()
@@ -1129,7 +1141,6 @@ do
         options = type(options) == "table" and options or {}
         propertyName = propertyName or "Text"
         local entry = {
-            Object = textObject,
             OriginalText = originalText,
             Property = propertyName,
             Key = getEntryKey(originalText, options.Key),
@@ -1142,7 +1153,7 @@ do
         }
         self.Registry[textObject] = entry
         FontManager:Track(textObject, options.FontRole)
-        self:ApplyEntry(entry)
+        self:ApplyEntry(textObject, entry)
         return textObject
     end
 
@@ -1151,11 +1162,15 @@ do
             return
         end
         properties = properties or {}
-        if properties.I18nSkip or type(properties.Text) ~= "string" or properties.Text == "" then
-            FontManager:Track(textObject, properties.FontRole)
+        local text = properties.Text
+        if properties.I18nSkip or type(text) ~= "string" or text == "" then
+            -- Empty clickable TextButton containers never render text; skip font tracking for them.
+            if textObject.ClassName ~= "TextButton" or properties.FontRole ~= nil or (type(text) == "string" and text ~= "") then
+                FontManager:Track(textObject, properties.FontRole)
+            end
             return
         end
-        self:Register(textObject, properties.Text, "Text", {
+        self:Register(textObject, text, "Text", {
             Key = properties.I18nKey,
             Context = properties.I18nContext,
             FontRole = properties.FontRole,
@@ -1196,7 +1211,7 @@ do
         end)
     end
 
-    function I18n:TryRoblox(entry, revision, callback)
+    function I18n:TryRoblox(textObject, entry, revision, callback)
         if not localizationOk or not LocalizationService then
             callback(nil)
             return
@@ -1221,7 +1236,7 @@ do
                 local translated
                 if translator then
                     local ok, result = pcall(function()
-                        return translator:Translate(entry.Object, entry.OriginalText)
+                        return translator:Translate(textObject, entry.OriginalText)
                     end)
                     if ok and type(result) == "string" and result ~= "" and result ~= entry.OriginalText then
                         translated = result
@@ -1422,8 +1437,8 @@ do
         self:DrainMachineQueue()
     end
 
-    function I18n:ApplyEntry(entry)
-        if not entry or entry.Skip then
+    function I18n:ApplyEntry(textObject, entry)
+        if not textObject or not entry or entry.Skip then
             return
         end
 
@@ -1431,17 +1446,17 @@ do
         local source = entry.OriginalText
         if not self.Enabled or TranslationSystem.Enabled == false or self.Mode == "source"
             or localeBase(self.CurrentLocale) == localeBase(self.SourceLocale) then
-            setEntryText(entry, source, revision)
+            setEntryText(textObject, entry, source, revision)
             return
         end
 
         local manual = self:GetManualTranslation(entry, self.CurrentLocale)
         if manual then
-            setEntryText(entry, forDisplay(entry, manual), revision)
+            setEntryText(textObject, entry, forDisplay(textObject, entry, manual), revision)
             return
         end
 
-        setEntryText(entry, source, revision)
+        setEntryText(textObject, entry, source, revision)
         if self.Mode == "community" then
             return
         end
@@ -1453,22 +1468,22 @@ do
                 return
             end
             if translated then
-                setEntryText(entry, forDisplay(entry, translated), revision)
+                setEntryText(textObject, entry, forDisplay(textObject, entry, translated), revision)
             elseif tryMachine then
                 self:TryMachine(entry, revision, function(machineTranslated)
                     if machineTranslated then
-                        setEntryText(entry, forDisplay(entry, machineTranslated), revision)
+                        setEntryText(textObject, entry, forDisplay(textObject, entry, machineTranslated), revision)
                     end
                 end)
             end
         end
 
         if tryRoblox then
-            self:TryRoblox(entry, revision, afterRoblox)
+            self:TryRoblox(textObject, entry, revision, afterRoblox)
         elseif tryMachine then
             self:TryMachine(entry, revision, function(machineTranslated)
                 if machineTranslated then
-                    setEntryText(entry, forDisplay(entry, machineTranslated), revision)
+                    setEntryText(textObject, entry, forDisplay(textObject, entry, machineTranslated), revision)
                 end
             end)
         end
@@ -1477,14 +1492,14 @@ do
     function I18n:UpdateText(textObject)
         local entry = self.Registry[textObject]
         if entry then
-            self:ApplyEntry(entry)
+            self:ApplyEntry(textObject, entry)
         end
     end
 
     function I18n:UpdateAllText()
         for textObject, entry in pairs(self.Registry) do
             if textObject and textObject.Parent then
-                self:ApplyEntry(entry)
+                self:ApplyEntry(textObject, entry)
             else
                 self.Registry[textObject] = nil
             end
@@ -1574,7 +1589,7 @@ do
                 name = "Translation template",
                 locale = normalizedTargetLocale,
                 sourceLocale = self.SourceLocale,
-                generatedBy = "ATG Fluent"
+                generatedBy = "Acryven"
             },
             entries = entries
         }
@@ -2248,48 +2263,38 @@ do
         end
         local entry = self.Registry[textObject]
         if not entry then
-            local originalFace, originalTextSize, originalLineHeight, originalStrokeTransparency
-            pcall(function()
-                originalFace = textObject.FontFace
-                originalTextSize = textObject.TextSize
-                originalLineHeight = textObject.LineHeight
-                originalStrokeTransparency = textObject.TextStrokeTransparency
-            end)
+            -- ClassName was already checked by isTextObject, so direct reads avoid
+            -- creating a closure + pcall for every single label during boot.
+            -- Weak-key Registry auto-collects destroyed labels because entry holds
+            -- no back-reference to textObject (zero per-label Destroying connections).
             entry = {
-                Object = textObject,
-                OriginalFace = originalFace,
-                OriginalTextSize = originalTextSize,
-                OriginalLineHeight = originalLineHeight,
-                OriginalStrokeTransparency = originalStrokeTransparency,
+                OriginalFace = textObject.FontFace,
+                OriginalTextSize = textObject.TextSize,
+                OriginalLineHeight = textObject.LineHeight,
+                OriginalStrokeTransparency = textObject.TextStrokeTransparency,
                 Role = role
             }
             self.Registry[textObject] = entry
-            -- Weak keys alone are not enough because the value also refers to
-            -- the instance. Explicit cleanup keeps virtualized dropdown rows
-            -- and notifications from accumulating during long sessions.
-            pcall(function()
-                entry.Cleanup = textObject.Destroying:Connect(function()
-                    self.Registry[textObject] = nil
-                    I18n.Registry[textObject] = nil
-                end)
-            end)
         elseif role then
             entry.Role = role
         end
         -- A new object already has its script FontFace. Avoid assigning that
-        -- same value again unless a custom profile is active.
+        -- same value again unless a custom profile or text tuning is active.
         if self.CurrentProfile ~= "default" then
-            self:ApplyObject(entry)
+            self:ApplyObject(textObject, entry)
         elseif self.TextStyleConfig and self.TextStyleConfig.Enabled then
-            self:ApplyObject(entry)
+            self:ApplyObject(textObject, entry)
         end
     end
 
-    function FontManager:ApplyTextStyle(entry)
-        if not entry or not entry.Object then
+    function FontManager:ApplyTextStyle(textObject, entry)
+        if typeof(textObject) ~= "Instance" and type(textObject) == "table" then
+            entry = textObject
+            textObject = entry.Object
+        end
+        if not textObject or not entry then
             return
         end
-        local textObject = entry.Object
         local config = self.TextStyleConfig
 
         local function setProperty(name, value)
@@ -2324,14 +2329,18 @@ do
         end
     end
 
-    function FontManager:ApplyObject(entry)
-        if not entry or not entry.Object then
+    function FontManager:ApplyObject(textObject, entry)
+        if typeof(textObject) ~= "Instance" and type(textObject) == "table" then
+            entry = textObject
+            textObject = entry.Object
+        end
+        if not textObject or not entry then
             return false
         end
         local profile = self.Profiles[self.CurrentProfile] or self.Profiles.default
         local displayedText = ""
         pcall(function()
-            displayedText = entry.Object.Text
+            displayedText = textObject.Text
         end)
         -- A malformed external font must never stop the script from building
         -- its UI. Keep the original face and remember the error instead.
@@ -2344,27 +2353,27 @@ do
         )
         if not built then
             entry.LastError = tostring(face)
-            self:ApplyTextStyle(entry)
+            self:ApplyTextStyle(textObject, entry)
             return false, entry.LastError
         end
         if face then
             pcall(function()
-                entry.Object.FontFace = face
+                textObject.FontFace = face
             end)
-            self:ApplyTextStyle(entry)
+            self:ApplyTextStyle(textObject, entry)
             return true
         elseif profile and profile.UseOriginal and entry.OriginalFace then
             pcall(function()
-                entry.Object.FontFace = entry.OriginalFace
+                textObject.FontFace = entry.OriginalFace
             end)
-            self:ApplyTextStyle(entry)
+            self:ApplyTextStyle(textObject, entry)
             return true
         elseif faceError then
             entry.LastError = faceError
-            self:ApplyTextStyle(entry)
+            self:ApplyTextStyle(textObject, entry)
             return false, faceError
         end
-        self:ApplyTextStyle(entry)
+        self:ApplyTextStyle(textObject, entry)
         return false
     end
 
@@ -2379,25 +2388,15 @@ do
     function FontManager:ApplyAll()
         for textObject, entry in pairs(self.Registry) do
             if textObject and textObject.Parent then
-                self:ApplyObject(entry)
+                self:ApplyObject(textObject, entry)
             else
-                if entry.Cleanup then
-                    pcall(function()
-                        entry.Cleanup:Disconnect()
-                    end)
-                end
                 self.Registry[textObject] = nil
             end
         end
     end
 
     function FontManager:ClearRegistry()
-        for textObject, entry in pairs(self.Registry) do
-            if entry.Cleanup then
-                pcall(function()
-                    entry.Cleanup:Disconnect()
-                end)
-            end
+        for textObject in pairs(self.Registry) do
             self.Registry[textObject] = nil
         end
     end
@@ -3116,18 +3115,20 @@ local moduleTree, moduleContext = {
 local moduleFunctions = {
 	function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(1)
-		local Lighting, RunService, localPlayer, UserInputService, TweenService, camera =
-			game:GetService "Lighting",
-		game:GetService "RunService",
-		game:GetService "Players".LocalPlayer,
-		game:GetService "UserInputService",
-		game:GetService "TweenService",
-		game:GetService "Workspace".CurrentCamera
-		local mouse, libraryRoot = localPlayer:GetMouse(), moduleScript
-		local Creator, elementModules, Acrylic, Components = requireModule(libraryRoot.Creator), requireModule(libraryRoot.Elements), requireModule(libraryRoot.Acrylic), libraryRoot.Components
+		local libraryRoot = moduleScript
+		local Creator = requireModule(libraryRoot.Creator)
+		local Lighting = Creator.GetService("Lighting")
+		local RunService = Creator.GetService("RunService")
+		local Players = Creator.GetService("Players")
+		local UserInputService = Creator.GetService("UserInputService")
+		local TweenService = Creator.GetService("TweenService")
+		local WorkspaceService = Creator.GetService("Workspace")
+		local localPlayer, camera = Players.LocalPlayer, WorkspaceService.CurrentCamera
+		local mouse = localPlayer:GetMouse()
+		local elementModules, Acrylic, Components = requireModule(libraryRoot.Elements), requireModule(libraryRoot.Acrylic), libraryRoot.Components
 		local Notification, New, protectGui = requireModule(Components.Notification), Creator.New, protectgui or (syn and syn.protect_gui) or function()
 		end
-		local gui = New("ScreenGui", {Parent = RunService:IsStudio() and localPlayer.PlayerGui or game:GetService "CoreGui"})
+		local gui = New("ScreenGui", {Parent = RunService:IsStudio() and localPlayer.PlayerGui or Creator.GetService("CoreGui")})
 		protectGui(gui)
 		Notification:Init(gui)
 		-- Indexing an Enum with an unknown name throws; return nil instead.
@@ -3144,10 +3145,17 @@ local moduleFunctions = {
 			return ok and item or nil
 		end
 		local Library = {
+			-- Brand identity (Acryven v3.0, 100% backward compatible with Fluent / ATGHUBUI).
+			Brand = "Acryven",
+			AcryvenVersion = "3.0.0",
 			-- Fluent's version, kept for scripts that check it.
 			Version = "1.6.0",
-			-- This ATG build: opt-in extras, privacy and bug fixes (CHANGELOG.md).
+			-- Legacy ATG version field kept for compatibility.
 			ATGVersion = "2.0.0",
+			-- Automatic frame-budget yielding during heavy UI mount bursts (prevents >50ms hitches).
+			AutoYieldMount = true,
+			MountBudgetMs = 6,
+			MountBatchCap = 10,
 			OpenFrames = {},
 			Options = {},
 			Themes = requireModule(libraryRoot.Themes).Names,
@@ -3243,7 +3251,7 @@ local moduleFunctions = {
 			callbacks and never scans CoreGui, so it remains inexpensive in long
 			sessions and safe on executors without a file system.
 		]]
-		local WorkspaceHttpService = game:GetService("HttpService")
+		local WorkspaceHttpService = Creator.GetService("HttpService")
 		local Workspace = {
 			Version = 1,
 			Library = Library,
@@ -3500,8 +3508,18 @@ local moduleFunctions = {
 					self.Drag = {Tab = tab, Start = input.Position, Input = input, Moved = false}
 				end
 			end)
-			self:ApplyTabOrder()
-			self:ApplyModes()
+			-- Coalesce layout order + mode updates across rapid AddTab bursts during boot.
+			if not self._TabRefreshQueued then
+				self._TabRefreshQueued = true
+				task.defer(function()
+					self._TabRefreshQueued = false
+					if not self.Window then
+						return
+					end
+					self:ApplyTabOrder()
+					self:ApplyModes()
+				end)
+			end
 			return tab
 		end
 		function Workspace:RegisterElement(element, section, options, elementType, optionKey)
@@ -4846,6 +4864,52 @@ local moduleFunctions = {
 			end
 			return false
 		end
+		local mountBurstStart = 0
+		local mountLastAt = 0
+		local mountBurstItems = 0
+		local mountYieldNext = false
+		local function armPostWindowYield()
+			mountBurstStart = os.clock()
+			mountLastAt = mountBurstStart
+			mountBurstItems = 0
+			mountYieldNext = true
+		end
+		local function budgetYieldMount()
+			if Library.AutoYieldMount == false then
+				return
+			end
+			local budgetMs = tonumber(Library.MountBudgetMs) or 6
+			local batchCap = tonumber(Library.MountBatchCap) or 10
+			if budgetMs <= 0 and batchCap <= 0 then
+				return
+			end
+			local now = os.clock()
+			if mountYieldNext then
+				mountYieldNext = false
+				if (now - mountLastAt) <= 0.05 and type(coroutine.isyieldable) == "function" and coroutine.isyieldable() then
+					task.wait()
+					mountBurstStart = os.clock()
+					mountLastAt = mountBurstStart
+					mountBurstItems = 1
+					return
+				end
+			end
+			if now - mountLastAt > 0.05 then
+				mountBurstStart = now
+				mountBurstItems = 0
+			end
+			mountLastAt = now
+			mountBurstItems += 1
+			local timeExceeded = budgetMs > 0 and (now - mountBurstStart) >= (budgetMs / 1000)
+			local countExceeded = batchCap > 0 and mountBurstItems >= batchCap
+			if (timeExceeded or countExceeded) and type(coroutine.isyieldable) == "function" and coroutine.isyieldable() then
+				task.wait()
+				mountBurstStart = os.clock()
+				mountLastAt = mountBurstStart
+				mountBurstItems = 0
+			end
+		end
+
 		local Elements = {}
 		Elements.__index = Elements
 		Elements.__namecall = function(_, methodName, ...)
@@ -4853,6 +4917,7 @@ local moduleFunctions = {
 		end
 		for _, elementModule in ipairs(elementModules) do
 			Elements["Add" .. elementModule.__type] = function(parent, key, config)
+				budgetYieldMount()
 				elementModule.Container = parent.Container
 				elementModule.Type = parent.Type
 				elementModule.ScrollFrame = parent.ScrollFrame
@@ -4916,11 +4981,24 @@ local moduleFunctions = {
 			-- Opt-in extras (all off for scripts written before they existed).
 			Library.SmartConfirm = config.SmartConfirm == true
 			Library.SearchEnabled = config.Search == true
+			if config.AutoYieldMount ~= nil then
+				Library.AutoYieldMount = config.AutoYieldMount == true
+			end
+			if type(config.MountBudgetMs) == "number" then
+				Library.MountBudgetMs = config.MountBudgetMs
+			end
+			if type(config.MountBatchCap) == "number" then
+				Library.MountBatchCap = config.MountBatchCap
+			end
+			if config.Theme and table.find(Library.Themes, config.Theme) then
+				Library.Theme = config.Theme
+			end
 			if config.Splash == true then
 				showSplash()
 			end
-			Library.UseAcrylic = config.Acrylic
-			if config.Acrylic then
+			Library.UseAcrylic = config.Acrylic == true
+			Library.Acrylic = Library.UseAcrylic
+			if Library.UseAcrylic then
 				Acrylic.init()
 			end
 			local window =
@@ -4945,7 +5023,10 @@ local moduleFunctions = {
 				Library.Workspace:Configure {ScriptId = workspaceScope}
 				Library.Workspace:Attach(window)
 			end
-			Library:SetTheme(config.Theme)
+			if config.Theme == "RGB" then
+				Library:SetTheme(config.Theme)
+			end
+			armPostWindowYield()
 			if config.FloatingToggle ~= false then
 				local floatingConfig = type(config.FloatingToggle) == "table" and config.FloatingToggle or nil
 				-- Give legacy scripts that append FluentToggleGui after CreateWindow
@@ -4991,12 +5072,14 @@ local moduleFunctions = {
 			removeLegacyFloatingToggles()
 			Library._CloseDropdowns()
 			if Library.UseAcrylic then
-				-- Acrylic.Disable only exists after Acrylic.init; it removes the
-				-- DepthOfFieldEffect the blur added to Lighting.
-				if type(Acrylic.Disable) == "function" then
+				if Library.Window and Library.Window.AcrylicPaint and type(Library.Window.AcrylicPaint.Destroy) == "function" then
+					pcall(Library.Window.AcrylicPaint.Destroy)
+				end
+				if type(Acrylic.Destroy) == "function" then
+					pcall(Acrylic.Destroy)
+				elseif type(Acrylic.Disable) == "function" then
 					pcall(Acrylic.Disable)
 				end
-				Library.Window.AcrylicPaint.Model:Destroy()
 			end
 			Creator.Disconnect()
 			Creator.StopRainbow()
@@ -5005,9 +5088,10 @@ local moduleFunctions = {
 		function Library.ToggleAcrylic(_, enabled)
 			if Library.Window then
 				if Library.UseAcrylic then
-					Library.Acrylic = enabled
-					Library.Window.AcrylicPaint.Model.Transparency = enabled and 0.98 or 1
-					if enabled then
+					Library.Acrylic = enabled == true
+					if Library.Window.AcrylicPaint and type(Library.Window.AcrylicPaint.SyncVisibility) == "function" then
+						Library.Window.AcrylicPaint.SyncVisibility()
+					elseif Library.Acrylic then
 						Acrylic.Enable()
 					else
 						Acrylic.Disable()
@@ -5028,132 +5112,415 @@ local moduleFunctions = {
 		end
 		if getgenv then
 			getgenv().Fluent = Library
+			getgenv().Acryven = Library
 		end
 		return Library
 	end,
 	function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(2)
-		local Acrylic = {AcrylicBlur = requireModule(moduleScript.AcrylicBlur), CreateAcrylic = requireModule(moduleScript.CreateAcrylic), AcrylicPaint = requireModule(moduleScript.AcrylicPaint)}
+		local Creator = requireModule(moduleScript.Parent.Creator)
+		local Lighting = Creator.GetService("Lighting")
+		local Workspace = Creator.GetService("Workspace")
+
+		local Acrylic = {
+			AcrylicBlur = requireModule(moduleScript.AcrylicBlur),
+			CreateAcrylic = requireModule(moduleScript.CreateAcrylic),
+			AcrylicPaint = requireModule(moduleScript.AcrylicPaint),
+			BLUR_FOLDER_NAME = "AcryvenBlurLayer",
+			DOF_NAME = "AcryvenDoF"
+		}
+
+		local baseEffect = nil
+		local depthOfFieldDefaults = {}
+		local isInitialized = false
+		local isEnabled = false
+
+		local function isLegacyFluentDoF(object)
+			if not object or not object:IsA("DepthOfFieldEffect") then
+				return false
+			end
+			if object.Name == Acrylic.DOF_NAME then
+				return true
+			end
+			local ok, managed = pcall(function()
+				return object:GetAttribute("AcryvenManaged") == true
+			end)
+			if ok and managed then
+				return true
+			end
+			-- Legacy unnamed Fluent DepthOfFieldEffect fingerprint
+			return object.Name == "DepthOfField"
+				and object.FarIntensity == 0
+				and object.NearIntensity == 1
+				and math.abs(object.InFocusRadius - 0.1) < 0.001
+		end
+
+		-- Purge any orphaned glass blur parts or DoF effects left by previous sessions
+		-- or crashed legacy Fluent runs so no stuck blur rectangle ever remains.
+		function Acrylic.PurgeStale()
+			for _, child in ipairs(Lighting:GetChildren()) do
+				if child ~= baseEffect and isLegacyFluentDoF(child) then
+					pcall(function()
+						child:Destroy()
+					end)
+				end
+			end
+			local camera = Workspace.CurrentCamera
+			if camera then
+				for _, child in ipairs(camera:GetChildren()) do
+					if child.Name == Acrylic.BLUR_FOLDER_NAME then
+						pcall(function()
+							child:Destroy()
+						end)
+					elseif child:IsA("Folder") then
+						local hasOnlyGlassBody = false
+						for _, sub in ipairs(child:GetChildren()) do
+							if sub:IsA("BasePart") and sub.Material == Enum.Material.Glass and (sub.Name == "Body" or sub.Name == "AcryvenBlurPart") then
+								hasOnlyGlassBody = true
+							end
+						end
+						if hasOnlyGlassBody and child.Name == "Folder" then
+							pcall(function()
+								child:Destroy()
+							end)
+						end
+					end
+				end
+			end
+			for _, child in ipairs(Workspace:GetChildren()) do
+				if child:IsA("BasePart") and child.Material == Enum.Material.Glass and (child.Name == "Body" or child.Name == "AcryvenBlurPart") then
+					pcall(function()
+						child:Destroy()
+					end)
+				end
+			end
+		end
+
+		function Acrylic.GetBlurFolder()
+			local camera = Workspace.CurrentCamera
+			if not camera then
+				return nil
+			end
+			local folder = camera:FindFirstChild(Acrylic.BLUR_FOLDER_NAME)
+			if not folder then
+				folder = Instance.new("Folder")
+				folder.Name = Acrylic.BLUR_FOLDER_NAME
+				folder.Parent = camera
+			end
+			return folder
+		end
+
+		function Acrylic.Enable()
+			if not baseEffect then
+				return
+			end
+			isEnabled = true
+			for effectInstance, state in pairs(depthOfFieldDefaults) do
+				if effectInstance and effectInstance.Parent then
+					pcall(function()
+						effectInstance.Enabled = false
+					end)
+				end
+			end
+			baseEffect.Enabled = true
+			if baseEffect.Parent ~= Lighting then
+				baseEffect.Parent = Lighting
+			end
+		end
+
+		function Acrylic.Disable()
+			isEnabled = false
+			for effectInstance, state in pairs(depthOfFieldDefaults) do
+				if effectInstance and effectInstance.Parent then
+					pcall(function()
+						effectInstance.Enabled = state.enabled
+					end)
+				end
+			end
+			if baseEffect then
+				baseEffect.Enabled = false
+				baseEffect.Parent = nil
+			end
+		end
+
+		function Acrylic.Destroy()
+			Acrylic.Disable()
+			if baseEffect then
+				pcall(function()
+					baseEffect:Destroy()
+				end)
+				baseEffect = nil
+			end
+			local camera = Workspace.CurrentCamera
+			if camera then
+				local folder = camera:FindFirstChild(Acrylic.BLUR_FOLDER_NAME)
+				if folder then
+					pcall(function()
+						folder:Destroy()
+					end)
+				end
+			end
+			table.clear(depthOfFieldDefaults)
+			isInitialized = false
+			isEnabled = false
+		end
+
 		function Acrylic.init()
-			local baseEffect = Instance.new "DepthOfFieldEffect"
+			if isInitialized and baseEffect then
+				Acrylic.Enable()
+				return
+			end
+			Acrylic.PurgeStale()
+			table.clear(depthOfFieldDefaults)
+
+			local function register(object)
+				if object:IsA("DepthOfFieldEffect") and not isLegacyFluentDoF(object) then
+					depthOfFieldDefaults[object] = {enabled = object.Enabled}
+				end
+			end
+			for _, child in ipairs(Lighting:GetChildren()) do
+				register(child)
+			end
+			local camera = Workspace.CurrentCamera
+			if camera then
+				for _, child in ipairs(camera:GetChildren()) do
+					register(child)
+				end
+			end
+
+			baseEffect = Instance.new("DepthOfFieldEffect")
+			baseEffect.Name = Acrylic.DOF_NAME
 			baseEffect.FarIntensity = 0
 			baseEffect.InFocusRadius = 0.1
 			baseEffect.NearIntensity = 1
-			local depthOfFieldDefaults = {}
-			function Acrylic.Enable()
-				for _, effect in pairs(depthOfFieldDefaults) do
-					effect.Enabled = false
-				end
-				baseEffect.Parent = game:GetService "Lighting"
-			end
-			function Acrylic.Disable()
-				for _, effect in pairs(depthOfFieldDefaults) do
-					effect.Enabled = effect.enabled
-				end
-				baseEffect.Parent = nil
-			end
-			local registerDefaults = function()
-				local register = function(object)
-					if object:IsA "DepthOfFieldEffect" then
-						depthOfFieldDefaults[object] = {enabled = object.Enabled}
-					end
-				end
-				for _, child in pairs(game:GetService "Lighting":GetChildren()) do
-					register(child)
-				end
-				if game:GetService "Workspace".CurrentCamera then
-					for _, child in pairs(game:GetService "Workspace".CurrentCamera:GetChildren()) do
-						register(child)
-					end
-				end
-			end
-			registerDefaults()
+			pcall(function()
+				baseEffect:SetAttribute("AcryvenManaged", true)
+			end)
+			isInitialized = true
 			Acrylic.Enable()
 		end
+
+		function Acrylic.IsEnabled()
+			return isEnabled
+		end
+
 		return Acrylic
 	end,
 	function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(3)
-		local Creator, createAcrylic, viewportPointToWorld, getOffset = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.CreateAcrylic), unpack(requireModule(moduleScript.Parent.Utils))
-		local createAcrylicBlur = function(distance)
-			local cleanups = {}
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local createAcrylic = requireModule(moduleScript.Parent.CreateAcrylic)
+		local viewportPointToWorld, getOffset = unpack(requireModule(moduleScript.Parent.Utils))
+		local Workspace = Creator.GetService("Workspace")
+
+		local activeBlurCount = 0
+
+		return function(distance)
+			local AcrylicModule = requireModule(moduleScript.Parent)
+			local Library = requireModule(Root)
+
 			distance = distance or 0.001
-			local positions, model = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}, createAcrylic()
-			model.Parent = workspace
-			local updatePositions, render = function(size, position)
-				positions.topLeft = position
-				positions.topRight = position + Vector2.new(size.X, 0)
-				positions.bottomRight = position + size
-			end, function()
-				local cameraCFrame = game:GetService "Workspace".CurrentCamera
-				if cameraCFrame then
-					cameraCFrame = cameraCFrame.CFrame
+			local positions = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}
+			local model = createAcrylic()
+			local mesh = model:FindFirstChildOfClass("SpecialMesh")
+
+			local destroyed = false
+			local currentlyVisible = false
+			local boundParent = nil
+			local boundGui = nil
+			local cameraSignals = {}
+			local lifecycleSignals = {}
+
+			local function disconnectList(list)
+				for index = #list, 1, -1 do
+					local conn = table.remove(list, index)
+					pcall(function()
+						conn:Disconnect()
+					end)
 				end
-				local resolvedCFrame = cameraCFrame
-				if not resolvedCFrame then
-					resolvedCFrame = CFrame.new()
-				end
-				local viewCFrame, topLeft, topRight, bottomRight = resolvedCFrame, positions.topLeft, positions.topRight, positions.bottomRight
-				local topLeft3D, topRight3D, bottomRight3D = viewportPointToWorld(topLeft, distance), viewportPointToWorld(topRight, distance), viewportPointToWorld(bottomRight, distance)
-				local width, height = (topRight3D - topLeft3D).Magnitude, (topRight3D - bottomRight3D).Magnitude
-				model.CFrame = CFrame.fromMatrix((topLeft3D + bottomRight3D) / 2, viewCFrame.XVector, viewCFrame.YVector, viewCFrame.ZVector)
-				model.Mesh.Scale = Vector3.new(width, height, 0)
 			end
-			local onChange, renderOnChange = function(frame)
-				local offset = getOffset()
-				local size, position = frame.AbsoluteSize - Vector2.new(offset, offset), frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
-				updatePositions(size, position)
-				task.spawn(render)
-			end, function()
-				local camera = game:GetService "Workspace".CurrentCamera
+
+			local function render()
+				if destroyed or not currentlyVisible or not model or not model.Parent then
+					return
+				end
+				local camera = Workspace.CurrentCamera
 				if not camera then
 					return
 				end
-				table.insert(cleanups, camera:GetPropertyChangedSignal "CFrame":Connect(render))
-				table.insert(cleanups, camera:GetPropertyChangedSignal "ViewportSize":Connect(render))
-				table.insert(cleanups, camera:GetPropertyChangedSignal "FieldOfView":Connect(render))
-				task.spawn(render)
-			end
-			model.Destroying:Connect(
-				function()
-					for _, connection in cleanups do
-						pcall(
-							function()
-								connection:Disconnect()
-							end
-						)
-					end
+				local viewCFrame = camera.CFrame
+				local topLeft3D = viewportPointToWorld(positions.topLeft, distance)
+				local topRight3D = viewportPointToWorld(positions.topRight, distance)
+				local bottomRight3D = viewportPointToWorld(positions.bottomRight, distance)
+				local width = (topRight3D - topLeft3D).Magnitude
+				local height = (topRight3D - bottomRight3D).Magnitude
+				model.CFrame = CFrame.fromMatrix((topLeft3D + bottomRight3D) / 2, viewCFrame.XVector, viewCFrame.YVector, viewCFrame.ZVector)
+				if mesh then
+					mesh.Scale = Vector3.new(width, height, 0)
 				end
-			)
-			renderOnChange()
-			return onChange, model
-		end
-		return function(distance)
-			local Blur, onChange, model = {}, createAcrylicBlur(distance)
+			end
+
+			local function bindCameraSignals()
+				disconnectList(cameraSignals)
+				if destroyed or not currentlyVisible then
+					return
+				end
+				local camera = Workspace.CurrentCamera
+				if not camera then
+					return
+				end
+				table.insert(cameraSignals, camera:GetPropertyChangedSignal("CFrame"):Connect(render))
+				table.insert(cameraSignals, camera:GetPropertyChangedSignal("ViewportSize"):Connect(render))
+				table.insert(cameraSignals, camera:GetPropertyChangedSignal("FieldOfView"):Connect(render))
+				render()
+			end
+
 			local frame = Creator.New("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
-			Creator.AddSignal(
-				frame:GetPropertyChangedSignal "AbsolutePosition",
-				function()
-					onChange(frame)
+
+			local function updateBounds()
+				if destroyed then
+					return
 				end
-			)
-			Creator.AddSignal(
-				frame:GetPropertyChangedSignal "AbsoluteSize",
-				function()
-					onChange(frame)
+				local offset = getOffset()
+				local size = frame.AbsoluteSize - Vector2.new(offset, offset)
+				local position = frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
+				positions.topLeft = position
+				positions.topRight = position + Vector2.new(size.X, 0)
+				positions.bottomRight = position + size
+				if currentlyVisible then
+					render()
 				end
-			)
-			Blur.AddParent = function(parentFrame)
-				Creator.AddSignal(
-					parentFrame:GetPropertyChangedSignal "Visible",
-					function()
-						Blur.SetVisibility(parentFrame.Visible)
+			end
+
+			local function shouldBeVisible()
+				if destroyed or Library.Unloaded then
+					return false
+				end
+				if not Library.UseAcrylic or Library.Acrylic == false then
+					return false
+				end
+				if not frame or not frame.Parent or not frame:IsDescendantOf(game) then
+					return false
+				end
+				if boundParent then
+					if not boundParent.Visible or not boundParent:IsDescendantOf(game) then
+						return false
 					end
-				)
+				end
+				if boundGui then
+					if not boundGui.Enabled or not boundGui:IsDescendantOf(game) then
+						return false
+					end
+				end
+				return true
 			end
-			Blur.SetVisibility = function(visible)
-				model.Transparency = visible and 0.98 or 1
+
+			local function setActiveState(visible)
+				visible = visible == true
+				if visible == currentlyVisible then
+					return
+				end
+				currentlyVisible = visible
+				if visible then
+					activeBlurCount += 1
+					local folder = AcrylicModule.GetBlurFolder()
+					if folder then
+						model.Transparency = 0.98
+						model.Parent = folder
+					end
+					AcrylicModule.Enable()
+					updateBounds()
+					bindCameraSignals()
+				else
+					activeBlurCount = math.max(0, activeBlurCount - 1)
+					disconnectList(cameraSignals)
+					if model then
+						model.Transparency = 1
+						model.Parent = nil
+					end
+					if activeBlurCount == 0 then
+						AcrylicModule.Disable()
+					end
+				end
 			end
+
+			local Blur = {}
+
+			function Blur.SyncVisibility()
+				setActiveState(shouldBeVisible())
+			end
+
+			function Blur.SetVisibility(visible)
+				if visible then
+					Blur.SyncVisibility()
+				else
+					setActiveState(false)
+				end
+			end
+
+			function Blur.Destroy()
+				if destroyed then
+					return
+				end
+				destroyed = true
+				if currentlyVisible then
+					currentlyVisible = false
+					activeBlurCount = math.max(0, activeBlurCount - 1)
+					if activeBlurCount == 0 then
+						AcrylicModule.Disable()
+					end
+				end
+				disconnectList(cameraSignals)
+				disconnectList(lifecycleSignals)
+				if model then
+					pcall(function()
+						model:Destroy()
+					end)
+					model = nil
+				end
+				mesh = nil
+			end
+
+			-- Re-parent blur layer if the game replaces CurrentCamera.
+			table.insert(lifecycleSignals, Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+				if destroyed or not currentlyVisible then
+					return
+				end
+				local folder = AcrylicModule.GetBlurFolder()
+				if folder and model then
+					model.Parent = folder
+				end
+				bindCameraSignals()
+			end))
+
+			table.insert(lifecycleSignals, frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateBounds))
+			table.insert(lifecycleSignals, frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateBounds))
+			table.insert(lifecycleSignals, frame.Destroying:Connect(Blur.Destroy))
+			table.insert(lifecycleSignals, frame.AncestryChanged:Connect(function()
+				if not frame:IsDescendantOf(game) then
+					setActiveState(false)
+				else
+					Blur.SyncVisibility()
+				end
+			end))
+
+			function Blur.AddParent(parentFrame)
+				if destroyed or not parentFrame then
+					return
+				end
+				boundParent = parentFrame
+				boundGui = parentFrame:FindFirstAncestorOfClass("ScreenGui") or Library.GUI
+				table.insert(lifecycleSignals, parentFrame:GetPropertyChangedSignal("Visible"):Connect(Blur.SyncVisibility))
+				table.insert(lifecycleSignals, parentFrame.Destroying:Connect(Blur.Destroy))
+				table.insert(lifecycleSignals, parentFrame.AncestryChanged:Connect(Blur.SyncVisibility))
+				if boundGui then
+					table.insert(lifecycleSignals, boundGui:GetPropertyChangedSignal("Enabled"):Connect(Blur.SyncVisibility))
+					table.insert(lifecycleSignals, boundGui.Destroying:Connect(Blur.Destroy))
+				end
+				Blur.SyncVisibility()
+			end
+
 			Blur.Frame = frame
 			Blur.Model = model
 			return Blur
@@ -5163,7 +5530,7 @@ local moduleFunctions = {
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(4)
 		local Creator, AcrylicBlur = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.AcrylicBlur)
 		local New = Creator.New
-		return function(_props)
+		return function(props)
 			local Paint = {}
 			Paint.Frame =
 				New(
@@ -5247,13 +5614,21 @@ local moduleFunctions = {
 						)
 					}
 				)
+			local useBlur = (type(props) ~= "table") or (props.UseBlur ~= false)
 			local blur
-			if requireModule(moduleScript.Parent.Parent).UseAcrylic then
+			if useBlur and requireModule(moduleScript.Parent.Parent).UseAcrylic then
 				blur = AcrylicBlur()
 				blur.Frame.Parent = Paint.Frame
 				Paint.Model = blur.Model
 				Paint.AddParent = blur.AddParent
 				Paint.SetVisibility = blur.SetVisibility
+				Paint.SyncVisibility = blur.SyncVisibility
+				Paint.Destroy = blur.Destroy
+			else
+				Paint.AddParent = function() end
+				Paint.SetVisibility = function() end
+				Paint.SyncVisibility = function() end
+				Paint.Destroy = function() end
 			end
 			return Paint
 		end
@@ -5267,12 +5642,15 @@ local moduleFunctions = {
 				Creator.New(
 					"Part",
 					{
-						Name = "Body",
+						Name = "AcryvenBlurPart",
 						Color = Color3.new(0, 0, 0),
 						Material = Enum.Material.Glass,
 						Size = Vector3.new(1, 1, 0),
 						Anchored = true,
 						CanCollide = false,
+						CanTouch = false,
+						CanQuery = false,
+						Massless = true,
 						Locked = true,
 						CastShadow = false,
 						Transparency = 0.98
@@ -5284,15 +5662,22 @@ local moduleFunctions = {
 		return createAcrylic
 	end,
 	function()
-		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(6)
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(6)
+		local Creator = requireModule(moduleScript.Parent.Parent.Creator)
+		local Workspace = Creator.GetService("Workspace")
 		local map, viewportPointToWorld = function(value, inMin, inMax, outMin, outMax)
 			return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
 		end, function(location, distance)
-			local ray = game:GetService "Workspace".CurrentCamera:ScreenPointToRay(location.X, location.Y)
+			local camera = Workspace.CurrentCamera
+			if not camera then
+				return Vector3.new()
+			end
+			local ray = camera:ScreenPointToRay(location.X, location.Y)
 			return ray.Origin + ray.Direction * distance
 		end
 		local getOffset = function()
-			local viewportHeight = game:GetService "Workspace".CurrentCamera.ViewportSize.Y
+			local camera = Workspace.CurrentCamera
+			local viewportHeight = camera and camera.ViewportSize.Y or 1080
 			return map(viewportHeight, 0, 2560, 8, 56)
 		end
 		return {viewportPointToWorld, getOffset}
@@ -5562,12 +5947,14 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
+			local initialDesc = desc == nil and "" or tostring(desc)
 			Element.DescLabel =
 				New(
 					"TextLabel",
 					{
 						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-						Text = desc,
+						Text = initialDesc,
+						Visible = initialDesc ~= "",
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
 						TextWrapped = true,
@@ -5624,13 +6011,11 @@ local moduleFunctions = {
 					},
 					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), Element.Border, Element.LabelHolder}
 				)
-			-- Text set after the element is built is runtime text (status, counters,
-			-- player names), so it is registered as dynamic.
-			local built = false
+			-- TitleLabel and DescLabel were already registered once by Creator.New above.
+			-- Subsequent SetTitle/SetDesc calls are runtime text (status, counters, player names).
 			function Element.SetTitle(_self, text)
 				Element.TitleLabel.Text = text
-				-- Register with Translation System
-				TranslationSystem:Register(Element.TitleLabel, text, "Text", {Dynamic = built})
+				TranslationSystem:Register(Element.TitleLabel, text, "Text", {Dynamic = true})
 			end
 			function Element.SetDesc(_self, text)
 				if text == nil then
@@ -5642,17 +6027,13 @@ local moduleFunctions = {
 					Element.DescLabel.Visible = true
 				end
 				Element.DescLabel.Text = text
-				-- Register with Translation System
 				if text ~= "" then
-					TranslationSystem:Register(Element.DescLabel, text, "Text", {Dynamic = built})
+					TranslationSystem:Register(Element.DescLabel, text, "Text", {Dynamic = true})
 				end
 			end
 			function Element.Destroy(_self)
 				Element.Frame:Destroy()
 			end
-			Element:SetTitle(title)
-			Element:SetDesc(desc)
-			built = true
 			if hover then
 				local _themes, motor, setTransparency =
 					Root.Themes,
@@ -5695,14 +6076,16 @@ local moduleFunctions = {
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(12)
 		local Root = moduleScript.Parent.Parent
 		local Flipper, Creator, Acrylic = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic)
+		local TweenService = Creator.GetService("TweenService")
+		local Workspace = Creator.GetService("Workspace")
 		local Spring, Instant, New, Notification = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {}
 
 		function Notification.Init(_self, gui)
 			-- Responsive width: smaller on mobile, recomputed when the screen
 			-- rotates or the window is resized.
-			local camera = workspace.CurrentCamera
+			local camera = Workspace.CurrentCamera
 			local function layout()
-				local isMobile = camera.ViewportSize.X < 600
+				local isMobile = camera and camera.ViewportSize.X < 600
 				local sideMargin = isMobile and 10 or 30
 				return UDim2.new(1, -sideMargin, 1, -sideMargin), UDim2.new(0, isMobile and 280 or 340, 1, -sideMargin)
 			end
@@ -5730,9 +6113,11 @@ local moduleFunctions = {
 						)
 					}
 				)
-			Creator.AddSignal(camera:GetPropertyChangedSignal("ViewportSize"), function()
-				Notification.Holder.Position, Notification.Holder.Size = layout()
-			end)
+			if camera then
+				Creator.AddSignal(camera:GetPropertyChangedSignal("ViewportSize"), function()
+					Notification.Holder.Position, Notification.Holder.Size = layout()
+				end)
+			end
 		end
 
 		function Notification.New(_self, config)
@@ -5742,13 +6127,10 @@ local moduleFunctions = {
 			config.Duration = config.Duration or nil
 			config.Buttons = config.Buttons or {}
 
-			-- Store originals for translation
-			local originalTitle = config.Title
-			local originalContent = config.Content
-			local originalSubContent = config.SubContent
-
 			local NewNotification = {Closed = false}
-			NewNotification.AcrylicPaint = Acrylic.AcrylicPaint()
+			-- Notifications use 2D Glass surface only (no 3D workspace glass mesh)
+			-- so transient toasts never leak blur planes or add Camera CFrame signals.
+			NewNotification.AcrylicPaint = Acrylic.AcrylicPaint({UseBlur = false})
 
 			-- Icon & color mapping
 			local icon = "rbxassetid://10723415903"
@@ -5822,9 +6204,7 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			-- Register Title for translation (notification text is dynamic)
-			TranslationSystem:Register(NewNotification.Title, originalTitle, "Text", {Dynamic = true})
-
+			-- Title, ContentLabel, SubContentLabel are already auto-registered by Creator.New with I18nDynamic = true.
 			NewNotification.ContentLabel =
 				New(
 					"TextLabel",
@@ -5846,8 +6226,6 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
-			-- Register Content for translation
-			TranslationSystem:Register(NewNotification.ContentLabel, originalContent, "Text", {Dynamic = true})
 
 			NewNotification.SubContentLabel =
 				New(
@@ -5866,10 +6244,6 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "SubText"}
 					}
 				)
-			-- Register SubContent for translation
-			if originalSubContent ~= "" then
-				TranslationSystem:Register(NewNotification.SubContentLabel, originalSubContent, "Text", {Dynamic = true})
-			end
 
 			NewNotification.LabelHolder =
 				New(
@@ -6184,10 +6558,8 @@ local moduleFunctions = {
 								{Size = UDim2.fromOffset(0, 0)}):Play()
 
 							task.wait(0.6)
-							if requireModule(Root).UseAcrylic then
-								if NewNotification.AcrylicPaint and NewNotification.AcrylicPaint.Model then
-									NewNotification.AcrylicPaint.Model:Destroy()
-								end
+							if NewNotification.AcrylicPaint and type(NewNotification.AcrylicPaint.Destroy) == "function" then
+								pcall(NewNotification.AcrylicPaint.Destroy)
 							end
 							if NewNotification.Holder and NewNotification.Holder.Destroy then
 								NewNotification.Holder:Destroy()
@@ -6259,12 +6631,18 @@ local moduleFunctions = {
 						Section.Container
 					}
 				)
+			local lastHeight = -1
 			Creator.AddSignal(
 				Section.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
 				function()
-					Section.Container.Size = UDim2.new(1, 0, 0, Section.Layout.AbsoluteContentSize.Y)
+					local contentY = Section.Layout.AbsoluteContentSize.Y
+					if contentY == lastHeight then
+						return
+					end
+					lastHeight = contentY
+					Section.Container.Size = UDim2.new(1, 0, 0, contentY)
 					if Section.Visible then
-						Section.Root.Size = UDim2.new(1, 0, 0, Section.Layout.AbsoluteContentSize.Y + 25)
+						Section.Root.Size = UDim2.new(1, 0, 0, contentY + 25)
 					end
 				end
 			)
@@ -6358,11 +6736,7 @@ local moduleFunctions = {
 				)
 			Tab.Label = Tab.Frame:FindFirstChild("TabLabel")
 			Tab.IconObject = Tab.Frame:FindFirstChild("TabIcon")
-			-- Translate the sidebar label as well as the large selected-tab title,
-			-- allowing navigation search to match the language users actually see.
-			if Tab.Label then
-				TranslationSystem:Register(Tab.Label, title, "Text")
-			end
+			-- Tab.Label is already registered with I18n by Creator.New above.
 			local listLayout = New("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
 			Tab.ContainerFrame =
 				New(
@@ -6467,34 +6841,44 @@ local moduleFunctions = {
 			return Tab
 		end
 		function TabModule.SelectTab(_self, tabIndex)
+			local targetTab = TabModule.Tabs[tabIndex]
+			if not targetTab then
+				return
+			end
 			local window = TabModule.Window
 			local library = requireModule(Root)
 			if type(library._CloseDropdowns) == "function" then
 				library._CloseDropdowns()
 			end
 			TabModule.SelectedTab = tabIndex
+			TabModule._TransitionId = (TabModule._TransitionId or 0) + 1
+			local transitionId = TabModule._TransitionId
 			for _, tab in next, TabModule.Tabs do
 				tab.SetTransparency(1)
 				tab.Selected = false
 			end
-			TabModule.Tabs[tabIndex].SetTransparency(0.89)
-			TabModule.Tabs[tabIndex].Selected = true
-			local Library = requireModule(Root)
-			if Library.Workspace and type(Library.Workspace.TouchTab) == "function" then
-				Library.Workspace:TouchTab(TabModule.Tabs[tabIndex])
+			targetTab.SetTransparency(0.89)
+			targetTab.Selected = true
+			if library.Workspace and type(library.Workspace.TouchTab) == "function" then
+				library.Workspace:TouchTab(targetTab)
 			end
-			window.TabDisplay.Text = TabModule.Tabs[tabIndex].Name
-			TranslationSystem:Register(window.TabDisplay, TabModule.Tabs[tabIndex].Name, "Text")
+			window.TabDisplay.Text = targetTab.Name
+			TranslationSystem:Register(window.TabDisplay, targetTab.Name, "Text")
 			window.SelectorPosMotor:setGoal(Spring(TabModule:GetCurrentTabPos(), {frequency = 6}))
 			task.spawn(
 				function()
 					window.ContainerPosMotor:setGoal(Spring(110, {frequency = 10}))
 					window.ContainerBackMotor:setGoal(Spring(1, {frequency = 10}))
 					task.wait(0.15)
+					if transitionId ~= TabModule._TransitionId or library.Unloaded then
+						return
+					end
 					for _, container in next, TabModule.Containers do
 						container.Visible = false
 					end
-					TabModule.Containers[tabIndex].Visible = true
+					if TabModule.Containers[tabIndex] then
+						TabModule.Containers[tabIndex].Visible = true
+					end
 					window.ContainerPosMotor:setGoal(Spring(94, {frequency = 5}))
 					window.ContainerBackMotor:setGoal(Spring(0, {frequency = 8}))
 				end
@@ -6504,10 +6888,11 @@ local moduleFunctions = {
 	end,
 	[15] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(15)
-		local TextService, Root = game:GetService("TextService"), moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
+		local TextService = Creator.GetService("TextService")
 		local New = Creator.New
-		local TweenService = game:GetService("TweenService")
+		local TweenService = Creator.GetService("TweenService")
 
 		return function(parent, acrylic)
 			acrylic = acrylic or false
@@ -6566,8 +6951,9 @@ local moduleFunctions = {
 				}
 			)
 
-			-- store original stroke color so we can revert
-			local originalStrokeColor = frameStroke.Color
+			-- Stroke color is resolved live from the current theme on FocusLost
+			-- so switching themes never reverts the border to an outdated color.
+			local defaultStrokeThemeKey = acrylic and "InElementBorder" or "DialogButtonBorder"
 
 			-- Main frame
 			Textbox.Frame =
@@ -6812,7 +7198,9 @@ local moduleFunctions = {
 				setInputOffset(math.clamp(targetOffset, minimumOffset, pad))
 			end
 
-			task.spawn(adjustInputPosition)
+			if Textbox.Input.Text and #Textbox.Input.Text > 0 then
+				task.spawn(adjustInputPosition)
+			end
 			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("Text"), adjustInputPosition)
 			Creator.AddSignal(Textbox.Input:GetPropertyChangedSignal("CursorPosition"), adjustInputPosition)
 			Creator.AddSignal(Textbox.Container:GetPropertyChangedSignal("AbsoluteSize"), adjustInputPosition)
@@ -6855,11 +7243,11 @@ local moduleFunctions = {
 				-- De-emphasize baseline
 				deEmphasizeBaseLine(false)
 
-				-- Stroke return: revert color/transparency/thickness back
+				-- Stroke return: revert color/transparency/thickness back using live theme
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 					Transparency = acrylic and 0.5 or 0.65,
 					Thickness = 1.2,
-					Color = originalStrokeColor
+					Color = Creator.GetThemeProperty(defaultStrokeThemeKey)
 				}):Play()
 
 				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.92 or 0}):Play()
@@ -7107,12 +7495,10 @@ local moduleFunctions = {
 	end,
 	[17] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(17)
-		local UserInputService, mouse, camera, Root =
-			game:GetService "UserInputService",
-		game:GetService "Players".LocalPlayer:GetMouse(),
-		game:GetService "Workspace".CurrentCamera,
-		moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Flipper, Creator, Acrylic, Assets, Components = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic), requireModule(moduleScript.Parent.Assets), moduleScript.Parent
+		local UserInputService, Players, Workspace = Creator.GetService("UserInputService"), Creator.GetService("Players"), Creator.GetService("Workspace")
+		local mouse, camera = Players.LocalPlayer:GetMouse(), Workspace.CurrentCamera
 		local Spring, Instant, New = Flipper.Spring.new, Flipper.Instant.new, Creator.New
 		-- Space kept between the window and the screen edges on small screens,
 		-- and how much of the title bar must stay on screen while dragging.
@@ -7459,6 +7845,9 @@ local moduleFunctions = {
 					Library._CloseDropdowns()
 				end
 				Window.Root.Visible = not Window.Minimized
+				if Window.AcrylicPaint and type(Window.AcrylicPaint.SyncVisibility) == "function" then
+					Window.AcrylicPaint.SyncVisibility()
+				end
 				if not minimizeNotified then
 					minimizeNotified = true
 					local key = Library.MinimizeKeybind and Library.MinimizeKeybind.Value or Library.MinimizeKey
@@ -7469,8 +7858,8 @@ local moduleFunctions = {
 				end
 			end
 			function Window.Destroy(_self)
-				if requireModule(Root).UseAcrylic then
-					Window.AcrylicPaint.Model:Destroy()
+				if Window.AcrylicPaint and type(Window.AcrylicPaint.Destroy) == "function" then
+					pcall(Window.AcrylicPaint.Destroy)
 				end
 				Window.Root:Destroy()
 			end
@@ -7543,13 +7932,33 @@ local moduleFunctions = {
 	[18] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(18)
 		local Root = moduleScript.Parent
-		local Themes, Flipper, Creator =
-			requireModule(Root.Themes),
-		requireModule(Root.Packages.Flipper),
-		{
-			Registry = {},
+		local cloneRef = cloneref or clonereference or function(instance)
+			return instance
+		end
+		local serviceCache = {}
+		local function getService(name)
+			local cached = serviceCache[name]
+			if cached then
+				return cached
+			end
+			local service = cloneRef(game:GetService(name))
+			serviceCache[name] = service
+			return service
+		end
+
+		local RunService = getService("RunService")
+		local UserInputService = getService("UserInputService")
+		local Themes, Flipper = requireModule(Root.Themes), requireModule(Root.Packages.Flipper)
+
+		-- Weak-key registries avoid per-instance Destroying connections and closures.
+		-- Values never hold back-references to the key Instance so destroyed GUIs GC cleanly.
+		local Creator = {
+			CloneRef = cloneRef,
+			GetService = getService,
+			Registry = setmetatable({}, {__mode = "k"}),
 			Signals = {},
 			TransparencyMotors = {},
+			TransparencyTargets = setmetatable({}, {__mode = "k"}),
 			DefaultProperties = {
 				ScreenGui = {ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling},
 				Frame = {
@@ -7607,13 +8016,28 @@ local moduleFunctions = {
 				}
 			}
 		}
-		local applyCustomProps = function(object, props)
-			if props.ThemeTag then
-				Creator.AddThemeObject(object, props.ThemeTag)
+
+		local TEXT_CLASSES = {TextLabel = true, TextButton = true, TextBox = true}
+		local META_KEYS = {
+			Parent = true,
+			ThemeTag = true,
+			I18nKey = true,
+			I18nContext = true,
+			I18nSkip = true,
+			I18nDynamic = true,
+			FontRole = true
+		}
+
+		local libraryRef = nil
+		local function getLibrary()
+			if not libraryRef then
+				libraryRef = requireModule(Root)
 			end
+			return libraryRef
 		end
-		-- Connections to destroyed instances are already disconnected; drop them
-		-- whenever the list has doubled so it stays proportional to live ones.
+
+		-- Connections to destroyed instances are already disconnected; prune
+		-- whenever the list doubles so memory stays proportional to live ones.
 		local nextSignalPrune = 64
 		local function pruneSignals()
 			local signals, kept = Creator.Signals, 0
@@ -7637,14 +8061,278 @@ local moduleFunctions = {
 			end
 			return connection
 		end
-		function Creator.Disconnect()
-			for index = #Creator.Signals, 1, -1 do
-				local connection = table.remove(Creator.Signals, index)
-				connection:Disconnect()
+
+		-- ============================================================================
+		-- Shared zero-alloc scalar spring animator
+		-- Drives hover / fade / micro-interaction springs on one RenderStepped loop
+		-- without allocating Flipper motors or signals at UI mount time.
+		-- ============================================================================
+		local activeSprings = {}
+		local activeSpringCount = 0
+		local springConnection = nil
+		local SPRING_EPSILON = 0.001
+
+		local function stopSpringScheduler()
+			if springConnection then
+				springConnection:Disconnect()
+				springConnection = nil
+			end
+			table.clear(activeSprings)
+			activeSpringCount = 0
+		end
+
+		local function stepSprings(deltaTime)
+			if deltaTime > 0.05 then
+				deltaTime = 0.05
+			end
+			for key, state in next, activeSprings do
+				local instance = state.instance
+				if not instance or not instance.Parent then
+					activeSprings[key] = nil
+					activeSpringCount -= 1
+				else
+					local f = state.angularFreq
+					local d = state.damping
+					local offset = state.value - state.target
+					local velocity = state.velocity
+					local decay = math.exp(-d * f * deltaTime)
+					local nextValue, nextVelocity
+					if d == 1 then
+						nextValue = (offset * (1 + f * deltaTime) + velocity * deltaTime) * decay + state.target
+						nextVelocity = (velocity * (1 - f * deltaTime) - offset * (f * f * deltaTime)) * decay
+					elseif d < 1 then
+						local c = math.sqrt(1 - d * d)
+						local i = math.cos(f * c * deltaTime)
+						local j = math.sin(f * c * deltaTime)
+						nextValue = (offset * i + ((velocity + d * f * offset) / (f * c)) * j) * decay + state.target
+						nextVelocity = (velocity * (i - (d / c) * j) - offset * (f / c) * j) * decay
+					else
+						local c = math.sqrt(d * d - 1)
+						local r1 = -f * (d - c)
+						local r2 = -f * (d + c)
+						local co2 = (velocity - r1 * offset) / (2 * f * c)
+						local co1 = offset - co2
+						local e1 = co1 * math.exp(r1 * deltaTime)
+						local e2 = co2 * math.exp(r2 * deltaTime)
+						nextValue = e1 + e2 + state.target
+						nextVelocity = r1 * e1 + r2 * e2
+					end
+					if math.abs(nextValue - state.target) <= SPRING_EPSILON and math.abs(nextVelocity) <= SPRING_EPSILON then
+						state.value = state.target
+						state.velocity = 0
+						if state.setter then
+							state.setter(state.target)
+						else
+							instance[state.property] = state.target
+						end
+						activeSprings[key] = nil
+						activeSpringCount -= 1
+					else
+						state.value = nextValue
+						state.velocity = nextVelocity
+						if state.setter then
+							state.setter(nextValue)
+						else
+							instance[state.property] = nextValue
+						end
+					end
+				end
+			end
+			if activeSpringCount <= 0 and springConnection then
+				springConnection:Disconnect()
+				springConnection = nil
+				activeSpringCount = 0
 			end
 		end
-		-- RGB theme: while it is active, these keys (the accent and border
-		-- colors) cycle through the rainbow about ten times a second.
+
+		function Creator.SpringValue(instance, property, target, frequency, damping, setter)
+			if not instance then
+				return
+			end
+			local key = tostring(property) .. "|" .. tostring(instance)
+			-- Use a per-instance subtable so keys never rely on tostring collisions.
+			local slot = activeSprings[instance]
+			if slot and slot.property == property then
+				slot.target = target
+				slot.angularFreq = (frequency or 8) * 2 * math.pi
+				slot.damping = damping or 1
+				if setter then
+					slot.setter = setter
+				end
+				return
+			end
+			-- Multi-property support on the same instance uses composite key fallback.
+			local mapKey = (slot == nil) and instance or key
+			local existing = activeSprings[mapKey]
+			if existing then
+				existing.target = target
+				existing.angularFreq = (frequency or 8) * 2 * math.pi
+				existing.damping = damping or 1
+				if setter then
+					existing.setter = setter
+				end
+				return
+			end
+			local currentValue = target
+			if not setter then
+				local ok, val = pcall(function()
+					return instance[property]
+				end)
+				if ok and type(val) == "number" then
+					currentValue = val
+				end
+			end
+			if math.abs(currentValue - target) <= SPRING_EPSILON then
+				if setter then
+					setter(target)
+				else
+					instance[property] = target
+				end
+				return
+			end
+			activeSprings[mapKey] = {
+				instance = instance,
+				property = property,
+				value = currentValue,
+				velocity = 0,
+				target = target,
+				angularFreq = (frequency or 8) * 2 * math.pi,
+				damping = damping or 1,
+				setter = setter
+			}
+			activeSpringCount += 1
+			if not springConnection then
+				springConnection = RunService.RenderStepped:Connect(stepSprings)
+			end
+		end
+
+		function Creator.CancelSpring(instance, property)
+			local slot = activeSprings[instance]
+			if slot and (property == nil or slot.property == property) then
+				activeSprings[instance] = nil
+				activeSpringCount = math.max(0, activeSpringCount - 1)
+			end
+			if property ~= nil then
+				local key = tostring(property) .. "|" .. tostring(instance)
+				if activeSprings[key] then
+					activeSprings[key] = nil
+					activeSpringCount = math.max(0, activeSpringCount - 1)
+				end
+			end
+		end
+
+		-- ============================================================================
+		-- Shared InputRouter: single UserInputService dispatcher for drags & keybinds.
+		-- Eliminates O(N) global UIS connections across Sliders and Keybinds.
+		-- ============================================================================
+		local activeDragMove = nil
+		local activeDragEnd = nil
+		local dragChangedConn = nil
+		local dragEndedConn = nil
+
+		local keybindByEntry = {}
+		local keybindCount = 0
+		local keybindBeganConn = nil
+
+		local function stopDragConnections()
+			activeDragMove = nil
+			activeDragEnd = nil
+			if dragChangedConn then
+				dragChangedConn:Disconnect()
+				dragChangedConn = nil
+			end
+			if dragEndedConn then
+				dragEndedConn:Disconnect()
+				dragEndedConn = nil
+			end
+		end
+
+		function Creator.BeginDrag(onMove, onEnd)
+			if activeDragEnd then
+				local prevEnd = activeDragEnd
+				activeDragMove = nil
+				activeDragEnd = nil
+				pcall(prevEnd)
+			end
+			activeDragMove = onMove
+			activeDragEnd = onEnd
+			if not dragChangedConn then
+				dragChangedConn = UserInputService.InputChanged:Connect(function(input)
+					if not activeDragMove then
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+						activeDragMove(input)
+					end
+				end)
+			end
+			if not dragEndedConn then
+				dragEndedConn = UserInputService.InputEnded:Connect(function(input)
+					if not activeDragEnd then
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						local finish = activeDragEnd
+						stopDragConnections()
+						finish(input)
+					end
+				end)
+			end
+		end
+
+		function Creator.EndDrag()
+			stopDragConnections()
+		end
+
+		local function ensureKeybindListener()
+			if keybindBeganConn then
+				return
+			end
+			keybindBeganConn = UserInputService.InputBegan:Connect(function(input)
+				if keybindCount <= 0 or UserInputService:GetFocusedTextBox() then
+					return
+				end
+				local pressedKey = nil
+				if input.UserInputType == Enum.UserInputType.Keyboard then
+					pressedKey = input.KeyCode.Name
+				elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+					pressedKey = "MouseLeft"
+				elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+					pressedKey = "MouseRight"
+				else
+					return
+				end
+				for entry in next, keybindByEntry do
+					if not entry.IsPicking() and entry.GetMode() == "Toggle" and entry.GetKey() == pressedKey then
+						entry.Trigger()
+					end
+				end
+			end)
+		end
+
+		function Creator.RegisterKeybind(entry)
+			if not keybindByEntry[entry] then
+				keybindByEntry[entry] = true
+				keybindCount += 1
+				ensureKeybindListener()
+			end
+			return entry
+		end
+
+		function Creator.UnregisterKeybind(entry)
+			if keybindByEntry[entry] then
+				keybindByEntry[entry] = nil
+				keybindCount = math.max(0, keybindCount - 1)
+				if keybindCount == 0 and keybindBeganConn then
+					keybindBeganConn:Disconnect()
+					keybindBeganConn = nil
+				end
+			end
+		end
+
+		-- ============================================================================
+		-- RGB theme & Registry
+		-- ============================================================================
 		local RAINBOW_KEYS = {
 			Accent = true,
 			AcrylicBorder = true,
@@ -7658,8 +8346,7 @@ local moduleFunctions = {
 			DialogBorder = true,
 			DialogInputLine = true
 		}
-		-- Objects with at least one property bound to a rainbow key.
-		local rainbowTargets = {}
+		local rainbowTargets = setmetatable({}, {__mode = "k"})
 		local rainbowColor = nil
 		local rainbowConnection = nil
 		local function usesRainbowKey(properties)
@@ -7676,9 +8363,9 @@ local moduleFunctions = {
 		local function stepRainbow()
 			rainbowColor = rainbowNow()
 			for object in next, rainbowTargets do
-				local data = Creator.Registry[object]
-				if data then
-					for property, themeKey in next, data.Properties do
+				local properties = Creator.Registry[object]
+				if properties then
+					for property, themeKey in next, properties do
 						if RAINBOW_KEYS[themeKey] then
 							object[property] = rainbowColor
 						end
@@ -7699,13 +8386,13 @@ local moduleFunctions = {
 			end
 			rainbowColor = rainbowNow()
 			local elapsed = 0
-			rainbowConnection = game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
+			rainbowConnection = RunService.Heartbeat:Connect(function(deltaTime)
 				elapsed = elapsed + deltaTime
 				if elapsed < 0.1 then
 					return
 				end
 				elapsed = 0
-				local library = requireModule(Root)
+				local library = getLibrary()
 				if library.Window and library.Window.Minimized then
 					return
 				end
@@ -7713,115 +8400,153 @@ local moduleFunctions = {
 			end)
 		end
 		Creator.StopRainbow = stopRainbow
+
+		function Creator.Disconnect()
+			stopSpringScheduler()
+			stopDragConnections()
+			if keybindBeganConn then
+				keybindBeganConn:Disconnect()
+				keybindBeganConn = nil
+			end
+			table.clear(keybindByEntry)
+			keybindCount = 0
+			for index = #Creator.Signals, 1, -1 do
+				local connection = table.remove(Creator.Signals, index)
+				connection:Disconnect()
+			end
+		end
+
 		function Creator.GetThemeProperty(property)
 			if rainbowColor and RAINBOW_KEYS[property] then
 				return rainbowColor
 			end
-			if Themes[requireModule(Root).Theme][property] then
-				return Themes[requireModule(Root).Theme][property]
+			local themeTable = Themes[getLibrary().Theme]
+			if themeTable and themeTable[property] ~= nil then
+				return themeTable[property]
 			end
 			return Themes.Dark[property]
 		end
+
 		function Creator.UpdateTheme()
-			local theme = Themes[requireModule(Root).Theme]
+			local theme = Themes[getLibrary().Theme]
 			if theme and theme.IsRGB then
 				startRainbow()
 			else
 				stopRainbow()
 			end
-			for object, data in next, Creator.Registry do
-				for property, themeKey in next, data.Properties do
+			local elementTransparency = Creator.GetThemeProperty("ElementTransparency")
+			for object, properties in next, Creator.Registry do
+				for property, themeKey in next, properties do
 					object[property] = Creator.GetThemeProperty(themeKey)
 				end
 			end
+			for instance, property in next, Creator.TransparencyTargets do
+				Creator.CancelSpring(instance, property)
+				instance[property] = elementTransparency
+			end
 			for _, motor in next, Creator.TransparencyMotors do
-				motor:setGoal(Flipper.Instant.new(Creator.GetThemeProperty "ElementTransparency"))
+				motor:setGoal(Flipper.Instant.new(elementTransparency))
 			end
 		end
+
 		function Creator.AddThemeObject(object, properties)
-			local idx = #Creator.Registry + 1
-			local data = {Object = object, Properties = properties, Idx = idx}
-			if Creator.Registry[object] == nil then
-				-- Forget destroyed objects so the registry does not keep them alive.
-				object.Destroying:Connect(function()
-					Creator.Registry[object] = nil
-					rainbowTargets[object] = nil
-				end)
-			end
-			Creator.Registry[object] = data
+			Creator.Registry[object] = properties
 			rainbowTargets[object] = usesRainbowKey(properties) or nil
 			for property, themeKey in next, properties do
 				object[property] = Creator.GetThemeProperty(themeKey)
 			end
 			return object
 		end
-		-- Re-tags one object and applies only its properties. Re-theming every
-		-- object here made each toggle click cost O(elements) and reset the
-		-- hover state of every other element.
+
 		function Creator.OverrideTag(object, properties)
-			local data = Creator.Registry[object]
-			if data then
-				data.Properties = properties
-				rainbowTargets[object] = usesRainbowKey(properties) or nil
-				for property, themeKey in next, properties do
-					object[property] = Creator.GetThemeProperty(themeKey)
-				end
-			else
-				Creator.AddThemeObject(object, properties)
+			Creator.Registry[object] = properties
+			rainbowTargets[object] = usesRainbowKey(properties) or nil
+			for property, themeKey in next, properties do
+				object[property] = Creator.GetThemeProperty(themeKey)
 			end
 		end
+
 		function Creator.New(className, properties, children)
 			local object = Instance.new(className)
-			for name, value in next, Creator.DefaultProperties[className] or {} do
-				object[name] = value
-			end
-			for name, value in next, properties or {} do
-				-- These are creation metadata for the customization layer, not
-				-- Roblox Instance properties.
-				if name ~= "ThemeTag" and name ~= "I18nKey" and name ~= "I18nContext" and name ~= "I18nSkip"
-					and name ~= "I18nDynamic" and name ~= "FontRole" then
+			local defaults = Creator.DefaultProperties[className]
+			if defaults then
+				for name, value in next, defaults do
 					object[name] = value
 				end
 			end
-			for _, child in next, children or {} do
-				child.Parent = object
+			local parent = nil
+			local themeTag = nil
+			if properties then
+				parent = properties.Parent
+				themeTag = properties.ThemeTag
+				for name, value in next, properties do
+					if not META_KEYS[name] then
+						object[name] = value
+					end
+				end
 			end
-			applyCustomProps(object, properties)
-			-- Registers only once at creation, then updates only on a real
-			-- language/font change. This avoids expensive descendant scans.
-			CustomizationSystem.I18n:AutoRegister(object, properties)
+			if children then
+				for _, child in next, children do
+					child.Parent = object
+				end
+			end
+			if themeTag then
+				Creator.AddThemeObject(object, themeTag)
+			end
+			if TEXT_CLASSES[className] then
+				CustomizationSystem.I18n:AutoRegister(object, properties)
+			end
+			-- Set Parent LAST so Roblox layout / DataModel notifications fire once.
+			if parent ~= nil then
+				object.Parent = parent
+			end
 			return object
 		end
+
+		-- Backwards-compatible SpringMotor backed by the zero-alloc shared spring scheduler.
 		function Creator.SpringMotor(initial, instance, property, ignoreDialogCheck, resetOnThemeChange)
 			ignoreDialogCheck = ignoreDialogCheck or false
 			resetOnThemeChange = resetOnThemeChange or false
-			local motor = Flipper.SingleMotor.new(initial)
-			motor:onStep(
-				function(value)
-					instance[property] = value
-				end
-			)
-			if resetOnThemeChange then
-				table.insert(Creator.TransparencyMotors, motor)
-				instance.Destroying:Connect(function()
-					local index = table.find(Creator.TransparencyMotors, motor)
-					if index then
-						table.remove(Creator.TransparencyMotors, index)
-					end
-				end)
+			if resetOnThemeChange and instance then
+				Creator.TransparencyTargets[instance] = property
 			end
-			local setValue = function(value, ignore)
-				ignore = ignore or false
-				if not ignoreDialogCheck then
-					if not ignore then
-						if property == "BackgroundTransparency" and requireModule(Root).DialogOpen then
-							return
+			local currentVal = initial
+			local proxy = {
+				getValue = function()
+					local ok, val = pcall(function()
+						return instance[property]
+					end)
+					return (ok and type(val) == "number") and val or currentVal
+				end,
+				setGoal = function(_, goal)
+					if type(goal) == "table" then
+						local target = goal._targetValue
+						if target ~= nil then
+							currentVal = target
+							if goal._frequency then
+								Creator.SpringValue(instance, property, target, goal._frequency, goal._dampingRatio or 1)
+							else
+								Creator.CancelSpring(instance, property)
+								instance[property] = target
+							end
 						end
 					end
+				end,
+				stop = function()
+					Creator.CancelSpring(instance, property)
 				end
-				motor:setGoal(Flipper.Spring.new(value, {frequency = 8}))
+			}
+			local setValue = function(value, ignore)
+				ignore = ignore or false
+				if not ignoreDialogCheck and not ignore then
+					if property == "BackgroundTransparency" and getLibrary().DialogOpen then
+						return
+					end
+				end
+				currentVal = value
+				Creator.SpringValue(instance, property, value, 8, 1)
 			end
-			return motor, setValue
+			return proxy, setValue
 		end
 		return Creator
 	end,
@@ -8355,21 +9080,33 @@ local moduleFunctions = {
 	end,
 	[22] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(22)
-		local TweenService, UserInputService, mouse, camera, Root =
-			game:GetService "TweenService",
-		game:GetService "UserInputService",
-		game:GetService "Players".LocalPlayer:GetMouse(),
-		game:GetService "Workspace".CurrentCamera,
-		moduleScript.Parent.Parent
-		local Creator, Flipper = requireModule(Root.Creator), requireModule(Root.Packages.Flipper)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local TweenService = Creator.GetService("TweenService")
+		local UserInputService = Creator.GetService("UserInputService")
+		local Players = Creator.GetService("Players")
+		local Workspace = Creator.GetService("Workspace")
+		local TextService = Creator.GetService("TextService")
+		local mouse = Players.LocalPlayer:GetMouse()
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
 		Element.__type = "Dropdown"
+
+		local function parseColorCode(text)
+			if type(text) ~= "string" then
+				return nil, tostring(text)
+			end
+			local r, g, b, cleanText = text:match("^%[COLOR:(%d+),(%d+),(%d+)%](.+)$")
+			if r and g and b and cleanText then
+				return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b)), cleanText
+			end
+			return nil, text
+		end
+
 		function Element.New(parent, idx, config)
-			local Library, Dropdown, dropdownFrame =
-				parent.Library,
-			{
-				Values = config.Values,
+			local Library = parent.Library
+			local Dropdown = {
+				Values = config.Values or {},
 				Value = (config.Multi and {}) or config.Default,
 				Multi = config.Multi,
 				Buttons = {},
@@ -8378,13 +9115,14 @@ local moduleFunctions = {
 				SearchText = "",
 				Callback = config.Callback or function()
 				end
-			},
-			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			}
+			local dropdownFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
 			dropdownFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
 			Dropdown.SetTitle = dropdownFrame.SetTitle
 			Dropdown.SetDesc = dropdownFrame.SetDesc
 			Dropdown.Frame = dropdownFrame.Frame
-			local dropdownDisplay, dropdownIcon =
+
+			local dropdownDisplay =
 				New(
 					"TextLabel",
 					{
@@ -8393,7 +9131,7 @@ local moduleFunctions = {
 							Enum.FontWeight.Regular,
 							Enum.FontStyle.Normal
 						),
-						Text = "Value",
+						Text = "--",
 						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
@@ -8406,18 +9144,19 @@ local moduleFunctions = {
 						TextTruncate = Enum.TextTruncate.AtEnd,
 						ThemeTag = {TextColor3 = "Text"}
 					}
-				),
-			New(
-				"ImageLabel",
-				{
-					Image = "rbxassetid://10709790948",
-					Size = UDim2.fromOffset(16, 16),
-					AnchorPoint = Vector2.new(1, 0.5),
-					Position = UDim2.new(1, -8, 0.5, 0),
-					BackgroundTransparency = 1,
-					ThemeTag = {ImageColor3 = "SubText"}
-				}
-			)
+				)
+			local dropdownIcon =
+				New(
+					"ImageLabel",
+					{
+						Image = "rbxassetid://10709790948",
+						Size = UDim2.fromOffset(16, 16),
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, -8, 0.5, 0),
+						BackgroundTransparency = 1,
+						ThemeTag = {ImageColor3 = "SubText"}
+					}
+				)
 			local dropdownInner =
 				New(
 					"TextButton",
@@ -8444,21 +9183,19 @@ local moduleFunctions = {
 						dropdownDisplay
 					}
 				)
-			local textService = game:GetService("TextService")
+
 			local function getTextWidth(label, text)
-				local ok, size =
-					pcall(
-						function()
-							return textService:GetTextSize(
-								text or label.Text,
-								label.TextSize,
-								Enum.Font.Gotham,
-								Vector2.new(10000, math.max(label.AbsoluteSize.Y, 34))
-							)
-						end
+				local ok, size = pcall(function()
+					return TextService:GetTextSize(
+						text or label.Text,
+						label.TextSize,
+						Enum.Font.Gotham,
+						Vector2.new(10000, math.max(label.AbsoluteSize.Y, 34))
 					)
+				end)
 				return ok and size.X or label.TextBounds.X
 			end
+
 			local selectedLabelDefaultPosition = UDim2.new(0, 8, 0.5, 0)
 			local selectedLabelDefaultSize = UDim2.new(1, -30, 0, 14)
 			local selectedLabelScrollTween = nil
@@ -8490,24 +9227,218 @@ local moduleFunctions = {
 				selectedLabelScrollTween:Play()
 			end
 
-			-- Search Box
-			local searchBoxStroke = New(
-				"UIStroke",
-				{
-					Transparency = 0.5,
-					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-					ThemeTag = {Color = "InElementBorder"}
-				}
-			)
+			local function toSelectionSet(value)
+				local set = {}
+				if type(value) == "table" then
+					for key, item in next, value do
+						local candidate = item
+						if type(item) == "boolean" then
+							candidate = item and key or nil
+						end
+						if candidate ~= nil and table.find(Dropdown.Values, candidate) then
+							set[candidate] = true
+						end
+					end
+				end
+				return set
+			end
 
-			local searchBox =
-				New(
+			local canClear = config.Multi or config.AllowNull
+			local scrollFrame = parent.ScrollFrame
+
+			-- Lazy popup state: none of the popup instances or signals are created until
+			-- Dropdown:Open() is invoked for the first time, keeping boot fast and lean.
+			local popupBuilt = false
+			local dropdownBuilt = false
+			local dropdownRows = {}
+			local searchRevision = 0
+			local listSizeX = 170
+			local isClearButtonVisible = false
+			local hasSelectionState = false
+			local openConnections = {}
+
+			local searchBox, searchBoxStroke, clearButton, clearButtonStroke, clearIcon
+			local selectAllButton, dropdownListLayout, dropdownScrollFrame, dropdownHolderFrame, dropdownHolderCanvas
+
+			local function showClearButton(instant)
+				if not popupBuilt or not clearButton or isClearButtonVisible then
+					return
+				end
+				isClearButtonVisible = true
+				clearButton.Visible = true
+				if instant then
+					clearButton.Size = UDim2.fromOffset(34, 34)
+					clearButton.BackgroundTransparency = 0.9
+					clearButton.Rotation = 0
+					if clearIcon then clearIcon.ImageTransparency = 0 end
+					if clearButtonStroke then clearButtonStroke.Transparency = 0.5 end
+					return
+				end
+				TweenService:Create(
+					clearButton,
+					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{Size = UDim2.fromOffset(34, 34), BackgroundTransparency = 0.9, Rotation = 0}
+				):Play()
+				if clearIcon then
+					TweenService:Create(clearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+				end
+				if clearButtonStroke then
+					TweenService:Create(clearButtonStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 0.5}):Play()
+				end
+			end
+
+			local function hideClearButton(instant)
+				if not popupBuilt or not clearButton or not isClearButtonVisible then
+					return
+				end
+				isClearButtonVisible = false
+				if instant then
+					clearButton.Size = UDim2.fromOffset(0, 0)
+					clearButton.BackgroundTransparency = 1
+					clearButton.Rotation = -90
+					clearButton.Visible = false
+					if clearIcon then clearIcon.ImageTransparency = 1 end
+					if clearButtonStroke then clearButtonStroke.Transparency = 1 end
+					return
+				end
+				local hideTween = TweenService:Create(
+					clearButton,
+					TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+					{Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1, Rotation = 90}
+				)
+				if clearIcon then
+					TweenService:Create(clearIcon, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1}):Play()
+				end
+				if clearButtonStroke then
+					TweenService:Create(clearButtonStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Transparency = 1}):Play()
+				end
+				hideTween:Play()
+				hideTween.Completed:Connect(function()
+					if not isClearButtonVisible and clearButton and clearButton.Parent then
+						clearButton.Visible = false
+						clearButton.Rotation = -90
+					end
+				end)
+			end
+
+			local function recalculateListPosition()
+				if not popupBuilt then return end
+				local camera = Workspace.CurrentCamera
+				local viewportSize = camera and camera.ViewportSize or Vector2.new(1280, 720)
+				local mainFrame = dropdownInner.AbsolutePosition
+				local mainSize = dropdownInner.AbsoluteSize
+				local dropdownWidth = listSizeX
+
+				local xPos = mainFrame.X + mainSize.X + 10
+				if xPos + dropdownWidth > viewportSize.X then
+					xPos = mainFrame.X - dropdownWidth - 10
+				end
+				if xPos < 0 then
+					xPos = math.min(mainFrame.X + mainSize.X + 10, viewportSize.X - dropdownWidth - 10)
+					xPos = math.max(xPos, 10)
+				end
+
+				local yPos = mainFrame.Y - 5
+				local maxY = viewportSize.Y - dropdownHolderCanvas.AbsoluteSize.Y - 10
+				if yPos > maxY then
+					yPos = maxY
+				end
+				if yPos < 10 then
+					yPos = 10
+				end
+				dropdownHolderCanvas.Position = UDim2.fromOffset(xPos, yPos)
+			end
+
+			local function recalculateListSize()
+				if not popupBuilt then return end
+				local maxHeight = 280
+				local contentHeight = dropdownListLayout.AbsoluteContentSize.Y + (config.Multi and 87 or 54)
+				local finalHeight = math.min(contentHeight, maxHeight)
+				dropdownHolderCanvas.Size = UDim2.fromOffset(listSizeX, finalHeight)
+			end
+
+			local function recalculateCanvasSize()
+				if not popupBuilt then return end
+				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, dropdownListLayout.AbsoluteContentSize.Y)
+			end
+
+			local function applySearchFilter()
+				if not popupBuilt then return end
+				local query = Dropdown.SearchText
+				for _, row in ipairs(dropdownRows) do
+					local shown = query == "" or row.SearchTarget:find(query, 1, true) ~= nil
+					if row.Button.Visible ~= shown then
+						row.Button.Visible = shown
+						if not shown then
+							row:ResetHover()
+						end
+					end
+				end
+				recalculateCanvasSize()
+				recalculateListSize()
+			end
+
+			local function rebuildDropdown()
+				Dropdown:BuildDropdownList()
+				dropdownBuilt = true
+			end
+
+			local function closeOnOutsideInput(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if Dropdown.Opened and popupBuilt then
+						local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
+						local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
+						local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
+						local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
+						if outsideDropdown and outsideButton then
+							Dropdown:Close()
+						end
+					end
+				end
+			end
+
+			local function connectWhileOpen()
+				table.insert(openConnections, Creator.AddSignal(dropdownInner:GetPropertyChangedSignal("AbsolutePosition"), recalculateListPosition))
+				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, closeOnOutsideInput))
+				table.insert(openConnections, Creator.AddSignal(dropdownListLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+					recalculateCanvasSize()
+					recalculateListSize()
+				end))
+			end
+
+			local function disconnectWhileOpen()
+				for index = #openConnections, 1, -1 do
+					openConnections[index]:Disconnect()
+					openConnections[index] = nil
+				end
+			end
+
+			local function ensurePopup()
+				if popupBuilt then
+					return
+				end
+				popupBuilt = true
+
+				local searchIconAsset = Library:GetIcon("search") or "rbxassetid://10734943674"
+				local clearIconAsset = Library:GetIcon("x") or "rbxassetid://10747384394"
+				local selectAllIconAsset = Library:GetIcon("check-square") or Library:GetIcon("check") or "rbxassetid://10709790644"
+
+				searchBoxStroke = New(
+					"UIStroke",
+					{
+						Transparency = 0.5,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "InElementBorder"}
+					}
+				)
+
+				searchBox = New(
 					"TextBox",
 					{
 						Size = UDim2.new(1, -50, 0, 34),
 						Position = UDim2.fromOffset(5, 5),
 						BackgroundTransparency = 0.9,
-						PlaceholderText = "🔍 Search...",
+						PlaceholderText = "Search...",
 						Text = "",
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
@@ -8518,56 +9449,88 @@ local moduleFunctions = {
 					},
 					{
 						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 28), PaddingRight = UDim.new(0, 8)}),
+						New(
+							"ImageLabel",
+							{
+								Name = "SearchIcon",
+								Image = searchIconAsset,
+								Size = UDim2.fromOffset(14, 14),
+								Position = UDim2.new(0, -19, 0.5, 0),
+								AnchorPoint = Vector2.new(0, 0.5),
+								BackgroundTransparency = 1,
+								ThemeTag = {ImageColor3 = "SubText"}
+							}
+						),
 						searchBoxStroke
 					}
 				)
-			TranslationSystem:Register(searchBox, "🔍 Search...", "PlaceholderText")
+				TranslationSystem:Register(searchBox, "Search...", "PlaceholderText")
 
-			-- Clear Button (X)
-			local clearButton =
-				New(
+				clearIcon = New(
+					"ImageLabel",
+					{
+						Name = "ClearIcon",
+						Image = clearIconAsset,
+						Size = UDim2.fromOffset(15, 15),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ImageColor3 = Color3.fromRGB(255, 92, 92),
+						ImageTransparency = 1
+					}
+				)
+
+				clearButtonStroke = New(
+					"UIStroke",
+					{
+						Transparency = 1,
+						Color = Color3.fromRGB(255, 80, 80),
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					}
+				)
+
+				clearButton = New(
 					"TextButton",
 					{
 						Size = UDim2.fromOffset(0, 0),
 						Position = UDim2.new(1, -22, 0, 22),
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						BackgroundTransparency = 1,
-						Text = "❌",
-						TextColor3 = Color3.fromRGB(255, 80, 80),
-						TextSize = 16,
-						TextTransparency = 1,
+						Text = "",
 						Visible = false,
 						ThemeTag = {BackgroundColor3 = "DialogButton"}
 					},
 					{
 						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						New(
-							"UIStroke",
-							{
-								Transparency = 1,
-								Color = Color3.fromRGB(255, 80, 80),
-								ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-							}
-						)
+						clearButtonStroke,
+						clearIcon
 					}
 				)
 
-			-- Select All Button (เฉพาะ Multi-select)
-			local selectAllButton = nil
-
-			if config.Multi then
-				selectAllButton =
-					New(
+				if config.Multi then
+					local selectAllLabel = New(
+						"TextLabel",
+						{
+							Name = "Title",
+							Text = "Select All",
+							TextSize = 12,
+							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
+							BackgroundTransparency = 1,
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.new(0, 0, 1, 0),
+							LayoutOrder = 2,
+							ThemeTag = {TextColor3 = "Accent"}
+						}
+					)
+					selectAllButton = New(
 						"TextButton",
 						{
 							Size = UDim2.new(1, -10, 0, 28),
 							Position = UDim2.fromOffset(5, 44),
 							BackgroundTransparency = 0.9,
-							Text = "✅ Select All",
-							TextSize = 13,
-							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
-							ThemeTag = {BackgroundColor3 = "DialogButton", TextColor3 = "Accent"}
+							Text = "",
+							ThemeTag = {BackgroundColor3 = "DialogButton"}
 						},
 						{
 							New("UICorner", {CornerRadius = UDim.new(0, 8)}),
@@ -8578,17 +9541,40 @@ local moduleFunctions = {
 									ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 									ThemeTag = {Color = "Accent"}
 								}
+							),
+							New(
+								"Frame",
+								{Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1},
+								{
+									New("UIListLayout", {
+										FillDirection = Enum.FillDirection.Horizontal,
+										HorizontalAlignment = Enum.HorizontalAlignment.Center,
+										VerticalAlignment = Enum.VerticalAlignment.Center,
+										Padding = UDim.new(0, 6),
+										SortOrder = Enum.SortOrder.LayoutOrder
+									}),
+									New(
+										"ImageLabel",
+										{
+											Image = selectAllIconAsset,
+											Size = UDim2.fromOffset(14, 14),
+											BackgroundTransparency = 1,
+											LayoutOrder = 1,
+											ThemeTag = {ImageColor3 = "Accent"}
+										}
+									),
+									selectAllLabel
+								}
 							)
 						}
 					)
-			end
+				end
 
-			local dropdownListLayout = New("UIListLayout", {Padding = UDim.new(0, 4)})
-			local scrollYPos = config.Multi and 77 or 44
-			local scrollYSize = config.Multi and -82 or -49
+				dropdownListLayout = New("UIListLayout", {Padding = UDim.new(0, 4)})
+				local scrollYPos = config.Multi and 77 or 44
+				local scrollYSize = config.Multi and -82 or -49
 
-			local dropdownScrollFrame =
-				New(
+				dropdownScrollFrame = New(
 					"ScrollingFrame",
 					{
 						Size = UDim2.new(1, -10, 1, scrollYSize),
@@ -8606,217 +9592,63 @@ local moduleFunctions = {
 					{dropdownListLayout}
 				)
 
-			local uChildren = {
-				searchBox,
-				clearButton,
-				dropdownScrollFrame,
-				New("UICorner", {CornerRadius = UDim.new(0, 7)}),
-				New(
-					"UIStroke",
-					{
-						Thickness = 1.5,
-						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-						ThemeTag = {Color = "DropdownBorder"}
-					}
-				),
-				New(
-					"ImageLabel",
-					{
-						BackgroundTransparency = 1,
-						Image = "http://www.roblox.com/asset/?id=5554236805",
-						ScaleType = Enum.ScaleType.Slice,
-						SliceCenter = Rect.new(23, 23, 277, 277),
-						Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30),
-						Position = UDim2.fromOffset(-15, -15),
-						ImageColor3 = Color3.fromRGB(0, 0, 0),
-						ImageTransparency = 0.1
-					}
-				)
-			}
+				local uChildren = {
+					searchBox,
+					clearButton,
+					dropdownScrollFrame,
+					New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+					New(
+						"UIStroke",
+						{
+							Thickness = 1.5,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "DropdownBorder"}
+						}
+					),
+					New(
+						"ImageLabel",
+						{
+							BackgroundTransparency = 1,
+							Image = "http://www.roblox.com/asset/?id=5554236805",
+							ScaleType = Enum.ScaleType.Slice,
+							SliceCenter = Rect.new(23, 23, 277, 277),
+							Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30),
+							Position = UDim2.fromOffset(-15, -15),
+							ImageColor3 = Color3.fromRGB(0, 0, 0),
+							ImageTransparency = 0.1
+						}
+					)
+				}
+				if config.Multi and selectAllButton then
+					table.insert(uChildren, selectAllButton)
+				end
 
-			if config.Multi then
-				table.insert(uChildren, selectAllButton)
-			end
-
-			local dropdownHolderFrame =
-				New(
+				dropdownHolderFrame = New(
 					"Frame",
 					{Size = UDim2.fromScale(1, 0.5), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
 					uChildren
 				)
 
-			local dropdownHolderCanvas =
-				New(
+				dropdownHolderCanvas = New(
 					"Frame",
 					{
 						BackgroundTransparency = 1,
-						Size = UDim2.fromOffset(170, 250),
+						Size = UDim2.fromOffset(listSizeX, 250),
 						Parent = parent.Library.GUI,
 						Visible = false
 					},
 					{dropdownHolderFrame, New("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 320)})}
 				)
-			table.insert(Library.OpenFrames, dropdownHolderCanvas)
+				table.insert(Library.OpenFrames, dropdownHolderCanvas)
 
-			-- Position dropdown with smart positioning
-			local recalculateListPosition = function()
-				local mainFrame = dropdownInner.AbsolutePosition
-				local mainSize = dropdownInner.AbsoluteSize
-				local dropdownWidth = 170
-				local viewportSize = camera.ViewportSize
-
-				-- Try right side first
-				local xPos = mainFrame.X + mainSize.X + 10
-
-				-- If goes off screen on right, try left side
-				if xPos + dropdownWidth > viewportSize.X then
-					xPos = mainFrame.X - dropdownWidth - 10
-				end
-
-				-- If still off screen on left, clamp to screen
-				if xPos < 0 then
-					xPos = math.min(mainFrame.X + mainSize.X + 10, viewportSize.X - dropdownWidth - 10)
-					xPos = math.max(xPos, 10)
-				end
-
-				local yPos = mainFrame.Y - 5
-
-				-- Make sure Y position is within screen
-				local maxY = viewportSize.Y - dropdownHolderCanvas.AbsoluteSize.Y - 10
-				if yPos > maxY then
-					yPos = maxY
-				end
-				if yPos < 10 then
-					yPos = 10
-				end
-
-				dropdownHolderCanvas.Position = UDim2.fromOffset(xPos, yPos)
-			end
-
-			local listSizeX = 170
-			local recalculateListSize = function()
-				local maxHeight = 280
-				local contentHeight = dropdownListLayout.AbsoluteContentSize.Y + (config.Multi and 87 or 54)
-				local finalHeight = math.min(contentHeight, maxHeight)
-				dropdownHolderCanvas.Size = UDim2.fromOffset(listSizeX, finalHeight)
-			end
-
-			local recalculateCanvasSize = function()
-				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, dropdownListLayout.AbsoluteContentSize.Y)
-			end
-			local searchRevision = 0
-			local dropdownBuilt = false
-			-- Rows in list order. Searching shows or hides these rows instead of
-			-- rebuilding them, so typing creates no instances.
-			local dropdownRows = {}
-			local function applySearchFilter()
-				local query = Dropdown.SearchText
-				for _, row in ipairs(dropdownRows) do
-					local shown = query == "" or row.SearchTarget:find(query, 1, true) ~= nil
-					if row.Button.Visible ~= shown then
-						row.Button.Visible = shown
-						if not shown then
-							-- MouseLeave may not fire for a row hidden under the mouse.
-							row:ResetHover()
-						end
-					end
-				end
-				recalculateCanvasSize()
-				recalculateListSize()
-			end
-			local function rebuildDropdown()
-				Dropdown:BuildDropdownList()
-				dropdownBuilt = true
-			end
-
-			recalculateListPosition()
-			recalculateListSize()
-
-			-- Follow the button and close on outside clicks only while open, so
-			-- closed dropdowns cost nothing when the window moves or on input.
-			local openConnections = {}
-			local function closeOnOutsideInput(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-					if Dropdown.Opened then
-						local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
-						local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
-
-						-- Check if click is outside dropdown and outside button
-						local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
-						local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
-
-						if outsideDropdown and outsideButton then
-							Dropdown:Close()
-						end
-					end
-				end
-			end
-			local function connectWhileOpen()
-				table.insert(openConnections, Creator.AddSignal(dropdownInner:GetPropertyChangedSignal "AbsolutePosition", recalculateListPosition))
-				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, closeOnOutsideInput))
-				table.insert(openConnections, Creator.AddSignal(dropdownListLayout:GetPropertyChangedSignal "AbsoluteContentSize", function()
-					recalculateCanvasSize()
-					recalculateListSize()
-				end))
-			end
-			local function disconnectWhileOpen()
-				for index = #openConnections, 1, -1 do
-					openConnections[index]:Disconnect()
-					openConnections[index] = nil
-				end
-			end
-
-			-- Arrow rotation animation
-			local arrowRotation = Flipper.SingleMotor.new(0)
-			arrowRotation:onStep(function(rot)
-				dropdownIcon.Rotation = rot
-			end)
-
-			-- Toggle dropdown on click
-			Creator.AddSignal(
-				dropdownInner.MouseEnter,
-				function()
-					startSelectedLabelScroll()
-				end
-			)
-
-			Creator.AddSignal(
-				dropdownInner.MouseLeave,
-				function()
-					stopSelectedLabelScroll()
-				end
-			)
-
-			Creator.AddSignal(
-				dropdownInner.MouseButton1Click,
-				function()
-					if Dropdown.Opened then
-						Dropdown:Close()
-					else
-						Dropdown:Open()
-					end
-				end
-			)
-
-			-- Search box focus animation
-			Creator.AddSignal(
-				searchBox.Focused,
-				function()
+				-- Search box focus & debounced filter
+				Creator.AddSignal(searchBox.Focused, function()
 					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
-				end
-			)
-
-			Creator.AddSignal(
-				searchBox.FocusLost,
-				function()
+				end)
+				Creator.AddSignal(searchBox.FocusLost, function()
 					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
-				end
-			)
-
-			-- Search: several text changes in one frame rebuild the list once.
-			Creator.AddSignal(
-				searchBox:GetPropertyChangedSignal("Text"),
-				function()
+				end)
+				Creator.AddSignal(searchBox:GetPropertyChangedSignal("Text"), function()
 					searchRevision = searchRevision + 1
 					local revision = searchRevision
 					task.defer(function()
@@ -8831,226 +9663,94 @@ local moduleFunctions = {
 							rebuildDropdown()
 						end
 					end)
-				end
-			)
+				end)
 
-			-- Parse color code from text
-			local function parseColorCode(text)
-				-- ตรวจสอบว่า text เป็น string หรือไม่
-				if type(text) ~= "string" then
-					return nil, tostring(text)
-				end
-
-				local colorPattern = "^%[COLOR:(%d+),(%d+),(%d+)%](.+)$"
-				local r, g, b, cleanText = text:match(colorPattern)
-				if r and g and b and cleanText then
-					return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b)), cleanText
-				end
-				return nil, text
-			end
-
-			-- Multi values arrive as a list {"A", "B"} or as a set {A = true}
-			-- (SaveManager). Returns a set of the entries that are in Values.
-			local function toSelectionSet(value)
-				local set = {}
-				if type(value) == "table" then
-					for key, item in next, value do
-						local candidate = item
-						if type(item) == "boolean" then
-							candidate = item and key or nil
-						end
-						if candidate ~= nil and table.find(Dropdown.Values, candidate) then
-							set[candidate] = true
-						end
-					end
-				end
-				return set
-			end
-
-			-- A single-choice dropdown can only become empty with AllowNull.
-			local canClear = config.Multi or config.AllowNull
-
-			-- Clear button functionality with hover effects
-			local _, clearBgTransparency = Creator.SpringMotor(0.9, clearButton, "BackgroundTransparency")
-
-			Creator.AddSignal(
-				clearButton.MouseEnter,
-				function()
-					clearBgTransparency(0.8)
-					-- Scale up slightly on hover
-					TweenService:Create(
-						clearButton,
-						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Size = UDim2.fromOffset(38, 38)}
-					):Play()
-				end
-			)
-
-			Creator.AddSignal(
-				clearButton.MouseLeave,
-				function()
-					clearBgTransparency(0.9)
-					-- Scale back to normal
-					TweenService:Create(
-						clearButton,
-						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Size = UDim2.fromOffset(34, 34)}
-					):Play()
-				end
-			)
-
-			Creator.AddSignal(
-				clearButton.MouseButton1Click,
-				function()
+				-- Clear button hover & click
+				Creator.AddSignal(clearButton.MouseEnter, function()
+					Creator.SpringValue(clearButton, "BackgroundTransparency", 0.8, 8, 1)
+					TweenService:Create(clearButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(38, 38)}):Play()
+				end)
+				Creator.AddSignal(clearButton.MouseLeave, function()
+					Creator.SpringValue(clearButton, "BackgroundTransparency", 0.9, 8, 1)
+					TweenService:Create(clearButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(34, 34)}):Play()
+				end)
+				Creator.AddSignal(clearButton.MouseButton1Click, function()
 					if not canClear then
 						return
 					end
-					-- Bounce animation on click
-					local bounceSequence = TweenService:Create(
-						clearButton,
-						TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Size = UDim2.fromOffset(30, 30)}
-					)
+					local bounceSequence = TweenService:Create(clearButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(30, 30)})
 					bounceSequence:Play()
 					bounceSequence.Completed:Connect(function()
-						TweenService:Create(
-							clearButton,
-							TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-							{Size = UDim2.fromOffset(34, 34)}
-						):Play()
+						if clearButton and clearButton.Parent then
+							TweenService:Create(clearButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(34, 34)}):Play()
+						end
 					end)
-
 					if config.Multi then
 						Dropdown.Value = {}
 					else
 						Dropdown.Value = nil
 					end
-
-					-- Update buttons without rebuilding
-					for button, buttonData in pairs(Dropdown.Buttons) do
+					for _, buttonData in pairs(Dropdown.Buttons) do
 						buttonData:UpdateButton()
 					end
-
 					Dropdown:Display()
 					Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 					Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 					Library._TouchElement(Dropdown)
-				end
-			)
+				end)
 
-			-- Select All button functionality with hover effect
-			if config.Multi and selectAllButton then
-				local _, selectAllTransparency = Creator.SpringMotor(0.9, selectAllButton, "BackgroundTransparency")
-
-				Creator.AddSignal(
-					selectAllButton.MouseEnter,
-					function()
-						selectAllTransparency(0.85)
-					end
-				)
-
-				Creator.AddSignal(
-					selectAllButton.MouseLeave,
-					function()
-						selectAllTransparency(0.9)
-					end
-				)
-
-				Creator.AddSignal(
-					selectAllButton.MouseButton1Click,
-					function()
-						-- Get all visible values (filtered by search)
+				-- Select All button
+				if config.Multi and selectAllButton then
+					Creator.AddSignal(selectAllButton.MouseEnter, function()
+						Creator.SpringValue(selectAllButton, "BackgroundTransparency", 0.85, 8, 1)
+					end)
+					Creator.AddSignal(selectAllButton.MouseLeave, function()
+						Creator.SpringValue(selectAllButton, "BackgroundTransparency", 0.9, 8, 1)
+					end)
+					Creator.AddSignal(selectAllButton.MouseButton1Click, function()
 						for _, value in pairs(Dropdown.Values) do
 							local _, cleanText = parseColorCode(value)
 							if Dropdown.SearchText == "" or cleanText:lower():find(Dropdown.SearchText, 1, true) then
 								Dropdown.Value[value] = true
 							end
 						end
-
-						-- Update buttons without rebuilding
-						for button, buttonData in pairs(Dropdown.Buttons) do
+						for _, buttonData in pairs(Dropdown.Buttons) do
 							buttonData:UpdateButton()
 						end
-
 						Dropdown:Display()
 						Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 						Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 						Library._TouchElement(Dropdown)
-					end
-				)
-			end
+					end)
+				end
 
-			-- Clear button animation helper
-			local clearButtonStroke = clearButton:FindFirstChildOfClass("UIStroke")
-			local isClearButtonVisible = false
-
-			local function showClearButton()
-				if isClearButtonVisible then return end
-				isClearButtonVisible = true
-				clearButton.Visible = true
-
-				-- Animate size, transparency, and rotation
-				TweenService:Create(
-					clearButton,
-					TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-					{
-						Size = UDim2.fromOffset(34, 34),
-						BackgroundTransparency = 0.9,
-						TextTransparency = 0,
-						Rotation = 0
-					}
-				):Play()
-
-				if clearButtonStroke then
-					TweenService:Create(
-						clearButtonStroke,
-						TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Transparency = 0.5}
-					):Play()
+				if hasSelectionState and canClear then
+					showClearButton(true)
 				end
 			end
 
-			local function hideClearButton()
-				if not isClearButtonVisible then return end
-				isClearButtonVisible = false
-
-				-- Animate out with rotation
-				local hideTween = TweenService:Create(
-					clearButton,
-					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-					{
-						Size = UDim2.fromOffset(0, 0),
-						BackgroundTransparency = 1,
-						TextTransparency = 1,
-						Rotation = 90
-					}
-				)
-
-				if clearButtonStroke then
-					TweenService:Create(
-						clearButtonStroke,
-						TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-						{Transparency = 1}
-					):Play()
+			-- Main trigger interactions
+			Creator.AddSignal(dropdownInner.MouseEnter, startSelectedLabelScroll)
+			Creator.AddSignal(dropdownInner.MouseLeave, stopSelectedLabelScroll)
+			Creator.AddSignal(dropdownInner.MouseButton1Click, function()
+				if Dropdown.Opened then
+					Dropdown:Close()
+				else
+					Dropdown:Open()
 				end
+			end)
 
-				hideTween:Play()
-				hideTween.Completed:Connect(function()
-					clearButton.Visible = false
-					clearButton.Rotation = -90
-				end)
-			end
-
-
-			local scrollFrame = parent.ScrollFrame
 			function Dropdown.Open(_self)
 				if Dropdown.Opened then
 					return
 				end
+				ensurePopup()
 				Dropdown.Opened = true
 				Library._OpenDropdowns[Dropdown] = true
 				connectWhileOpen()
-				scrollFrame.ScrollingEnabled = false
+				if scrollFrame then
+					scrollFrame.ScrollingEnabled = false
+				end
 				dropdownHolderCanvas.Visible = true
 				searchBox.Text = ""
 				Dropdown.SearchText = ""
@@ -9063,10 +9763,8 @@ local moduleFunctions = {
 				recalculateListPosition()
 				recalculateListSize()
 
-				-- Arrow rotation animation
-				arrowRotation:setGoal(Flipper.Spring.new(180, {frequency = 4, dampingRatio = 0.8}))
+				Creator.SpringValue(dropdownIcon, "Rotation", 180, 4, 0.8)
 
-				-- Open animation with Back easing
 				dropdownHolderFrame.Size = UDim2.fromScale(1, 0.3)
 				TweenService:Create(
 					dropdownHolderFrame,
@@ -9082,40 +9780,40 @@ local moduleFunctions = {
 				Dropdown.Opened = false
 				Library._OpenDropdowns[Dropdown] = nil
 				disconnectWhileOpen()
-				scrollFrame.ScrollingEnabled = true
-
-				-- Arrow rotation animation
-				arrowRotation:setGoal(Flipper.Spring.new(0, {frequency = 4, dampingRatio = 0.8}))
-
-				local closeTween =
-					TweenService:Create(
-						dropdownHolderFrame,
-						TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-						{Size = UDim2.fromScale(1, 0.3)}
-					)
+				if scrollFrame then
+					scrollFrame.ScrollingEnabled = true
+				end
+				Creator.SpringValue(dropdownIcon, "Rotation", 0, 4, 0.8)
+				if not popupBuilt then
+					return
+				end
+				local closeTween = TweenService:Create(
+					dropdownHolderFrame,
+					TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+					{Size = UDim2.fromScale(1, 0.3)}
+				)
 				closeTween:Play()
-				closeTween.Completed:Connect(
-					function()
+				closeTween.Completed:Connect(function()
+					if not Dropdown.Opened and dropdownHolderCanvas and dropdownHolderCanvas.Parent then
 						dropdownHolderCanvas.Visible = false
 					end
-				)
+				end)
 			end
 
 			function Dropdown.Display(_self)
 				local values, text = Dropdown.Values, ""
 				local hasSelection = false
 				if config.Multi then
+					local parts = {}
 					for _, value in next, values do
 						if Dropdown.Value[value] then
-							-- Remove color code for display
 							local _, cleanText = parseColorCode(value)
-							text = text .. cleanText .. ", "
+							table.insert(parts, cleanText)
 							hasSelection = true
 						end
 					end
-					text = text:sub(1, #text - 2)
+					text = table.concat(parts, ", ")
 				else
-					-- Remove color code for display
 					local displayText = Dropdown.Value or ""
 					if displayText ~= "" then
 						local _, cleanText = parseColorCode(displayText)
@@ -9124,16 +9822,19 @@ local moduleFunctions = {
 					text = displayText
 					hasSelection = Dropdown.Value ~= nil and Dropdown.Value ~= ""
 				end
+				hasSelectionState = hasSelection
 				stopSelectedLabelScroll()
 				dropdownDisplay.Text = (text == "" and "--" or text)
 
-				-- Animate clear button visibility
-				if hasSelection and canClear then
-					showClearButton()
-				else
-					hideClearButton()
+				if popupBuilt then
+					if hasSelection and canClear then
+						showClearButton(false)
+					else
+						hideClearButton(false)
+					end
 				end
 			end
+
 			function Dropdown.GetActiveValues(_self)
 				if config.Multi then
 					local active = {}
@@ -9145,299 +9846,261 @@ local moduleFunctions = {
 					return Dropdown.Value and 1 or 0
 				end
 			end
+
 			function Dropdown.BuildDropdownList(_self)
+				ensurePopup()
 				local values, buttons = Dropdown.Values, {}
 				for _, child in next, dropdownScrollFrame:GetChildren() do
-					if not child:IsA "UIListLayout" then
+					if not child:IsA("UIListLayout") then
 						child:Destroy()
 					end
 				end
 				Dropdown.Buttons = {}
 				dropdownRows = {}
-				local renderItems = {}
+
 				for _, value in next, values do
 					local customColor, cleanText = parseColorCode(value)
-					table.insert(renderItems, {Value = value, CustomColor = customColor, CleanText = cleanText})
-				end
+					local row = {}
 
-				for index = 1, #renderItems do
-					local item = renderItems[index]
-					if item then
-						local value = item.Value
-						local customColor, cleanText = item.CustomColor, item.CleanText
-						local row = {}
-
-						-- Use custom color for background if provided
-						local bgColor = Color3.fromRGB(255, 255, 255)
-						local bgTransparency = 1
-
-						if customColor then
-							-- ใช้สี 60% ของสีต้นฉบับ เพื่อให้เห็นสีชัดเจนขึ้น
-							local r, g, b = customColor.R * 255, customColor.G * 255, customColor.B * 255
-							bgColor = Color3.fromRGB(
-								math.floor(r * 0.6 + 15),
-								math.floor(g * 0.6 + 15),
-								math.floor(b * 0.6 + 15)
-							)
-							bgTransparency = 0.65  -- โปร่งใส 65% (ลดลงจาก 85% เพื่อให้เห็นสีชัดขึ้น)
-						end
-
-						local buttonSelector, buttonLabel =
-							New(
-								"Frame",
-								{
-									Size = UDim2.fromOffset(5, 14),
-									BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-									Position = UDim2.fromOffset(-1, 17),
-									AnchorPoint = Vector2.new(0, 0.5),
-									ThemeTag = {BackgroundColor3 = "Accent"}
-								},
-								{
-									New("UICorner", {CornerRadius = UDim.new(0, 2)}),
-									New(
-										"UIGradient",
-										{
-											Color = ColorSequence.new({
-												ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 194, 255)),
-												ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 210, 255))
-											}),
-											Rotation = 90
-										}
-									)
-								}
-							),
-						New(
-							"TextLabel",
-							{
-								FontFace = Font.new(
-									"rbxasset://fonts/families/GothamSSm.json",
-									Enum.FontWeight.Medium,
-									Enum.FontStyle.Normal
-								),
-								Text = cleanText,
-								-- Dropdown values are often game logic keys
-								-- (for example "Instant" / "Tween").  Keep their
-								-- runtime values stable instead of translating them.
-								I18nSkip = true,
-								TextSize = 13,
-								TextXAlignment = Enum.TextXAlignment.Left,
-								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-								BackgroundTransparency = 1,
-								Size = UDim2.fromScale(1, 1),
-								Position = UDim2.fromOffset(0, 0),
-								Name = "ButtonLabel",
-								TextTruncate = Enum.TextTruncate.AtEnd,
-								TextColor3 = Color3.fromRGB(255, 255, 255),
-								TextStrokeTransparency = 0.8,
-								TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
-								ThemeTag = {TextColor3 = "Text"}
-							}
+					local bgColor = Color3.fromRGB(255, 255, 255)
+					local bgTransparency = 1
+					if customColor then
+						local r, g, b = customColor.R * 255, customColor.G * 255, customColor.B * 255
+						bgColor = Color3.fromRGB(
+							math.floor(r * 0.6 + 15),
+							math.floor(g * 0.6 + 15),
+							math.floor(b * 0.6 + 15)
 						)
-						local labelClip =
+						bgTransparency = 0.65
+					end
+
+					local selected = config.Multi and (Dropdown.Value[value] == true) or (Dropdown.Value == value)
+					local defaultTransparency = customColor and bgTransparency or 1
+					local hoverTransparency = customColor and math.max(bgTransparency - 0.2, 0.3) or 0.89
+					local selectedTransparency = customColor and math.max(bgTransparency - 0.3, 0.2) or 0.89
+
+					local buttonSelector = New(
+						"Frame",
+						{
+							Size = UDim2.fromOffset(5, selected and 16 or 6),
+							BackgroundColor3 = Color3.fromRGB(76, 194, 255),
+							BackgroundTransparency = selected and 0 or 1,
+							Position = UDim2.fromOffset(-1, 17),
+							AnchorPoint = Vector2.new(0, 0.5),
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						},
+						{
+							New("UICorner", {CornerRadius = UDim.new(0, 2)}),
 							New(
-								"Frame",
+								"UIGradient",
 								{
-									Size = UDim2.new(1, -24, 1, 0),
-									Position = UDim2.fromOffset(12, 0),
-									BackgroundTransparency = 1,
-									ClipsDescendants = true
-								},
-								{buttonLabel}
-							)
-						local button, selected =
-							(New(
-								"TextButton",
-								{
-									Size = UDim2.new(1, -10, 0, 34),
-									BackgroundColor3 = bgColor,
-									BackgroundTransparency = bgTransparency,
-									ClipsDescendants = true,
-									ZIndex = 23,
-									Text = "",
-									Parent = dropdownScrollFrame,
-									ThemeTag = customColor and {} or {BackgroundColor3 = "DropdownOption"}
-								},
-								{
-									buttonSelector,
-									labelClip,
-									New("UICorner", {CornerRadius = UDim.new(0, 6)}),
-									New(
-										"UIStroke",
-										{
-											Thickness = 1.2,
-											Transparency = 0.7,
-											ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-											ThemeTag = {Color = "InElementBorder"}
-										}
-									)
+									Color = ColorSequence.new({
+										ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 194, 255)),
+										ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 210, 255))
+									}),
+									Rotation = 90
 								}
-								))
+							)
+						}
+					)
+
+					local buttonLabel = New(
+						"TextLabel",
+						{
+							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+							Text = cleanText,
+							I18nSkip = true,
+							TextSize = 13,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+							BackgroundTransparency = 1,
+							Size = UDim2.fromScale(1, 1),
+							Position = UDim2.fromOffset(0, 0),
+							Name = "ButtonLabel",
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							TextColor3 = Color3.fromRGB(255, 255, 255),
+							TextStrokeTransparency = 0.8,
+							TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+							ThemeTag = {TextColor3 = "Text"}
+						}
+					)
+
+					local labelClip = New(
+						"Frame",
+						{
+							Size = UDim2.new(1, -24, 1, 0),
+							Position = UDim2.fromOffset(12, 0),
+							BackgroundTransparency = 1,
+							ClipsDescendants = true
+						},
+						{buttonLabel}
+					)
+
+					local button = New(
+						"TextButton",
+						{
+							Size = UDim2.new(1, -10, 0, 34),
+							BackgroundColor3 = bgColor,
+							BackgroundTransparency = selected and selectedTransparency or defaultTransparency,
+							ClipsDescendants = true,
+							ZIndex = 23,
+							Text = "",
+							Parent = dropdownScrollFrame,
+							ThemeTag = customColor and {} or {BackgroundColor3 = "DropdownOption"}
+						},
+						{
+							buttonSelector,
+							labelClip,
+							New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+							New(
+								"UIStroke",
+								{
+									Thickness = 1.2,
+									Transparency = 0.7,
+									ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+									ThemeTag = {Color = "InElementBorder"}
+								}
+							)
+						}
+					)
+
+					local labelDefaultPosition = UDim2.fromOffset(0, 0)
+					local labelDefaultSize = UDim2.fromScale(1, 1)
+					local labelScrollTween = nil
+					local function stopLabelScroll()
+						if labelScrollTween then
+							labelScrollTween:Cancel()
+							labelScrollTween = nil
+						end
+						buttonLabel.TextTruncate = Enum.TextTruncate.AtEnd
+						buttonLabel.Size = labelDefaultSize
+						buttonLabel.Position = labelDefaultPosition
+					end
+					local function startLabelScroll()
+						local visibleWidth = math.max(labelClip.AbsoluteSize.X, 0)
+						local textWidth = getTextWidth(buttonLabel, cleanText) + 6
+						if textWidth <= visibleWidth then
+							return
+						end
+						stopLabelScroll()
+						buttonLabel.TextTruncate = Enum.TextTruncate.None
+						buttonLabel.Size = UDim2.fromOffset(textWidth, button.AbsoluteSize.Y)
+						local travel = textWidth - visibleWidth
+						labelScrollTween = TweenService:Create(
+							buttonLabel,
+							TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
+							{Position = UDim2.fromOffset(-travel, 0)}
+						)
+						labelScrollTween:Play()
+					end
+
+					local hovered = false
+					button.MouseEnter:Connect(function()
+						hovered = true
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or hoverTransparency, 8, 1)
+						startLabelScroll()
+					end)
+					button.MouseLeave:Connect(function()
+						hovered = false
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or defaultTransparency, 8, 1)
+						stopLabelScroll()
+					end)
+					button.MouseButton1Down:Connect(function()
+						Creator.SpringValue(button, "BackgroundTransparency", customColor and 0.3 or 0.92, 8, 1)
+					end)
+					button.MouseButton1Up:Connect(function()
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or hoverTransparency, 8, 1)
+					end)
+
+					function row.ResetHover(_self)
+						if not hovered then return end
+						hovered = false
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or defaultTransparency, 8, 1)
+						stopLabelScroll()
+					end
+
+					local selectorHeight = selected and 16 or 6
+					function row.UpdateButton(_self)
 						if config.Multi then
-							selected = Dropdown.Value[value]
+							selected = Dropdown.Value[value] == true
 						else
 							selected = Dropdown.Value == value
 						end
-
-						-- ปรับค่า transparency ตามว่ามีสีกำหนดหรือไม่
-						local defaultTransparency = customColor and bgTransparency or 1
-						local hoverTransparency = customColor and math.max(bgTransparency - 0.2, 0.3) or 0.89
-						local selectedTransparency = customColor and math.max(bgTransparency - 0.3, 0.2) or 0.89
-
-						local backMotor, setBackTransparency = Creator.SpringMotor(defaultTransparency, button, "BackgroundTransparency")
-						local selMotor, setSelTransparency = Creator.SpringMotor(1, buttonSelector, "BackgroundTransparency")
-						local labelDefaultPosition = UDim2.fromOffset(0, 0)
-						local labelDefaultSize = UDim2.fromScale(1, 1)
-						local labelScrollTween = nil
-						local function stopLabelScroll()
-							if labelScrollTween then
-								labelScrollTween:Cancel()
-								labelScrollTween = nil
-							end
-							buttonLabel.TextTruncate = Enum.TextTruncate.AtEnd
-							buttonLabel.Size = labelDefaultSize
-							buttonLabel.Position = labelDefaultPosition
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or (hovered and hoverTransparency or defaultTransparency), 8, 1)
+						Creator.SpringValue(buttonSelector, "BackgroundTransparency", selected and 0 or 1, 8, 1)
+						local targetHeight = selected and 16 or 6
+						if targetHeight ~= selectorHeight then
+							selectorHeight = targetHeight
+							Creator.SpringValue(buttonSelector, "Size", targetHeight, 6, 0.8, function(h)
+								buttonSelector.Size = UDim2.fromOffset(5, h)
+							end)
 						end
-						local function startLabelScroll()
-							local visibleWidth = math.max(labelClip.AbsoluteSize.X, 0)
-							local textWidth = getTextWidth(buttonLabel, cleanText) + 6
-							if textWidth <= visibleWidth then
-								return
-							end
-							stopLabelScroll()
-							buttonLabel.TextTruncate = Enum.TextTruncate.None
-							buttonLabel.Size = UDim2.fromOffset(textWidth, button.AbsoluteSize.Y)
-							local travel = textWidth - visibleWidth
-							labelScrollTween =
-								TweenService:Create(
-									buttonLabel,
-									TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
-									{Position = UDim2.fromOffset(-travel, 0)}
-								)
-							labelScrollTween:Play()
-						end
-						local selectorSizeMotor = Flipper.SingleMotor.new(6)
-						selectorSizeMotor:onStep(
-							function(size)
-								buttonSelector.Size = UDim2.new(0, 5, 0, size)
-							end
-						)
-						local hovered = false
-						Creator.AddSignal(
-							button.MouseEnter,
-							function()
-								hovered = true
-								setBackTransparency(selected and selectedTransparency or hoverTransparency)
-								startLabelScroll()
-							end
-						)
-						Creator.AddSignal(
-							button.MouseLeave,
-							function()
-								hovered = false
-								setBackTransparency(selected and selectedTransparency or defaultTransparency)
-								stopLabelScroll()
-							end
-						)
-						Creator.AddSignal(
-							button.MouseButton1Down,
-							function()
-								setBackTransparency(customColor and 0.3 or 0.92)
-							end
-						)
-						Creator.AddSignal(
-							button.MouseButton1Up,
-							function()
-								setBackTransparency(selected and selectedTransparency or hoverTransparency)
-							end
-						)
-						function row.ResetHover(_self)
-							if not hovered then
-								return
-							end
-							hovered = false
-							setBackTransparency(selected and selectedTransparency or defaultTransparency)
-							stopLabelScroll()
-						end
-						function row.UpdateButton(_self)
-							if config.Multi then
-								selected = Dropdown.Value[value]
-								if selected then
-									setBackTransparency(selectedTransparency)
-								end
-							else
-								selected = Dropdown.Value == value
-								setBackTransparency(selected and selectedTransparency or defaultTransparency)
-							end
-							selectorSizeMotor:setGoal(Flipper.Spring.new(selected and 16 or 6, {frequency = 6, dampingRatio = 0.8}))
-							setSelTransparency(selected and 0 or 1)
-						end
-						-- Select on Activated (release), not on press, so a finger that
-						-- starts a scroll on a row does not pick it. Activated still
-						-- fires after a scroll, so it is ignored when the list moved
-						-- between press and release. The press is recorded from the
-						-- row and from its label, whichever receives it.
-						local canvasAtPress = nil
-						local function recordPress(input)
-							if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-								canvasAtPress = dropdownScrollFrame.CanvasPosition
-							end
-						end
-						button.InputBegan:Connect(recordPress)
-						buttonLabel.InputBegan:Connect(recordPress)
-						button.Activated:Connect(
-							function()
-								local pressedAt = canvasAtPress
-								canvasAtPress = nil
-								local scrolled = pressedAt ~= nil and (dropdownScrollFrame.CanvasPosition - pressedAt).Magnitude > 4
-								if not scrolled then
-									local newSelected = not selected
-									if Dropdown:GetActiveValues() == 1 and not newSelected and not config.AllowNull then
-									else
-										if config.Multi then
-											selected = newSelected
-											Dropdown.Value[value] = selected and true or nil
-										else
-											selected = newSelected
-											Dropdown.Value = selected and value or nil
-											for _, otherRow in next, buttons do
-												otherRow:UpdateButton()
-											end
-										end
-										row:UpdateButton()
-										Dropdown:Display()
-										Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
-										Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
-										Library._TouchElement(Dropdown)
-									end
-								end
-							end
-						)
-						row:UpdateButton()
-						row.Button = button
-						row.SearchTarget = cleanText:lower()
-						table.insert(dropdownRows, row)
-						buttons[button] = row
-						Dropdown.Buttons[button] = row
 					end
+
+					local canvasAtPress = nil
+					local function recordPress(input)
+						if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+							canvasAtPress = dropdownScrollFrame.CanvasPosition
+						end
+					end
+					button.InputBegan:Connect(recordPress)
+					buttonLabel.InputBegan:Connect(recordPress)
+					button.Activated:Connect(function()
+						local pressedAt = canvasAtPress
+						canvasAtPress = nil
+						local scrolled = pressedAt ~= nil and (dropdownScrollFrame.CanvasPosition - pressedAt).Magnitude > 4
+						if not scrolled then
+							local newSelected = not selected
+							if Dropdown:GetActiveValues() == 1 and not newSelected and not config.AllowNull then
+								return
+							end
+							if config.Multi then
+								selected = newSelected
+								Dropdown.Value[value] = selected and true or nil
+							else
+								selected = newSelected
+								Dropdown.Value = selected and value or nil
+								for _, otherRow in next, buttons do
+									otherRow:UpdateButton()
+								end
+							end
+							row:UpdateButton()
+							Dropdown:Display()
+							Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+							Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+							Library._TouchElement(Dropdown)
+						end
+					end)
+
+					row.Button = button
+					row.SearchTarget = cleanText:lower()
+					table.insert(dropdownRows, row)
+					buttons[button] = row
+					Dropdown.Buttons[button] = row
 				end
 				Dropdown:Display()
 				applySearchFilter()
 			end
+
 			function Dropdown.SetValues(_self, values)
 				if values then
 					Dropdown.Values = values
 				end
-				dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
+				if popupBuilt and dropdownScrollFrame then
+					dropdownScrollFrame.CanvasPosition = Vector2.new(0, 0)
+				end
 				dropdownBuilt = false
 				if Dropdown.Opened then
 					rebuildDropdown()
 				end
 				Dropdown:Display()
 			end
+
 			function Dropdown.OnChanged(_self, callback)
 				Dropdown.Changed = callback
 				callback(Dropdown.Value)
 			end
+
 			function Dropdown.SetValue(_self, value)
 				if Dropdown.Multi then
 					Dropdown.Value = toSelectionSet(value)
@@ -9448,19 +10111,36 @@ local moduleFunctions = {
 						Dropdown.Value = value
 					end
 				end
-				dropdownBuilt = false
-				if Dropdown.Opened then
-					rebuildDropdown()
+				-- Update existing rows in place instead of destroying and rebuilding all rows.
+				if popupBuilt and dropdownBuilt then
+					for _, buttonData in pairs(Dropdown.Buttons) do
+						buttonData:UpdateButton()
+					end
 				end
 				Dropdown:Display()
 				Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 				Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 			end
+
 			function Dropdown.Destroy(_self)
+				Dropdown:Close()
+				disconnectWhileOpen()
+				Library._OpenDropdowns[Dropdown] = nil
+				if dropdownHolderCanvas then
+					local openIdx = table.find(Library.OpenFrames, dropdownHolderCanvas)
+					if openIdx then
+						table.remove(Library.OpenFrames, openIdx)
+					end
+					pcall(function()
+						dropdownHolderCanvas:Destroy()
+					end)
+					dropdownHolderCanvas = nil
+				end
 				dropdownFrame:Destroy()
 				Library.Options[idx] = nil
 			end
-			Dropdown:Display()
+
+			-- Resolve initial defaults BEFORE calling Display() once.
 			local defaultIndexes = {}
 			if type(config.Default) == "string" then
 				local index = table.find(Dropdown.Values, config.Default)
@@ -9469,7 +10149,6 @@ local moduleFunctions = {
 				end
 			elseif type(config.Default) == "table" then
 				for key, defaultValue in next, config.Default do
-					-- Accept both {"A", "B"} and {A = true}.
 					local item = defaultValue
 					if type(defaultValue) == "boolean" then
 						item = defaultValue and key or nil
@@ -9494,8 +10173,8 @@ local moduleFunctions = {
 						break
 					end
 				end
-				Dropdown:Display()
 			end
+			Dropdown:Display()
 			Library.Options[idx] = Dropdown
 			return Dropdown
 		end
@@ -9585,8 +10264,9 @@ local moduleFunctions = {
 	end,
 	[24] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(24)
-		local UserInputService, Root = game:GetService "UserInputService", moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Creator = requireModule(Root.Creator)
+		local UserInputService = Creator.GetService("UserInputService")
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
 		Element.__type = "Keybind"
@@ -9701,7 +10381,27 @@ local moduleFunctions = {
 				Library:SafeCallback(Keybind.Callback, Keybind.Toggled)
 				Library:SafeCallback(Keybind.Clicked, Keybind.Toggled)
 			end
+
+			-- Route through Creator's single shared keybind listener instead of
+			-- allocating one global UserInputService.InputBegan per Keybind.
+			local routerEntry = Creator.RegisterKeybind({
+				IsPicking = function()
+					return picking
+				end,
+				GetMode = function()
+					return Keybind.Mode
+				end,
+				GetKey = function()
+					return Keybind.Value
+				end,
+				Trigger = function()
+					Keybind.Toggled = not Keybind.Toggled
+					Keybind:DoClick()
+				end
+			})
+
 			function Keybind.Destroy(_self)
+				Creator.UnregisterKeybind(routerEntry)
 				keybindFrame:Destroy()
 				Library.Options[idx] = nil
 			end
@@ -9713,9 +10413,6 @@ local moduleFunctions = {
 						picking = true
 						keybindDisplayLabel.Text = "..."
 						task.wait(0.2)
-						-- The first key or mouse button pressed is picked when it is
-						-- released. Touch and gamepad input cannot be bound, so they
-						-- cancel picking and keep the current key.
 						local beganConnection
 						beganConnection =
 							UserInputService.InputBegan:Connect(
@@ -9758,30 +10455,6 @@ local moduleFunctions = {
 					end
 				end
 			)
-			Creator.AddSignal(
-				UserInputService.InputBegan,
-				function(input)
-					if not picking and not UserInputService:GetFocusedTextBox() then
-						if Keybind.Mode == "Toggle" then
-							local key = Keybind.Value
-							if key == "MouseLeft" or key == "MouseRight" then
-								if
-									key == "MouseLeft" and input.UserInputType == Enum.UserInputType.MouseButton1 or
-									key == "MouseRight" and input.UserInputType == Enum.UserInputType.MouseButton2
-								then
-									Keybind.Toggled = not Keybind.Toggled
-									Keybind:DoClick()
-								end
-							elseif input.UserInputType == Enum.UserInputType.Keyboard then
-								if input.KeyCode.Name == key then
-									Keybind.Toggled = not Keybind.Toggled
-									Keybind:DoClick()
-								end
-							end
-						end
-					end
-				end
-			)
 			Library.Options[idx] = Keybind
 			return Keybind
 		end
@@ -9805,7 +10478,7 @@ local moduleFunctions = {
 	end,
 	[26] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(26)
-		local UserInputService, Root = game:GetService "UserInputService", moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Creator = requireModule(Root.Creator)
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
@@ -9845,7 +10518,6 @@ local moduleFunctions = {
 					}
 				)
 
-			-- แก้ตรงนี้: เปลี่ยนจาก TextLabel -> TextBox เพื่อให้พิมพ์ค่าได้
 			local sliderRail, sliderFill, sliderDisplay =
 				New(
 					"Frame",
@@ -9870,11 +10542,9 @@ local moduleFunctions = {
 					BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 					BackgroundTransparency = 1,
 					Size = UDim2.new(0, 100, 0, 14),
-					-- ปรับตำแหน่งให้เลื่อนไปทางซ้ายเล็กน้อย
 					Position = UDim2.new(0, -12, 0.5, 0),
 					AnchorPoint = Vector2.new(1, 0.5),
 					ThemeTag = {TextColor3 = "SubText"},
-					-- Allow numbers input; keyboard will show on mobile
 					TextEditable = true
 				}
 			)
@@ -9899,29 +10569,44 @@ local moduleFunctions = {
 					}
 				)
 
-			-- ถ้ามีการพิมพ์อยู่ หยุดการ drag ไว้
 			local editingNumber = false
 
-			-- ถ้าคลิกที่ไอคอน จะเริ่ม drag (เหมือนเดิม)
+			local function updateFromPosition(posX)
+				local width = sliderRail.AbsoluteSize.X
+				if width <= 0 then
+					return
+				end
+				local ratio = math.clamp((posX - sliderRail.AbsolutePosition.X) / width, 0, 1)
+				Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
+			end
+
+			-- Shared Creator.BeginDrag attaches InputChanged/InputEnded ONLY while actively
+			-- dragging, eliminating 2 persistent global UIS connections per Slider.
+			local function startDrag(input)
+				if editingNumber then
+					return
+				end
+				dragging = true
+				Library._TouchElement(Slider)
+				Creator.BeginDrag(function(moveInput)
+					if not dragging or editingNumber then
+						return
+					end
+					updateFromPosition(moveInput.Position.X)
+				end, function()
+					dragging = false
+				end)
+			end
+
 			Creator.AddSignal(
 				sliderDot.InputBegan,
 				function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-						dragging = true
-						Library._TouchElement(Slider)
+						startDrag(input)
 					end
 				end
 			)
-			Creator.AddSignal(
-				sliderDot.InputEnded,
-				function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-						dragging = false
-					end
-				end
-			)
-			-- Pressing anywhere on the rail sets the value and starts a drag. The
-			-- rail is 4 px tall, so an invisible 24 px area catches the press.
+
 			local railHitArea = New("Frame", {
 				Name = "HitArea",
 				BackgroundTransparency = 1,
@@ -9935,46 +10620,32 @@ local moduleFunctions = {
 				function(input)
 					if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
 						and not editingNumber and sliderRail.AbsoluteSize.X > 0 then
-						dragging = true
-						local ratio = math.clamp((input.Position.X - sliderRail.AbsolutePosition.X) / sliderRail.AbsoluteSize.X, 0, 1)
-						Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
-						Library._TouchElement(Slider)
-					end
-				end
-			)
-			-- A drag that started on the rail ends wherever the pointer is lifted.
-			Creator.AddSignal(
-				UserInputService.InputEnded,
-				function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-						dragging = false
+						updateFromPosition(input.Position.X)
+						startDrag(input)
 					end
 				end
 			)
 
-			-- ขณะพิมพ์ หยุดตอบสนองการลาก
 			sliderDisplay.Focused:Connect(
 				function()
 					editingNumber = true
-					-- ป้องกันค่า i (drag) ขณะพิมพ์
-					dragging = false
+					if dragging then
+						dragging = false
+						Creator.EndDrag()
+					end
 				end
 			)
 
 			sliderDisplay.FocusLost:Connect(
-				function(enterPressed)
+				function()
 					editingNumber = false
-					-- ถ้ากด Enter หรือคลิกออก ให้อ่านค่าและอัปเดต slider
-					local text = sliderDisplay.Text
-					-- support comma เป็นจุดทศนิยมด้วย (เช่น "1,5")
-					text = tostring(text):gsub(",", ".")
+					local text = tostring(sliderDisplay.Text):gsub(",", ".")
 					local num = tonumber(text)
 					if num then
 						local newVal = Library:Round(math.clamp(num, Slider.Min, Slider.Max), Slider.Rounding)
 						Slider:SetValue(newVal)
 						Library._TouchElement(Slider)
 					else
-						-- revert to current value
 						if Slider.Value ~= nil then
 							sliderDisplay.Text = tostring(Slider.Value)
 						else
@@ -9984,36 +10655,25 @@ local moduleFunctions = {
 				end
 			)
 
-			Creator.AddSignal(
-				UserInputService.InputChanged,
-				function(input)
-					if editingNumber then
-						return
-					end
-					if
-						dragging and
-						(input.UserInputType == Enum.UserInputType.MouseMovement or
-							input.UserInputType == Enum.UserInputType.Touch)
-					then
-						local ratio = math.clamp((input.Position.X - sliderRail.AbsolutePosition.X) / sliderRail.AbsoluteSize.X, 0, 1)
-						Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
-					end
-				end
-			)
 			function Slider.OnChanged(_self, callback)
 				Slider.Changed = callback
 				callback(Slider.Value)
 			end
 			function Slider.SetValue(target, value)
 				target.Value = Library:Round(math.clamp(value, Slider.Min, Slider.Max), Slider.Rounding)
-				sliderDot.Position = UDim2.new((target.Value - Slider.Min) / (Slider.Max - Slider.Min), -7, 0.5, 0)
-				sliderFill.Size = UDim2.fromScale((target.Value - Slider.Min) / (Slider.Max - Slider.Min), 1)
-				-- อัปเดตข้อความใน TextBox ให้ตรงค่า
+				local range = Slider.Max - Slider.Min
+				local ratio = range ~= 0 and ((target.Value - Slider.Min) / range) or 0
+				sliderDot.Position = UDim2.new(ratio, -7, 0.5, 0)
+				sliderFill.Size = UDim2.fromScale(ratio, 1)
 				sliderDisplay.Text = tostring(target.Value)
 				Library:SafeCallback(Slider.Callback, target.Value)
 				Library:SafeCallback(Slider.Changed, target.Value)
 			end
 			function Slider.Destroy(_self)
+				if dragging then
+					dragging = false
+					Creator.EndDrag()
+				end
 				sliderFrame:Destroy()
 				Library.Options[idx] = nil
 			end
@@ -10025,11 +10685,14 @@ local moduleFunctions = {
 	end,
 	[27] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(27)
-		local TweenService, Root = game:GetService "TweenService", moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Creator = requireModule(Root.Creator)
+		local TweenService = Creator.GetService("TweenService")
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
 		Element.__type = "Toggle"
+		local TOGGLE_TWEEN = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+
 		function Element.New(parent, idx, config)
 			local Library = parent.Library
 			assert(config.Title, "Toggle - Missing Title")
@@ -10075,22 +10738,24 @@ local moduleFunctions = {
 				Toggle.Changed = callback
 				callback(Toggle.Value)
 			end
-			function Toggle.SetValue(_self, value)
+			local function applyVisual(value, instant)
+				Creator.OverrideTag(toggleBorder, {Color = value and "Accent" or "ToggleSlider"})
+				Creator.OverrideTag(toggleCircle, {ImageColor3 = value and "ToggleToggled" or "ToggleSlider"})
+				local targetPos = UDim2.new(0, value and 19 or 2, 0.5, 0)
+				local targetBg = value and 0 or 1
+				if instant then
+					toggleCircle.Position = targetPos
+					toggleSlider.BackgroundTransparency = targetBg
+				else
+					TweenService:Create(toggleCircle, TOGGLE_TWEEN, {Position = targetPos}):Play()
+					TweenService:Create(toggleSlider, TOGGLE_TWEEN, {BackgroundTransparency = targetBg}):Play()
+				end
+				toggleCircle.ImageTransparency = value and 0 or 0.5
+			end
+			function Toggle.SetValue(_self, value, instant)
 				value = not (not value)
 				Toggle.Value = value
-				Creator.OverrideTag(toggleBorder, {Color = Toggle.Value and "Accent" or "ToggleSlider"})
-				Creator.OverrideTag(toggleCircle, {ImageColor3 = Toggle.Value and "ToggleToggled" or "ToggleSlider"})
-				TweenService:Create(
-					toggleCircle,
-					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{Position = UDim2.new(0, Toggle.Value and 19 or 2, 0.5, 0)}
-				):Play()
-				TweenService:Create(
-					toggleSlider,
-					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{BackgroundTransparency = Toggle.Value and 0 or 1}
-				):Play()
-				toggleCircle.ImageTransparency = Toggle.Value and 0 or 0.5
+				applyVisual(value, instant == true)
 				Library:SafeCallback(Toggle.Callback, Toggle.Value)
 				Library:SafeCallback(Toggle.Changed, Toggle.Value)
 			end
@@ -10105,7 +10770,8 @@ local moduleFunctions = {
 					Library._TouchElement(Toggle)
 				end
 			)
-			Toggle:SetValue(Toggle.Value)
+			-- Apply initial state instantaneously (zero Tween allocations at boot).
+			Toggle:SetValue(Toggle.Value, true)
 			Library.Options[idx] = Toggle
 			return Toggle
 		end
@@ -10953,7 +11619,10 @@ local moduleFunctions = {
 	end,
 	[31] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(31)
-		local RunService, Signal, noop, BaseMotor = game:GetService "RunService", requireModule(moduleScript.Parent.Signal), function()
+		local cloneRef = cloneref or clonereference or function(instance)
+			return instance
+		end
+		local RunService, Signal, noop, BaseMotor = cloneRef(game:GetService "RunService"), requireModule(moduleScript.Parent.Signal), function()
 		end, {}
 		BaseMotor.__index = BaseMotor
 		function BaseMotor.new()
@@ -10968,14 +11637,21 @@ local moduleFunctions = {
 		function BaseMotor.onComplete(motor, handler)
 			return motor._onComplete:connect(handler)
 		end
-		-- Running motors are stepped, in start order, from one RenderStepped
-		-- connection that exists only while something is animating. A motor
-		-- whose step errors is stopped so it cannot block the others.
+		-- Running motors are stepped in start order from one RenderStepped
+		-- connection that exists only while something is animating. A reusable
+		-- buffer avoids allocating a cloned table on every frame.
 		local runningMotors = {}
+		local stepBuffer = {}
 		local schedulerConnection = nil
 		local function stepRunningMotors(deltaTime)
-			for _, motor in ipairs(table.clone(runningMotors)) do
-				if motor._running then
+			local count = #runningMotors
+			for index = 1, count do
+				stepBuffer[index] = runningMotors[index]
+			end
+			for index = 1, count do
+				local motor = stepBuffer[index]
+				stepBuffer[index] = nil
+				if motor and motor._running then
 					local ok, err = pcall(motor.step, motor, deltaTime)
 					if not ok then
 						motor:stop()
