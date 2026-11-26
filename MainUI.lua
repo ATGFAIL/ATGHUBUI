@@ -9513,6 +9513,7 @@ local moduleFunctions = {
 			end
 			function Window.SetSidebarCollapsed(_self, collapsed, instant)
 				collapsed = collapsed == true
+				local changed = Window.SidebarCollapsed ~= collapsed
 				Window.SidebarCollapsed = collapsed
 				updateTabsCollapsedVisual(collapsed)
 				local targetW = collapsed and COLLAPSED_SIDEBAR_W or math.clamp(Window.ExpandedTabWidth or defaultTabWidth, MIN_SIDEBAR_W, MAX_SIDEBAR_W)
@@ -9521,6 +9522,9 @@ local moduleFunctions = {
 					applyTabWidthImmediate(targetW)
 				else
 					Creator.SpringValue(tabFrame, "SidebarWidth", targetW, 7.0, 0.9, applyTabWidthImmediate, Window.TabWidth)
+				end
+				if changed and not instant and type(Library._NotifyInterfaceSetting) == "function" then
+					Library:_NotifyInterfaceSetting("SidebarCollapsed", collapsed)
 				end
 			end
 			function Window.ToggleSidebar(_self, instant)
@@ -22559,7 +22563,9 @@ local moduleFunctions = {
 				ScrollFrame = parentObj.ScrollFrame,
 				Tab = parentObj.Tab,
 				TabId = parentObj.TabId,
-				TabTitle = parentObj.TabTitle
+				TabTitle = parentObj.TabTitle,
+				Library = parentObj.Library or Library,
+				_Internal = parentObj._Internal == true
 			}
 
 			local layout = New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
@@ -23435,7 +23441,9 @@ local moduleFunctions = {
 				ScrollFrame = parentObj.ScrollFrame,
 				Tab = parentObj.Tab,
 				TabId = parentObj.TabId,
-				TabTitle = parentObj.TabTitle
+				TabTitle = parentObj.TabTitle,
+				Library = parentObj.Library or Library,
+				_Internal = parentObj._Internal == true
 			}
 
 			Row.Root = New(
@@ -23509,12 +23517,14 @@ local moduleFunctions = {
 						Tab = parentObj.Tab,
 						TabId = parentObj.TabId,
 						TabTitle = parentObj.TabTitle,
+						Library = parentObj.Library or Library,
+						_Internal = parentObj._Internal == true,
 						_WidthScale = w,
 						_WidthOffset = -math.floor(gapShare + 0.5)
 					}
 					function colObj.AddSection(_self, sectionTitle, sectionOpts)
 						local Section, sectionComponent =
-							{Type = "Section"},
+							{Type = "Section", _Internal = parentObj._Internal == true, Library = parentObj.Library or Library},
 							requireModule(Root.Components.Section)(sectionTitle, colFrame, sectionOpts)
 						Section.Container = sectionComponent.Container
 						Section.Root = sectionComponent.Root
@@ -23980,6 +23990,8 @@ local moduleFunctions = {
 					Tab = parentObj.Tab,
 					TabId = parentObj.TabId,
 					TabTitle = parentObj.TabTitle,
+					Library = parentObj.Library or Library,
+					_Internal = parentObj._Internal == true,
 					_Button = btn,
 					_Label = label,
 					_Icon = iconImg,
@@ -23988,7 +24000,7 @@ local moduleFunctions = {
 
 				function pageObj.AddSection(_s, sectionTitle, sectionOpts)
 					local Section, sectionComponent =
-						{Type = "Section"},
+						{Type = "Section", _Internal = parentObj._Internal == true, Library = parentObj.Library or Library},
 						requireModule(Root.Components.Section)(sectionTitle, pageFrame, sectionOpts)
 					Section.Container = sectionComponent.Container
 					Section.Root = sectionComponent.Root
@@ -25715,7 +25727,11 @@ local moduleFunctions = {
 				Creator.AddSignal(eyeIconBtn.MouseButton1Click, function()
 					if type(Library.SetPrivacyMode) == "function" then
 						local cur = Library:GetPrivacyMode()
-						Library:SetPrivacyMode(not cur.Hidden, cur.Alias, cur.HideAvatar)
+						local nextHidden = not cur.Hidden
+						Library:SetPrivacyMode(nextHidden, cur.Alias, cur.HideAvatar)
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("HidePlayerName", nextHidden)
+						end
 						syncHeaderAndBadges()
 					end
 				end)
@@ -26007,7 +26023,11 @@ local moduleFunctions = {
 				addMenuItem({Title = "Hide Name", Icon = "eye-off", BadgeTag = "PrivacyBadge", KeepOpen = true, Callback = function()
 					if type(Library.SetPrivacyMode) == "function" then
 						local cur = Library:GetPrivacyMode()
-						Library:SetPrivacyMode(not cur.Hidden, cur.Alias, cur.HideAvatar)
+						local nextHidden = not cur.Hidden
+						Library:SetPrivacyMode(nextHidden, cur.Alias, cur.HideAvatar)
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("HidePlayerName", nextHidden)
+						end
 					end
 				end})
 				addMenuItem({Title = "Language", Icon = "globe", RightTag = "LangRight", Submenu = "language"})
@@ -26733,7 +26753,10 @@ local moduleFunctions = {
 					Suffix = "x",
 					Callback = function(v)
 						if syncing then return end
-						Library:SetDPIScale(v)
+						local applied = Library:SetDPIScale(v)
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("DPIScale", applied or v)
+						end
 					end
 				})
 				controlRefs.ReducedMotion = secGenMotion:AddToggle("SettingsModalMotion", {
@@ -26743,6 +26766,9 @@ local moduleFunctions = {
 					Callback = function(v)
 						if syncing then return end
 						Library:SetReducedMotion(v)
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("ReducedMotion", v == true)
+						end
 					end
 				})
 
@@ -26807,7 +26833,10 @@ local moduleFunctions = {
 					Callback = function(v)
 						if syncing then return end
 						if Library.Window and Library.Window.SidebarCollapsed ~= (v == true) then
-							Library.Window:SetSidebarCollapsed(v == true)
+							Library.Window:SetSidebarCollapsed(v == true, true)
+							if type(Library._NotifyInterfaceSetting) == "function" then
+								Library:_NotifyInterfaceSetting("SidebarCollapsed", v == true)
+							end
 						end
 					end
 				})
@@ -26820,6 +26849,9 @@ local moduleFunctions = {
 						if syncing then return end
 						if corner then
 							Library:SetNotifySide(corner)
+							if type(Library._NotifyInterfaceSetting) == "function" then
+								Library:_NotifyInterfaceSetting("NotifySide", corner)
+							end
 						end
 					end
 				})
@@ -26849,18 +26881,25 @@ local moduleFunctions = {
 							Library.FloatingPill.AlwaysVisible = v == true
 							Library.FloatingPill:SetVisible((v == true) or (Library.Window and Library.Window.Minimized))
 						end
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("AlwaysShowPill", v == true)
+						end
 					end
 				})
 				controlRefs.ShowHuds = secHud:AddToggle("SettingsModalShowHUDs", {
 					Title = "Show Active HUD Widgets",
 					Description = "Toggle Watermark and Active Keybinds overlay",
-					Default = true,
+					Default = Library._HUDsVisible ~= false,
 					Callback = function(v)
 						if syncing then return end
+						Library._HUDsVisible = v == true
 						for _, hud in ipairs(Library._ActiveHUDs or {}) do
 							if hud and type(hud.SetVisible) == "function" then
 								hud:SetVisible(v == true)
 							end
+						end
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("ShowHUDs", v == true)
 						end
 					end
 				})
@@ -26879,6 +26918,9 @@ local moduleFunctions = {
 							local cur = Library:GetPrivacyMode()
 							if cur.Hidden ~= (v == true) then
 								Library:SetPrivacyMode(v == true, cur.Alias, cur.HideAvatar)
+								if type(Library._NotifyInterfaceSetting) == "function" then
+									Library:_NotifyInterfaceSetting("HidePlayerName", v == true)
+								end
 							end
 						end
 					end
@@ -26893,6 +26935,9 @@ local moduleFunctions = {
 							local cur = Library:GetPrivacyMode()
 							if cur.HideAvatar ~= (v == true) then
 								Library:SetPrivacyMode(cur.Hidden, cur.Alias, v == true)
+								if type(Library._NotifyInterfaceSetting) == "function" then
+									Library:_NotifyInterfaceSetting("HidePlayerAvatar", v == true)
+								end
 							end
 						end
 					end
@@ -26911,6 +26956,9 @@ local moduleFunctions = {
 							local nextAlias = clean ~= "" and clean or "Anonymous"
 							if cur.Alias ~= nextAlias then
 								Library:SetPrivacyMode(cur.Hidden, nextAlias, cur.HideAvatar)
+								if type(Library._NotifyInterfaceSetting) == "function" then
+									Library:_NotifyInterfaceSetting("PrivacyAlias", nextAlias)
+								end
 							end
 						end
 					end
@@ -26954,10 +27002,32 @@ local moduleFunctions = {
 						Library:SetDPIScale(1.0)
 						Library:SetReducedMotion(false)
 						Library:SetNotifySide("BottomRight")
+						if Library.Window and type(Library.Window.SetSidebarCollapsed) == "function" then
+							Library.Window:SetSidebarCollapsed(false, true)
+						end
+						if Library.FloatingPill then
+							Library.FloatingPill.AlwaysVisible = false
+							Library.FloatingPill:SetVisible(Library.Window and Library.Window.Minimized or false)
+						end
+						Library._HUDsVisible = true
+						for _, hud in ipairs(Library._ActiveHUDs or {}) do
+							if hud and type(hud.SetVisible) == "function" then
+								hud:SetVisible(true)
+							end
+						end
 						if type(Library.SetPrivacyMode) == "function" then Library:SetPrivacyMode(false, "Anonymous", false) end
 						if type(Library._NotifyInterfaceSetting) == "function" then
 							Library:_NotifyInterfaceSetting("Theme", "Acryven")
 							Library:_NotifyInterfaceSetting("FontProfile", "default")
+							Library:_NotifyInterfaceSetting("DPIScale", 1.0)
+							Library:_NotifyInterfaceSetting("ReducedMotion", false)
+							Library:_NotifyInterfaceSetting("NotifySide", "BottomRight")
+							Library:_NotifyInterfaceSetting("SidebarCollapsed", false)
+							Library:_NotifyInterfaceSetting("AlwaysShowPill", false)
+							Library:_NotifyInterfaceSetting("ShowHUDs", true)
+							Library:_NotifyInterfaceSetting("HidePlayerName", false)
+							Library:_NotifyInterfaceSetting("HidePlayerAvatar", false)
+							Library:_NotifyInterfaceSetting("PrivacyAlias", "Anonymous")
 						end
 						Modal:SyncValues()
 						if Library.ProfileMenu then
@@ -27718,6 +27788,12 @@ local moduleFunctions = {
 						local targetPill = Library.FloatingPill.AlwaysVisible == true
 						if controlRefs.AlwaysPill.Value ~= targetPill then
 							controlRefs.AlwaysPill:SetValue(targetPill, true, true)
+						end
+					end
+					if controlRefs.ShowHuds then
+						local targetHud = Library._HUDsVisible ~= false
+						if controlRefs.ShowHuds.Value ~= targetHud then
+							controlRefs.ShowHuds:SetValue(targetHud, true, true)
 						end
 					end
 					if controlRefs.MinKeybind then

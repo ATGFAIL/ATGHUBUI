@@ -1,9 +1,21 @@
 --[[
-    ATG InterfaceManager
+    ATG InterfaceManager (Acryven v3.0 Ready)
 
     The legacy Fluent-facing API remains intact:
       SetFolder, SetLibrary, BuildFolderTree, SaveSettings, LoadSettings,
-      BuildInterfaceSection.
+      BuildInterfaceSection, AttachToSettingsModal, ResetSettings,
+      GetSetting, SetSetting.
+
+    When running on Acryven v3.0 (Library.SettingsModal present), calling
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings, options) routes all
+    UI preferences into the Settings Modal automatically, syncs every v3.0
+    preference (DPI Scale, Reduced Motion, Sidebar Rail, Notification Corner,
+    Floating Pill, Active HUDs, Streamer Privacy, Theme, Acrylic, Transparency,
+    Floating Button, Keybind, Language, Font, Font Tuning), and builds its
+    customization panels using Acryven v3.0 Components & Elements (Card
+    Sections, DependencyBox, SubTabs, StatGrid, SegmentedControl, Stepper,
+    ActionRow with inline Confirm, Callout, Divider, Tooltips, CommandPalette)
+    with full fallback compatibility for older MainUI versions.
 
     The optional second argument of BuildInterfaceSection lets a script choose
     an isolated i18n scope without requiring changes to its UI code:
@@ -24,6 +36,17 @@ do
         MenuKeybind = "LeftControl",
         FloatingToggle = true,
 
+        -- Acryven v3.0 UI & Layout Preferences
+        DPIScale = 1.0,
+        ReducedMotion = false,
+        SidebarCollapsed = false,
+        NotifySide = "BottomRight",
+        AlwaysShowPill = false,
+        ShowHUDs = true,
+        HidePlayerName = false,
+        HidePlayerAvatar = false,
+        PrivacyAlias = "Anonymous",
+
         Language = "en",
         TranslationEnabled = true,
         TranslationMode = "auto",
@@ -34,7 +57,7 @@ do
         FontProfile = "default",
         FontUrl = "",
         FontTarget = "Both",
-        -- Optional per-script typography overrides.  Keeping these scoped
+        -- Optional per-script typography overrides. Keeping these scoped
         -- means each game can use a readable size without changing another.
         FontTuningEnabled = false,
         FontSizeScale = 100,
@@ -52,15 +75,23 @@ do
         EnableRemoteAssets = true
     }
 
-    -- Appearance is intentionally shared, while translation/font choices are
-    -- saved per script scope.  This keeps a Thai Magic Loot pack from being
-    -- selected by an unrelated script which has a different set of packs.
+    -- Appearance, Layout, HUD, and Streamer Privacy are intentionally shared,
+    -- while translation/font choices are saved per script scope.
     local GLOBAL_SETTING_KEYS = {
         "Theme",
         "Acrylic",
         "Transparency",
         "MenuKeybind",
-        "FloatingToggle"
+        "FloatingToggle",
+        "DPIScale",
+        "ReducedMotion",
+        "SidebarCollapsed",
+        "NotifySide",
+        "AlwaysShowPill",
+        "ShowHUDs",
+        "HidePlayerName",
+        "HidePlayerAvatar",
+        "PrivacyAlias"
     }
 
     local SCOPED_SETTING_KEYS = {
@@ -114,6 +145,18 @@ do
         ["Normal"] = true,
         ["Italic"] = true
     }
+
+    local NOTIFY_SIDE_VALUES = {
+        ["BottomRight"] = true,
+        ["BottomLeft"] = true,
+        ["TopRight"] = true,
+        ["TopLeft"] = true
+    }
+
+    local COLOR_OK = Color3.fromRGB(52, 211, 153)
+    local COLOR_WARN = Color3.fromRGB(251, 191, 36)
+    local COLOR_ERR = Color3.fromRGB(248, 113, 113)
+    local COLOR_INFO = Color3.fromRGB(99, 179, 255)
 
     InterfaceManager.Folder = "FluentSettings"
     InterfaceManager.Settings = {}
@@ -194,7 +237,7 @@ do
             and type(executorFunction("makefolder")) == "function"
     end
 
-    local function safeNotify(library, title, content, subContent)
+    local function safeNotify(library, title, content, subContent, icon)
         if not library or type(library.Notify) ~= "function" then
             return
         end
@@ -203,6 +246,7 @@ do
                 Title = title,
                 Content = content,
                 SubContent = subContent or "",
+                Icon = icon,
                 Duration = 5
             })
         end)
@@ -263,6 +307,33 @@ do
             return fallback
         end
         return math.floor(math.clamp(value, minimum, maximum) + 0.5)
+    end
+
+    local function clampNumber(value, fallback, minimum, maximum, decimals)
+        if type(value) ~= "number" or value ~= value then
+            return fallback
+        end
+        local clamped = math.clamp(value, minimum, maximum)
+        local factor = 10 ^ (decimals or 2)
+        return math.floor(clamped * factor + 0.5) / factor
+    end
+
+    local function sanitizeAlias(value)
+        local clean = tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if #clean > 32 then
+            clean = clean:sub(1, 32)
+        end
+        return clean ~= "" and clean or "Anonymous"
+    end
+
+    local function keyNameOf(value, fallback)
+        if typeof(value) == "EnumItem" then
+            return value.Name
+        end
+        if type(value) == "string" and value ~= "" then
+            return value
+        end
+        return fallback or "LeftControl"
     end
 
     local function fontTuningFromSettings(settings)
@@ -328,6 +399,168 @@ do
             return nil, path .. " is not valid JSON."
         end
         return decoded
+    end
+
+    local function seedDefaultsFromLibrary(settings, library)
+        if type(library) ~= "table" then
+            return
+        end
+        if type(library.Theme) == "string" and library.Theme ~= "" then
+            settings.Theme = library.Theme
+        end
+        if type(library.Acrylic) == "boolean" then
+            settings.Acrylic = library.Acrylic
+        end
+        if type(library.Transparency) == "boolean" then
+            settings.Transparency = library.Transparency
+        end
+        if library.MinimizeKey ~= nil then
+            settings.MenuKeybind = keyNameOf(library.MinimizeKey, settings.MenuKeybind)
+        end
+        if type(library.DPIScale) == "number" then
+            settings.DPIScale = clampNumber(library.DPIScale, 1.0, 0.8, 1.35, 2)
+        end
+        if type(library.ReducedMotion) == "boolean" then
+            settings.ReducedMotion = library.ReducedMotion
+        end
+        if type(library.NotifySide) == "string" and NOTIFY_SIDE_VALUES[library.NotifySide] then
+            settings.NotifySide = library.NotifySide
+        end
+        if type(library.Window) == "table" and type(library.Window.SidebarCollapsed) == "boolean" then
+            settings.SidebarCollapsed = library.Window.SidebarCollapsed
+        end
+        if type(library.FloatingPill) == "table" and type(library.FloatingPill.AlwaysVisible) == "boolean" then
+            settings.AlwaysShowPill = library.FloatingPill.AlwaysVisible
+        end
+        if library._HUDsVisible ~= nil then
+            settings.ShowHUDs = library._HUDsVisible ~= false
+        end
+        if type(library.GetPrivacyMode) == "function" then
+            local ok, priv = pcall(library.GetPrivacyMode, library)
+            if ok and type(priv) == "table" then
+                settings.HidePlayerName = priv.Hidden == true
+                settings.HidePlayerAvatar = priv.HideAvatar == true
+                settings.PrivacyAlias = sanitizeAlias(priv.Alias)
+            end
+        end
+    end
+
+    local function normalizeSettings(settings)
+        local validModes = {
+            auto = true,
+            community = true,
+            roblox = true,
+            machine = true,
+            source = true
+        }
+        if not validModes[settings.TranslationMode] then
+            settings.TranslationMode = DEFAULT_SETTINGS.TranslationMode
+        end
+        local oldFontTargets = {
+            ["Both (Latin + Thai)"] = "Both",
+            ["English / Latin only"] = "Latin",
+            ["Thai only"] = "Thai"
+        }
+        settings.FontTarget = oldFontTargets[settings.FontTarget] or settings.FontTarget
+        if not FONT_TARGET_VALUES[settings.FontTarget] then
+            settings.FontTarget = DEFAULT_SETTINGS.FontTarget
+        end
+        if type(settings.FontTuningEnabled) ~= "boolean" then
+            settings.FontTuningEnabled = DEFAULT_SETTINGS.FontTuningEnabled
+        end
+        settings.FontSizeScale = clampInteger(settings.FontSizeScale, DEFAULT_SETTINGS.FontSizeScale, 70, 160)
+        if not FONT_WEIGHT_VALUES[settings.FontWeight] then
+            settings.FontWeight = DEFAULT_SETTINGS.FontWeight
+        end
+        if not FONT_STYLE_VALUES[settings.FontStyle] then
+            settings.FontStyle = DEFAULT_SETTINGS.FontStyle
+        end
+        settings.FontLineHeight = clampInteger(settings.FontLineHeight, DEFAULT_SETTINGS.FontLineHeight, 80, 160)
+        settings.FontStroke = clampInteger(settings.FontStroke, DEFAULT_SETTINGS.FontStroke, 0, 100)
+        if type(settings.AdvancedTools) ~= "boolean" then
+            settings.AdvancedTools = DEFAULT_SETTINGS.AdvancedTools
+        end
+
+        settings.DPIScale = clampNumber(settings.DPIScale, DEFAULT_SETTINGS.DPIScale, 0.8, 1.35, 2)
+        settings.ReducedMotion = settings.ReducedMotion == true
+        settings.SidebarCollapsed = settings.SidebarCollapsed == true
+        if not NOTIFY_SIDE_VALUES[settings.NotifySide] then
+            settings.NotifySide = DEFAULT_SETTINGS.NotifySide
+        end
+        settings.AlwaysShowPill = settings.AlwaysShowPill == true
+        if type(settings.ShowHUDs) ~= "boolean" then
+            settings.ShowHUDs = DEFAULT_SETTINGS.ShowHUDs
+        end
+        settings.HidePlayerName = settings.HidePlayerName == true
+        settings.HidePlayerAvatar = settings.HidePlayerAvatar == true
+        settings.PrivacyAlias = sanitizeAlias(settings.PrivacyAlias)
+        settings.MenuKeybind = keyNameOf(settings.MenuKeybind, DEFAULT_SETTINGS.MenuKeybind)
+    end
+
+    local function applyCoreSettings(library, settings)
+        if type(library) ~= "table" then
+            return
+        end
+        if type(library.SetTheme) == "function" and settings.Theme then
+            pcall(function()
+                library:SetTheme(settings.Theme, true)
+            end)
+        end
+        if library.UseAcrylic and type(library.ToggleAcrylic) == "function" then
+            pcall(function()
+                library:ToggleAcrylic(settings.Acrylic == true)
+            end)
+        end
+        if type(library.ToggleTransparency) == "function" then
+            library.Transparency = settings.Transparency == true
+            pcall(function()
+                library:ToggleTransparency(settings.Transparency == true)
+            end)
+        end
+        if settings.MenuKeybind ~= nil and settings.MenuKeybind ~= "" then
+            library.MinimizeKey = settings.MenuKeybind
+        end
+        if type(library.SetDPIScale) == "function" and type(settings.DPIScale) == "number" then
+            pcall(library.SetDPIScale, library, settings.DPIScale)
+        end
+        if type(library.SetReducedMotion) == "function" then
+            pcall(library.SetReducedMotion, library, settings.ReducedMotion == true)
+        end
+        if type(library.SetNotifySide) == "function" and NOTIFY_SIDE_VALUES[settings.NotifySide] then
+            pcall(library.SetNotifySide, library, settings.NotifySide)
+        end
+        if type(library.Window) == "table" and type(library.Window.SetSidebarCollapsed) == "function" then
+            if library.Window.SidebarCollapsed ~= (settings.SidebarCollapsed == true) then
+                pcall(library.Window.SetSidebarCollapsed, library.Window, settings.SidebarCollapsed == true, true)
+            end
+        end
+        if type(library.FloatingPill) == "table" then
+            library.FloatingPill.AlwaysVisible = settings.AlwaysShowPill == true
+            if type(library.FloatingPill.SetVisible) == "function" then
+                pcall(
+                    library.FloatingPill.SetVisible,
+                    library.FloatingPill,
+                    (settings.AlwaysShowPill == true) or (library.Window and library.Window.Minimized == true)
+                )
+            end
+        end
+        library._HUDsVisible = settings.ShowHUDs ~= false
+        if type(library._ActiveHUDs) == "table" then
+            for _, hud in ipairs(library._ActiveHUDs) do
+                if hud and type(hud.SetVisible) == "function" then
+                    pcall(hud.SetVisible, hud, settings.ShowHUDs ~= false)
+                end
+            end
+        end
+        if type(library.SetPrivacyMode) == "function" then
+            pcall(
+                library.SetPrivacyMode,
+                library,
+                settings.HidePlayerName == true,
+                sanitizeAlias(settings.PrivacyAlias),
+                settings.HidePlayerAvatar == true
+            )
+        end
     end
 
     function InterfaceManager:SetFolder(folder)
@@ -410,17 +643,22 @@ do
 
     function InterfaceManager:LoadSettings()
         copyDefaults(self.Settings, DEFAULT_SETTINGS)
+        seedDefaultsFromLibrary(self.Settings, self.Library)
+        self._HasSavedGlobal = false
         if not hasFileSystem() then
+            normalizeSettings(self.Settings)
             return false, "This executor does not expose a file system."
         end
 
-        -- Read the legacy all-in-one file first.  It doubles as a painless
+        -- Read the legacy all-in-one file first. It doubles as a painless
         -- migration path for users upgrading from the older manager.
         local decoded, readError = readSettings(self.Folder .. "/options.json")
         if readError then
+            normalizeSettings(self.Settings)
             return false, readError
         end
         if decoded then
+            self._HasSavedGlobal = true
             copySettingKeys(self.Settings, decoded, GLOBAL_SETTING_KEYS)
             copySettingKeys(self.Settings, decoded, SCOPED_SETTING_KEYS)
         end
@@ -428,61 +666,53 @@ do
         local scope = sanitizeSegment(self.Configuration.ScriptId, "shared")
         local scoped, scopedError = readSettings(self.Folder .. "/i18n/" .. scope .. "/interface.json")
         if scopedError then
+            normalizeSettings(self.Settings)
             return false, scopedError
         end
         if scoped then
             copySettingKeys(self.Settings, scoped, SCOPED_SETTING_KEYS)
         end
 
-        local validModes = {
-            auto = true,
-            community = true,
-            roblox = true,
-            machine = true,
-            source = true
-        }
-        if not validModes[self.Settings.TranslationMode] then
-            self.Settings.TranslationMode = DEFAULT_SETTINGS.TranslationMode
+        normalizeSettings(self.Settings)
+        return true
+    end
+
+    function InterfaceManager:GetSetting(key)
+        return self.Settings[key]
+    end
+
+    function InterfaceManager:SetSetting(key, value, persist)
+        if DEFAULT_SETTINGS[key] == nil then
+            return false, "Unknown setting key: " .. tostring(key)
         end
-        local oldFontTargets = {
-            ["Both (Latin + Thai)"] = "Both",
-            ["English / Latin only"] = "Latin",
-            ["Thai only"] = "Thai"
-        }
-        self.Settings.FontTarget = oldFontTargets[self.Settings.FontTarget] or self.Settings.FontTarget
-        if not FONT_TARGET_VALUES[self.Settings.FontTarget] then
-            self.Settings.FontTarget = DEFAULT_SETTINGS.FontTarget
+        self.Settings[key] = value
+        normalizeSettings(self.Settings)
+        if self.Library then
+            applyCoreSettings(self.Library, self.Settings)
+            if type(self._SyncUI) == "function" then
+                pcall(self._SyncUI, false)
+            end
         end
-        if type(self.Settings.FontTuningEnabled) ~= "boolean" then
-            self.Settings.FontTuningEnabled = DEFAULT_SETTINGS.FontTuningEnabled
+        if persist ~= false then
+            return self:SaveSettings()
         end
-        self.Settings.FontSizeScale = clampInteger(
-            self.Settings.FontSizeScale,
-            DEFAULT_SETTINGS.FontSizeScale,
-            70,
-            160
-        )
-        if not FONT_WEIGHT_VALUES[self.Settings.FontWeight] then
-            self.Settings.FontWeight = DEFAULT_SETTINGS.FontWeight
+        return true
+    end
+
+    function InterfaceManager:ResetSettings()
+        copyDefaults(self.Settings, DEFAULT_SETTINGS)
+        if self.Library and self.Library.Brand == "Acryven" and type(self.Library.Themes) == "table" and table.find(self.Library.Themes, "Acryven") then
+            self.Settings.Theme = "Acryven"
         end
-        if not FONT_STYLE_VALUES[self.Settings.FontStyle] then
-            self.Settings.FontStyle = DEFAULT_SETTINGS.FontStyle
+        normalizeSettings(self.Settings)
+        if self.Library then
+            applyCoreSettings(self.Library, self.Settings)
+            self:ApplyCustomizationSettings()
+            if type(self._SyncUI) == "function" then
+                pcall(self._SyncUI, true)
+            end
         end
-        self.Settings.FontLineHeight = clampInteger(
-            self.Settings.FontLineHeight,
-            DEFAULT_SETTINGS.FontLineHeight,
-            80,
-            160
-        )
-        self.Settings.FontStroke = clampInteger(
-            self.Settings.FontStroke,
-            DEFAULT_SETTINGS.FontStroke,
-            0,
-            100
-        )
-        if type(self.Settings.AdvancedTools) ~= "boolean" then
-            self.Settings.AdvancedTools = DEFAULT_SETTINGS.AdvancedTools
-        end
+        self:SaveSettings()
         return true
     end
 
@@ -523,28 +753,6 @@ do
         return true
     end
 
-    local function applyCoreSettings(library, settings)
-        if type(library.SetTheme) == "function" and settings.Theme then
-            pcall(function()
-                library:SetTheme(settings.Theme, true)
-            end)
-        end
-        if library.UseAcrylic and type(library.ToggleAcrylic) == "function" then
-            pcall(function()
-                library:ToggleAcrylic(settings.Acrylic == true)
-            end)
-        end
-        if type(library.ToggleTransparency) == "function" then
-            library.Transparency = settings.Transparency == true
-            pcall(function()
-                library:ToggleTransparency(settings.Transparency == true)
-            end)
-        end
-        if settings.MenuKeybind ~= nil and settings.MenuKeybind ~= "" then
-            library.MinimizeKey = settings.MenuKeybind
-        end
-    end
-
     function InterfaceManager:BuildInterfaceSection(tab, options)
         assert(self.Library, "Must set InterfaceManager.Library")
         local opts = type(options) == "table" and options or {}
@@ -568,6 +776,7 @@ do
             assert(tab, "BuildInterfaceSection requires a Settings tab or SettingsModal")
         end
 
+        applyCoreSettings(library, settings)
         local customizationApplied, customizationError = self:ApplyCustomizationSettings()
         if not customizationApplied then
             safeNotify(library, "Customization", "Some saved customization could not be applied", customizationError)
@@ -575,9 +784,33 @@ do
 
         local generalTarget = tab
         local configTarget = tab
-        local syncingFontDropdown = false
+        local syncingUi = false
         local activeFontDropdownRef = nil
         local languageDropdown = nil
+        local fontTuningToggleRef = nil
+        local advancedToolsToggleRef = nil
+        local translationToggleRef = nil
+        local fontWeightDropdownRef = nil
+        local fontStyleControlRef = nil
+        local fontSizeSliderRef = nil
+        local fontLineSliderRef = nil
+        local fontStrokeControlRef = nil
+        local fontTargetControlRef = nil
+        local modeDropdownRef = nil
+        local installedPackDropdownRef = nil
+        local localizationSectionRef = nil
+        local storageStatGridRef = nil
+
+        local delayedSaveRevision = 0
+        local function saveSoon()
+            delayedSaveRevision = delayedSaveRevision + 1
+            local revision = delayedSaveRevision
+            task.delay(0.35, function()
+                if revision == delayedSaveRevision then
+                    self:SaveSettings()
+                end
+            end)
+        end
 
         local function syncModalUi(refreshLanguages)
             if not useModal or not settingsModal or settingsModal.Destroyed then
@@ -591,6 +824,35 @@ do
             end
             if library.ProfileMenu and type(library.ProfileMenu.Refresh) == "function" then
                 pcall(library.ProfileMenu.Refresh, library.ProfileMenu)
+            end
+        end
+
+        local function updateSectionBadges(assets)
+            if localizationSectionRef and type(localizationSectionRef.SetBadge) == "function" then
+                if settings.FontTuningEnabled then
+                    localizationSectionRef:SetBadge("TUNED")
+                else
+                    localizationSectionRef:SetBadge(nil)
+                end
+            end
+            if storageStatGridRef and type(storageStatGridRef.SetStat) == "function" then
+                local packCount = 0
+                if assets and type(assets.GetLanguagePacks) == "function" then
+                    local ok, list = pcall(assets.GetLanguagePacks, assets)
+                    if ok and type(list) == "table" then
+                        packCount = #list
+                    end
+                end
+                storageStatGridRef:SetStat("Packs", tostring(packCount))
+                storageStatGridRef:SetStat("Scope", tostring((self.Configuration and self.Configuration.ScriptId) or "shared"))
+            end
+        end
+
+        local function openModalPage(pageName)
+            if type(library.OpenSettings) == "function" then
+                library:OpenSettings(pageName or "General")
+            elseif settingsModal and type(settingsModal.Open) == "function" then
+                settingsModal:Open(pageName or "General")
             end
         end
 
@@ -618,24 +880,41 @@ do
                 if hasOther and not forceLauncher then
                     return
                 end
-                local launcher = legacyTab:AddSection("Interface Settings")
-                launcher:AddButton({
-                    Title = "Open UI Settings",
-                    Description = "Theme, language, fonts, transparency, and shortcuts now live in Settings (Ctrl+,).",
-                    Callback = function()
-                        if type(library.OpenSettings) == "function" then
-                            library:OpenSettings("General")
-                        elseif settingsModal and type(settingsModal.Open) == "function" then
-                            settingsModal:Open("General")
+
+                local launcherRoot = nil
+                if type(legacyTab.AddCallout) == "function" then
+                    local callout = legacyTab:AddCallout({
+                        Title = "UI Settings Moved to Modal",
+                        Content = "Theme, DPI scale, Streamer Privacy, languages, fonts, and shortcuts now live in Settings (Ctrl+,).",
+                        Variant = "Info",
+                        Icon = "sliders-horizontal",
+                        Dismissible = false,
+                        Action = {
+                            Title = "Open UI Settings (Ctrl+,)",
+                            Callback = function()
+                                openModalPage("General")
+                            end
+                        }
+                    })
+                    launcherRoot = callout and (callout.Root or callout.Frame)
+                else
+                    local launcher = legacyTab:AddSection("Interface Settings")
+                    launcher:AddButton({
+                        Title = "Open UI Settings",
+                        Description = "Theme, language, fonts, transparency, and shortcuts now live in Settings (Ctrl+,).",
+                        Callback = function()
+                            openModalPage("General")
                         end
-                    end
-                })
-                if not forceLauncher and launcher and launcher.Root then
+                    })
+                    launcherRoot = launcher and launcher.Root
+                end
+
+                if not forceLauncher and launcherRoot then
                     local conn
                     conn = legacyTab.Container.ChildAdded:Connect(function(child)
-                        if child ~= launcher.Root and child:IsA("GuiObject") then
-                            if launcher.Root and launcher.Root.Parent then
-                                launcher.Root:Destroy()
+                        if child ~= launcherRoot and child:IsA("GuiObject") then
+                            if launcherRoot and launcherRoot.Parent then
+                                launcherRoot:Destroy()
                             end
                             if conn then
                                 conn:Disconnect()
@@ -648,7 +927,6 @@ do
         end
 
         if useModal then
-            applyCoreSettings(library, settings)
             generalTarget = settingsModal:GetPageContainer("General")
             configTarget = settingsModal:GetPageContainer("Config")
 
@@ -670,7 +948,34 @@ do
                     settings.FloatingToggle = value == true
                     self:SaveSettings()
                 elseif key == "MenuKeybind" and value ~= nil and tostring(value) ~= "" then
-                    settings.MenuKeybind = tostring(value)
+                    settings.MenuKeybind = keyNameOf(value, settings.MenuKeybind)
+                    self:SaveSettings()
+                elseif key == "DPIScale" and type(value) == "number" then
+                    settings.DPIScale = clampNumber(value, 1.0, 0.8, 1.35, 2)
+                    saveSoon()
+                elseif key == "ReducedMotion" then
+                    settings.ReducedMotion = value == true
+                    self:SaveSettings()
+                elseif key == "SidebarCollapsed" then
+                    settings.SidebarCollapsed = value == true
+                    self:SaveSettings()
+                elseif key == "NotifySide" and type(value) == "string" and NOTIFY_SIDE_VALUES[value] then
+                    settings.NotifySide = value
+                    self:SaveSettings()
+                elseif key == "AlwaysShowPill" then
+                    settings.AlwaysShowPill = value == true
+                    self:SaveSettings()
+                elseif key == "ShowHUDs" then
+                    settings.ShowHUDs = value == true
+                    self:SaveSettings()
+                elseif key == "HidePlayerName" then
+                    settings.HidePlayerName = value == true
+                    self:SaveSettings()
+                elseif key == "HidePlayerAvatar" then
+                    settings.HidePlayerAvatar = value == true
+                    self:SaveSettings()
+                elseif key == "PrivacyAlias" and type(value) == "string" then
+                    settings.PrivacyAlias = sanitizeAlias(value)
                     self:SaveSettings()
                 elseif key == "Language" and type(value) == "string" and value ~= "" then
                     settings.Language = value
@@ -680,11 +985,11 @@ do
                     if activeFontDropdownRef and type(activeFontDropdownRef.SetValue) == "function" then
                         local cust = getCustomization(library)
                         if cust and cust.Fonts then
-                            syncingFontDropdown = true
+                            syncingUi = true
                             pcall(function()
                                 activeFontDropdownRef:SetValue(profileDisplay(cust.Fonts, value), true)
                             end)
-                            syncingFontDropdown = false
+                            syncingUi = false
                         end
                     end
                     self:SaveSettings()
@@ -692,6 +997,45 @@ do
             end
 
             syncModalUi(true)
+
+            if self._RegisteredPaletteLibrary ~= library and type(library.RegisterCommand) == "function" then
+                self._RegisteredPaletteLibrary = library
+                pcall(library.RegisterCommand, library, {
+                    Title = "Save Interface Settings",
+                    Subtitle = "Write current Acryven UI preferences to disk",
+                    Category = "Interface",
+                    Icon = "save",
+                    Callback = function()
+                        self:SaveSettings()
+                        safeNotify(library, "Interface", "Saved interface settings", tostring(self.Folder), "save")
+                    end
+                })
+                pcall(library.RegisterCommand, library, {
+                    Title = "Reload Interface Settings",
+                    Subtitle = "Reload saved theme, DPI scale, privacy, and language",
+                    Category = "Interface",
+                    Icon = "refresh-cw",
+                    Callback = function()
+                        self:LoadSettings()
+                        settings = self.Settings
+                        applyCoreSettings(library, settings)
+                        self:ApplyCustomizationSettings()
+                        if type(self._SyncUI) == "function" then
+                            pcall(self._SyncUI, true)
+                        end
+                        safeNotify(library, "Interface", "Reloaded saved settings", nil, "refresh-cw")
+                    end
+                })
+                pcall(library.RegisterCommand, library, {
+                    Title = "Open Interface Storage",
+                    Subtitle = "Jump to Settings -> Config & storage status",
+                    Category = "Interface",
+                    Icon = "hard-drive",
+                    Callback = function()
+                        openModalPage("Config")
+                    end
+                })
+            end
 
             if self._MountedModalLibrary == library then
                 scheduleLegacyTabLauncher()
@@ -706,6 +1050,7 @@ do
                 Values = library.Themes,
                 Default = settings.Theme,
                 Callback = function(value)
+                    if syncingUi then return end
                     library:SetTheme(value)
                     settings.Theme = value
                     self:SaveSettings()
@@ -721,7 +1066,8 @@ do
                 Default = settings.MenuKeybind
             })
             menuKeybind:OnChanged(function()
-                settings.MenuKeybind = menuKeybind.Value
+                if syncingUi then return end
+                settings.MenuKeybind = keyNameOf(menuKeybind.Value, settings.MenuKeybind)
                 self:SaveSettings()
             end)
             library.MinimizeKeybind = menuKeybind
@@ -732,6 +1078,7 @@ do
                     Description = "Blur background.",
                     Default = settings.Acrylic,
                     Callback = function(value)
+                        if syncingUi then return end
                         library:ToggleAcrylic(value)
                         settings.Acrylic = value
                         self:SaveSettings()
@@ -744,6 +1091,7 @@ do
                 Description = "See-through background.",
                 Default = settings.Transparency,
                 Callback = function(value)
+                    if syncingUi then return end
                     library:ToggleTransparency(value)
                     settings.Transparency = value
                     self:SaveSettings()
@@ -756,6 +1104,7 @@ do
                     Description = "Draggable show/hide button",
                     Default = settings.FloatingToggle,
                     Callback = function(value)
+                        if syncingUi then return end
                         settings.FloatingToggle = value
                         library:SetFloatingToggleConfig(value and {} or false)
                         self:SaveSettings()
@@ -780,10 +1129,21 @@ do
             and type(customization.RemoteAssets.ImportLanguage) == "function"
             and type(customization.RemoteAssets.ImportFont) == "function"
         if not customizationReady then
-            generalTarget:AddSection("Customization"):AddParagraph({
-                Title = "Customization core unavailable",
-                Content = "Update MainUI to use language and font tools."
-            })
+            local fallbackSec = generalTarget:AddSection("Customization")
+            if type(fallbackSec.AddCallout) == "function" then
+                fallbackSec:AddCallout({
+                    Title = "Customization core unavailable",
+                    Content = "Update MainUI to use language and font tools.",
+                    Variant = "Warning",
+                    Dismissible = false
+                })
+            else
+                fallbackSec:AddParagraph({
+                    Title = "Customization core unavailable",
+                    Content = "Update MainUI to use language and font tools."
+                })
+            end
+            scheduleLegacyTabLauncher()
             return
         end
 
@@ -791,20 +1151,18 @@ do
         local fonts = customization.Fonts
         local assets = customization.RemoteAssets
         local capabilities = customization.Capabilities or {}
-        local delayedSaveRevision = 0
-        local function saveSoon()
-            delayedSaveRevision = delayedSaveRevision + 1
-            local revision = delayedSaveRevision
-            task.delay(0.35, function()
-                if revision == delayedSaveRevision then
-                    self:SaveSettings()
-                end
-            end)
-        end
 
         local localization = generalTarget:AddSection(
-            useModal and { Title = "Font & Translation", Icon = "languages" } or "Language & Font"
+            useModal and {
+                Title = "Font & Translation",
+                Icon = "languages",
+                Style = "Card",
+                Collapsible = true,
+                Badge = settings.FontTuningEnabled and "TUNED" or nil
+            } or "Language & Font"
         )
+        localizationSectionRef = localization
+
         if not useModal then
             languageDropdown = localization:AddDropdown("InterfaceLanguage", {
                 Title = "UI language",
@@ -812,6 +1170,7 @@ do
                 Values = i18n:GetLanguageOptions(),
                 Default = getLanguageValue(i18n, settings.Language),
                 Callback = function(value)
+                    if syncingUi then return end
                     settings.Language = i18n:GetLanguageCode(value)
                     i18n:SetLanguage(settings.Language)
                     library.CurrentLanguage = settings.Language
@@ -823,27 +1182,26 @@ do
             end)
         end
 
-        -- Keep the common actions visible. Import/update tools are grouped
-        -- below so first-time users do not have to scan a long settings page.
         local fontProfileDropdown
         local function refreshFontProfiles()
             local values = fonts:GetProfileOptions()
             if #values == 0 then
                 values = {"Script default [default]"}
             end
-            syncingFontDropdown = true
+            syncingUi = true
             fontProfileDropdown:SetValues(values)
             fontProfileDropdown:SetValue(profileDisplay(fonts, settings.FontProfile) or values[1])
-            syncingFontDropdown = false
+            syncingUi = false
         end
 
         fontProfileDropdown = localization:AddDropdown("InterfaceFontProfile", {
             Title = "Active font",
-            Description = "Choose a saved font.",
+            Description = "Choose a built-in or installed font profile.",
+            Tooltip = "Applies across UI headings and labels while keeping code blocks monospace.",
             Values = fonts:GetProfileOptions(),
             Default = profileDisplay(fonts, settings.FontProfile),
             Callback = function(value)
-                if syncingFontDropdown then
+                if syncingUi then
                     return
                 end
                 local profileId = fonts:GetProfileId(value)
@@ -860,21 +1218,23 @@ do
         activeFontDropdownRef = fontProfileDropdown
         pcall(refreshFontProfiles)
 
-        -- These controls are deliberately separate from the import tools.
-        -- Most users only need to reveal them when text needs accessibility
-        -- adjustments; the saved values remain dormant while the toggle is off.
         local fontTuningSupported = type(fonts.GetTextStyleConfig) == "function"
             and type(fonts.SetTextStyleConfig) == "function"
         local fontTuningUiReady = false
         local fontTuningRevision = 0
-        local fontAppearance
+        local fontAppearanceSection = nil
+        local fontAppearanceDepBox = nil
+
         local function setFontAppearanceVisible(visible)
-            if fontAppearance and type(fontAppearance.SetVisible) == "function" then
-                fontAppearance:SetVisible(visible)
-            elseif fontAppearance and fontAppearance.Root then
-                fontAppearance.Root.Visible = visible == true
+            if fontAppearanceDepBox and type(fontAppearanceDepBox.SetVisible) == "function" then
+                fontAppearanceDepBox:SetVisible(visible == true, false)
+            elseif fontAppearanceSection and type(fontAppearanceSection.SetVisible) == "function" then
+                fontAppearanceSection:SetVisible(visible == true)
+            elseif fontAppearanceSection and fontAppearanceSection.Root then
+                fontAppearanceSection.Root.Visible = visible == true
             end
         end
+
         local function applyFontTuning()
             local called, applied, applyError = pcall(function()
                 return fonts:SetTextStyleConfig(fontTuningFromSettings(settings))
@@ -890,8 +1250,9 @@ do
             end
             return true
         end
+
         local function requestFontTuningUpdate(immediate)
-            if not fontTuningUiReady then
+            if not fontTuningUiReady or syncingUi then
                 return
             end
             fontTuningRevision = fontTuningRevision + 1
@@ -899,8 +1260,6 @@ do
             if immediate then
                 applyFontTuning()
             else
-                -- A slider emits while dragging; apply once after it settles
-                -- instead of rebuilding every FontFace on every mouse move.
                 task.delay(0.15, function()
                     if revision == fontTuningRevision then
                         applyFontTuning()
@@ -910,11 +1269,13 @@ do
             saveSoon()
         end
 
-        localization:AddToggle("InterfaceTranslationEnabled", {
+        translationToggleRef = localization:AddToggle("InterfaceTranslationEnabled", {
             Title = "Translation",
-            Description = "Show translated text.",
+            Description = "Show translated text across UI labels.",
+            Tooltip = "Turn off to view original source strings without uninstalling packs.",
             Default = settings.TranslationEnabled,
             Callback = function(value)
+                if syncingUi then return end
                 settings.TranslationEnabled = value
                 i18n:SetEnabled(value)
                 self:SaveSettings()
@@ -922,83 +1283,140 @@ do
         })
 
         if fontTuningSupported then
-            localization:AddToggle("InterfaceFontTuningEnabled", {
+            fontTuningToggleRef = localization:AddToggle("InterfaceFontTuningEnabled", {
                 Title = "Advanced font settings",
-                Description = "Size, weight, spacing and outline.",
+                Description = "Fine-tune weight, style, text size, line spacing, and outline.",
+                Tooltip = "Saved per script scope so each game stays readable.",
                 Default = settings.FontTuningEnabled,
                 Callback = function(value)
+                    if syncingUi then return end
                     settings.FontTuningEnabled = value
                     setFontAppearanceVisible(value)
+                    updateSectionBadges(assets)
                     requestFontTuningUpdate(true)
                 end
             })
 
-            fontAppearance = generalTarget:AddSection(
-                useModal and { Title = "Font appearance", Icon = "type" } or "Font appearance"
-            )
-            fontAppearance:AddDropdown("InterfaceFontWeight", {
+            local fontTuningContainer
+            if type(localization.AddDependencyBox) == "function" then
+                fontAppearanceDepBox = localization:AddDependencyBox({
+                    DependsOn = fontTuningToggleRef,
+                    Default = settings.FontTuningEnabled == true
+                })
+                fontTuningContainer = fontAppearanceDepBox
+                if type(fontTuningContainer.AddDivider) == "function" then
+                    fontTuningContainer:AddDivider("Font Appearance")
+                end
+            else
+                fontAppearanceSection = generalTarget:AddSection("Font appearance")
+                fontTuningContainer = fontAppearanceSection
+            end
+
+            fontWeightDropdownRef = fontTuningContainer:AddDropdown("InterfaceFontWeight", {
                 Title = "Weight",
                 Description = "How bold the text is.",
                 Values = {"Auto", "Thin", "ExtraLight", "Light", "Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Heavy"},
                 Default = settings.FontWeight,
                 Callback = function(value)
+                    if syncingUi then return end
                     settings.FontWeight = value
                     requestFontTuningUpdate(true)
                 end
             })
 
-            fontAppearance:AddDropdown("InterfaceFontStyle", {
-                Title = "Style",
-                Description = "Keep normal or use italic.",
-                Values = {"Auto", "Normal", "Italic"},
-                Default = settings.FontStyle,
-                Callback = function(value)
-                    settings.FontStyle = value
-                    requestFontTuningUpdate(true)
-                end
-            })
+            if type(fontTuningContainer.AddSegmentedControl) == "function" then
+                fontStyleControlRef = fontTuningContainer:AddSegmentedControl("InterfaceFontStyle", {
+                    Title = "Style",
+                    Description = "Keep normal or switch to italic.",
+                    Values = {"Auto", "Normal", "Italic"},
+                    Default = settings.FontStyle,
+                    Callback = function(value)
+                        if syncingUi then return end
+                        settings.FontStyle = value
+                        requestFontTuningUpdate(true)
+                    end
+                })
+            else
+                fontStyleControlRef = fontTuningContainer:AddDropdown("InterfaceFontStyle", {
+                    Title = "Style",
+                    Description = "Keep normal or use italic.",
+                    Values = {"Auto", "Normal", "Italic"},
+                    Default = settings.FontStyle,
+                    Callback = function(value)
+                        if syncingUi then return end
+                        settings.FontStyle = value
+                        requestFontTuningUpdate(true)
+                    end
+                })
+            end
 
-            fontAppearance:AddSlider("InterfaceFontSizeScale", {
+            fontSizeSliderRef = fontTuningContainer:AddSlider("InterfaceFontSizeScale", {
                 Title = "Text size",
                 Description = "100% = normal.",
                 Default = settings.FontSizeScale,
                 Min = 70,
                 Max = 160,
                 Rounding = 0,
+                Suffix = "%",
                 Callback = function(value)
+                    if syncingUi then return end
                     settings.FontSizeScale = value
                     requestFontTuningUpdate(false)
                 end
             })
 
-            fontAppearance:AddSlider("InterfaceFontLineHeight", {
+            fontLineSliderRef = fontTuningContainer:AddSlider("InterfaceFontLineHeight", {
                 Title = "Line spacing",
                 Description = "100% = normal.",
                 Default = settings.FontLineHeight,
                 Min = 80,
                 Max = 160,
                 Rounding = 0,
+                Suffix = "%",
                 Callback = function(value)
+                    if syncingUi then return end
                     settings.FontLineHeight = value
                     requestFontTuningUpdate(false)
                 end
             })
 
-            fontAppearance:AddSlider("InterfaceFontStroke", {
-                Title = "Outline",
-                Description = "0% = script default.",
-                Default = settings.FontStroke,
-                Min = 0,
-                Max = 100,
-                Rounding = 0,
-                Callback = function(value)
-                    settings.FontStroke = value
-                    requestFontTuningUpdate(false)
-                end
-            })
+            if type(fontTuningContainer.AddStepper) == "function" then
+                fontStrokeControlRef = fontTuningContainer:AddStepper("InterfaceFontStroke", {
+                    Title = "Text outline",
+                    Description = "0% = script default.",
+                    Min = 0,
+                    Max = 100,
+                    Step = 5,
+                    Default = settings.FontStroke,
+                    Rounding = 0,
+                    Suffix = "%",
+                    Callback = function(value)
+                        if syncingUi then return end
+                        settings.FontStroke = value
+                        requestFontTuningUpdate(true)
+                    end
+                })
+            else
+                fontStrokeControlRef = fontTuningContainer:AddSlider("InterfaceFontStroke", {
+                    Title = "Outline",
+                    Description = "0% = script default.",
+                    Default = settings.FontStroke,
+                    Min = 0,
+                    Max = 100,
+                    Rounding = 0,
+                    Suffix = "%",
+                    Callback = function(value)
+                        if syncingUi then return end
+                        settings.FontStroke = value
+                        requestFontTuningUpdate(false)
+                    end
+                })
+            end
 
             fontTuningUiReady = true
-            setFontAppearanceVisible(settings.FontTuningEnabled)
+            if fontAppearanceSection then
+                setFontAppearanceVisible(settings.FontTuningEnabled)
+            end
         else
             localization:AddParagraph({
                 Title = "Advanced font settings",
@@ -1007,55 +1425,122 @@ do
         end
 
         local advancedSections = {}
+        local advancedDepBox = nil
         local function setAdvancedVisible(visible)
+            if advancedDepBox and type(advancedDepBox.SetVisible) == "function" then
+                advancedDepBox:SetVisible(visible == true, false)
+            end
             for _, advancedSection in ipairs(advancedSections) do
                 if type(advancedSection.SetVisible) == "function" then
-                    advancedSection:SetVisible(visible)
+                    advancedSection:SetVisible(visible == true)
                 elseif advancedSection.Root then
-                    advancedSection.Root.Visible = visible
+                    advancedSection.Root.Visible = visible == true
                 end
             end
         end
 
-        localization:AddToggle("InterfaceAdvancedTools", {
+        advancedToolsToggleRef = localization:AddToggle("InterfaceAdvancedTools", {
             Title = "Advanced tools",
-            Description = "Language packs and font installs.",
+            Description = "Language JSON packs and custom font installer.",
+            Tooltip = "Reveal Language Packs & Font Installer tabs.",
             Default = settings.AdvancedTools,
             Callback = function(value)
+                if syncingUi then return end
                 settings.AdvancedTools = value
                 setAdvancedVisible(value)
                 self:SaveSettings()
             end
         })
 
-        local languageTools = generalTarget:AddSection(
-            useModal and { Title = "Language tools", Icon = "globe" } or "Language tools"
-        )
-        table.insert(advancedSections, languageTools)
-        setAdvancedVisible(settings.AdvancedTools)
+        local languageToolsContainer
+        local fontToolsContainer
+        local useModernToolsLayout = type(localization.AddDependencyBox) == "function"
+            and type(localization.AddSubTabs) == "function"
 
-        local capabilityText = string.format(
-            "Save: %s | Web: %s | Fonts: %s",
-            capabilities.FileSystem and "OK" or "No",
-            (capabilities.RemoteFetch and assets.Enabled) and "OK" or "No",
-            capabilities.CustomFonts and "OK" or "No"
-        )
-        languageTools:AddParagraph({
-            Title = "Status",
-            Content = capabilityText
-        })
+        if useModernToolsLayout then
+            advancedDepBox = localization:AddDependencyBox({
+                DependsOn = advancedToolsToggleRef,
+                Default = settings.AdvancedTools == true
+            })
+            if type(advancedDepBox.AddDivider) == "function" then
+                advancedDepBox:AddDivider("Import & Pack Tools")
+            end
+            local toolTabs = advancedDepBox:AddSubTabs({
+                Tabs = {
+                    { Title = "Language Packs", Icon = "globe" },
+                    { Title = "Font Installer", Icon = "type" }
+                },
+                Default = 1
+            })
+            languageToolsContainer = toolTabs:GetTab("Language Packs")
+            fontToolsContainer = toolTabs:GetTab("Font Installer")
+        else
+            local languageTools = generalTarget:AddSection("Language tools")
+            table.insert(advancedSections, languageTools)
+            languageToolsContainer = languageTools
+
+            local typography = generalTarget:AddSection("Font tools")
+            table.insert(advancedSections, typography)
+            fontToolsContainer = typography
+            setAdvancedVisible(settings.AdvancedTools)
+        end
+
+        if type(languageToolsContainer.AddStatGrid) == "function" then
+            local fsOk = capabilities.FileSystem == true
+            local webOk = (capabilities.RemoteFetch and assets.Enabled) == true
+            local fontOk = capabilities.CustomFonts == true
+            languageToolsContainer:AddStatGrid("InterfaceCapabilitiesGrid", {
+                Columns = 3,
+                CardHeight = 60,
+                Stats = {
+                    {
+                        Key = "FS",
+                        Label = "File System",
+                        Value = fsOk and "OK" or "Off",
+                        Icon = "hard-drive",
+                        Color = fsOk and COLOR_OK or COLOR_ERR
+                    },
+                    {
+                        Key = "Web",
+                        Label = "Web Fetch",
+                        Value = webOk and "OK" or "Off",
+                        Icon = "globe",
+                        Color = webOk and COLOR_OK or COLOR_WARN
+                    },
+                    {
+                        Key = "Fonts",
+                        Label = "Custom Fonts",
+                        Value = fontOk and "OK" or "Off",
+                        Icon = "type",
+                        Color = fontOk and COLOR_OK or COLOR_WARN
+                    }
+                }
+            })
+        else
+            local capabilityText = string.format(
+                "Save: %s | Web: %s | Fonts: %s",
+                capabilities.FileSystem and "OK" or "No",
+                (capabilities.RemoteFetch and assets.Enabled) and "OK" or "No",
+                capabilities.CustomFonts and "OK" or "No"
+            )
+            languageToolsContainer:AddParagraph({
+                Title = "Status",
+                Content = capabilityText
+            })
+        end
 
         local modeValues = {}
         for display in pairs(MODE_VALUES) do
             table.insert(modeValues, display)
         end
         table.sort(modeValues)
-        local modeDropdown = languageTools:AddDropdown("InterfaceTranslationMode", {
+        modeDropdownRef = languageToolsContainer:AddDropdown("InterfaceTranslationMode", {
             Title = "Translate by",
-            Description = "Pick a source.",
+            Description = "Pick a translation source.",
             Values = modeValues,
             Default = modeDisplay(settings.TranslationMode),
             Callback = function(value)
+                if syncingUi then return end
                 settings.TranslationMode = MODE_VALUES[value] or "auto"
                 if settings.TranslationMode == "machine" and not capabilities.MachineTranslation then
                     safeNotify(library, "Machine translation", "Unsupported executor", "Original text will be used.")
@@ -1067,11 +1552,10 @@ do
             end
         })
         pcall(function()
-            modeDropdown:SetValue(modeDisplay(settings.TranslationMode))
+            modeDropdownRef:SetValue(modeDisplay(settings.TranslationMode))
         end)
 
         local installedPackValues = {}
-        local installedPackDropdown
         local function refreshLanguagePacks(dropdown)
             installedPackValues = {}
             for _, pack in ipairs(assets:GetLanguagePacks()) do
@@ -1081,6 +1565,7 @@ do
                 installedPackValues = {"No installed language packs"}
             end
             if dropdown then
+                syncingUi = true
                 dropdown:SetValues(installedPackValues)
                 local wanted
                 for _, value in ipairs(installedPackValues) do
@@ -1090,15 +1575,18 @@ do
                     end
                 end
                 dropdown:SetValue(wanted or installedPackValues[1])
+                syncingUi = false
             end
+            updateSectionBadges(assets)
         end
 
-        installedPackDropdown = languageTools:AddDropdown("InterfaceInstalledLanguagePack", {
+        installedPackDropdownRef = languageToolsContainer:AddDropdown("InterfaceInstalledLanguagePack", {
             Title = "Saved pack",
-            Description = "Choose a pack.",
+            Description = "Choose an installed language pack.",
             Values = {"No installed language packs"},
             Default = "No installed language packs",
             Callback = function(value)
+                if syncingUi then return end
                 local id = packIdFromDisplay(value)
                 if id ~= "" then
                     settings.LanguagePack = id
@@ -1106,21 +1594,22 @@ do
                 end
             end
         })
-        refreshLanguagePacks(installedPackDropdown)
+        refreshLanguagePacks(installedPackDropdownRef)
 
-        languageTools:AddInput("InterfaceLanguagePackUrl", {
+        languageToolsContainer:AddInput("InterfaceLanguagePackUrl", {
             Title = "Language JSON",
             Description = "Paste a link or file path.",
             Default = settings.LanguagePackUrl,
             Placeholder = "GitHub raw URL or local file path",
             Finished = false,
             Callback = function(value)
+                if syncingUi then return end
                 settings.LanguagePackUrl = value
                 saveSoon()
             end
         })
 
-        languageTools:AddInput("InterfaceTemplateLocale", {
+        languageToolsContainer:AddInput("InterfaceTemplateLocale", {
             Title = "Target code",
             Description = "Optional, e.g. ja-JP.",
             Default = settings.TemplateLocale,
@@ -1128,228 +1617,359 @@ do
             Finished = false,
             MaxLength = 24,
             Callback = function(value)
+                if syncingUi then return end
                 settings.TemplateLocale = value
                 saveSoon()
             end
         })
 
-        languageTools:AddButton({
-            Title = "Install JSON",
-            Description = "Install the JSON above.",
-            Callback = function()
-                local pack, importError = assets:ImportLanguage(settings.LanguagePackUrl)
-                if not pack then
-                    safeNotify(library, "Language pack", "Install failed", importError)
-                    return
-                end
-                settings.LanguagePack = pack.Id
-                settings.Language = pack.Locale
-                library.CurrentLanguage = pack.Locale
-                i18n:SetLanguage(pack.Locale)
-                if languageDropdown then
-                    languageDropdown:SetValues(i18n:GetLanguageOptions())
-                    languageDropdown:SetValue(getLanguageValue(i18n, pack.Locale))
-                end
-                syncModalUi(true)
-                refreshLanguagePacks(installedPackDropdown)
-                self:SaveSettings()
-                safeNotify(library, "Language pack", "Installed " .. pack.Name, "Locale: " .. pack.Locale)
+        local function doInstallJson()
+            local pack, importError = assets:ImportLanguage(settings.LanguagePackUrl)
+            if not pack then
+                safeNotify(library, "Language pack", "Install failed", importError)
+                return
             end
-        })
-
-        languageTools:AddButton({
-            Title = "Export JSON",
-            Description = "Copy a blank template.",
-            Callback = function()
-                local targetLocale = settings.TemplateLocale:match("^%s*(.-)%s*$")
-                if targetLocale == "" then
-                    targetLocale = settings.Language
-                end
-                local export, exportError = assets:ExportDefaultLanguagePack(targetLocale)
-                if not export then
-                    safeNotify(library, "Language template", "Export failed", exportError)
-                    return
-                end
-                local delivery = {}
-                if export.Copied then
-                    table.insert(delivery, "Copied to clipboard.")
-                end
-                if export.Path then
-                    table.insert(delivery, "Saved: " .. export.Path)
-                elseif export.SaveError then
-                    table.insert(delivery, "File save failed: " .. tostring(export.SaveError))
-                end
-                safeNotify(
-                    library,
-                    "Language template",
-                    export.Copied and "Copied" or "Template exported",
-                    #delivery > 0 and table.concat(delivery, "\n")
-                        or "Generated, but this executor cannot save files or copy to clipboard."
-                )
+            settings.LanguagePack = pack.Id
+            settings.Language = pack.Locale
+            library.CurrentLanguage = pack.Locale
+            i18n:SetLanguage(pack.Locale)
+            if languageDropdown then
+                syncingUi = true
+                languageDropdown:SetValues(i18n:GetLanguageOptions())
+                languageDropdown:SetValue(getLanguageValue(i18n, pack.Locale))
+                syncingUi = false
             end
-        })
+            syncModalUi(true)
+            refreshLanguagePacks(installedPackDropdownRef)
+            self:SaveSettings()
+            safeNotify(library, "Language pack", "Installed " .. pack.Name, "Locale: " .. pack.Locale, "check-circle-2")
+        end
 
-        languageTools:AddButton({
-            Title = "Update pack",
-            Description = "Download it again.",
-            Callback = function()
-                local pack, updateError = assets:UpdateLanguage(settings.LanguagePack)
-                if not pack then
-                    safeNotify(library, "Language pack", "Update failed", updateError)
-                    return
+        local function doExportJson()
+            local targetLocale = settings.TemplateLocale:match("^%s*(.-)%s*$")
+            if targetLocale == "" then
+                targetLocale = settings.Language
+            end
+            local export, exportError = assets:ExportDefaultLanguagePack(targetLocale)
+            if not export then
+                safeNotify(library, "Language template", "Export failed", exportError)
+                return
+            end
+            local delivery = {}
+            if export.Copied then
+                table.insert(delivery, "Copied to clipboard.")
+            end
+            if export.Path then
+                table.insert(delivery, "Saved: " .. export.Path)
+            elseif export.SaveError then
+                table.insert(delivery, "File save failed: " .. tostring(export.SaveError))
+            end
+            safeNotify(
+                library,
+                "Language template",
+                export.Copied and "Copied" or "Template exported",
+                #delivery > 0 and table.concat(delivery, "\n")
+                    or "Generated, but this executor cannot save files or copy to clipboard.",
+                "copy"
+            )
+        end
+
+        local function doUpdatePack()
+            local pack, updateError = assets:UpdateLanguage(settings.LanguagePack)
+            if not pack then
+                safeNotify(library, "Language pack", "Update failed", updateError)
+                return
+            end
+            syncModalUi(true)
+            refreshLanguagePacks(installedPackDropdownRef)
+            safeNotify(library, "Language pack", "Updated " .. pack.Name, "Version: " .. pack.Version, "refresh-cw")
+        end
+
+        local function doRemovePack()
+            local removed, removeError = assets:RemoveLanguage(settings.LanguagePack)
+            if not removed then
+                safeNotify(library, "Language pack", "Remove failed", removeError)
+                return
+            end
+            settings.LanguagePack = ""
+            syncModalUi(true)
+            refreshLanguagePacks(installedPackDropdownRef)
+            self:SaveSettings()
+            safeNotify(library, "Language pack", "Removed", nil, "trash-2")
+        end
+
+        if type(languageToolsContainer.AddActionRow) == "function" then
+            languageToolsContainer:AddActionRow("InterfaceLangActionsPrimary", {
+                Buttons = {
+                    { Title = "Install JSON", Icon = "download", Variant = "Primary", Callback = doInstallJson },
+                    { Title = "Export Template", Icon = "copy", Variant = "Secondary", Callback = doExportJson }
+                }
+            })
+            languageToolsContainer:AddActionRow("InterfaceLangActionsManage", {
+                Buttons = {
+                    { Title = "Update Pack", Icon = "refresh-cw", Variant = "Secondary", Callback = doUpdatePack },
+                    { Title = "Remove Pack", Icon = "trash-2", Variant = "Danger", Confirm = true, ConfirmText = "Confirm Remove", Callback = doRemovePack }
+                }
+            })
+        else
+            languageToolsContainer:AddButton({ Title = "Install JSON", Description = "Install the JSON above.", Callback = doInstallJson })
+            languageToolsContainer:AddButton({ Title = "Export JSON", Description = "Copy a blank template.", Callback = doExportJson })
+            languageToolsContainer:AddButton({ Title = "Update pack", Description = "Download it again.", Callback = doUpdatePack })
+            languageToolsContainer:AddButton({ Title = "Remove pack", Description = "Delete this pack.", Callback = doRemovePack })
+        end
+
+        -- Font Installer controls
+        if type(fontToolsContainer.AddCallout) == "function" then
+            fontToolsContainer:AddCallout({
+                Title = "Supported Font Sources",
+                Content = "Paste a Roblox Font Asset ID, Google Fonts link, or local .ttf file path.",
+                Variant = "Info",
+                Icon = "info",
+                Dismissible = false
+            })
+        else
+            fontToolsContainer:AddParagraph({
+                Title = "Font help",
+                Content = "Use ID, Google Fonts, or a font file."
+            })
+        end
+
+        if type(fontToolsContainer.AddSegmentedControl) == "function" then
+            fontTargetControlRef = fontToolsContainer:AddSegmentedControl("InterfaceFontTarget", {
+                Title = "Apply font to",
+                Description = "Choose which scripts to override.",
+                Values = {"Both", "Latin", "Thai"},
+                Default = settings.FontTarget,
+                Callback = function(value)
+                    if syncingUi then return end
+                    settings.FontTarget = value
+                    self:SaveSettings()
                 end
-                syncModalUi(true)
-                refreshLanguagePacks(installedPackDropdown)
-                safeNotify(library, "Language pack", "Updated " .. pack.Name, "Version: " .. pack.Version)
-            end
-        })
-
-        languageTools:AddButton({
-            Title = "Remove pack",
-            Description = "Delete this pack.",
-            Callback = function()
-                local removed, removeError = assets:RemoveLanguage(settings.LanguagePack)
-                if not removed then
-                    safeNotify(library, "Language pack", "Remove failed", removeError)
-                    return
+            })
+        else
+            fontTargetControlRef = fontToolsContainer:AddDropdown("InterfaceFontTarget", {
+                Title = "Apply font to",
+                Description = "Choose the text to change.",
+                Values = {"Both", "Latin", "Thai"},
+                Default = settings.FontTarget,
+                Callback = function(value)
+                    if syncingUi then return end
+                    settings.FontTarget = value
+                    self:SaveSettings()
                 end
-                settings.LanguagePack = ""
-                syncModalUi(true)
-                refreshLanguagePacks(installedPackDropdown)
-                self:SaveSettings()
-                safeNotify(library, "Language pack", "Removed")
-            end
-        })
+            })
+        end
 
-        local typography = generalTarget:AddSection(
-            useModal and { Title = "Font tools", Icon = "wand-2" } or "Font tools"
-        )
-        table.insert(advancedSections, typography)
-        setAdvancedVisible(settings.AdvancedTools)
-        typography:AddParagraph({
-            Title = "Font help",
-            Content = "Use ID, Google Fonts, or a font file."
-        })
-
-        typography:AddDropdown("InterfaceFontTarget", {
-            Title = "Apply font to",
-            Description = "Choose the text to change.",
-            Values = {"Both", "Latin", "Thai"},
-            Default = settings.FontTarget,
-            Callback = function(value)
-                settings.FontTarget = value
-                self:SaveSettings()
-            end
-        })
-
-        typography:AddInput("InterfaceFontUrl", {
+        fontToolsContainer:AddInput("InterfaceFontUrl", {
             Title = "Font link / ID",
             Description = "Paste an ID, link, or file.",
             Default = settings.FontUrl,
             Placeholder = "Google Fonts link, Asset ID, or .ttf file",
             Finished = false,
             Callback = function(value)
+                if syncingUi then return end
                 settings.FontUrl = value
                 saveSoon()
             end
         })
 
-        typography:AddButton({
-            Title = "Install font",
-            Description = "Install and use this font.",
-            Callback = function()
-                local profile, installError = assets:ImportFont(settings.FontUrl, {
-                    Target = FONT_TARGET_VALUES[settings.FontTarget] or "both",
-                    MergeProfile = settings.FontProfile ~= "default" and settings.FontProfile or nil
-                })
-                if not profile then
-                    safeNotify(library, "Font", "Install failed", installError)
-                    return
+        local function doInstallFont()
+            local profile, installError = assets:ImportFont(settings.FontUrl, {
+                Target = FONT_TARGET_VALUES[settings.FontTarget] or "both",
+                MergeProfile = settings.FontProfile ~= "default" and settings.FontProfile or nil
+            })
+            if not profile then
+                safeNotify(library, "Font", "Install failed", installError)
+                return
+            end
+            settings.FontProfile = profile.Id
+            refreshFontProfiles()
+            syncModalUi(false)
+            self:SaveSettings()
+            safeNotify(library, "Font", "Installed " .. profile.Name, "Applied to the current UI.", "check-circle-2")
+        end
+
+        local function doDefaultFont()
+            settings.FontProfile = "default"
+            fonts:ApplyProfile("default")
+            refreshFontProfiles()
+            syncModalUi(false)
+            self:SaveSettings()
+            safeNotify(library, "Font", "Script default font restored", nil, "rotate-ccw")
+        end
+
+        local function doRemoveFont()
+            local removed, removeError = assets:RemoveFont(settings.FontProfile)
+            if not removed then
+                safeNotify(library, "Font", "Remove failed", removeError)
+                return
+            end
+            settings.FontProfile = "default"
+            refreshFontProfiles()
+            syncModalUi(false)
+            self:SaveSettings()
+            safeNotify(library, "Font", "Profile removed", nil, "trash-2")
+        end
+
+        if type(fontToolsContainer.AddActionRow) == "function" then
+            fontToolsContainer:AddActionRow("InterfaceFontActions", {
+                Buttons = {
+                    { Title = "Install", Icon = "download", Variant = "Primary", Callback = doInstallFont },
+                    { Title = "Default", Icon = "rotate-ccw", Variant = "Secondary", Callback = doDefaultFont },
+                    { Title = "Remove", Icon = "trash-2", Variant = "Danger", Confirm = true, ConfirmText = "Confirm", Callback = doRemoveFont }
+                }
+            })
+        else
+            fontToolsContainer:AddButton({ Title = "Install font", Description = "Install and use this font.", Callback = doInstallFont })
+            fontToolsContainer:AddButton({ Title = "Default font", Description = "Use the script font.", Callback = doDefaultFont })
+            fontToolsContainer:AddButton({ Title = "Remove font", Description = "Remove this profile.", Callback = doRemoveFont })
+        end
+
+        if not useModernToolsLayout then
+            setAdvancedVisible(settings.AdvancedTools)
+        end
+
+        -- Sync helper used by Reload / ResetSettings / SetSetting
+        local function syncAllControls(refreshLangs)
+            settings = self.Settings
+            syncingUi = true
+            pcall(function()
+                if translationToggleRef and type(translationToggleRef.SetValue) == "function" then
+                    translationToggleRef:SetValue(settings.TranslationEnabled == true, true, true)
                 end
-                settings.FontProfile = profile.Id
-                refreshFontProfiles()
-                syncModalUi(false)
-                self:SaveSettings()
-                safeNotify(library, "Font", "Installed " .. profile.Name, "Applied to the current UI.")
-            end
-        })
-
-        typography:AddButton({
-            Title = "Default font",
-            Description = "Use the script font.",
-            Callback = function()
-                settings.FontProfile = "default"
-                fonts:ApplyProfile("default")
-                refreshFontProfiles()
-                syncModalUi(false)
-                self:SaveSettings()
-                safeNotify(library, "Font", "Script default font restored")
-            end
-        })
-
-        typography:AddButton({
-            Title = "Remove font",
-            Description = "Remove this profile.",
-            Callback = function()
-                local removed, removeError = assets:RemoveFont(settings.FontProfile)
-                if not removed then
-                    safeNotify(library, "Font", "Remove failed", removeError)
-                    return
+                if fontTuningToggleRef and type(fontTuningToggleRef.SetValue) == "function" then
+                    fontTuningToggleRef:SetValue(settings.FontTuningEnabled == true, true, true)
                 end
-                settings.FontProfile = "default"
-                refreshFontProfiles()
-                syncModalUi(false)
-                self:SaveSettings()
-                safeNotify(library, "Font", "Profile removed")
-            end
-        })
-
-        setAdvancedVisible(settings.AdvancedTools)
+                if advancedToolsToggleRef and type(advancedToolsToggleRef.SetValue) == "function" then
+                    advancedToolsToggleRef:SetValue(settings.AdvancedTools == true, true, true)
+                end
+                if fontWeightDropdownRef and type(fontWeightDropdownRef.SetValue) == "function" then
+                    fontWeightDropdownRef:SetValue(settings.FontWeight, true)
+                end
+                if fontStyleControlRef and type(fontStyleControlRef.SetValue) == "function" then
+                    fontStyleControlRef:SetValue(settings.FontStyle, true)
+                end
+                if fontSizeSliderRef and type(fontSizeSliderRef.SetValue) == "function" then
+                    fontSizeSliderRef:SetValue(settings.FontSizeScale, true)
+                end
+                if fontLineSliderRef and type(fontLineSliderRef.SetValue) == "function" then
+                    fontLineSliderRef:SetValue(settings.FontLineHeight, true)
+                end
+                if fontStrokeControlRef and type(fontStrokeControlRef.SetValue) == "function" then
+                    fontStrokeControlRef:SetValue(settings.FontStroke, true)
+                end
+                if fontTargetControlRef and type(fontTargetControlRef.SetValue) == "function" then
+                    fontTargetControlRef:SetValue(settings.FontTarget, true)
+                end
+                if modeDropdownRef and type(modeDropdownRef.SetValue) == "function" then
+                    modeDropdownRef:SetValue(modeDisplay(settings.TranslationMode), true)
+                end
+                if languageDropdown and type(languageDropdown.SetValue) == "function" then
+                    languageDropdown:SetValue(getLanguageValue(i18n, settings.Language), true)
+                end
+            end)
+            syncingUi = false
+            pcall(refreshFontProfiles)
+            refreshLanguagePacks(installedPackDropdownRef)
+            setFontAppearanceVisible(settings.FontTuningEnabled)
+            setAdvancedVisible(settings.AdvancedTools)
+            updateSectionBadges(assets)
+            syncModalUi(refreshLangs)
+        end
+        self._SyncUI = syncAllControls
 
         if useModal and configTarget then
             local storageSection = configTarget:AddSection({
                 Title = "Interface Storage",
-                Icon = "hard-drive"
+                Icon = "hard-drive",
+                Style = "Card",
+                Badge = capabilities.FileSystem and "SYNCED" or "MEMORY"
             })
+            local scopeLabel = tostring((self.Configuration and self.Configuration.ScriptId) or "shared")
+            local initialPacks = 0
+            pcall(function()
+                initialPacks = #assets:GetLanguagePacks()
+            end)
+
+            if type(storageSection.AddStatGrid) == "function" then
+                storageStatGridRef = storageSection:AddStatGrid("InterfaceStorageStats", {
+                    Columns = 3,
+                    CardHeight = 60,
+                    Stats = {
+                        {
+                            Key = "Storage",
+                            Label = "Disk Save",
+                            Value = capabilities.FileSystem and "Ready" or "Memory",
+                            Icon = "hard-drive",
+                            Color = capabilities.FileSystem and COLOR_OK or COLOR_WARN
+                        },
+                        {
+                            Key = "Scope",
+                            Label = "Script Scope",
+                            Value = scopeLabel,
+                            Icon = "layers",
+                            Color = COLOR_INFO
+                        },
+                        {
+                            Key = "Packs",
+                            Label = "Lang Packs",
+                            Value = tostring(initialPacks),
+                            Icon = "globe",
+                            Color = COLOR_INFO
+                        }
+                    }
+                })
+            end
+
             storageSection:AddParagraph({
-                Title = "Storage Scope",
-                Content = string.format(
-                    "Folder: %s\nScope: %s\nDisk Save: %s",
-                    tostring(self.Folder or "FluentSettings"),
-                    tostring((self.Configuration and self.Configuration.ScriptId) or "shared"),
-                    capabilities.FileSystem and "Ready" or "Session only"
-                )
+                Title = "Folder Path",
+                Content = string.format("%s/options.json  |  i18n/%s/interface.json", tostring(self.Folder or "FluentSettings"), scopeLabel)
             })
-            storageSection:AddButton({
-                Title = "Save Interface Settings",
-                Description = "Write current theme, language, font, and keybind settings to disk.",
-                Callback = function()
-                    self:SaveSettings()
-                    safeNotify(library, "Interface", "Saved interface settings", tostring(self.Folder or "FluentSettings"))
+
+            local function doSave()
+                local ok, err = self:SaveSettings()
+                if ok then
+                    safeNotify(library, "Interface", "Saved interface settings", tostring(self.Folder or "FluentSettings"), "save")
+                else
+                    safeNotify(library, "Interface", "Save failed", tostring(err or "Unknown error"))
                 end
-            })
-            storageSection:AddButton({
-                Title = "Reload Saved Settings",
-                Description = "Reload saved interface settings from disk and sync UI controls.",
-                Callback = function()
-                    self:LoadSettings()
-                    settings = self.Settings
-                    applyCoreSettings(library, settings)
-                    self:ApplyCustomizationSettings()
-                    pcall(refreshFontProfiles)
-                    refreshLanguagePacks(installedPackDropdown)
-                    syncModalUi(true)
-                    safeNotify(library, "Interface", "Reloaded saved settings")
-                end
-            })
+            end
+
+            local function doReload()
+                self:LoadSettings()
+                settings = self.Settings
+                applyCoreSettings(library, settings)
+                self:ApplyCustomizationSettings()
+                syncAllControls(true)
+                safeNotify(library, "Interface", "Reloaded saved settings", nil, "refresh-cw")
+            end
+
+            local function doResetAll()
+                self:ResetSettings()
+                safeNotify(library, "Interface", "Restored all interface defaults", nil, "rotate-ccw")
+            end
+
+            if type(storageSection.AddActionRow) == "function" then
+                storageSection:AddActionRow("InterfaceStorageActions", {
+                    Buttons = {
+                        { Title = "Save", Icon = "save", Variant = "Primary", Callback = doSave },
+                        { Title = "Reload", Icon = "refresh-cw", Variant = "Secondary", Callback = doReload },
+                        { Title = "Reset All", Icon = "rotate-ccw", Variant = "Danger", Confirm = true, ConfirmText = "Confirm Reset", Callback = doResetAll }
+                    }
+                })
+            else
+                storageSection:AddButton({ Title = "Save Interface Settings", Description = "Write current preferences to disk.", Callback = doSave })
+                storageSection:AddButton({ Title = "Reload Saved Settings", Description = "Reload saved preferences from disk.", Callback = doReload })
+            end
         end
 
         -- Public convenience for callers that need to refresh the selector
         -- after installing a pack programmatically.
         self.RefreshLanguagePacks = function()
-            refreshLanguagePacks(installedPackDropdown)
+            refreshLanguagePacks(installedPackDropdownRef)
         end
 
+        updateSectionBadges(assets)
         scheduleLegacyTabLauncher()
     end
 
