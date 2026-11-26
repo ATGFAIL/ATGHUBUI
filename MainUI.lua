@@ -3944,10 +3944,11 @@ local moduleFunctions = {
 				self.SidebarSearch.Visible = not enabled
 			end
 			if self.Window and self.Window.TabArea then
-				-- Reserve 48px at the bottom of the sidebar for the collapse/expand footer button.
+				-- Reserve space at the bottom of the sidebar for the collapse button + profile card.
 				local top = (self.Sidebar and not enabled) and 92 or 56
+				local reserve = self.Window.SidebarFooterReserve or 98
 				self.Window.TabArea.Position = UDim2.new(0, 12, 0, top)
-				self.Window.TabArea.Size = UDim2.new(0, self.Window.TabWidth, 1, -(top + 48))
+				self.Window.TabArea.Size = UDim2.new(0, self.Window.TabWidth, 1, -(top + reserve))
 			end
 			if self.Panel then
 				self.Panel.Size = UDim2.new(0, enabled and 230 or self.OriginalTabWidth, 0, 260)
@@ -4683,8 +4684,9 @@ local moduleFunctions = {
 				local text = self.SidebarSearch.Text
 				self:QueueSidebarSearch(text)
 			end)
+			local reserve = window.SidebarFooterReserve or 98
 			window.TabArea.Position = UDim2.new(0, 12, 0, 92)
-			window.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -104)
+			window.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -(92 + reserve))
 			self:CreatePanel()
 		end
 		-- The command palette was replaced by the sidebar search, which shows
@@ -8961,11 +8963,13 @@ local moduleFunctions = {
 				{New("UICorner", {CornerRadius = UDim.new(0, 8)}), tabHoverStroke}
 			)
 			local showProfileCard = config.ShowProfileCard ~= false
+			local footerReserve = showProfileCard and 98 or 50
+			Window.SidebarFooterReserve = footerReserve
 			local tabFrame =
 				New(
 					"Frame",
 					{
-						Size = UDim2.new(0, config.TabWidth, 1, showProfileCard and -148 or -104),
+						Size = UDim2.new(0, config.TabWidth, 1, -(56 + footerReserve)),
 						Position = UDim2.new(0, 12, 0, 56),
 						BackgroundTransparency = 1,
 						ClipsDescendants = true
