@@ -3332,7 +3332,12 @@ local moduleFunctions = {
 				ProfileMenuService:Toggle(anchorGui)
 			end
 		end
+		local settingPrivacyMode = false
 		function Library.SetPrivacyMode(_, hidden, alias, hideAvatar)
+			if settingPrivacyMode then
+				return Library.PrivacyMode
+			end
+			settingPrivacyMode = true
 			if hidden ~= nil then
 				Library.PrivacyMode.Hidden = hidden == true
 			end
@@ -3343,14 +3348,15 @@ local moduleFunctions = {
 				Library.PrivacyMode.HideAvatar = hideAvatar == true
 			end
 			if Library.Window and type(Library.Window.UpdateProfileCard) == "function" then
-				Library.Window.UpdateProfileCard()
+				pcall(Library.Window.UpdateProfileCard)
 			end
 			if ProfileMenuService then
-				ProfileMenuService:Refresh()
+				pcall(ProfileMenuService.Refresh, ProfileMenuService)
 			end
-			if SettingsModalService and SettingsModalService.Opened then
-				SettingsModalService:SyncValues()
+			if SettingsModalService and SettingsModalService.Opened and not SettingsModalService._Syncing then
+				pcall(SettingsModalService.SyncValues, SettingsModalService)
 			end
+			settingPrivacyMode = false
 			return Library.PrivacyMode
 		end
 		function Library.GetPrivacyMode(_)
@@ -3457,12 +3463,24 @@ local moduleFunctions = {
 			table.insert(unloadHandlers, handler)
 			return handler
 		end
+		local safeCallbackDepth = 0
+		local lastErrorNotifyAt = 0
 		function Library.SafeCallback(_, callback, ...)
 			if not callback then
 				return
 			end
+			if safeCallbackDepth >= 16 then
+				return
+			end
+			safeCallbackDepth += 1
 			local ok, err = pcall(callback, ...)
+			safeCallbackDepth -= 1
 			if not ok then
+				local now = os.clock()
+				if (now - lastErrorNotifyAt) < 0.5 then
+					return
+				end
+				lastErrorNotifyAt = now
 				err = tostring(err)
 				local _, matchEnd = err:find ":%d+: "
 				if not matchEnd then
@@ -13630,8 +13648,8 @@ local moduleFunctions = {
 					Type = "Input"
 				},
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
-			inputFrame.TitleLabel.Size = UDim2.new(1, -180, 0, 14)
-			inputFrame.DescLabel.Size = UDim2.new(1, -180, 0, 14)
+			inputFrame.TitleLabel.Size = UDim2.new(1, -180, 0, 0)
+			inputFrame.DescLabel.Size = UDim2.new(1, -180, 0, 0)
 			Input.SetTitle = inputFrame.SetTitle
 			Input.SetDesc = inputFrame.SetDesc
 			Input.Frame = inputFrame.Frame
@@ -13642,7 +13660,9 @@ local moduleFunctions = {
 			textbox.Input.Text = config.Default or ""
 			textbox.Input.PlaceholderText = config.Placeholder or ""
 			local inputBox = textbox.Input
-			function Input.SetValue(_self, text)
+			local settingProgrammatically = false
+			function Input.SetValue(_self, text, silent)
+				text = tostring(text or "")
 				if config.MaxLength and #text > config.MaxLength then
 					text = text:sub(1, config.MaxLength)
 				end
@@ -13652,9 +13672,15 @@ local moduleFunctions = {
 					end
 				end
 				Input.Value = text
-				inputBox.Text = text
-				Library:SafeCallback(Input.Callback, Input.Value)
-				Library:SafeCallback(Input.Changed, Input.Value)
+				if inputBox.Text ~= text then
+					settingProgrammatically = true
+					inputBox.Text = text
+					settingProgrammatically = false
+				end
+				if not silent then
+					Library:SafeCallback(Input.Callback, Input.Value)
+					Library:SafeCallback(Input.Changed, Input.Value)
+				end
 			end
 			if Input.Finished then
 				AddSignal(
@@ -13671,6 +13697,9 @@ local moduleFunctions = {
 				AddSignal(
 					inputBox:GetPropertyChangedSignal "Text",
 					function()
+						if settingProgrammatically then
+							return
+						end
 						Input:SetValue(inputBox.Text)
 						-- Text also changes when a script calls SetValue.
 						if inputBox:IsFocused() then
@@ -13950,8 +13979,8 @@ local moduleFunctions = {
 				},
 			false,
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
-			sliderFrame.TitleLabel.Size = UDim2.new(1, -210, 0, 14)
-			sliderFrame.DescLabel.Size = UDim2.new(1, -210, 0, 14)
+			sliderFrame.TitleLabel.Size = UDim2.new(1, -210, 0, 0)
+			sliderFrame.DescLabel.Size = UDim2.new(1, -210, 0, 0)
 			Slider.SetTitle = sliderFrame.SetTitle
 			Slider.SetDesc = sliderFrame.SetDesc
 			Slider.Frame = sliderFrame.Frame
@@ -14168,15 +14197,17 @@ local moduleFunctions = {
 				Slider.Changed = callback
 				callback(Slider.Value)
 			end
-			function Slider.SetValue(target, value)
+			function Slider.SetValue(target, value, silent)
 				target.Value = Library:Round(math.clamp(value, Slider.Min, Slider.Max), Slider.Rounding)
 				local range = Slider.Max - Slider.Min
 				local ratio = range ~= 0 and ((target.Value - Slider.Min) / range) or 0
 				sliderDot.Position = UDim2.new(ratio, 0, 0.5, 0)
 				sliderFill.Size = UDim2.fromScale(ratio, 1)
 				sliderDisplay.Text = formatValue(target.Value)
-				Library:SafeCallback(Slider.Callback, target.Value)
-				Library:SafeCallback(Slider.Changed, target.Value)
+				if not silent then
+					Library:SafeCallback(Slider.Callback, target.Value)
+					Library:SafeCallback(Slider.Changed, target.Value)
+				end
 			end
 			function Slider.Destroy(_self)
 				if dragging then
@@ -14223,8 +14254,8 @@ local moduleFunctions = {
 					Addons = {}
 				},
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
-			toggleFrame.TitleLabel.Size = UDim2.new(1, -60, 0, 14)
-			toggleFrame.DescLabel.Size = UDim2.new(1, -60, 0, 14)
+			toggleFrame.TitleLabel.Size = UDim2.new(1, -60, 0, 0)
+			toggleFrame.DescLabel.Size = UDim2.new(1, -60, 0, 0)
 			Toggle.SetTitle = toggleFrame.SetTitle
 			Toggle.SetDesc = toggleFrame.SetDesc
 			Toggle.SetBadge = toggleFrame.SetBadge
@@ -14296,8 +14327,8 @@ local moduleFunctions = {
 					local scale = Creator.GetEffectiveScale(addonHolder)
 					local usedW = math.ceil(addonLayout.AbsoluteContentSize.X / scale)
 					local rightReserve = 66 + usedW
-					toggleFrame.TitleLabel.Size = UDim2.new(1, -rightReserve, 0, 14)
-					toggleFrame.DescLabel.Size = UDim2.new(1, -rightReserve, 0, 14)
+					toggleFrame.TitleLabel.Size = UDim2.new(1, -rightReserve, 0, 0)
+					toggleFrame.DescLabel.Size = UDim2.new(1, -rightReserve, 0, 0)
 				end
 				Creator.AddSignal(addonLayout:GetPropertyChangedSignal("AbsoluteContentSize"), syncLabelBudget)
 				Creator.RegisterDPIScale(addonHolder, function()
@@ -14574,12 +14605,14 @@ local moduleFunctions = {
 				end
 			end
 
-			function Toggle.SetValue(_self, value, instant)
+			function Toggle.SetValue(_self, value, instant, silent)
 				value = not (not value)
 				Toggle.Value = value
 				applyVisual(value, instant == true)
-				Library:SafeCallback(Toggle.Callback, Toggle.Value)
-				Library:SafeCallback(Toggle.Changed, Toggle.Value)
+				if not silent then
+					Library:SafeCallback(Toggle.Callback, Toggle.Value)
+					Library:SafeCallback(Toggle.Changed, Toggle.Value)
+				end
 				if type(Library._NotifyKeybindChanged) == "function" and #Toggle.Addons > 0 then
 					Library._NotifyKeybindChanged()
 				end
@@ -26260,6 +26293,8 @@ local moduleFunctions = {
 
 			local built = false
 			local building = false
+			local syncing = false
+			Modal._Syncing = false
 			local backdrop, modalWrapper, modalCard, modalShadow, modalScale, modalDpiScale
 			local settingsBlur = nil
 			local navScroll, navInner, navListLayout, navEmptyLabel
@@ -26270,6 +26305,7 @@ local moduleFunctions = {
 			local navGroupHeaders = {}
 			local pageHolders = {}
 			local controlRefs = {}
+			Modal._Controls = controlRefs
 			local animGen = 0
 			local cardYOffset = 0
 			local activeIndicatorY = 0
@@ -26583,6 +26619,8 @@ local moduleFunctions = {
 			end
 
 			local function populateControls()
+				syncing = true
+				Modal._Syncing = true
 				-- 1) General (Language, Font, DPI Scale, Reduced Motion)
 				local pGen = pageHolders["General"].Api
 				local secGenLang = pGen:AddSection({Title = "Language & Typography", Icon = "globe"})
@@ -26592,6 +26630,7 @@ local moduleFunctions = {
 					Values = {"English", "Thai", "Vietnamese", "Spanish"},
 					Default = getLanguageDisplay(Library.CurrentLanguage),
 					Callback = function(choice)
+						if syncing then return end
 						local codeMap = {English = "en", Thai = "th", Vietnamese = "vi", Spanish = "es"}
 						local code = codeMap[choice] or "en"
 						Library.CurrentLanguage = code
@@ -26610,6 +26649,7 @@ local moduleFunctions = {
 					Values = {"Inter", "Builder Sans", "Gotham"},
 					Default = getFontLabel(currentProfileId),
 					Callback = function(label)
+						if syncing then return end
 						local map = {["Inter"] = "default", ["Builder Sans"] = "builder-sans", ["Gotham"] = "gotham"}
 						if type(Library.SetFont) == "function" then
 							Library:SetFont(map[label] or "default")
@@ -26630,6 +26670,7 @@ local moduleFunctions = {
 					Rounding = 2,
 					Suffix = "x",
 					Callback = function(v)
+						if syncing then return end
 						Library:SetDPIScale(v)
 					end
 				})
@@ -26638,6 +26679,7 @@ local moduleFunctions = {
 					Description = "Use instant transitions instead of spring animations",
 					Default = Library.ReducedMotion == true,
 					Callback = function(v)
+						if syncing then return end
 						Library:SetReducedMotion(v)
 					end
 				})
@@ -26651,6 +26693,7 @@ local moduleFunctions = {
 					Values = Library.Themes,
 					Default = Library.Theme,
 					Callback = function(th)
+						if syncing then return end
 						if th and th ~= Library.Theme then
 							Library:SetTheme(th)
 							if Library.ProfileMenu then
@@ -26666,6 +26709,7 @@ local moduleFunctions = {
 					Description = "Depth-of-field backdrop frosted glass effect",
 					Default = Library.Acrylic == true,
 					Callback = function(v)
+						if syncing then return end
 						if Library.UseAcrylic then
 							Library:ToggleAcrylic(v)
 						end
@@ -26676,6 +26720,7 @@ local moduleFunctions = {
 					Description = "Semi-translucent window surface",
 					Default = Library.Transparency ~= false,
 					Callback = function(v)
+						if syncing then return end
 						Library.Transparency = v == true
 						Library:ToggleTransparency(v)
 					end
@@ -26689,6 +26734,7 @@ local moduleFunctions = {
 					Description = "Compact icon-only navigation rail (Ctrl+B)",
 					Default = Library.Window and Library.Window.SidebarCollapsed == true or false,
 					Callback = function(v)
+						if syncing then return end
 						if Library.Window and Library.Window.SidebarCollapsed ~= (v == true) then
 							Library.Window:SetSidebarCollapsed(v == true)
 						end
@@ -26700,6 +26746,7 @@ local moduleFunctions = {
 					Values = {"BottomRight", "BottomLeft", "TopRight", "TopLeft"},
 					Default = Library.NotifySide or "BottomRight",
 					Callback = function(corner)
+						if syncing then return end
 						if corner then
 							Library:SetNotifySide(corner)
 						end
@@ -26712,6 +26759,7 @@ local moduleFunctions = {
 					Description = "Keep floating pill visible even while window is open",
 					Default = Library.FloatingPill and Library.FloatingPill.AlwaysVisible == true or false,
 					Callback = function(v)
+						if syncing then return end
 						if Library.FloatingPill then
 							Library.FloatingPill.AlwaysVisible = v == true
 							Library.FloatingPill:SetVisible((v == true) or (Library.Window and Library.Window.Minimized))
@@ -26723,6 +26771,7 @@ local moduleFunctions = {
 					Description = "Toggle Watermark and Active Keybinds overlay",
 					Default = true,
 					Callback = function(v)
+						if syncing then return end
 						for _, hud in ipairs(Library._ActiveHUDs or {}) do
 							if hud and type(hud.SetVisible) == "function" then
 								hud:SetVisible(v == true)
@@ -26740,9 +26789,12 @@ local moduleFunctions = {
 					Description = "Mask your Roblox name and username on the sidebar profile card",
 					Default = privState.Hidden == true,
 					Callback = function(v)
+						if syncing then return end
 						if type(Library.SetPrivacyMode) == "function" then
 							local cur = Library:GetPrivacyMode()
-							Library:SetPrivacyMode(v == true, cur.Alias, cur.HideAvatar)
+							if cur.Hidden ~= (v == true) then
+								Library:SetPrivacyMode(v == true, cur.Alias, cur.HideAvatar)
+							end
 						end
 					end
 				})
@@ -26751,9 +26803,12 @@ local moduleFunctions = {
 					Description = "Replace avatar picture with a privacy shield icon",
 					Default = privState.HideAvatar == true,
 					Callback = function(v)
+						if syncing then return end
 						if type(Library.SetPrivacyMode) == "function" then
 							local cur = Library:GetPrivacyMode()
-							Library:SetPrivacyMode(cur.Hidden, cur.Alias, v == true)
+							if cur.HideAvatar ~= (v == true) then
+								Library:SetPrivacyMode(cur.Hidden, cur.Alias, v == true)
+							end
 						end
 					end
 				})
@@ -26764,10 +26819,14 @@ local moduleFunctions = {
 					Placeholder = "Anonymous",
 					Finished = true,
 					Callback = function(txt)
+						if syncing then return end
 						if type(Library.SetPrivacyMode) == "function" then
 							local cur = Library:GetPrivacyMode()
 							local clean = tostring(txt or ""):gsub("^%s+", ""):gsub("%s+$", "")
-							Library:SetPrivacyMode(cur.Hidden, clean ~= "" and clean or "Anonymous", cur.HideAvatar)
+							local nextAlias = clean ~= "" and clean or "Anonymous"
+							if cur.Alias ~= nextAlias then
+								Library:SetPrivacyMode(cur.Hidden, nextAlias, cur.HideAvatar)
+							end
 						end
 					end
 				})
@@ -26837,6 +26896,8 @@ local moduleFunctions = {
 						}
 					}
 				})
+				syncing = false
+				Modal._Syncing = false
 			end
 
 			local function updateModalBounds()
@@ -27489,35 +27550,70 @@ local moduleFunctions = {
 			end
 
 			function Modal:SyncValues()
-				if not built or Modal.Destroyed then
+				if syncing or not built or Modal.Destroyed then
 					return
 				end
+				syncing = true
+				Modal._Syncing = true
 				pcall(function()
-					if controlRefs.ThemeDropdown then controlRefs.ThemeDropdown:SetValue(Library.Theme, true) end
+					if controlRefs.ThemeDropdown and controlRefs.ThemeDropdown.Value ~= Library.Theme then
+						controlRefs.ThemeDropdown:SetValue(Library.Theme, true)
+					end
 					if controlRefs.FontPreset and Library.Fonts then
-						controlRefs.FontPreset:SetValue(getFontLabel(Library.Fonts.CurrentProfile), true)
+						local targetFont = getFontLabel(Library.Fonts.CurrentProfile)
+						if controlRefs.FontPreset.Value ~= targetFont then
+							controlRefs.FontPreset:SetValue(targetFont, true)
+						end
 					end
-					if controlRefs.AcrylicToggle then controlRefs.AcrylicToggle:SetValue(Library.Acrylic == true, true) end
-					if controlRefs.TransparencyToggle then controlRefs.TransparencyToggle:SetValue(Library.Transparency ~= false, true) end
-					if controlRefs.DpiSlider then controlRefs.DpiSlider:SetValue(Library.DPIScale or 1.0, true) end
-					if controlRefs.ReducedMotion then controlRefs.ReducedMotion:SetValue(Library.ReducedMotion == true, true) end
+					if controlRefs.AcrylicToggle and controlRefs.AcrylicToggle.Value ~= (Library.Acrylic == true) then
+						controlRefs.AcrylicToggle:SetValue(Library.Acrylic == true, true, true)
+					end
+					if controlRefs.TransparencyToggle and controlRefs.TransparencyToggle.Value ~= (Library.Transparency ~= false) then
+						controlRefs.TransparencyToggle:SetValue(Library.Transparency ~= false, true, true)
+					end
+					if controlRefs.DpiSlider and controlRefs.DpiSlider.Value ~= (Library.DPIScale or 1.0) then
+						controlRefs.DpiSlider:SetValue(Library.DPIScale or 1.0, true)
+					end
+					if controlRefs.ReducedMotion and controlRefs.ReducedMotion.Value ~= (Library.ReducedMotion == true) then
+						controlRefs.ReducedMotion:SetValue(Library.ReducedMotion == true, true, true)
+					end
 					if controlRefs.SidebarCollapsed and Library.Window then
-						controlRefs.SidebarCollapsed:SetValue(Library.Window.SidebarCollapsed == true, true)
+						local targetCol = Library.Window.SidebarCollapsed == true
+						if controlRefs.SidebarCollapsed.Value ~= targetCol then
+							controlRefs.SidebarCollapsed:SetValue(targetCol, true, true)
+						end
 					end
-					if controlRefs.NotifySide then controlRefs.NotifySide:SetValue(Library.NotifySide or "BottomRight", true) end
+					if controlRefs.NotifySide and controlRefs.NotifySide.Value ~= (Library.NotifySide or "BottomRight") then
+						controlRefs.NotifySide:SetValue(Library.NotifySide or "BottomRight", true)
+					end
 					if controlRefs.AlwaysPill and Library.FloatingPill then
-						controlRefs.AlwaysPill:SetValue(Library.FloatingPill.AlwaysVisible == true, true)
+						local targetPill = Library.FloatingPill.AlwaysVisible == true
+						if controlRefs.AlwaysPill.Value ~= targetPill then
+							controlRefs.AlwaysPill:SetValue(targetPill, true, true)
+						end
 					end
 					if type(Library.GetPrivacyMode) == "function" then
 						local p = Library:GetPrivacyMode()
-						if controlRefs.HideName then controlRefs.HideName:SetValue(p.Hidden == true, true) end
-						if controlRefs.HideAvatar then controlRefs.HideAvatar:SetValue(p.HideAvatar == true, true) end
-						if controlRefs.PrivacyAlias then controlRefs.PrivacyAlias:SetValue(p.Alias or "Anonymous", true) end
+						if controlRefs.HideName and controlRefs.HideName.Value ~= (p.Hidden == true) then
+							controlRefs.HideName:SetValue(p.Hidden == true, true, true)
+						end
+						if controlRefs.HideAvatar and controlRefs.HideAvatar.Value ~= (p.HideAvatar == true) then
+							controlRefs.HideAvatar:SetValue(p.HideAvatar == true, true, true)
+						end
+						local targetAlias = p.Alias or "Anonymous"
+						if controlRefs.PrivacyAlias and controlRefs.PrivacyAlias.Value ~= targetAlias then
+							controlRefs.PrivacyAlias:SetValue(targetAlias, true)
+						end
 					end
 					if controlRefs.LangDropdown then
-						controlRefs.LangDropdown:SetValue(getLanguageDisplay(Library.CurrentLanguage), true)
+						local targetLang = getLanguageDisplay(Library.CurrentLanguage)
+						if controlRefs.LangDropdown.Value ~= targetLang then
+							controlRefs.LangDropdown:SetValue(targetLang, true)
+						end
 					end
 				end)
+				syncing = false
+				Modal._Syncing = false
 			end
 
 			function Modal:SelectTab(tabName)
