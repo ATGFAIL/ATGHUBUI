@@ -525,7 +525,10 @@ do
 
     function InterfaceManager:BuildInterfaceSection(tab, options)
         assert(self.Library, "Must set InterfaceManager.Library")
-        assert(tab, "BuildInterfaceSection requires a Settings tab")
+        if not tab and type(self.Library.SettingsModal) == "table" and type(self.Library.SettingsModal.GetConfigContainer) == "function" then
+            tab = self.Library.SettingsModal:GetConfigContainer()
+        end
+        assert(tab, "BuildInterfaceSection requires a Settings tab or SettingsModal")
         self:Configure(options)
         self:BuildFolderTree()
         self:LoadSettings()
@@ -1122,6 +1125,12 @@ do
         self.RefreshLanguagePacks = function()
             refreshLanguagePacks(installedPackDropdown)
         end
+    end
+
+    function InterfaceManager:AttachToSettingsModal(options)
+        assert(self.Library, "Must set InterfaceManager.Library")
+        local container = self.Library.SettingsModal and self.Library.SettingsModal:GetConfigContainer()
+        return self:BuildInterfaceSection(container, options)
     end
 end
 

@@ -20,7 +20,8 @@ local function showSplash()
         local logoImage = "rbxassetid://90989180960460"
         local showTitle = true
         local titleText = "ATG HUB"
-        local titleFont = Enum.Font.GothamBold
+        local okTitleFont, titleFace = pcall(Font.new, "rbxassetid://12187365364", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+        local fallbackSplashFont = Enum.Font.BuilderSansBold
         local fadeInTime = 0.35
         local holdTime = 0.8
         local fadeOutTime = 0.35
@@ -117,7 +118,11 @@ local function showSplash()
         titleShadow.Text = showTitle and titleText or ""
         titleShadow.TextColor3 = Color3.fromRGB(10, 10, 10)
         titleShadow.TextTransparency = 0.35
-        titleShadow.Font = titleFont
+        if okTitleFont and titleFace then
+            titleShadow.FontFace = titleFace
+        else
+            titleShadow.Font = fallbackSplashFont
+        end
         titleShadow.TextSize = 18
         titleShadow.Parent = center
         local title = Instance.new("TextLabel")
@@ -130,7 +135,11 @@ local function showSplash()
         title.Text = showTitle and titleText or ""
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
         title.TextStrokeTransparency = 0.7
-        title.Font = titleFont
+        if okTitleFont and titleFace then
+            title.FontFace = titleFace
+        else
+            title.Font = fallbackSplashFont
+        end
         title.TextSize = 18
         title.Parent = center
         local function applyLayout()
@@ -628,11 +637,29 @@ do
 
     FontManager.Profiles.default = {
         Id = "default",
-        Name = "Script default",
+        Name = "Inter (Default)",
         UseOriginal = true,
         BuiltIn = true
     }
-    FontManager.ProfileOrder[1] = "default"
+    FontManager.Profiles["builder-sans"] = {
+        Id = "builder-sans",
+        Name = "Builder Sans",
+        BuiltIn = true,
+        Roles = {
+            Latin = {AssetId = "rbxasset://fonts/families/BuilderSans.json"},
+            Thai = {AssetId = "rbxasset://fonts/families/BuilderSans.json"}
+        }
+    }
+    FontManager.Profiles.gotham = {
+        Id = "gotham",
+        Name = "Gotham Classic",
+        BuiltIn = true,
+        Roles = {
+            Latin = {AssetId = "rbxasset://fonts/families/GothamSSm.json"},
+            Thai = {AssetId = "rbxasset://fonts/families/GothamSSm.json"}
+        }
+    }
+    FontManager.ProfileOrder = {"default", "builder-sans", "gotham"}
 
     local I18n = {
         Registry = setmetatable({}, {__mode = "k"}),
@@ -1955,6 +1982,9 @@ do
 
     local function fontRoleForText(role, text)
         role = type(role) == "string" and role:lower() or "auto"
+        if role == "mono" or role == "code" then
+            return "Mono"
+        end
         if role == "latin" or role == "english" then
             return "Latin"
         end
@@ -2019,9 +2049,17 @@ do
         end
         self.LoadedRegistryPath = registryPath
 
-        local defaultProfile = self.Profiles.default
-        self.Profiles = {default = defaultProfile}
-        self.ProfileOrder = {"default"}
+        local builtInProfiles = {}
+        local builtInOrder = {}
+        for _, id in ipairs(self.ProfileOrder) do
+            local p = self.Profiles[id]
+            if p and p.BuiltIn then
+                builtInProfiles[id] = p
+                table.insert(builtInOrder, id)
+            end
+        end
+        self.Profiles = builtInProfiles
+        self.ProfileOrder = builtInOrder
         self.FaceCache = {}
         if not Storage:CanUseFiles() then
             return
@@ -2034,16 +2072,19 @@ do
         end
         for _, profile in ipairs(decoded.profiles) do
             if type(profile) == "table" and type(profile.Id) == "string" and type(profile.Roles) == "table" then
-                profile.Id = sanitizeSegment(profile.Id, "font")
-                -- getcustomasset returns a session-local URI. Never trust a
-                -- serialized one; rebuild the Font Family from saved files.
-                for _, role in pairs(profile.Roles) do
-                    if type(role) == "table" then
-                        role.RuntimeFamily = nil
+                local normId = sanitizeSegment(profile.Id, "font")
+                if not (self.Profiles[normId] and self.Profiles[normId].BuiltIn) then
+                    profile.Id = normId
+                    -- getcustomasset returns a session-local URI. Never trust a
+                    -- serialized one; rebuild the Font Family from saved files.
+                    for _, role in pairs(profile.Roles) do
+                        if type(role) == "table" then
+                            role.RuntimeFamily = nil
+                        end
                     end
+                    self.Profiles[profile.Id] = profile
+                    table.insert(self.ProfileOrder, profile.Id)
                 end
-                self.Profiles[profile.Id] = profile
-                table.insert(self.ProfileOrder, profile.Id)
             end
         end
     end
@@ -2479,8 +2520,8 @@ do
 
     function FontManager:RemoveProfile(profileId)
         profileId = self:GetProfileId(profileId)
-        if profileId == "default" then
-            return false, "The default font profile cannot be removed."
+        if profileId == "default" or (self.Profiles[profileId] and self.Profiles[profileId].BuiltIn) then
+            return false, "Built-in font profiles cannot be removed."
         end
         if not self.Profiles[profileId] then
             return false, "Font profile was not found."
@@ -3041,7 +3082,8 @@ local moduleTree, moduleContext = {
 					{65, "ModuleScript", {"Galaxy"}},
 					{66, "ModuleScript", {"RGB"}},
 					{67, "ModuleScript", {"Dark"}},
-					{68, "ModuleScript", {"Darker"}}
+					{68, "ModuleScript", {"Darker"}},
+					{69, "ModuleScript", {"Acryven"}}
 				}
 			},
 			{
@@ -3056,7 +3098,21 @@ local moduleTree, moduleContext = {
 					{25, "ModuleScript", {"Paragraph"}},
 					{22, "ModuleScript", {"Dropdown"}},
 					{26, "ModuleScript", {"Slider"}},
-					{24, "ModuleScript", {"Keybind"}}
+					{24, "ModuleScript", {"Keybind"}},
+					{70, "ModuleScript", {"ActionRow"}},
+					{71, "ModuleScript", {"Callout"}},
+					{72, "ModuleScript", {"CodeBlock"}},
+					{73, "ModuleScript", {"Divider"}},
+					{74, "ModuleScript", {"LiveConsole"}},
+					{75, "ModuleScript", {"PlayerSelector"}},
+					{76, "ModuleScript", {"ProgressBar"}},
+					{77, "ModuleScript", {"RangeSlider"}},
+					{78, "ModuleScript", {"SegmentedControl"}},
+					{79, "ModuleScript", {"StatGrid"}},
+					{80, "ModuleScript", {"Stepper"}},
+					{81, "ModuleScript", {"TagInput"}},
+					{90, "ModuleScript", {"Skeleton"}},
+					{91, "ModuleScript", {"Spinner"}}
 				}
 			},
 			{
@@ -3106,7 +3162,17 @@ local moduleTree, moduleContext = {
 					{8, "ModuleScript", {"Assets"}},
 					{16, "ModuleScript", {"TitleBar"}},
 					{15, "ModuleScript", {"Textbox"}},
-					{11, "ModuleScript", {"Element"}}
+					{11, "ModuleScript", {"Element"}},
+					{82, "ModuleScript", {"CommandPalette"}},
+					{83, "ModuleScript", {"ContextMenu"}},
+					{84, "ModuleScript", {"DependencyBox"}},
+					{85, "ModuleScript", {"FloatingPill"}},
+					{86, "ModuleScript", {"HUD"}},
+					{87, "ModuleScript", {"Row"}},
+					{88, "ModuleScript", {"SubTabs"}},
+					{89, "ModuleScript", {"Tooltip"}},
+					{92, "ModuleScript", {"ProfileMenu"}},
+					{93, "ModuleScript", {"SettingsModal"}}
 				}
 			}
 		}
@@ -3128,9 +3194,14 @@ local moduleFunctions = {
 		local elementModules, Acrylic, Components = requireModule(libraryRoot.Elements), requireModule(libraryRoot.Acrylic), libraryRoot.Components
 		local Notification, New, protectGui = requireModule(Components.Notification), Creator.New, protectgui or (syn and syn.protect_gui) or function()
 		end
-		local gui = New("ScreenGui", {Parent = RunService:IsStudio() and localPlayer.PlayerGui or Creator.GetService("CoreGui")})
+		local guiParent = RunService:IsStudio() and localPlayer.PlayerGui or Creator.GetService("CoreGui")
+		local gui = New("ScreenGui", {Name = "AcryvenMainGui", DisplayOrder = 0, Parent = guiParent})
 		protectGui(gui)
-		Notification:Init(gui)
+		local overlayGui = New("ScreenGui", {Name = "AcryvenOverlayGui", DisplayOrder = 220, IgnoreGuiInset = false, ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = guiParent})
+		protectGui(overlayGui)
+		local notifyGui = New("ScreenGui", {Name = "AcryvenNotificationGui", DisplayOrder = 240, IgnoreGuiInset = false, ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = guiParent})
+		protectGui(notifyGui)
+		Notification:Init(notifyGui)
 		-- Indexing an Enum with an unknown name throws; return nil instead.
 		local function safeEnumItem(enumType, name)
 			if typeof(name) == "EnumItem" then
@@ -3170,7 +3241,13 @@ local moduleFunctions = {
 			MinimizeKeybind = nil,
 			MinimizeKey = Enum.KeyCode.LeftControl,
 			GUI = gui,
-			-- Compatibility facade plus the modern customization APIs.
+			OverlayGUI = overlayGui,
+			NotificationGUI = notifyGui,
+			-- Compatibility facade plus the modern customization and motion APIs.
+			Motion = Creator.Motion,
+			ReducedMotion = false,
+			DPIScale = 1,
+			NotifySide = "BottomRight",
 			Translation = TranslationSystem,
 			I18n = CustomizationSystem.I18n,
 			Fonts = CustomizationSystem.Fonts,
@@ -3179,12 +3256,194 @@ local moduleFunctions = {
 			Customization = CustomizationSystem,
 			CurrentLanguage = "en"
 		}
+		Library.PrivacyMode = {
+			Hidden = false,
+			Alias = "Anonymous",
+			HideAvatar = false
+		}
+
 		-- Dropdowns currently open; closed on minimize, tab change and unload.
 		Library._OpenDropdowns = {}
 		function Library._CloseDropdowns()
 			for dropdown in pairs(Library._OpenDropdowns) do
 				pcall(dropdown.Close, dropdown)
 			end
+			if Library.ProfileMenu and Library.ProfileMenu.Opened then
+				pcall(Library.ProfileMenu.Close, Library.ProfileMenu)
+			end
+		end
+
+		-- Keybind tracker for live HUD KeybindList synchronization
+		Library._TrackedKeybinds = {}
+		Library._KeybindLists = {}
+		Library._ActiveHUDs = {}
+		function Library._NotifyKeybindChanged()
+			for _, kbList in ipairs(Library._KeybindLists) do
+				if kbList and not kbList.Destroyed and type(kbList.Refresh) == "function" then
+					pcall(kbList.Refresh, kbList)
+				end
+			end
+		end
+		function Library._TrackKeybind(kb)
+			if type(kb) == "table" and not table.find(Library._TrackedKeybinds, kb) then
+				table.insert(Library._TrackedKeybinds, kb)
+				Library._NotifyKeybindChanged()
+			end
+		end
+		function Library._UntrackKeybind(kb)
+			local idx = table.find(Library._TrackedKeybinds, kb)
+			if idx then
+				table.remove(Library._TrackedKeybinds, idx)
+				Library._NotifyKeybindChanged()
+			end
+		end
+
+		-- Phase 3 Singletons: CommandPalette, Tooltip, ContextMenu, HUD, FloatingPill, SettingsModal, ProfileMenu
+		local CommandPalette = requireModule(Components.CommandPalette)(Library)
+		local TooltipService = requireModule(Components.Tooltip)(Library)
+		local ContextMenuService = requireModule(Components.ContextMenu)(Library)
+		local HUDModule = requireModule(Components.HUD)
+		local FloatingPillFactory = requireModule(Components.FloatingPill)
+		local SettingsModalService = requireModule(Components.SettingsModal)(Library)
+		local ProfileMenuService = requireModule(Components.ProfileMenu)(Library)
+		Library.CommandPalette = CommandPalette
+		Library.Tooltip = TooltipService
+		Library.ContextMenu = ContextMenuService
+		Library.SettingsModal = SettingsModalService
+		Library.ProfileMenu = ProfileMenuService
+
+		function Library.OpenSettings(_, tabName)
+			if SettingsModalService then
+				SettingsModalService:Open(tabName)
+			end
+		end
+		function Library.CloseSettings(_)
+			if SettingsModalService then
+				SettingsModalService:Close()
+			end
+		end
+		function Library.ToggleSettings(_, tabName)
+			if SettingsModalService then
+				SettingsModalService:Toggle(tabName)
+			end
+		end
+		function Library.ToggleProfileMenu(_, anchorGui)
+			if ProfileMenuService then
+				ProfileMenuService:Toggle(anchorGui)
+			end
+		end
+		function Library.SetPrivacyMode(_, hidden, alias, hideAvatar)
+			if hidden ~= nil then
+				Library.PrivacyMode.Hidden = hidden == true
+			end
+			if type(alias) == "string" and alias ~= "" then
+				Library.PrivacyMode.Alias = alias
+			end
+			if hideAvatar ~= nil then
+				Library.PrivacyMode.HideAvatar = hideAvatar == true
+			end
+			if Library.Window and type(Library.Window.UpdateProfileCard) == "function" then
+				Library.Window.UpdateProfileCard()
+			end
+			if ProfileMenuService then
+				ProfileMenuService:Refresh()
+			end
+			if SettingsModalService and SettingsModalService.Opened then
+				SettingsModalService:SyncValues()
+			end
+			return Library.PrivacyMode
+		end
+		function Library.GetPrivacyMode(_)
+			return {
+				Hidden = Library.PrivacyMode.Hidden == true,
+				Alias = Library.PrivacyMode.Alias or "Anonymous",
+				HideAvatar = Library.PrivacyMode.HideAvatar == true
+			}
+		end
+
+		function Library.OpenCommandPalette(_)
+			if CommandPalette then
+				CommandPalette:Open()
+			end
+		end
+		function Library.CloseCommandPalette(_)
+			if CommandPalette then
+				CommandPalette:Close()
+			end
+		end
+		function Library.ToggleCommandPalette(_)
+			if CommandPalette then
+				CommandPalette:Toggle()
+			end
+		end
+		function Library.RegisterCommand(_, cmd)
+			if CommandPalette then
+				return CommandPalette:RegisterCommand(cmd)
+			end
+			return nil
+		end
+		function Library.AttachTooltip(_, guiObject, textOrGetter, delaySec)
+			if TooltipService then
+				TooltipService:Attach(guiObject, textOrGetter, delaySec)
+			end
+		end
+		function Library.OpenContextMenu(_, items, screenPos)
+			if ContextMenuService then
+				ContextMenuService:Open(items, screenPos)
+			end
+		end
+		function Library.AttachContextMenu(_, guiObject, itemsOrBuilder)
+			if ContextMenuService then
+				ContextMenuService:Attach(guiObject, itemsOrBuilder)
+			end
+		end
+		function Library.CreateWatermark(_, opts)
+			local wm = HUDModule.CreateWatermark(Library, opts)
+			table.insert(Library._ActiveHUDs, wm)
+			return wm
+		end
+		function Library.CreateKeybindList(_, opts)
+			local kl = HUDModule.CreateKeybindList(Library, opts)
+			table.insert(Library._ActiveHUDs, kl)
+			return kl
+		end
+		function Library.CreateSpinner(_, parentGui, opts)
+			local SpinnerModule = requireModule(libraryRoot.Elements.Spinner)
+			if type(parentGui) == "table" and opts == nil and typeof(parentGui) ~= "Instance" then
+				opts = parentGui
+				parentGui = nil
+			end
+			return SpinnerModule.CreateIndicator(parentGui or gui, opts)
+		end
+		function Library.SetFont(_, profileId)
+			return CustomizationSystem.Fonts:ApplyProfile(profileId)
+		end
+		function Library.GetFontProfiles(_)
+			return CustomizationSystem.Fonts:GetProfiles()
+		end
+		function Library.CreateFloatingPill(_, opts)
+			if Library.FloatingPill then
+				Library.FloatingPill:Destroy()
+			end
+			local pill = FloatingPillFactory(Library, Library.Window, opts)
+			Library.FloatingPill = pill
+			if Library.Window and type(Library.Window.OnMinimizeChanged) == "function" then
+				Library.Window:OnMinimizeChanged(function(isMin)
+					if pill and not pill.Destroyed and not pill.AlwaysVisible then
+						pill:SetVisible(isMin)
+					end
+				end)
+			end
+			return pill
+		end
+		function Library.SetFloatingPill(_, enabledOrOpts)
+			if enabledOrOpts == false then
+				if Library.FloatingPill then
+					Library.FloatingPill:Destroy()
+				end
+				return nil
+			end
+			return Library:CreateFloatingPill(type(enabledOrOpts) == "table" and enabledOrOpts or nil)
 		end
 		-- Library.OnUnload:Connect(fn) runs fn once, first thing in Destroy.
 		local unloadHandlers = {}
@@ -3238,11 +3497,15 @@ local moduleFunctions = {
 			end
 		end
 		local iconAssets = requireModule(libraryRoot.Icons).assets
-		function Library.GetIcon(_, name)
-			if name ~= nil and iconAssets["lucide-" .. name] then
-				return iconAssets["lucide-" .. name]
+		function Library.GetIcon(selfOrName, name)
+			if type(selfOrName) == "string" and name == nil then
+				name = selfOrName
 			end
-			return nil
+			if type(name) ~= "string" or name == "" then
+				return nil
+			end
+			local clean = name:lower():gsub("^lucide%-", "")
+			return iconAssets[clean]
 		end
 		--[[
 			Workspace is deliberately independent from InterfaceManager.  Old scripts
@@ -3630,7 +3893,7 @@ local moduleFunctions = {
 			end
 		end
 		function Workspace:ApplyModes()
-			local compact = self.State.CompactMode == true
+			local compact = self.State.CompactMode == true or (self.Window and self.Window.SidebarCollapsed == true)
 			local focus = self.State.FocusMode == true
 			for _, tab in ipairs(self.Tabs) do
 				if tab.Frame then
@@ -3640,32 +3903,8 @@ local moduleFunctions = {
 						tab.Frame.Visible = not focus or tab.Selected
 					end
 				end
-				if tab.Label then
-					if compact and tab.IconObject and tab.IconObject.Image ~= "" then
-						tab.Label.Visible = false
-					elseif compact then
-						tab._ATGCompactLabel = true
-						tab.Label.Visible = true
-						tab.Label.Text = tostring(tab.OriginalLabelText or tab.Name):sub(1, 1)
-						tab.Label.Position = UDim2.new(0, 0, 0.5, 0)
-						tab.Label.Size = UDim2.new(1, 0, 1, 0)
-						tab.Label.TextXAlignment = Enum.TextXAlignment.Center
-					else
-						tab.Label.Visible = true
-						if tab._ATGCompactLabel then
-							tab._ATGCompactLabel = nil
-							tab.Label.Text = tab.OriginalLabelText or tab.Name
-							pcall(function() TranslationSystem:UpdateText(tab.Label) end)
-						end
-						tab.Label.Position = tab.IconObject and tab.IconObject.Image ~= "" and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0)
-						tab.Label.Size = UDim2.new(1, -12, 1, 0)
-						tab.Label.TextXAlignment = Enum.TextXAlignment.Left
-					end
-				end
-				if compact and tab.IconObject and tab.IconObject.Image ~= "" then
-					tab.IconObject.Position = UDim2.new(0.5, -8, 0.5, 0)
-				elseif tab.IconObject then
-					tab.IconObject.Position = UDim2.new(0, 8, 0.5, 0)
+				if type(tab.SetCollapsed) == "function" then
+					tab.SetCollapsed(compact)
 				end
 			end
 		end
@@ -3677,18 +3916,20 @@ local moduleFunctions = {
 				-- the tab rail replaced by invisible search rows.
 				self.SidebarSearch.Text = ""
 			end
-			if self.Window and type(self.Window.SetTabWidth) == "function" then
-				self.Window:SetTabWidth(enabled and 54 or self.OriginalTabWidth)
+			if self.Window and type(self.Window.SetSidebarCollapsed) == "function" then
+				self.Window:SetSidebarCollapsed(enabled, true)
+			elseif self.Window and type(self.Window.SetTabWidth) == "function" then
+				self.Window:SetTabWidth(enabled and 46 or self.OriginalTabWidth, true)
 			end
 			if self.Sidebar then
-				self.Sidebar.Size = UDim2.new(0, enabled and 54 or self.OriginalTabWidth, 0, enabled and 0 or 26)
+				self.Sidebar.Size = UDim2.new(0, enabled and 46 or self.OriginalTabWidth, 0, enabled and 0 or 26)
 				self.SidebarSearch.Visible = not enabled
 			end
 			if self.Window and self.Window.TabArea then
-				-- Tabs start at Fluent's 54px, or below the search box when shown.
-				local top = self.Sidebar and 88 or 54
-				self.Window.TabArea.Position = UDim2.new(0, 12, 0, enabled and 54 or top)
-				self.Window.TabArea.Size = UDim2.new(0, enabled and 54 or self.OriginalTabWidth, 1, enabled and -66 or -(top + 12))
+				-- Reserve 48px at the bottom of the sidebar for the collapse/expand footer button.
+				local top = (self.Sidebar and not enabled) and 92 or 56
+				self.Window.TabArea.Position = UDim2.new(0, 12, 0, top)
+				self.Window.TabArea.Size = UDim2.new(0, self.Window.TabWidth, 1, -(top + 48))
 			end
 			if self.Panel then
 				self.Panel.Size = UDim2.new(0, enabled and 230 or self.OriginalTabWidth, 0, 260)
@@ -3749,7 +3990,8 @@ local moduleFunctions = {
 						return
 					end
 					local scrollFrame = entry.Tab.ScrollFrame
-					local canvasY = math.max(0, entry.Frame.AbsolutePosition.Y - scrollFrame.AbsolutePosition.Y + scrollFrame.CanvasPosition.Y - 12)
+					local scale = Creator.GetEffectiveScale(scrollFrame)
+					local canvasY = math.max(0, (entry.Frame.AbsolutePosition.Y - scrollFrame.AbsolutePosition.Y) / scale + scrollFrame.CanvasPosition.Y - 12)
 					scrollFrame.CanvasPosition = Vector2.new(0, canvasY)
 					local highlight = Instance.new("UIStroke")
 					highlight.Name = "ATGWorkspaceHighlight"
@@ -3966,7 +4208,7 @@ local moduleFunctions = {
 				BackgroundTransparency = 1,
 				Text = tostring(text or ""),
 				I18nSkip = true,
-				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", options.Weight or Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+				FontFace = Creator.Font(options.Weight or Enum.FontWeight.Regular, Enum.FontStyle.Normal),
 				TextTransparency = options.Transparency or 0,
 				TextSize = textSize or 12,
 				TextXAlignment = options.Align or Enum.TextXAlignment.Left,
@@ -4291,7 +4533,7 @@ local moduleFunctions = {
 				Name = "ProfileName", Parent = content, Size = UDim2.new(1, 0, 0, 30),
 				BackgroundTransparency = 0.04, BorderSizePixel = 0, ClearTextOnFocus = false, Text = self.ProfileDraft or "", PlaceholderText = "Profile name",
 				ThemeTag = {BackgroundColor3 = "DialogInput", TextColor3 = "Text", PlaceholderColor3 = "SubText"}, TextSize = 12,
-				FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), TextXAlignment = Enum.TextXAlignment.Left, I18nSkip = true, ZIndex = content.ZIndex + 1
+				FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal), TextXAlignment = Enum.TextXAlignment.Left, I18nSkip = true, ZIndex = content.ZIndex + 1
 			})
 			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = nameBox})
 			New("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = nameBox})
@@ -4398,25 +4640,33 @@ local moduleFunctions = {
 			local window = self.Window
 			self.Sidebar = New("Frame", {
 				Name = "ATGWorkspaceSidebar", Parent = window.Root, Size = UDim2.new(0, self.OriginalTabWidth, 0, 26),
-				Position = UDim2.fromOffset(12, 52), BackgroundTransparency = 1, ZIndex = 20
+				Position = UDim2.fromOffset(12, 56), BackgroundTransparency = 1, ZIndex = 20
 			})
 			self.SidebarSearch = New("TextBox", {
 				Name = "Search", Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 0),
-				BackgroundTransparency = 0.1, BorderSizePixel = 0, ClearTextOnFocus = false,
+				BackgroundTransparency = 0.52, BorderSizePixel = 0, ClearTextOnFocus = false,
 				Text = "", PlaceholderText = "Search...  Ctrl+K",
-				ThemeTag = {BackgroundColor3 = "DialogInput", TextColor3 = "Text", PlaceholderColor3 = "SubText"},
-				TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 21
+				ThemeTag = {BackgroundColor3 = "Element", TextColor3 = "Text", PlaceholderColor3 = "SubText"},
+				TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal), I18nSkip = true, ZIndex = 21
 			})
 			New("UICorner", {CornerRadius = UDim.new(0, 7), Parent = self.SidebarSearch})
-			New("UIStroke", {Transparency = 0.45, Parent = self.SidebarSearch, ThemeTag = {Color = "Accent"}})
+			local searchStroke = New("UIStroke", {Transparency = 0.58, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = self.SidebarSearch, ThemeTag = {Color = "InElementBorder"}})
+			self:Connect(self.SidebarSearch.Focused, function()
+				Creator.OverrideTag(searchStroke, {Color = "Accent"})
+				Creator.SpringValue(searchStroke, "Transparency", 0.25, 10, 1)
+			end)
+			self:Connect(self.SidebarSearch.FocusLost, function()
+				Creator.OverrideTag(searchStroke, {Color = "InElementBorder"})
+				Creator.SpringValue(searchStroke, "Transparency", 0.58, 10, 1)
+			end)
 			New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = self.SidebarSearch})
 			self:UpdateSearchHint()
 			self:Connect(self.SidebarSearch:GetPropertyChangedSignal("Text"), function()
 				local text = self.SidebarSearch.Text
 				self:QueueSidebarSearch(text)
 			end)
-			window.TabArea.Position = UDim2.new(0, 12, 0, 88)
-			window.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -100)
+			window.TabArea.Position = UDim2.new(0, 12, 0, 92)
+			window.TabArea.Size = UDim2.new(0, self.OriginalTabWidth, 1, -104)
 			self:CreatePanel()
 		end
 		-- The command palette was replaced by the sidebar search, which shows
@@ -4446,9 +4696,9 @@ local moduleFunctions = {
 			self.Window = window
 			self.OriginalTabWidth = tonumber(window.TabWidth) or 180
 			self:Load()
-			-- Tabs and elements are always registered for the API; the search
-			-- box, its panel and Ctrl+K are opt-in with CreateWindow{Search = true}.
-			self.SearchEnabled = Library.SearchEnabled == true
+			-- Sidebar search box is opt-in only via SidebarSearch = true so the sidebar
+			-- stays clean and uncluttered (Acryven v3.0 collapsible/resizable sidebar).
+			self.SearchEnabled = Library.SidebarSearchEnabled == true
 			if self.SearchEnabled then
 				self:CreateChrome()
 			end
@@ -4456,9 +4706,13 @@ local moduleFunctions = {
 			self:SetFocus(self.State.FocusMode)
 			self:Connect(UserInputService.InputBegan, function(input, gameProcessed)
 				if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-				if self.SearchEnabled and not gameProcessed and input.KeyCode == Enum.KeyCode.K and not UserInputService:GetFocusedTextBox() and
+				if not gameProcessed and input.KeyCode == Enum.KeyCode.K and not UserInputService:GetFocusedTextBox() and
 					(UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
-					self:OpenPalette()
+					if self.SearchEnabled then
+						self:OpenPalette()
+					elseif Library.CommandPalette then
+						Library.CommandPalette:Toggle()
+					end
 				end
 			end)
 			self:Connect(UserInputService.InputChanged, function(input)
@@ -4910,11 +5164,48 @@ local moduleFunctions = {
 			end
 		end
 
+		local DependencyBoxFactory = requireModule(Components.DependencyBox)
+		local RowFactory = requireModule(Components.Row)
+		local SubTabsFactory = requireModule(Components.SubTabs)
+
+		local function copyToClipboardSafe(text)
+			local fn = setclipboard or toclipboard or (syn and syn.write_clipboard)
+			if type(fn) == "function" then
+				pcall(fn, tostring(text))
+			end
+		end
+
 		local Elements = {}
 		Elements.__index = Elements
 		Elements.__namecall = function(_, methodName, ...)
 			return Elements[methodName](...)
 		end
+
+		function Elements.AddDependencyBox(parent, config)
+			budgetYieldMount()
+			return DependencyBoxFactory(parent, config)
+		end
+		function Elements.AddRow(parent, config)
+			budgetYieldMount()
+			return RowFactory(parent, config)
+		end
+		Elements.AddHStack = Elements.AddRow
+		function Elements.AddColumns(parent, countOrConfig)
+			budgetYieldMount()
+			if type(countOrConfig) == "number" then
+				return RowFactory(parent, {Columns = countOrConfig})
+			end
+			local cfg = type(countOrConfig) == "table" and countOrConfig or {}
+			if not cfg.Columns then
+				cfg.Columns = 2
+			end
+			return RowFactory(parent, cfg)
+		end
+		function Elements.AddSubTabs(parent, config)
+			budgetYieldMount()
+			return SubTabsFactory(parent, config)
+		end
+
 		for _, elementModule in ipairs(elementModules) do
 			Elements["Add" .. elementModule.__type] = function(parent, key, config)
 				budgetYieldMount()
@@ -4923,6 +5214,10 @@ local moduleFunctions = {
 				elementModule.ScrollFrame = parent.ScrollFrame
 				elementModule.Library = Library
 				local options = type(config) == "table" and config or (type(key) == "table" and key or nil)
+				local isInternal = (parent and parent._Internal == true) or (options and options._Internal == true)
+				if isInternal and type(options) == "table" then
+					options._Internal = true
+				end
 				-- Confirmation is explicit (Confirm = true/string/table). Guessing it
 				-- from a destructive word in the title is opt-in with
 				-- CreateWindow{SmartConfirm = true}; SmartConfirm = false on a
@@ -4940,8 +5235,55 @@ local moduleFunctions = {
 					end
 				end
 				local element = elementModule:New(key, config)
-				if Library.Workspace then
-					Library.Workspace:RegisterElement(element, parent, options, elementModule.__type, type(key) == "string" and key or nil)
+				if isInternal and type(key) == "string" and Library.Options[key] == element then
+					Library.Options[key] = nil
+				end
+				local entry = nil
+				if Library.Workspace and not isInternal then
+					entry = Library.Workspace:RegisterElement(element, parent, options, elementModule.__type, type(key) == "string" and key or nil)
+				end
+				-- Auto-attach Tooltip if provided in element options
+				if options and type(options.Tooltip) == "string" and options.Tooltip ~= "" and element and element.Frame then
+					Library:AttachTooltip(element.Frame, options.Tooltip)
+				end
+				-- Auto-attach ContextMenu on interactive elements (right-click Reset / Copy / Favorite)
+				if not isInternal and options and options.ContextMenu ~= false and element and element.Frame and (type(element.SetValue) == "function" or type(element.SetValueRGB) == "function") then
+					local defaultVal = options.Default
+					local defaultAlpha = options.Transparency
+					Library:AttachContextMenu(element.Frame, function()
+						local items = {}
+						if defaultVal ~= nil then
+							table.insert(items, {
+								Title = "Reset to Default",
+								Icon = "refresh-cw",
+								Callback = function()
+									if element.Type == "Colorpicker" and type(element.SetValueRGB) == "function" and typeof(defaultVal) == "Color3" then
+										element:SetValueRGB(defaultVal, defaultAlpha)
+									elseif type(element.SetValue) == "function" then
+										element:SetValue(defaultVal)
+									end
+								end
+							})
+						end
+						table.insert(items, {
+							Title = "Copy Title",
+							Icon = "copy",
+							Callback = function()
+								copyToClipboardSafe(options.Title or element.Type)
+							end
+						})
+						if entry and entry.Id and Library.Workspace then
+							local isFav = Library.Workspace:IsFavorite(entry.Id)
+							table.insert(items, {
+								Title = isFav and "Remove Favorite" or "Pin Favorite",
+								Icon = "star",
+								Callback = function()
+									Library.Workspace:ToggleFavorite(entry.Id)
+								end
+							})
+						end
+						return items
+					end)
 				end
 				return element
 			end
@@ -4981,6 +5323,7 @@ local moduleFunctions = {
 			-- Opt-in extras (all off for scripts written before they existed).
 			Library.SmartConfirm = config.SmartConfirm == true
 			Library.SearchEnabled = config.Search == true
+			Library.SidebarSearchEnabled = config.SidebarSearch == true
 			if config.AutoYieldMount ~= nil then
 				Library.AutoYieldMount = config.AutoYieldMount == true
 			end
@@ -4989,6 +5332,15 @@ local moduleFunctions = {
 			end
 			if type(config.MountBatchCap) == "number" then
 				Library.MountBatchCap = config.MountBatchCap
+			end
+			if config.ReducedMotion ~= nil then
+				Library:SetReducedMotion(config.ReducedMotion == true)
+			end
+			if type(config.DPIScale) == "number" then
+				Library:SetDPIScale(config.DPIScale)
+			end
+			if type(config.NotifySide) == "string" then
+				Library:SetNotifySide(config.NotifySide)
 			end
 			if config.Theme and table.find(Library.Themes, config.Theme) then
 				Library.Theme = config.Theme
@@ -5001,8 +5353,11 @@ local moduleFunctions = {
 			if Library.UseAcrylic then
 				Acrylic.init()
 			end
+			if config.HidePlayerName ~= nil or config.PrivacyAlias ~= nil or config.HideAvatar ~= nil then
+				Library:SetPrivacyMode(config.HidePlayerName, config.PrivacyAlias, config.HideAvatar)
+			end
 			local window =
-				requireModule(Components.Window) {Parent = gui, Size = config.Size, Title = config.Title, SubTitle = config.SubTitle, TabWidth = config.TabWidth}
+				requireModule(Components.Window) {Parent = gui, Size = config.Size, Title = config.Title, SubTitle = config.SubTitle, TabWidth = config.TabWidth, ShowProfileCard = config.ShowProfileCard}
 			window.Library = Library
 			Library.Window = window
 			if Library.Workspace then
@@ -5027,7 +5382,15 @@ local moduleFunctions = {
 				Library:SetTheme(config.Theme)
 			end
 			armPostWindowYield()
-			if config.FloatingToggle ~= false then
+			if config.FloatingPill then
+				local pillOpts = type(config.FloatingPill) == "table" and config.FloatingPill or {}
+				if not pillOpts.Title then
+					pillOpts.Title = config.Title
+				end
+				Library:CreateFloatingPill(pillOpts)
+			end
+			local wantsLegacyToggle = (config.FloatingToggle == true) or (type(config.FloatingToggle) == "table") or (config.FloatingToggle == nil and not config.FloatingPill)
+			if wantsLegacyToggle then
 				local floatingConfig = type(config.FloatingToggle) == "table" and config.FloatingToggle or nil
 				-- Give legacy scripts that append FluentToggleGui after CreateWindow
 				-- one scheduler turn to register it before we add our own button.
@@ -5040,11 +5403,23 @@ local moduleFunctions = {
 			end
 			return window
 		end
-		function Library.SetTheme(_, themeName)
+		function Library.SetTheme(_, themeName, instant)
 			if Library.Window and table.find(Library.Themes, themeName) then
 				Library.Theme = themeName
-				Creator.UpdateTheme()
+				Creator.UpdateTheme(instant == true)
 			end
+		end
+		function Library.SetDPIScale(_, scale)
+			Library.DPIScale = Creator.SetDPIScale(scale)
+			return Library.DPIScale
+		end
+		function Library.SetReducedMotion(_, enabled)
+			Library.ReducedMotion = Creator.SetReducedMotion(enabled == true)
+			return Library.ReducedMotion
+		end
+		function Library.SetNotifySide(_, side)
+			Library.NotifySide = Notification:SetSide(side)
+			return Library.NotifySide
 		end
 		function Library.Destroy(_)
 			if not Library.Window or Library.Unloaded then
@@ -5069,6 +5444,32 @@ local moduleFunctions = {
 			if Library.FloatingToggle then
 				Library.FloatingToggle:Destroy()
 			end
+			if Library.FloatingPill then
+				Library.FloatingPill:Destroy()
+			end
+			if CommandPalette then
+				pcall(CommandPalette.Destroy, CommandPalette)
+			end
+			if TooltipService then
+				pcall(TooltipService.Destroy, TooltipService)
+			end
+			if ContextMenuService then
+				pcall(ContextMenuService.Destroy, ContextMenuService)
+			end
+			if SettingsModalService then
+				pcall(SettingsModalService.Destroy, SettingsModalService)
+			end
+			if ProfileMenuService then
+				pcall(ProfileMenuService.Destroy, ProfileMenuService)
+			end
+			for _, hud in ipairs(Library._ActiveHUDs) do
+				if hud and type(hud.Destroy) == "function" then
+					pcall(hud.Destroy, hud)
+				end
+			end
+			table.clear(Library._ActiveHUDs)
+			table.clear(Library._KeybindLists)
+			table.clear(Library._TrackedKeybinds)
 			removeLegacyFloatingToggles()
 			Library._CloseDropdowns()
 			if Library.UseAcrylic then
@@ -5083,6 +5484,12 @@ local moduleFunctions = {
 			end
 			Creator.Disconnect()
 			Creator.StopRainbow()
+			if Library.OverlayGUI then
+				pcall(function() Library.OverlayGUI:Destroy() end)
+			end
+			if Library.NotificationGUI then
+				pcall(function() Library.NotificationGUI:Destroy() end)
+			end
 			Library.GUI:Destroy()
 		end
 		function Library.ToggleAcrylic(_, enabled)
@@ -5101,7 +5508,7 @@ local moduleFunctions = {
 		end
 		function Library.ToggleTransparency(_, enabled)
 			if Library.Window then
-				Library.Window.AcrylicPaint.Frame.Background.BackgroundTransparency = enabled and 0.35 or 0
+				Library.Window.AcrylicPaint.Frame.Background.BackgroundTransparency = enabled and 0.32 or 0
 			end
 		end
 		function Library.Notify(_, options)
@@ -5313,24 +5720,36 @@ local moduleFunctions = {
 		local createAcrylic = requireModule(moduleScript.Parent.CreateAcrylic)
 		local viewportPointToWorld, getOffset = unpack(requireModule(moduleScript.Parent.Utils))
 		local Workspace = Creator.GetService("Workspace")
+		local RunService = Creator.GetService("RunService")
 
 		local activeBlurCount = 0
+		local nextBlurId = 0
 
 		return function(distance)
 			local AcrylicModule = requireModule(moduleScript.Parent)
 			local Library = requireModule(Root)
 
-			distance = distance or 0.001
-			local positions = {topLeft = Vector2.new(), topRight = Vector2.new(), bottomRight = Vector2.new()}
+			nextBlurId += 1
+			local renderStepName = "AcryvenAcrylic_" .. tostring(nextBlurId)
+			distance = distance or 0.004
+			local positions = {
+				topLeft = Vector2.new(),
+				topRight = Vector2.new(),
+				bottomLeft = Vector2.new(),
+				bottomRight = Vector2.new()
+			}
 			local model = createAcrylic()
 			local mesh = model:FindFirstChildOfClass("SpecialMesh")
 
 			local destroyed = false
 			local currentlyVisible = false
+			local renderBound = false
 			local boundParent = nil
 			local boundGui = nil
 			local cameraSignals = {}
 			local lifecycleSignals = {}
+			local lastCamCF, lastFov, lastVp = nil, nil, nil
+			local boundsDirty = true
 
 			local function disconnectList(list)
 				for index = #list, 1, -1 do
@@ -5338,6 +5757,13 @@ local moduleFunctions = {
 					pcall(function()
 						conn:Disconnect()
 					end)
+				end
+			end
+
+			local function unbindRenderStep()
+				if renderBound then
+					renderBound = false
+					pcall(RunService.UnbindFromRenderStep, RunService, renderStepName)
 				end
 			end
 
@@ -5352,17 +5778,37 @@ local moduleFunctions = {
 				local viewCFrame = camera.CFrame
 				local topLeft3D = viewportPointToWorld(positions.topLeft, distance)
 				local topRight3D = viewportPointToWorld(positions.topRight, distance)
+				local bottomLeft3D = viewportPointToWorld(positions.bottomLeft, distance)
 				local bottomRight3D = viewportPointToWorld(positions.bottomRight, distance)
 				local width = (topRight3D - topLeft3D).Magnitude
-				local height = (topRight3D - bottomRight3D).Magnitude
-				model.CFrame = CFrame.fromMatrix((topLeft3D + bottomRight3D) / 2, viewCFrame.XVector, viewCFrame.YVector, viewCFrame.ZVector)
+				local height = (bottomLeft3D - topLeft3D).Magnitude
+				model.CFrame = CFrame.fromMatrix((topLeft3D + bottomRight3D) * 0.5, viewCFrame.XVector, viewCFrame.YVector, viewCFrame.ZVector)
 				if mesh then
-					mesh.Scale = Vector3.new(width, height, 0)
+					mesh.Scale = Vector3.new(width, height, 0.001)
 				end
+				lastCamCF = viewCFrame
+				lastFov = camera.FieldOfView
+				lastVp = camera.ViewportSize
+				boundsDirty = false
+			end
+
+			local function stepRender()
+				if destroyed or not currentlyVisible or not model or not model.Parent then
+					return
+				end
+				local camera = Workspace.CurrentCamera
+				if not camera then
+					return
+				end
+				if not boundsDirty and lastCamCF == camera.CFrame and lastFov == camera.FieldOfView and lastVp == camera.ViewportSize then
+					return
+				end
+				render()
 			end
 
 			local function bindCameraSignals()
 				disconnectList(cameraSignals)
+				unbindRenderStep()
 				if destroyed or not currentlyVisible then
 					return
 				end
@@ -5370,9 +5816,20 @@ local moduleFunctions = {
 				if not camera then
 					return
 				end
-				table.insert(cameraSignals, camera:GetPropertyChangedSignal("CFrame"):Connect(render))
-				table.insert(cameraSignals, camera:GetPropertyChangedSignal("ViewportSize"):Connect(render))
-				table.insert(cameraSignals, camera:GetPropertyChangedSignal("FieldOfView"):Connect(render))
+				-- Bind right after Camera update so turning the camera never causes 1-frame glass lag/skew
+				renderBound = true
+				pcall(function()
+					RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Camera.Value + 1, stepRender)
+				end)
+				table.insert(cameraSignals, camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+					boundsDirty = true
+					render()
+				end))
+				table.insert(cameraSignals, camera:GetPropertyChangedSignal("FieldOfView"):Connect(function()
+					boundsDirty = true
+					render()
+				end))
+				boundsDirty = true
 				render()
 			end
 
@@ -5383,11 +5840,14 @@ local moduleFunctions = {
 					return
 				end
 				local offset = getOffset()
-				local size = frame.AbsoluteSize - Vector2.new(offset, offset)
-				local position = frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
+				local absSize = frame.AbsoluteSize
+				local size = Vector2.new(math.max(0, absSize.X - offset), math.max(0, absSize.Y - offset))
+				local position = frame.AbsolutePosition + Vector2.new(offset * 0.5, offset * 0.5)
 				positions.topLeft = position
 				positions.topRight = position + Vector2.new(size.X, 0)
+				positions.bottomLeft = position + Vector2.new(0, size.Y)
 				positions.bottomRight = position + size
+				boundsDirty = true
 				if currentlyVisible then
 					render()
 				end
@@ -5395,6 +5855,9 @@ local moduleFunctions = {
 
 			local function shouldBeVisible()
 				if destroyed or Library.Unloaded then
+					return false
+				end
+				if Library.Window and Library.Window.Minimized then
 					return false
 				end
 				if not Library.UseAcrylic or Library.Acrylic == false then
@@ -5426,7 +5889,8 @@ local moduleFunctions = {
 					activeBlurCount += 1
 					local folder = AcrylicModule.GetBlurFolder()
 					if folder then
-						model.Transparency = 0.98
+						model.Transparency = 0.988
+						model.Reflectance = 0
 						model.Parent = folder
 					end
 					AcrylicModule.Enable()
@@ -5435,6 +5899,7 @@ local moduleFunctions = {
 				else
 					activeBlurCount = math.max(0, activeBlurCount - 1)
 					disconnectList(cameraSignals)
+					unbindRenderStep()
 					if model then
 						model.Transparency = 1
 						model.Parent = nil
@@ -5472,6 +5937,7 @@ local moduleFunctions = {
 					end
 				end
 				disconnectList(cameraSignals)
+				unbindRenderStep()
 				disconnectList(lifecycleSignals)
 				if model then
 					pcall(function()
@@ -5496,6 +5962,9 @@ local moduleFunctions = {
 
 			table.insert(lifecycleSignals, frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateBounds))
 			table.insert(lifecycleSignals, frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateBounds))
+			Creator.RegisterDPIScale(frame, function()
+				task.defer(updateBounds)
+			end)
 			table.insert(lifecycleSignals, frame.Destroying:Connect(Blur.Destroy))
 			table.insert(lifecycleSignals, frame.AncestryChanged:Connect(function()
 				if not frame:IsDescendantOf(game) then
@@ -5514,6 +5983,19 @@ local moduleFunctions = {
 				table.insert(lifecycleSignals, parentFrame:GetPropertyChangedSignal("Visible"):Connect(Blur.SyncVisibility))
 				table.insert(lifecycleSignals, parentFrame.Destroying:Connect(Blur.Destroy))
 				table.insert(lifecycleSignals, parentFrame.AncestryChanged:Connect(Blur.SyncVisibility))
+				local node = frame
+				local depth = 0
+				while node and depth < 12 do
+					local uiScale = node:FindFirstChildOfClass("UIScale")
+					if uiScale then
+						table.insert(lifecycleSignals, uiScale:GetPropertyChangedSignal("Scale"):Connect(updateBounds))
+					end
+					if node == parentFrame then
+						break
+					end
+					node = node.Parent
+					depth += 1
+				end
 				if boundGui then
 					table.insert(lifecycleSignals, boundGui:GetPropertyChangedSignal("Enabled"):Connect(Blur.SyncVisibility))
 					table.insert(lifecycleSignals, boundGui.Destroying:Connect(Blur.Destroy))
@@ -5531,88 +6013,148 @@ local moduleFunctions = {
 		local Creator, AcrylicBlur = requireModule(moduleScript.Parent.Parent.Creator), requireModule(moduleScript.Parent.AcrylicBlur)
 		local New = Creator.New
 		return function(props)
+			local radius = (type(props) == "table" and tonumber(props.Radius)) or Creator.Radius.Window or 12
+			local showShadow = (type(props) ~= "table") or (props.Shadow ~= false)
+			local surfaceTrans = (type(props) == "table" and tonumber(props.SurfaceTransparency)) or 0.32
+			local gradTrans = (type(props) == "table" and tonumber(props.GradientTransparency)) or 0.44
+			local corner = UDim.new(0, radius)
 			local Paint = {}
+			local children = {}
+			if showShadow then
+				-- Soft elevated ambient shadow (disabled inside CanvasGroup toasts where it would be clipped)
+				table.insert(children, New(
+					"ImageLabel",
+					{
+						Name = "Shadow",
+						Image = "rbxassetid://8992230677",
+						ScaleType = "Slice",
+						SliceCenter = Rect.new(Vector2.new(99, 99), Vector2.new(99, 99)),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Size = UDim2.new(1, 76, 1, 76),
+						Position = UDim2.new(0.5, 0, 0.5, 4),
+						BackgroundTransparency = 1,
+						ImageColor3 = Color3.fromRGB(0, 0, 0),
+						ImageTransparency = 0.72
+					}
+				))
+			end
+			table.insert(children, New("UICorner", {CornerRadius = corner}))
+			table.insert(children, New(
+				"Frame",
+				{
+					BackgroundTransparency = surfaceTrans,
+					Size = UDim2.fromScale(1, 1),
+					Name = "Background",
+					ThemeTag = {BackgroundColor3 = "AcrylicMain"}
+				},
+				{New("UICorner", {CornerRadius = corner})}
+			))
+			table.insert(children, New(
+				"Frame",
+				{
+					Name = "GradientSurface",
+					BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+					BackgroundTransparency = gradTrans,
+					Size = UDim2.fromScale(1, 1)
+				},
+				{
+					New("UICorner", {CornerRadius = corner}),
+					New("UIGradient", {Rotation = 90, ThemeTag = {Color = "AcrylicGradient"}})
+				}
+			))
+			-- Subtle frosted grain overlay
+			table.insert(children, New(
+				"ImageLabel",
+				{
+					Image = "rbxassetid://9968344105",
+					ImageTransparency = 0.975,
+					ScaleType = Enum.ScaleType.Tile,
+					TileSize = UDim2.new(0, 128, 0, 128),
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1
+				},
+				{New("UICorner", {CornerRadius = corner})}
+			))
+			table.insert(children, New(
+				"ImageLabel",
+				{
+					Image = "rbxassetid://9968344227",
+					ImageTransparency = 0.92,
+					ScaleType = Enum.ScaleType.Tile,
+					TileSize = UDim2.new(0, 128, 0, 128),
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					ThemeTag = {ImageTransparency = "AcrylicNoise"}
+				},
+				{New("UICorner", {CornerRadius = corner})}
+			))
+			-- Specular top sheen line (catches subtle top rim light)
+			table.insert(children, New(
+				"Frame",
+				{
+					Name = "TopRimSheen",
+					Size = UDim2.new(1, -radius * 2, 0, 1),
+					Position = UDim2.new(0, radius, 0, 0),
+					BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+					BackgroundTransparency = 0.82,
+					BorderSizePixel = 0,
+					ZIndex = 3
+				},
+				{
+					New(
+						"UIGradient",
+						{
+							Transparency = NumberSequence.new({
+								NumberSequenceKeypoint.new(0, 1),
+								NumberSequenceKeypoint.new(0.2, 0.25),
+								NumberSequenceKeypoint.new(0.5, 0),
+								NumberSequenceKeypoint.new(0.8, 0.25),
+								NumberSequenceKeypoint.new(1, 1)
+							})
+						}
+					)
+				}
+			))
+			-- Outer Glass Rim gradient stroke (brighter at top, deeper at bottom)
+			table.insert(children, New(
+				"Frame",
+				{Name = "GlassRim", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 3},
+				{
+					New("UICorner", {CornerRadius = corner}),
+					New(
+						"UIStroke",
+						{
+							Transparency = 0.3,
+							Thickness = 1,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "AcrylicBorder"}
+						},
+						{
+							New(
+								"UIGradient",
+								{
+									Rotation = 90,
+									Transparency = NumberSequence.new({
+										NumberSequenceKeypoint.new(0, 0.12),
+										NumberSequenceKeypoint.new(0.35, 0.55),
+										NumberSequenceKeypoint.new(1, 0.72)
+									})
+								}
+							)
+						}
+					)
+				}
+			))
 			Paint.Frame =
 				New(
 					"Frame",
 					{
 						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = 0.9,
+						BackgroundTransparency = 1,
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BorderSizePixel = 0
 					},
-					{
-						New(
-							"ImageLabel",
-							{
-								Image = "rbxassetid://8992230677",
-								ScaleType = "Slice",
-								SliceCenter = Rect.new(Vector2.new(99, 99), Vector2.new(99, 99)),
-								AnchorPoint = Vector2.new(0.5, 0.5),
-								Size = UDim2.new(1, 120, 1, 116),
-								Position = UDim2.new(0.5, 0, 0.5, 0),
-								BackgroundTransparency = 1,
-								ImageColor3 = Color3.fromRGB(0, 0, 0),
-								ImageTransparency = 0.7
-							}
-						),
-						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						New(
-							"Frame",
-							{
-								BackgroundTransparency = 0.45,
-								Size = UDim2.fromScale(1, 1),
-								Name = "Background",
-								ThemeTag = {BackgroundColor3 = "AcrylicMain"}
-							},
-							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
-						),
-						New(
-							"Frame",
-							{
-								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-								BackgroundTransparency = 0.4,
-								Size = UDim2.fromScale(1, 1)
-							},
-							{
-								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								New("UIGradient", {Rotation = 90, ThemeTag = {Color = "AcrylicGradient"}})
-							}
-						),
-						New(
-							"ImageLabel",
-							{
-								Image = "rbxassetid://9968344105",
-								ImageTransparency = 0.98,
-								ScaleType = Enum.ScaleType.Tile,
-								TileSize = UDim2.new(0, 128, 0, 128),
-								Size = UDim2.fromScale(1, 1),
-								BackgroundTransparency = 1
-							},
-							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
-						),
-						New(
-							"ImageLabel",
-							{
-								Image = "rbxassetid://9968344227",
-								ImageTransparency = 0.9,
-								ScaleType = Enum.ScaleType.Tile,
-								TileSize = UDim2.new(0, 128, 0, 128),
-								Size = UDim2.fromScale(1, 1),
-								BackgroundTransparency = 1,
-								ThemeTag = {ImageTransparency = "AcrylicNoise"}
-							},
-							{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
-						),
-						New(
-							"Frame",
-							{BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2},
-							{
-								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								New("UIStroke", {Transparency = 0.5, Thickness = 1, ThemeTag = {Color = "AcrylicBorder"}})
-							}
-						)
-					}
+					children
 				)
 			local useBlur = (type(props) ~= "table") or (props.UseBlur ~= false)
 			local blur
@@ -5645,7 +6187,8 @@ local moduleFunctions = {
 						Name = "AcryvenBlurPart",
 						Color = Color3.new(0, 0, 0),
 						Material = Enum.Material.Glass,
-						Size = Vector3.new(1, 1, 0),
+						Reflectance = 0,
+						Size = Vector3.new(1, 1, 1),
 						Anchored = true,
 						CanCollide = false,
 						CanTouch = false,
@@ -5653,9 +6196,9 @@ local moduleFunctions = {
 						Massless = true,
 						Locked = true,
 						CastShadow = false,
-						Transparency = 0.98
+						Transparency = 0.988
 					},
-					{Creator.New("SpecialMesh", {MeshType = Enum.MeshType.Brick, Offset = Vector3.new(0, 0, -1E-6)})}
+					{Creator.New("SpecialMesh", {MeshType = Enum.MeshType.Brick, Scale = Vector3.new(1, 1, 0.001), Offset = Vector3.new(0, 0, -1E-6)})}
 				)
 			return part
 		end
@@ -5665,30 +6208,44 @@ local moduleFunctions = {
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(6)
 		local Creator = requireModule(moduleScript.Parent.Parent.Creator)
 		local Workspace = Creator.GetService("Workspace")
-		local map, viewportPointToWorld = function(value, inMin, inMax, outMin, outMax)
-			return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
-		end, function(location, distance)
+
+		-- Project a ScreenGui pixel coordinate strictly onto a plane parallel to the
+		-- camera at depth `abs(NearPlaneZ) + distance`. Keeping all 4 corners coplanar
+		-- eliminates perspective skew / edge overshoot across any FOV, DPI, or window position.
+		local function viewportPointToWorld(location, distance)
 			local camera = Workspace.CurrentCamera
 			if not camera then
 				return Vector3.new()
 			end
 			local ray = camera:ScreenPointToRay(location.X, location.Y)
-			return ray.Origin + ray.Direction * distance
+			local camCF = camera.CFrame
+			local look = camCF.LookVector
+			local denom = ray.Direction:Dot(look)
+			local planeDepth = math.abs(camera.NearPlaneZ) + (distance or 0.004)
+			if math.abs(denom) > 1e-6 then
+				local originDepth = (ray.Origin - camCF.Position):Dot(look)
+				local t = (planeDepth - originDepth) / denom
+				return ray.Origin + ray.Direction * t
+			end
+			return ray.Origin + ray.Direction * (distance or 0.004)
 		end
-		local getOffset = function()
-			local camera = Workspace.CurrentCamera
-			local viewportHeight = camera and camera.ViewportSize.Y or 1080
-			return map(viewportHeight, 0, 2560, 8, 56)
+
+		-- ~6px-per-side inset scaled by DPI keeps the DoF bokeh blur kernel and
+		-- rectangular glass corners strictly inside the rounded UICorner(12) window
+		-- with zero halo spilling outside.
+		local function getOffset()
+			return math.floor(12 * Creator.DPIScale + 0.5)
 		end
+
 		return {viewportPointToWorld, getOffset}
 	end,
 	[8] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(8)
 		return {
-			Close = "rbxassetid://9886659671",
-			Min = "rbxassetid://9886659276",
-			Max = "rbxassetid://9886659406",
-			Restore = "rbxassetid://9886659001"
+			Close = "rbxassetid://110786993356448",
+			Min = "rbxassetid://118026365011536",
+			Max = "rbxassetid://73085922906397",
+			Restore = "rbxassetid://116269596042539"
 		}
 	end,
 	[9] = function()
@@ -5703,7 +6260,7 @@ local moduleFunctions = {
 				New(
 					"TextLabel",
 					{
-						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+						FontFace = Creator.Font(),
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 14,
 						TextWrapped = true,
@@ -5727,12 +6284,12 @@ local moduleFunctions = {
 					"TextButton",
 					{Size = UDim2.new(0, 0, 0, 32), Parent = parent, ThemeTag = {BackgroundColor3 = "DialogButton"}},
 					{
-						New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+						New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}),
 						New(
 							"UIStroke",
 							{
 								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-								Transparency = 0.65,
+								Transparency = 0.55,
 								ThemeTag = {Color = "DialogButtonBorder"}
 							}
 						),
@@ -5770,11 +6327,7 @@ local moduleFunctions = {
 	end,
 	[10] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(10)
-		local UserInputService, mouse, camera, Root =
-			game:GetService "UserInputService",
-		game:GetService "Players".LocalPlayer:GetMouse(),
-		game:GetService "Workspace".CurrentCamera,
-		moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Flipper, Creator = requireModule(Root.Packages.Flipper), requireModule(Root.Creator)
 		local Spring, Instant, New, Dialog = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {Window = nil}
 		function Dialog.Init(_self, window)
@@ -5782,7 +6335,8 @@ local moduleFunctions = {
 			return Dialog
 		end
 		function Dialog.Create(_self)
-			local NewDialog = {Buttons = 0}
+			local NewDialog = {Buttons = 0, _closed = false}
+			local radius = Creator.Radius.Window or 12
 			NewDialog.TintFrame =
 				New(
 					"TextButton",
@@ -5791,9 +6345,10 @@ local moduleFunctions = {
 						Size = UDim2.fromScale(1, 1),
 						BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 						BackgroundTransparency = 1,
+						ZIndex = 30,
 						Parent = Dialog.Window.Root
 					},
-					{New("UICorner", {CornerRadius = UDim.new(0, 8)})}
+					{New("UICorner", {CornerRadius = UDim.new(0, radius)})}
 				)
 			local tintMotor, setTintTransparency = Creator.SpringMotor(1, NewDialog.TintFrame, "BackgroundTransparency", true)
 			NewDialog.ButtonHolder =
@@ -5803,7 +6358,8 @@ local moduleFunctions = {
 						Size = UDim2.new(1, -40, 1, -40),
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.fromScale(0.5, 0.5),
-						BackgroundTransparency = 1
+						BackgroundTransparency = 1,
+						ZIndex = 32
 					},
 					{
 						New(
@@ -5823,10 +6379,11 @@ local moduleFunctions = {
 					{
 						Size = UDim2.new(1, 0, 0, 70),
 						Position = UDim2.new(0, 0, 1, -70),
+						ZIndex = 32,
 						ThemeTag = {BackgroundColor3 = "DialogHolder"}
 					},
 					{
-						New("Frame", {Size = UDim2.new(1, 0, 0, 1), ThemeTag = {BackgroundColor3 = "DialogHolderLine"}}),
+						New("Frame", {Size = UDim2.new(1, 0, 0, 1), ZIndex = 33, ThemeTag = {BackgroundColor3 = "DialogHolderLine"}}),
 						NewDialog.ButtonHolder
 					}
 				)
@@ -5834,11 +6391,7 @@ local moduleFunctions = {
 				New(
 					"TextLabel",
 					{
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.SemiBold,
-							Enum.FontStyle.Normal
-						),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 						Text = "Dialog",
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 22,
@@ -5847,11 +6400,18 @@ local moduleFunctions = {
 						Position = UDim2.fromOffset(20, 25),
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
+						ZIndex = 32,
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
 			NewDialog.Scale = New("UIScale", {Scale = 1})
 			local scaleMotor, setScale = Creator.SpringMotor(1.1, NewDialog.Scale, "Scale")
+			local dialogStroke = New("UIStroke", {Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DialogBorder"}})
+			local dialogBorderFrame = New(
+				"Frame",
+				{Name = "Border", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 34},
+				{New("UICorner", {CornerRadius = UDim.new(0, 10)}), dialogStroke}
+			)
 			NewDialog.Root =
 				New(
 					"CanvasGroup",
@@ -5860,12 +6420,13 @@ local moduleFunctions = {
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.fromScale(0.5, 0.5),
 						GroupTransparency = 1,
+						ZIndex = 31,
 						Parent = NewDialog.TintFrame,
 						ThemeTag = {BackgroundColor3 = "Dialog"}
 					},
 					{
-						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-						New("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "DialogBorder"}}),
+						New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+						dialogBorderFrame,
 						NewDialog.Scale,
 						NewDialog.Title,
 						NewDialog.ButtonHolderFrame
@@ -5874,19 +6435,31 @@ local moduleFunctions = {
 			local rootMotor, setRootTransparency = Creator.SpringMotor(1, NewDialog.Root, "GroupTransparency")
 			function NewDialog.Open(_self)
 				requireModule(Root).DialogOpen = true
-				NewDialog.Scale.Scale = 1.1
-				setTintTransparency(0.75)
+				NewDialog.Scale.Scale = Creator.ReducedMotion and 1 or 1.08
+				setTintTransparency(0.65)
 				setRootTransparency(0)
+				Creator.SpringValue(dialogStroke, "Transparency", 0.5, 10, 1)
 				setScale(1)
 			end
 			function NewDialog.Close(_self)
+				if NewDialog._closed then
+					return
+				end
+				NewDialog._closed = true
 				requireModule(Root).DialogOpen = false
 				setTintTransparency(1)
 				setRootTransparency(1)
-				setScale(1.1)
-				NewDialog.Root.UIStroke:Destroy()
-				task.delay(0.15, function()
-					NewDialog.TintFrame:Destroy()
+				Creator.SpringValue(dialogStroke, "Transparency", 1, 13, 1)
+				for _, desc in ipairs(NewDialog.Root:GetDescendants()) do
+					if desc:IsA("UIStroke") then
+						Creator.SpringValue(desc, "Transparency", 1, 13, 1)
+					end
+				end
+				setScale(1.06)
+				task.delay(Creator.ReducedMotion and 0 or 0.16, function()
+					if NewDialog.TintFrame and NewDialog.TintFrame.Parent then
+						NewDialog.TintFrame:Destroy()
+					end
 				end)
 			end
 			function NewDialog.Button(_self, title, callback)
@@ -5930,18 +6503,16 @@ local moduleFunctions = {
 				New(
 					"TextLabel",
 					{
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Medium,
-							Enum.FontStyle.Normal
-						),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 						Text = title,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
-						TextSize = 13,
+						TextSize = 14,
+						LineHeight = 1.12,
 						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						AutomaticSize = Enum.AutomaticSize.Y,
-						Size = UDim2.new(1, 0, 0, 14),
+						Size = UDim2.new(1, 0, 0, 0),
+						LayoutOrder = 1,
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
 						ThemeTag = {TextColor3 = "Text"}
@@ -5952,17 +6523,19 @@ local moduleFunctions = {
 				New(
 					"TextLabel",
 					{
-						FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+						FontFace = Creator.Font(Enum.FontWeight.Medium, Enum.FontStyle.Normal),
 						Text = initialDesc,
 						Visible = initialDesc ~= "",
 						TextColor3 = Color3.fromRGB(200, 200, 200),
 						TextSize = 12,
+						LineHeight = 1.15,
 						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						AutomaticSize = Enum.AutomaticSize.Y,
 						BackgroundTransparency = 1,
-						Size = UDim2.new(1, 0, 0, 14),
+						Size = UDim2.new(1, 0, 0, 0),
+						LayoutOrder = 2,
 						ThemeTag = {TextColor3 = "SubText"}
 					}
 				)
@@ -5973,15 +6546,15 @@ local moduleFunctions = {
 						AutomaticSize = Enum.AutomaticSize.Y,
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
-						Position = UDim2.fromOffset(10, 0),
-						Size = UDim2.new(1, -28, 0, 0)
+						Position = UDim2.fromOffset(12, 0),
+						Size = UDim2.new(1, -30, 0, 0)
 					},
 					{
 						New(
 							"UIListLayout",
-							{SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center}
+							{Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center}
 						),
-						New("UIPadding", {PaddingBottom = UDim.new(0, 13), PaddingTop = UDim.new(0, 13)}),
+						New("UIPadding", {PaddingBottom = UDim.new(0, 11), PaddingTop = UDim.new(0, 11)}),
 						Element.TitleLabel,
 						Element.DescLabel
 					}
@@ -5990,7 +6563,8 @@ local moduleFunctions = {
 				New(
 					"UIStroke",
 					{
-						Transparency = 0.5,
+						Transparency = 0.36,
+						Thickness = 1,
 						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 						Color = Color3.fromRGB(0, 0, 0),
 						ThemeTag = {Color = "ElementBorder"}
@@ -6009,8 +6583,84 @@ local moduleFunctions = {
 						LayoutOrder = 7,
 						ThemeTag = {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"}
 					},
-					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), Element.Border, Element.LabelHolder}
+					{New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}), Element.Border, Element.LabelHolder}
 				)
+
+			-- Optional StatusBadge pill (lazy created only when SetBadge is called)
+			local badgeFrame, badgeDot, badgeText = nil, nil, nil
+			function Element.SetBadge(_self, text, color, showDot)
+				if text == nil or text == "" then
+					if badgeFrame then
+						badgeFrame.Visible = false
+					end
+					return
+				end
+				if not badgeFrame then
+					badgeDot = New(
+						"Frame",
+						{
+							Name = "Dot",
+							Size = UDim2.fromOffset(6, 6),
+							BackgroundColor3 = Color3.fromRGB(52, 211, 153),
+							Visible = false
+						},
+						{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+					)
+					badgeText = New(
+						"TextLabel",
+						{
+							Name = "BadgeLabel",
+							Text = "",
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+							TextSize = 10,
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.new(0, 0, 1, 0),
+							BackgroundTransparency = 1
+						}
+					)
+					badgeFrame = New(
+						"Frame",
+						{
+							Name = "StatusBadge",
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.fromOffset(0, 18),
+							Position = UDim2.new(1, -12, 0, 8),
+							AnchorPoint = Vector2.new(1, 0),
+							BackgroundTransparency = 0.16,
+							ZIndex = 4,
+							Parent = Element.Frame,
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						},
+						{
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							New("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}),
+							New("UIListLayout", {
+								FillDirection = Enum.FillDirection.Horizontal,
+								VerticalAlignment = Enum.VerticalAlignment.Center,
+								Padding = UDim.new(0, 4)
+							}),
+							badgeDot,
+							badgeText
+						}
+					)
+				end
+				badgeText.Text = tostring(text)
+				badgeDot.Visible = showDot == true
+				if typeof(color) == "Color3" then
+					Creator.OverrideTag(badgeFrame, {})
+					badgeFrame.BackgroundColor3 = color
+					badgeText.TextColor3 = Creator.AutoContrast(color)
+					badgeDot.BackgroundColor3 = Creator.AutoContrast(color)
+				else
+					local acc = Creator.GetThemeProperty("Accent")
+					Creator.OverrideTag(badgeFrame, {BackgroundColor3 = "Accent"})
+					badgeText.TextColor3 = Creator.AutoContrast(acc)
+					badgeDot.BackgroundColor3 = Creator.AutoContrast(acc)
+				end
+				badgeFrame.Visible = true
+			end
+
 			-- TitleLabel and DescLabel were already registered once by Creator.New above.
 			-- Subsequent SetTitle/SetDesc calls are runtime text (status, counters, player names).
 			function Element.SetTitle(_self, text)
@@ -6048,24 +6698,28 @@ local moduleFunctions = {
 					Element.Frame.MouseEnter,
 					function()
 						setTransparency(Creator.GetThemeProperty "ElementTransparency" - Creator.GetThemeProperty "HoverChange")
+						Creator.SpringValue(Element.Border, "Transparency", 0.16, 10, 1)
 					end
 				)
 				Creator.AddSignal(
 					Element.Frame.MouseLeave,
 					function()
 						setTransparency(Creator.GetThemeProperty "ElementTransparency")
+						Creator.SpringValue(Element.Border, "Transparency", 0.36, 10, 1)
 					end
 				)
 				Creator.AddSignal(
 					Element.Frame.MouseButton1Down,
 					function()
 						setTransparency(Creator.GetThemeProperty "ElementTransparency" + Creator.GetThemeProperty "HoverChange")
+						Creator.SpringValue(Element.Border, "Transparency", 0.08, 12, 1)
 					end
 				)
 				Creator.AddSignal(
 					Element.Frame.MouseButton1Up,
 					function()
 						setTransparency(Creator.GetThemeProperty "ElementTransparency" - Creator.GetThemeProperty "HoverChange")
+						Creator.SpringValue(Element.Border, "Transparency", 0.16, 10, 1)
 					end
 				)
 			end
@@ -6075,513 +6729,608 @@ local moduleFunctions = {
 	[12] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(12)
 		local Root = moduleScript.Parent.Parent
-		local Flipper, Creator, Acrylic = requireModule(Root.Packages.Flipper), requireModule(Root.Creator), requireModule(Root.Acrylic)
-		local TweenService = Creator.GetService("TweenService")
+		local Creator, Acrylic = requireModule(Root.Creator), requireModule(Root.Acrylic)
+		local RunService = Creator.GetService("RunService")
 		local Workspace = Creator.GetService("Workspace")
-		local Spring, Instant, New, Notification = Flipper.Spring.new, Flipper.Instant.new, Creator.New, {}
+		local New = Creator.New
+
+		local Notification = {
+			Side = "BottomRight",
+			Holder = nil,
+			ListLayout = nil
+		}
+
+		local SIDE_CONFIG = {
+			BottomRight = {anchor = Vector2.new(1, 1), xScale = 1, yScale = 1, xSign = -1, ySign = -1, vAlign = Enum.VerticalAlignment.Bottom, slideDir = 1},
+			TopRight = {anchor = Vector2.new(1, 0), xScale = 1, yScale = 0, xSign = -1, ySign = 1, vAlign = Enum.VerticalAlignment.Top, slideDir = 1},
+			BottomLeft = {anchor = Vector2.new(0, 1), xScale = 0, yScale = 1, xSign = 1, ySign = -1, vAlign = Enum.VerticalAlignment.Bottom, slideDir = -1},
+			TopLeft = {anchor = Vector2.new(0, 0), xScale = 0, yScale = 0, xSign = 1, ySign = 1, vAlign = Enum.VerticalAlignment.Top, slideDir = -1}
+		}
+
+		local function normalizeSide(side)
+			if type(side) ~= "string" then
+				return "BottomRight"
+			end
+			local compact = side:gsub("[%s_%-]", ""):lower()
+			if compact == "topright" or compact == "righttop" then
+				return "TopRight"
+			elseif compact == "bottomleft" or compact == "leftbottom" or compact == "left" then
+				return "BottomLeft"
+			elseif compact == "topleft" or compact == "lefttop" then
+				return "TopLeft"
+			end
+			return "BottomRight"
+		end
+
+		local function computeHolderLayout()
+			local camera = Workspace.CurrentCamera
+			local isMobile = camera and camera.ViewportSize.X < 600
+			local sideMargin = isMobile and 12 or 24
+			local topSafe = isMobile and 14 or 16
+			local cfg = SIDE_CONFIG[Notification.Side] or SIDE_CONFIG.BottomRight
+			local width = isMobile and 286 or 336
+			local yOffset = cfg.ySign > 0 and topSafe or -sideMargin
+			local pos = UDim2.new(cfg.xScale, cfg.xSign * sideMargin, cfg.yScale, yOffset)
+			local size = UDim2.new(0, width, 1, -(sideMargin + topSafe))
+			return pos, size, cfg
+		end
+
+		function Notification.SetSide(_self, side)
+			Notification.Side = normalizeSide(side)
+			if not Notification.Holder then
+				return Notification.Side
+			end
+			local pos, size, cfg = computeHolderLayout()
+			Notification.Holder.AnchorPoint = cfg.anchor
+			Notification.Holder.Position = pos
+			Notification.Holder.Size = size
+			if Notification.ListLayout then
+				Notification.ListLayout.VerticalAlignment = cfg.vAlign
+			end
+			return Notification.Side
+		end
 
 		function Notification.Init(_self, gui)
-			-- Responsive width: smaller on mobile, recomputed when the screen
-			-- rotates or the window is resized.
+			local pos, size, cfg = computeHolderLayout()
+			Notification.ListLayout = New(
+				"UIListLayout",
+				{
+					HorizontalAlignment = Enum.HorizontalAlignment.Center,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					VerticalAlignment = cfg.vAlign,
+					Padding = UDim.new(0, 10)
+				}
+			)
+			local holderScale = New("UIScale", {Scale = Creator.DPIScale})
+			Notification.UIScale = holderScale
+			Creator.RegisterDPIScale(holderScale)
+			Notification.Holder = New(
+				"Frame",
+				{
+					Name = "AcryvenNotifications",
+					Position = pos,
+					Size = size,
+					AnchorPoint = cfg.anchor,
+					BackgroundTransparency = 1,
+					Parent = gui
+				},
+				{holderScale, Notification.ListLayout}
+			)
 			local camera = Workspace.CurrentCamera
-			local function layout()
-				local isMobile = camera and camera.ViewportSize.X < 600
-				local sideMargin = isMobile and 10 or 30
-				return UDim2.new(1, -sideMargin, 1, -sideMargin), UDim2.new(0, isMobile and 280 or 340, 1, -sideMargin)
-			end
-			local position, size = layout()
-
-			Notification.Holder =
-				New(
-					"Frame",
-					{
-						Position = position,
-						Size = size,
-						AnchorPoint = Vector2.new(1, 1),
-						BackgroundTransparency = 1,
-						Parent = gui
-					},
-					{
-						New(
-							"UIListLayout",
-							{
-								HorizontalAlignment = Enum.HorizontalAlignment.Center,
-								SortOrder = Enum.SortOrder.LayoutOrder,
-								VerticalAlignment = Enum.VerticalAlignment.Bottom,
-								Padding = UDim.new(0, 8)
-							}
-						)
-					}
-				)
 			if camera then
 				Creator.AddSignal(camera:GetPropertyChangedSignal("ViewportSize"), function()
-					Notification.Holder.Position, Notification.Holder.Size = layout()
+					Notification:SetSide(Notification.Side)
 				end)
 			end
 		end
 
+		local function resolveAccentAndIcon(Library, config)
+			local kind = type(config.Type) == "string" and config.Type:lower() or ""
+			local titleLower = tostring(config.Title or ""):lower()
+			local accentColor = typeof(config.AccentColor) == "Color3" and config.AccentColor or nil
+			local icon = nil
+			if type(config.Icon) == "string" and config.Icon ~= "" then
+				icon = Library:GetIcon(config.Icon) or config.Icon
+			end
+
+			if kind == "success" or (kind == "" and (titleLower:find("success") or titleLower:find("complete") or titleLower:find("saved"))) then
+				icon = icon or Library:GetIcon("check-circle") or "rbxassetid://10709790387"
+				accentColor = accentColor or Color3.fromRGB(52, 211, 153)
+			elseif kind == "error" or (kind == "" and (titleLower:find("error") or titleLower:find("fail"))) then
+				icon = icon or Library:GetIcon("alert-circle") or "rbxassetid://10734933655"
+				accentColor = accentColor or Color3.fromRGB(248, 113, 113)
+			elseif kind == "warn" or kind == "warning" or (kind == "" and titleLower:find("warn")) then
+				icon = icon or Library:GetIcon("alert-triangle") or "rbxassetid://10709753149"
+				accentColor = accentColor or Color3.fromRGB(251, 191, 36)
+			else
+				icon = icon or Library:GetIcon("bell") or "rbxassetid://10723415903"
+				accentColor = accentColor or Creator.GetThemeProperty("Accent")
+			end
+			return accentColor, icon
+		end
+
 		function Notification.New(_self, config)
+			local Library = requireModule(Root)
+			config = type(config) == "table" and config or {}
 			config.Title = config.Title or "Notification"
-			config.Content = config.Content or "Content"
+			config.Content = config.Content or ""
 			config.SubContent = config.SubContent or ""
-			config.Duration = config.Duration or nil
 			config.Buttons = config.Buttons or {}
 
-			local NewNotification = {Closed = false}
-			-- Notifications use 2D Glass surface only (no 3D workspace glass mesh)
-			-- so transient toasts never leak blur planes or add Camera CFrame signals.
-			NewNotification.AcrylicPaint = Acrylic.AcrylicPaint({UseBlur = false})
+			local accentColor, icon = resolveAccentAndIcon(Library, config)
+			local sideCfg = SIDE_CONFIG[Notification.Side] or SIDE_CONFIG.BottomRight
+			local slideStart = sideCfg.slideDir * 36
 
-			-- Icon & color mapping
-			local icon = "rbxassetid://10723415903"
-			local accentColor = Color3.fromRGB(76, 194, 255)
+			local NewNotification = {
+				Closed = false,
+				Paused = false,
+				Duration = tonumber(config.Duration),
+				Remaining = tonumber(config.Duration),
+				ManualProgress = nil
+			}
 
-			if config.Title:lower():find("success") or config.Title:lower():find("complete") then
-				icon = "rbxassetid://10709790387"
-				accentColor = Color3.fromRGB(50, 205, 50)
-			elseif config.Title:lower():find("error") or config.Title:lower():find("fail") then
-				icon = "rbxassetid://10734933655"
-				accentColor = Color3.fromRGB(255, 60, 80)
-			elseif config.Title:lower():find("warn") then
-				icon = "rbxassetid://10709753149"
-				accentColor = Color3.fromRGB(255, 180, 0)
-			end
+			-- Pure 2D Glass Surface (higher opacity for crisp readability over bright 3D scenes, no clipped outer shadow)
+			NewNotification.AcrylicPaint = Acrylic.AcrylicPaint({UseBlur = false, Radius = 10, Shadow = false, SurfaceTransparency = 0.16, GradientTransparency = 0.28})
 
-			NewNotification.IconFrame =
-				New(
-					"Frame",
-					{
-						Size = UDim2.fromOffset(40, 40),
-						Position = UDim2.fromOffset(10, 10),
-						BackgroundColor3 = accentColor,
-						BackgroundTransparency = 0.88,
-						BorderSizePixel = 0
-					},
-					{
-						New("UICorner", {CornerRadius = UDim.new(0, 10)}),
-						New(
-							"UIStroke",
-							{
-								Color = accentColor,
-								Transparency = 0.7,
-								Thickness = 1
-							}
-						),
-						New(
-							"ImageLabel",
-							{
-								Size = UDim2.fromOffset(22, 22),
-								Position = UDim2.fromScale(0.5, 0.5),
-								AnchorPoint = Vector2.new(0.5, 0.5),
-								BackgroundTransparency = 1,
-								Image = icon,
-								ImageColor3 = accentColor
-							}
-						)
-					}
-				)
-
-			NewNotification.Title =
-				New(
-					"TextLabel",
-					{
-						Position = UDim2.new(0, 58, 0, 12),
-						Text = config.Title,
-						I18nDynamic = true,
-						RichText = true,
-						TextTransparency = 0,
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Bold,
-							Enum.FontStyle.Normal
-						),
-						TextSize = 14,
-						TextXAlignment = "Left",
-						TextYAlignment = "Center",
-						Size = UDim2.new(1, -98, 0, 16),
-						TextWrapped = true,
-						BackgroundTransparency = 1,
-						ThemeTag = {TextColor3 = "Text"}
-					}
-				)
-			-- Title, ContentLabel, SubContentLabel are already auto-registered by Creator.New with I18nDynamic = true.
-			NewNotification.ContentLabel =
-				New(
-					"TextLabel",
-					{
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Regular,
-							Enum.FontStyle.Normal
-						),
-						Text = config.Content,
-						I18nDynamic = true,
-						TextColor3 = Color3.fromRGB(240, 240, 240),
-						TextSize = 12,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						AutomaticSize = Enum.AutomaticSize.Y,
-						Size = UDim2.new(1, 0, 0, 12),
-						BackgroundTransparency = 1,
-						TextWrapped = true,
-						ThemeTag = {TextColor3 = "Text"}
-					}
-				)
-
-			NewNotification.SubContentLabel =
-				New(
-					"TextLabel",
-					{
-						FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
-						Text = config.SubContent,
-						I18nDynamic = true,
-						TextColor3 = Color3.fromRGB(200, 200, 200),
-						TextSize = 12,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						AutomaticSize = Enum.AutomaticSize.Y,
-						Size = UDim2.new(1, 0, 0, 12),
-						BackgroundTransparency = 1,
-						TextWrapped = true,
-						ThemeTag = {TextColor3 = "SubText"}
-					}
-				)
-
-			NewNotification.LabelHolder =
-				New(
-					"Frame",
-					{
-						AutomaticSize = Enum.AutomaticSize.Y,
-						BackgroundTransparency = 1,
-						Position = UDim2.fromOffset(58, 32),
-						Size = UDim2.new(1, -68, 0, 0)
-					},
-					{
-						New(
-							"UIListLayout",
-							{
-								SortOrder = Enum.SortOrder.LayoutOrder,
-								VerticalAlignment = Enum.VerticalAlignment.Center,
-								Padding = UDim.new(0, 3)
-							}
-						),
-						NewNotification.ContentLabel,
-						NewNotification.SubContentLabel
-					}
-				)
-
-			-- Buttons container (dynamic)
-			NewNotification.ButtonHolder =
-				New(
-					"Frame",
-					{
-						AutomaticSize = Enum.AutomaticSize.Y,
-						BackgroundTransparency = 1,
-						Position = UDim2.new(0, 58, 1, -40),
-						Size = UDim2.new(1, -68, 0, 0)
-					},
-					{
-						New(
-							"UIListLayout",
-							{
-								SortOrder = Enum.SortOrder.LayoutOrder,
-								Padding = UDim.new(0, 5),
-								HorizontalAlignment = Enum.HorizontalAlignment.Right,
-								FillDirection = Enum.FillDirection.Horizontal
-							}
-						)
-					}
-				)
-
-			-- Create each dynamic button
-			if #config.Buttons > 0 then
-				for _, btnData in ipairs(config.Buttons) do
-					local text = btnData.Text or "Button"
-					local color = btnData.Color or Color3.fromRGB(100, 100, 255)
-					-- estimate width (simple): clamp by text length - smaller for mobile
-					local estWidth = math.clamp(#tostring(text) * 7 + 20, 64, 140)
-
-					local btnStroke = New(
-						"UIStroke",
+			local iconStroke = New("UIStroke", {Color = accentColor, Transparency = 1, Thickness = 1})
+			NewNotification.IconFrame = New(
+				"Frame",
+				{
+					Name = "IconBadge",
+					Size = UDim2.fromOffset(34, 34),
+					Position = UDim2.fromOffset(12, 12),
+					BackgroundColor3 = accentColor,
+					BackgroundTransparency = 0.86,
+					BorderSizePixel = 0,
+					ZIndex = 4
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 9)}),
+					iconStroke,
+					New(
+						"ImageLabel",
 						{
-							Color = color,
-							Transparency = 0.5,
-							Thickness = 1,
-							ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+							Name = "Icon",
+							Size = UDim2.fromOffset(18, 18),
+							Position = UDim2.fromScale(0.5, 0.5),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							BackgroundTransparency = 1,
+							Image = icon,
+							ImageColor3 = accentColor,
+							ZIndex = 5
 						}
 					)
+				}
+			)
 
-					local btn =
-						New(
-							"TextButton",
-							{
-								Text = text,
-								FontFace = Font.new(
-									"rbxasset://fonts/families/GothamSSm.json",
-									Enum.FontWeight.SemiBold,
-									Enum.FontStyle.Normal
-								),
-								TextSize = 13,
-								TextColor3 = Color3.fromRGB(255, 255, 255),
-								Size = UDim2.fromOffset(estWidth, 26),
-								BackgroundColor3 = color,
-								BackgroundTransparency = 0.05,
-								BorderSizePixel = 0,
-								AutoButtonColor = false
-							},
-							{
-								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
-								btnStroke
-							}
-						)
+			NewNotification.Title = New(
+				"TextLabel",
+				{
+					Position = UDim2.new(0, 56, 0, 11),
+					Text = tostring(config.Title),
+					I18nDynamic = true,
+					RichText = true,
+					TextTransparency = 0,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+					TextSize = 13,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextYAlignment = Enum.TextYAlignment.Center,
+					Size = UDim2.new(1, -92, 0, 17),
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					BackgroundTransparency = 1,
+					ZIndex = 4,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
 
-					-- hover spring with smoother animation
-					local _, btnSet = Creator.SpringMotor(0.05, btn, "BackgroundTransparency")
-					local _, btnStrokeSet = Creator.SpringMotor(0.5, btnStroke, "Transparency")
+			NewNotification.ContentLabel = New(
+				"TextLabel",
+				{
+					FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+					Text = tostring(config.Content),
+					I18nDynamic = true,
+					RichText = true,
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, 0, 0, 0),
+					BackgroundTransparency = 1,
+					TextWrapped = true,
+					Visible = config.Content ~= "",
+					ZIndex = 4,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
 
-					Creator.AddSignal(
-						btn.MouseEnter,
-						function()
-							btnSet(0)
-							btnStrokeSet(0.2)
-						end
+			NewNotification.SubContentLabel = New(
+				"TextLabel",
+				{
+					FontFace = Creator.Font(),
+					Text = tostring(config.SubContent),
+					I18nDynamic = true,
+					RichText = true,
+					TextSize = 11,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, 0, 0, 0),
+					BackgroundTransparency = 1,
+					TextWrapped = true,
+					Visible = config.SubContent ~= "",
+					ZIndex = 4,
+					ThemeTag = {TextColor3 = "SubText"}
+				}
+			)
+
+			NewNotification.LabelHolder = New(
+				"Frame",
+				{
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					Position = UDim2.fromOffset(56, 30),
+					Size = UDim2.new(1, -68, 0, 0),
+					ZIndex = 4
+				},
+				{
+					New("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2)}),
+					NewNotification.ContentLabel,
+					NewNotification.SubContentLabel
+				}
+			)
+
+			NewNotification.ButtonHolder = New(
+				"Frame",
+				{
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					Position = UDim2.new(0, 56, 1, -38),
+					Size = UDim2.new(1, -68, 0, 26),
+					Visible = #config.Buttons > 0,
+					ZIndex = 5
+				},
+				{
+					New(
+						"UIListLayout",
+						{
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							Padding = UDim.new(0, 6),
+							HorizontalAlignment = Enum.HorizontalAlignment.Right,
+							FillDirection = Enum.FillDirection.Horizontal
+						}
 					)
-					Creator.AddSignal(
-						btn.MouseLeave,
-						function()
-							btnSet(0.05)
-							btnStrokeSet(0.5)
-						end
-					)
+				}
+			)
 
-					-- click behaviour
-					Creator.AddSignal(
-						btn.MouseButton1Click,
-						function()
-							-- safe call to callback
-							if type(btnData.Callback) == "function" then
-								local ok, err = pcall(btnData.Callback)
-								if not ok then
-									warn("Notification button callback error:", err)
-								end
-							end
-							-- default close unless btnData.KeepOpen == true
-							if not btnData.KeepOpen then
-								NewNotification:Close()
-							end
-						end
-					)
-
-					-- parent into holder
-					btn.Parent = NewNotification.ButtonHolder
-				end
-			end
-
-			NewNotification.ProgressBar =
-				New(
-					"Frame",
-					{
-						Size = UDim2.new(1, 0, 0, 4),
-						Position = UDim2.new(0, 0, 1, -4),
-						BackgroundColor3 = accentColor,
-						BackgroundTransparency = 0.5,
-						BorderSizePixel = 0
-					},
-					{
-						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						New(
-							"UIGradient",
-							{
-								Color = ColorSequence.new({
-									ColorSequenceKeypoint.new(0, accentColor),
-									ColorSequenceKeypoint.new(1, Color3.fromRGB(
-										math.min(accentColor.R * 255 * 1.2, 255),
-										math.min(accentColor.G * 255 * 1.2, 255),
-										math.min(accentColor.B * 255 * 1.2, 255)
-										))
-								})
-							}
-						)
-					}
-				)
-
-			NewNotification.CloseButton =
-				New(
+			for _, btnData in ipairs(config.Buttons) do
+				local text = btnData.Text or btnData.Title or "Action"
+				local color = btnData.Color or accentColor
+				local textColor = Creator.AutoContrast(color)
+				local estWidth = math.clamp(#tostring(text) * 7 + 22, 62, 136)
+				local btn = New(
 					"TextButton",
 					{
-						Text = "",
-						Position = UDim2.new(1, -12, 0, 12),
-						Size = UDim2.fromOffset(20, 20),
-						AnchorPoint = Vector2.new(1, 0),
-						BackgroundTransparency = 0.92,
-						ThemeTag = {BackgroundColor3 = "Element"}
+						Text = text,
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+						TextSize = 12,
+						TextColor3 = textColor,
+						Size = UDim2.fromOffset(estWidth, 24),
+						BackgroundColor3 = color,
+						BackgroundTransparency = 0.1,
+						BorderSizePixel = 0,
+						AutoButtonColor = false,
+						ZIndex = 6,
+						Parent = NewNotification.ButtonHolder
 					},
 					{
-						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						New(
-							"ImageLabel",
-							{
-								Image = "rbxassetid://10747384394",
-								Size = UDim2.fromOffset(12, 12),
-								Position = UDim2.fromScale(0.5, 0.5),
-								AnchorPoint = Vector2.new(0.5, 0.5),
-								BackgroundTransparency = 1,
-								ThemeTag = {ImageColor3 = "SubText"}
-							}
-						)
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIStroke", {Color = color, Transparency = 0.45, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
 					}
 				)
-
-			NewNotification.Shadow =
-				New(
-					"ImageLabel",
-					{
-						Size = UDim2.new(1, 40, 1, 40),
-						Position = UDim2.fromOffset(-20, -20),
-						BackgroundTransparency = 1,
-						Image = "rbxassetid://5554236805",
-						ScaleType = Enum.ScaleType.Slice,
-						SliceCenter = Rect.new(23, 23, 277, 277),
-						ImageTransparency = 0.82,
-						ImageColor3 = Color3.fromRGB(0, 0, 0),
-						ZIndex = 0
-					}
-				)
-
-			-- Include ButtonHolder in Root children so it renders
-			NewNotification.Root =
-				New(
-					"Frame",
-					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Position = UDim2.fromScale(1, 0)},
-					{
-						NewNotification.Shadow,
-						NewNotification.AcrylicPaint.Frame,
-						NewNotification.IconFrame,
-						NewNotification.Title,
-						NewNotification.CloseButton,
-						NewNotification.LabelHolder,
-						NewNotification.ButtonHolder,
-						NewNotification.ProgressBar
-					}
-				)
-
-			if config.Content == "" then
-				NewNotification.ContentLabel.Visible = false
-			end
-			if config.SubContent == "" then
-				NewNotification.SubContentLabel.Visible = false
-			end
-
-			NewNotification.Holder =
-				New("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 100), Parent = Notification.Holder}, {NewNotification.Root})
-
-			local motor = Flipper.GroupMotor.new({Scale = 1, Offset = 80, Rotation = 8, Opacity = 0})
-			motor:onStep(
-				function(values)
-					NewNotification.Root.Position = UDim2.new(values.Scale, values.Offset, 0, 0)
-					NewNotification.Root.Rotation = values.Rotation
-					NewNotification.Root.BackgroundTransparency = values.Opacity
-					if NewNotification.AcrylicPaint and NewNotification.AcrylicPaint.Frame then
-						NewNotification.AcrylicPaint.Frame.BackgroundTransparency = values.Opacity
+				Creator.AddSignal(btn.MouseEnter, function()
+					Creator.SpringValue(btn, "BackgroundTransparency", 0, 10, 1)
+				end)
+				Creator.AddSignal(btn.MouseLeave, function()
+					Creator.SpringValue(btn, "BackgroundTransparency", 0.1, 10, 1)
+				end)
+				Creator.AddSignal(btn.MouseButton1Click, function()
+					if type(btnData.Callback) == "function" then
+						local ok, err = pcall(btnData.Callback)
+						if not ok then
+							warn("Notification button callback error:", err)
+						end
 					end
-				end
-			)
-
-			Creator.AddSignal(
-				NewNotification.CloseButton.MouseButton1Click,
-				function()
-					NewNotification:Close()
-				end
-			)
-
-			local closeMotor, setCloseTransparency = Creator.SpringMotor(0.92, NewNotification.CloseButton, "BackgroundTransparency")
-			Creator.AddSignal(
-				NewNotification.CloseButton.MouseEnter,
-				function()
-					setCloseTransparency(0.8)
-				end
-			)
-			Creator.AddSignal(
-				NewNotification.CloseButton.MouseLeave,
-				function()
-					setCloseTransparency(0.92)
-				end
-			)
-
-			function NewNotification.Open(_self)
-				local labelHeight = NewNotification.LabelHolder.AbsoluteSize.Y
-				local extraForButtons = (#config.Buttons > 0) and 36 or 0
-				NewNotification.Holder.Size = UDim2.new(1, 0, 0, math.max(60, 50 + labelHeight + extraForButtons))
-
-				-- Improved slide-in animation with fade
-				motor:setGoal(
-					{
-						Scale = Spring(0, {frequency = 6, dampingRatio = 0.75}),
-						Offset = Spring(0, {frequency = 6, dampingRatio = 0.75}),
-						Rotation = Spring(0, {frequency = 7, dampingRatio = 0.85}),
-						Opacity = Spring(1, {frequency = 8, dampingRatio = 0.9})
-					}
-				)
-
-				-- Icon bounce animation - smoother and smaller
-				NewNotification.IconFrame.Size = UDim2.fromOffset(0, 0)
-				-- Runs on its own thread so Notify returns without yielding.
-				local TweenService = game:GetService("TweenService")
-				local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-				task.delay(0.15, function()
-					TweenService:Create(NewNotification.IconFrame, tweenInfo, {Size = UDim2.fromOffset(40, 40)}):Play()
-
-					-- Subtle glow effect on icon
-					task.wait(0.2)
-					local iconFrame = NewNotification.IconFrame
-					TweenService:Create(iconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 0.75}):Play()
+					if not btnData.KeepOpen then
+						NewNotification:Close()
+					end
 				end)
 			end
 
-			function NewNotification.Close(_self)
-				if not NewNotification.Closed then
-					NewNotification.Closed = true
-					task.spawn(
-						function()
-							-- Improved slide-out with fade and rotation
-							motor:setGoal(
-								{
-									Scale = Spring(1, {frequency = 7, dampingRatio = 0.8}),
-									Offset = Spring(100, {frequency = 7, dampingRatio = 0.8}),
-									Rotation = Spring(-8, {frequency = 8, dampingRatio = 0.85}),
-									Opacity = Spring(0, {frequency = 6, dampingRatio = 1})
-								}
-							)
+			NewNotification.ProgressFill = New(
+				"Frame",
+				{
+					Name = "ProgressFill",
+					Size = UDim2.new(1, 0, 1, 0),
+					BackgroundColor3 = accentColor,
+					BackgroundTransparency = 0.15,
+					BorderSizePixel = 0
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
 
-							-- Icon shrink animation
-							local TweenService = game:GetService("TweenService")
-							TweenService:Create(NewNotification.IconFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-								{Size = UDim2.fromOffset(0, 0)}):Play()
+			NewNotification.ProgressBar = New(
+				"Frame",
+				{
+					Name = "ProgressTrack",
+					Size = UDim2.new(1, -20, 0, 3),
+					Position = UDim2.new(0, 10, 1, -7),
+					BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+					BackgroundTransparency = 0.9,
+					BorderSizePixel = 0,
+					Visible = NewNotification.Duration ~= nil or config.Progress ~= nil,
+					ZIndex = 5
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)}), NewNotification.ProgressFill}
+			)
 
-							task.wait(0.6)
-							if NewNotification.AcrylicPaint and type(NewNotification.AcrylicPaint.Destroy) == "function" then
-								pcall(NewNotification.AcrylicPaint.Destroy)
-							end
-							if NewNotification.Holder and NewNotification.Holder.Destroy then
-								NewNotification.Holder:Destroy()
-							end
-						end
+			NewNotification.CloseButton = New(
+				"TextButton",
+				{
+					Text = "",
+					Position = UDim2.new(1, -10, 0, 10),
+					Size = UDim2.fromOffset(22, 22),
+					AnchorPoint = Vector2.new(1, 0),
+					BackgroundTransparency = 1,
+					ZIndex = 6,
+					ThemeTag = {BackgroundColor3 = "Text"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+					New(
+						"ImageLabel",
+						{
+							Image = Library:GetIcon("x") or "rbxassetid://10747384394",
+							Size = UDim2.fromOffset(12, 12),
+							Position = UDim2.fromScale(0.5, 0.5),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							BackgroundTransparency = 1,
+							ZIndex = 7,
+							ThemeTag = {ImageColor3 = "SubText"}
+						}
 					)
+				}
+			)
+
+			-- Accent severity rim placed on a child Frame (never directly on CanvasGroup)
+			-- and animated in sync with GroupTransparency so strokes never linger when fading out.
+			local cardBorder = New(
+				"UIStroke",
+				{
+					Color = accentColor,
+					Transparency = 1,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				}
+			)
+			local cardBorderFrame = New(
+				"Frame",
+				{
+					Name = "CardBorder",
+					BackgroundTransparency = 1,
+					Size = UDim2.fromScale(1, 1),
+					ZIndex = 6
+				},
+				{New("UICorner", {CornerRadius = UDim.new(0, 10)}), cardBorder}
+			)
+			local glassRim = NewNotification.AcrylicPaint.Frame:FindFirstChild("GlassRim")
+			local glassRimStroke = glassRim and glassRim:FindFirstChildOfClass("UIStroke") or nil
+			if glassRimStroke then
+				glassRimStroke.Transparency = 1
+			end
+
+			-- True CanvasGroup root: fades background, border, icons, and text together cleanly
+			NewNotification.Root = New(
+				"CanvasGroup",
+				{
+					Name = "ToastCard",
+					BackgroundTransparency = 1,
+					Size = UDim2.fromScale(1, 1),
+					Position = UDim2.fromOffset(slideStart, 0),
+					GroupTransparency = 1,
+					BorderSizePixel = 0
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+					NewNotification.AcrylicPaint.Frame,
+					cardBorderFrame,
+					NewNotification.IconFrame,
+					NewNotification.Title,
+					NewNotification.CloseButton,
+					NewNotification.LabelHolder,
+					NewNotification.ButtonHolder,
+					NewNotification.ProgressBar
+				}
+			)
+
+			NewNotification.Holder = New(
+				"Frame",
+				{
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 64),
+					Parent = Notification.Holder
+				},
+				{NewNotification.Root}
+			)
+
+			local function recomputeHeight()
+				if NewNotification.Closed or not NewNotification.Holder or not NewNotification.Holder.Parent then
+					return
+				end
+				local scale = Creator.GetEffectiveScale(NewNotification.LabelHolder)
+				local labelHeight = math.ceil(NewNotification.LabelHolder.AbsoluteSize.Y / scale)
+				local extraButtons = (#config.Buttons > 0) and 38 or 0
+				local extraProgress = NewNotification.ProgressBar.Visible and 10 or 0
+				local targetH = math.max(58, 40 + labelHeight + extraButtons + extraProgress)
+				NewNotification.Holder.Size = UDim2.new(1, 0, 0, targetH)
+			end
+			Creator.AddSignal(NewNotification.LabelHolder:GetPropertyChangedSignal("AbsoluteSize"), recomputeHeight)
+			Creator.RegisterDPIScale(NewNotification.Holder, function()
+				task.defer(recomputeHeight)
+			end)
+
+			-- Pause-on-hover countdown timer (still auto-dismisses when Duration > 0 even with ManualProgress)
+			local timerConn = nil
+			local function stopTimer()
+				if timerConn then
+					timerConn:Disconnect()
+					timerConn = nil
 				end
 			end
 
-			NewNotification:Open()
-
-			if config.Duration then
-				NewNotification.ProgressBar.Size = UDim2.new(1, 0, 0, 4)
-				local TweenService = game:GetService("TweenService")
-				local tweenInfo = TweenInfo.new(config.Duration, Enum.EasingStyle.Linear)
-				TweenService:Create(NewNotification.ProgressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 4)}):Play()
-				task.delay(
-					config.Duration,
-					function()
+			local function startTimer()
+				stopTimer()
+				if not NewNotification.Duration or NewNotification.Duration <= 0 then
+					return
+				end
+				NewNotification.ProgressBar.Visible = true
+				timerConn = RunService.Heartbeat:Connect(function(dt)
+					if NewNotification.Closed then
+						stopTimer()
+						return
+					end
+					if NewNotification.Paused then
+						return
+					end
+					NewNotification.Remaining = math.max(0, (NewNotification.Remaining or 0) - dt)
+					if NewNotification.ManualProgress == nil then
+						local ratio = NewNotification.Duration > 0 and (NewNotification.Remaining / NewNotification.Duration) or 0
+						NewNotification.ProgressFill.Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0)
+					end
+					if NewNotification.Remaining <= 0 then
+						stopTimer()
 						NewNotification:Close()
 					end
-				)
+				end)
+			end
+
+			Creator.AddSignal(NewNotification.Root.MouseEnter, function()
+				NewNotification.Paused = true
+				Creator.SpringValue(cardBorder, "Transparency", 0.28, 10, 1)
+			end)
+			Creator.AddSignal(NewNotification.Root.MouseLeave, function()
+				NewNotification.Paused = false
+				Creator.SpringValue(cardBorder, "Transparency", 0.62, 10, 1)
+			end)
+			Creator.AddSignal(NewNotification.CloseButton.MouseEnter, function()
+				Creator.SpringValue(NewNotification.CloseButton, "BackgroundTransparency", 0.88, 10, 1)
+			end)
+			Creator.AddSignal(NewNotification.CloseButton.MouseLeave, function()
+				Creator.SpringValue(NewNotification.CloseButton, "BackgroundTransparency", 1, 10, 1)
+			end)
+			Creator.AddSignal(NewNotification.CloseButton.MouseButton1Click, function()
+				NewNotification:Close()
+			end)
+
+			-- Live update API: toast:Update({ Title = ..., Content = ..., SubContent = ..., Progress = 0..1, Duration = ... })
+			function NewNotification.Update(_self, patch)
+				if NewNotification.Closed or type(patch) ~= "table" then
+					return
+				end
+				if patch.Title ~= nil then
+					NewNotification.Title.Text = tostring(patch.Title)
+				end
+				if patch.Content ~= nil then
+					local str = tostring(patch.Content)
+					NewNotification.ContentLabel.Text = str
+					NewNotification.ContentLabel.Visible = str ~= ""
+				end
+				if patch.SubContent ~= nil then
+					local str = tostring(patch.SubContent)
+					NewNotification.SubContentLabel.Text = str
+					NewNotification.SubContentLabel.Visible = str ~= ""
+				end
+				if type(patch.Progress) == "number" then
+					local clamped = math.clamp(patch.Progress, 0, 1)
+					NewNotification.ManualProgress = clamped
+					NewNotification.ProgressBar.Visible = true
+					local startRatio = NewNotification.ProgressFill.Size.X.Scale
+					Creator.SpringValue(NewNotification.ProgressFill, "Size", clamped, 10, 1, function(ratio)
+						NewNotification.ProgressFill.Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0)
+					end, startRatio)
+				end
+				if type(patch.Duration) == "number" then
+					NewNotification.ManualProgress = nil
+					NewNotification.Duration = patch.Duration
+					NewNotification.Remaining = patch.Duration
+					startTimer()
+				end
+				task.defer(recomputeHeight)
+			end
+
+			function NewNotification.Open(_self)
+				recomputeHeight()
+				task.defer(recomputeHeight)
+				if type(config.Progress) == "number" then
+					NewNotification.ManualProgress = math.clamp(config.Progress, 0, 1)
+					NewNotification.ProgressFill.Size = UDim2.new(NewNotification.ManualProgress, 0, 1, 0)
+				end
+				if Creator.ReducedMotion then
+					NewNotification.Root.Position = UDim2.fromOffset(0, 0)
+					NewNotification.Root.GroupTransparency = 0
+					cardBorder.Transparency = 0.62
+					iconStroke.Transparency = 0.65
+					if glassRimStroke then glassRimStroke.Transparency = 0.42 end
+				else
+					Creator.SpringValue(NewNotification.Root, "GroupTransparency", 0, 9, 1)
+					Creator.SpringValue(cardBorder, "Transparency", 0.62, 9, 1)
+					Creator.SpringValue(iconStroke, "Transparency", 0.65, 9, 1)
+					if glassRimStroke then Creator.SpringValue(glassRimStroke, "Transparency", 0.42, 9, 1) end
+					Creator.SpringValue(NewNotification.Root, "Position", 0, 8, 0.85, function(x)
+						NewNotification.Root.Position = UDim2.fromOffset(x, 0)
+					end, slideStart)
+				end
+			end
+
+			function NewNotification.Close(_self)
+				if NewNotification.Closed then
+					return
+				end
+				NewNotification.Closed = true
+				stopTimer()
+				local function cleanup()
+					if NewNotification.AcrylicPaint and type(NewNotification.AcrylicPaint.Destroy) == "function" then
+						pcall(NewNotification.AcrylicPaint.Destroy)
+					end
+					if NewNotification.Holder and NewNotification.Holder.Parent then
+						pcall(function()
+							NewNotification.Holder:Destroy()
+						end)
+					end
+				end
+				if Creator.ReducedMotion then
+					cleanup()
+					return
+				end
+				Creator.SpringValue(NewNotification.Root, "GroupTransparency", 1, 11, 1)
+				Creator.SpringValue(cardBorder, "Transparency", 1, 12, 1)
+				Creator.SpringValue(iconStroke, "Transparency", 1, 12, 1)
+				if glassRimStroke then Creator.SpringValue(glassRimStroke, "Transparency", 1, 12, 1) end
+				for _, btn in ipairs(NewNotification.ButtonHolder:GetChildren()) do
+					local st = btn:IsA("TextButton") and btn:FindFirstChildOfClass("UIStroke")
+					if st then
+						Creator.SpringValue(st, "Transparency", 1, 12, 1)
+					end
+				end
+				local startX = NewNotification.Root.Position.X.Offset
+				Creator.SpringValue(NewNotification.Root, "Position", slideStart, 10, 1, function(x)
+					if NewNotification.Root and NewNotification.Root.Parent then
+						NewNotification.Root.Position = UDim2.fromOffset(x, 0)
+					end
+				end, startX)
+				task.delay(0.24, cleanup)
+			end
+
+			NewNotification:Open()
+			if NewNotification.Duration and NewNotification.Duration > 0 then
+				startTimer()
 			end
 
 			return NewNotification
@@ -6594,63 +7343,378 @@ local moduleFunctions = {
 		local Root = moduleScript.Parent.Parent
 		local Creator = requireModule(Root.Creator)
 		local New = Creator.New
-		return function(title, parent)
-			local Section = {}
-			Section.Visible = true
-			Section.Layout = New("UIListLayout", {Padding = UDim.new(0, 5)})
-			Section.Container =
-				New(
-					"Frame",
-					{Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 24), BackgroundTransparency = 1},
-					{Section.Layout}
-				)
-			Section.Root =
-				New(
-					"Frame",
-					{BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 7, Parent = parent},
-					{
-						New(
-							"TextLabel",
-							{
-								RichText = true,
-								Text = title,
-								TextTransparency = 0,
-								FontFace = Font.new(
-									"rbxassetid://12187365364",
-									Enum.FontWeight.SemiBold,
-									Enum.FontStyle.Normal
-								),
-								TextSize = 18,
-								TextXAlignment = "Left",
-								TextYAlignment = "Center",
-								Size = UDim2.new(1, -16, 0, 18),
-								Position = UDim2.fromOffset(0, 2),
-								ThemeTag = {TextColor3 = "Text"}
-							}
-						),
-						Section.Container
-					}
-				)
-			local lastHeight = -1
-			Creator.AddSignal(
-				Section.Layout:GetPropertyChangedSignal "AbsoluteContentSize",
-				function()
-					local contentY = Section.Layout.AbsoluteContentSize.Y
-					if contentY == lastHeight then
-						return
-					end
-					lastHeight = contentY
-					Section.Container.Size = UDim2.new(1, 0, 0, contentY)
-					if Section.Visible then
-						Section.Root.Size = UDim2.new(1, 0, 0, contentY + 25)
+
+		return function(titleOrConfig, parent, extraOpts)
+			local Library = requireModule(Root)
+			local opts = {}
+			if type(titleOrConfig) == "table" then
+				opts = titleOrConfig
+			else
+				opts.Title = tostring(titleOrConfig or "")
+				if type(extraOpts) == "table" then
+					for k, v in next, extraOpts do
+						opts[k] = v
 					end
 				end
+			end
+
+			local title = tostring(opts.Title or "")
+			local collapsible = opts.Collapsible == true
+			local collapsed = collapsible and (opts.Collapsed == true) or false
+			local isCard = opts.Style == "Card" or opts.Card == true
+			local iconAsset = nil
+			if type(opts.Icon) == "string" and opts.Icon ~= "" then
+				local resolved = Library:GetIcon(opts.Icon)
+				if resolved then
+					iconAsset = resolved
+				elseif opts.Icon:match("^rbxassetid://") or opts.Icon:match("^rbxasset://") then
+					iconAsset = opts.Icon
+				end
+			end
+
+			local Section = {
+				Visible = true,
+				Collapsible = collapsible,
+				Collapsed = collapsed,
+				Style = isCard and "Card" or "Plain"
+			}
+
+			local headerHeight = isCard and 34 or 24
+			local bodyPadX = isCard and 10 or 2
+			local bodyPadTop = isCard and 4 or 4
+			local bodyPadBottom = isCard and 10 or 4
+
+			Section.Layout = New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+			Section.Container = New(
+				"Frame",
+				{
+					Name = "Content",
+					Size = UDim2.new(1, -bodyPadX * 2, 0, 0),
+					Position = UDim2.fromOffset(bodyPadX, bodyPadTop),
+					BackgroundTransparency = 1
+				},
+				{Section.Layout}
 			)
-			Section.SetVisible = function(visible)
+			local containerHolder = New(
+				"Frame",
+				{
+					Name = "ContainerHolder",
+					Size = UDim2.new(1, 0, 0, 0),
+					Position = UDim2.fromOffset(0, headerHeight),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true
+				},
+				{Section.Container}
+			)
+
+			local headerChildren = {}
+			local textLeft = isCard and 12 or 10
+
+			if not isCard then
+				table.insert(
+					headerChildren,
+					New(
+						"Frame",
+						{
+							Name = "AccentBar",
+							Size = UDim2.fromOffset(3, 12),
+							Position = UDim2.new(0, 1, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						},
+						{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+					)
+				)
+			end
+
+			if iconAsset then
+				table.insert(
+					headerChildren,
+					New(
+						"ImageLabel",
+						{
+							Name = "Icon",
+							Image = iconAsset,
+							Size = UDim2.fromOffset(16, 16),
+							Position = UDim2.new(0, textLeft, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							BackgroundTransparency = 1,
+							ImageTransparency = 0,
+							ThemeTag = {ImageColor3 = "Accent"}
+						}
+					)
+				)
+				textLeft += 22
+			end
+
+			local titleLabel = New(
+				"TextLabel",
+				{
+					Name = "Title",
+					RichText = true,
+					Text = title,
+					TextTransparency = 0,
+					FontFace = Creator.Font(Enum.FontWeight.Bold, Enum.FontStyle.Normal, "Display"),
+					TextSize = 14,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextYAlignment = Enum.TextYAlignment.Center,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					Position = UDim2.fromOffset(textLeft, 0),
+					BackgroundTransparency = 1,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
+			table.insert(headerChildren, titleLabel)
+
+			local badgeLabel = New(
+				"TextLabel",
+				{
+					Name = "BadgeText",
+					Text = "",
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 10,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1,
+					TextColor3 = Color3.fromRGB(246, 248, 254)
+				}
+			)
+			local badgePill = New(
+				"Frame",
+				{
+					Name = "Badge",
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, collapsible and -30 or -10, 0.5, 0),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 18),
+					BackgroundTransparency = 0.18,
+					Visible = false,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}),
+					badgeLabel
+				}
+			)
+			table.insert(headerChildren, badgePill)
+
+			local chevronIcon = nil
+			if collapsible then
+				chevronIcon = New(
+					"ImageLabel",
+					{
+						Name = "Chevron",
+						Image = Library:GetIcon("chevron-down") or "rbxassetid://10709790948",
+						Size = UDim2.fromOffset(14, 14),
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, isCard and -10 or -4, 0.5, 0),
+						BackgroundTransparency = 1,
+						ImageTransparency = 0.04,
+						Rotation = collapsed and -90 or 0,
+						ThemeTag = {ImageColor3 = "SubText"}
+					}
+				)
+				table.insert(headerChildren, chevronIcon)
+			end
+
+			local headerClass = collapsible and "TextButton" or "Frame"
+			local headerProps = {
+				Name = "Header",
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, headerHeight),
+				Position = UDim2.fromOffset(0, 0)
+			}
+			if collapsible then
+				headerProps.Text = ""
+				headerProps.AutoButtonColor = false
+			end
+			local headerRow = New(headerClass, headerProps, headerChildren)
+
+			local rootChildren = {headerRow, containerHolder}
+			local cardStroke = nil
+			if isCard then
+				cardStroke = New(
+					"UIStroke",
+					{
+						Transparency = 0.34,
+						Thickness = 1,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "ElementBorder"}
+					}
+				)
+				table.insert(rootChildren, New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card + 2)}))
+				table.insert(rootChildren, cardStroke)
+			end
+
+			Section.Root = New(
+				"Frame",
+				{
+					Name = "Section_" .. title:gsub("[^%w_]", ""),
+					BackgroundTransparency = isCard and 0.44 or 1,
+					Size = UDim2.new(1, 0, 0, headerHeight + 4),
+					LayoutOrder = opts.LayoutOrder or 7,
+					ClipsDescendants = false,
+					Parent = parent,
+					ThemeTag = isCard and {BackgroundColor3 = "Element"} or nil
+				},
+				rootChildren
+			)
+
+			local currentBodyHeight = 0
+			local currentTargetBodyH = 0
+			local lastContentY = -1
+			local lastCollapsed = Section.Collapsed
+			local function applyBodyHeight(bodyH)
+				currentBodyHeight = bodyH
+				containerHolder.Size = UDim2.new(1, 0, 0, math.max(0, bodyH))
+				containerHolder.Visible = bodyH > 0.5
+				containerHolder.ClipsDescendants = Section.Collapsed or math.abs(bodyH - currentTargetBodyH) > 0.8
+				if Section.Visible then
+					local totalH = headerHeight + (bodyH > 0.5 and bodyH or (isCard and 0 or 4))
+					Section.Root.Size = UDim2.new(1, 0, 0, totalH)
+				end
+			end
+
+			local function getExpandedBodyHeight()
+				if not Section.Root or not Section.Root.Parent then
+					return 0
+				end
+				local scale = Creator.GetEffectiveScale(Section.Container)
+				local contentY = math.ceil(Section.Layout.AbsoluteContentSize.Y / scale)
+				return contentY, contentY + bodyPadTop + bodyPadBottom
+			end
+
+			local function recomputeSectionHeight(animate, force)
+				if not Section.Root or not Section.Root.Parent then
+					return
+				end
+				local contentY, fullBodyH = getExpandedBodyHeight()
+				if contentY == lastContentY and Section.Collapsed == lastCollapsed and not animate and not force then
+					return
+				end
+				lastContentY = contentY
+				lastCollapsed = Section.Collapsed
+				Section.Container.Size = UDim2.new(1, -bodyPadX * 2, 0, contentY)
+				local targetBodyH = Section.Collapsed and 0 or fullBodyH
+				currentTargetBodyH = targetBodyH
+				if animate and not Creator.ReducedMotion then
+					containerHolder.ClipsDescendants = true
+					Creator.SpringValue(containerHolder, "BodyHeight", targetBodyH, 8.5, 0.94, applyBodyHeight, currentBodyHeight)
+				else
+					Creator.CancelSpring(containerHolder, "BodyHeight")
+					applyBodyHeight(targetBodyH)
+				end
+			end
+
+			Creator.AddSignal(Section.Layout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+				recomputeSectionHeight(false)
+			end)
+			Creator.RegisterDPIScale(Section.Root, function()
+				lastContentY = -1
+				task.defer(function()
+					recomputeSectionHeight(false)
+				end)
+			end)
+
+			local badgeUsesAccent = true
+			Creator.AddSignal(badgePill:GetPropertyChangedSignal("BackgroundColor3"), function()
+				if badgeUsesAccent and badgePill.Visible then
+					badgeLabel.TextColor3 = Creator.AutoContrast(badgePill.BackgroundColor3)
+				end
+			end)
+
+			function Section.SetBadge(text, color)
+				if text == nil or text == "" then
+					badgePill.Visible = false
+					return
+				end
+				badgeLabel.Text = tostring(text)
+				if typeof(color) == "Color3" then
+					badgeUsesAccent = false
+					Creator.OverrideTag(badgePill, {})
+					badgePill.BackgroundColor3 = color
+					badgeLabel.TextColor3 = Creator.AutoContrast(color)
+				else
+					badgeUsesAccent = true
+					Creator.OverrideTag(badgePill, {BackgroundColor3 = "Accent"})
+					badgeLabel.TextColor3 = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+				end
+				badgePill.Visible = true
+			end
+
+			if opts.Badge then
+				Section.SetBadge(opts.Badge, opts.BadgeColor)
+			end
+
+			function Section.SetCollapsed(isCollapsed, instant)
+				if not Section.Collapsible then
+					return
+				end
+				Section.Collapsed = isCollapsed == true
+				if chevronIcon then
+					local targetRot = Section.Collapsed and -90 or 0
+					if instant or Creator.ReducedMotion then
+						Creator.CancelSpring(chevronIcon, "Rotation")
+						chevronIcon.Rotation = targetRot
+					else
+						Creator.SpringValue(chevronIcon, "Rotation", targetRot, 9, 0.88)
+					end
+				end
+				recomputeSectionHeight(not instant, true)
+				if type(opts.OnToggle) == "function" then
+					Library:SafeCallback(opts.OnToggle, not Section.Collapsed)
+				end
+			end
+
+			function Section.Toggle(instant)
+				Section.SetCollapsed(not Section.Collapsed, instant)
+			end
+
+			if collapsible then
+				Creator.AddSignal(headerRow.MouseEnter, function()
+					if chevronIcon then
+						Creator.SpringValue(chevronIcon, "ImageTransparency", 0, 10, 1)
+					end
+					if cardStroke then
+						Creator.SpringValue(cardStroke, "Transparency", 0.16, 10, 1)
+					end
+				end)
+				Creator.AddSignal(headerRow.MouseLeave, function()
+					if chevronIcon then
+						Creator.SpringValue(chevronIcon, "ImageTransparency", 0.04, 10, 1)
+					end
+					if cardStroke then
+						Creator.SpringValue(cardStroke, "Transparency", 0.34, 10, 1)
+					end
+				end)
+				Creator.AddSignal(headerRow.MouseButton1Click, function()
+					Section.Toggle(false)
+				end)
+			end
+
+			function Section.SetVisible(visible)
 				Section.Visible = visible == true
 				Section.Root.Visible = Section.Visible
-				Section.Root.Size = UDim2.new(1, 0, 0, Section.Visible and (Section.Layout.AbsoluteContentSize.Y + 25) or 0)
+				if Section.Visible then
+					lastContentY = -1
+					recomputeSectionHeight(false)
+				else
+					Creator.CancelSpring(containerHolder, "BodyHeight")
+					Section.Root.Size = UDim2.new(1, 0, 0, 0)
+				end
 			end
+
+			function Section.SetTitle(newTitle)
+				titleLabel.Text = tostring(newTitle or "")
+			end
+
+			task.defer(function()
+				recomputeSectionHeight(false)
+			end)
+
 			return Section
 		end
 	end,
@@ -6669,8 +7733,13 @@ local moduleFunctions = {
 			return TabModule
 		end
 		function TabModule.GetCurrentTabPos(_self)
-			local tabHolderY, tabY = TabModule.Window.TabHolder.AbsolutePosition.Y, TabModule.Tabs[TabModule.SelectedTab].Frame.AbsolutePosition.Y
-			return tabY - tabHolderY
+			local activeTab = TabModule.Tabs[TabModule.SelectedTab]
+			if not activeTab or not activeTab.Frame or not TabModule.Window or not TabModule.Window.TabHolder then
+				return 0
+			end
+			local tabHolderY, tabY = TabModule.Window.TabHolder.AbsolutePosition.Y, activeTab.Frame.AbsolutePosition.Y
+			local scale = Creator.GetEffectiveScale(TabModule.Window.TabHolder)
+			return (tabY - tabHolderY) / scale
 		end
 		function TabModule.New(_self, title, icon, parent)
 			local Library, window = requireModule(Root), TabModule.Window
@@ -6678,12 +7747,43 @@ local moduleFunctions = {
 			TabModule.TabCount = TabModule.TabCount + 1
 			local tabIndex, Tab = TabModule.TabCount, {Selected = false, Name = title, Type = "Tab", Index = TabModule.TabCount}
 			Tab.Id = "tab-" .. tostring(tabIndex) .. "-" .. tostring(title)
-			if Library:GetIcon(icon) then
-				icon = Library:GetIcon(icon)
-			end
-			if icon == "" then
+			if type(icon) == "string" and icon ~= "" then
+				local resolved = Library:GetIcon(icon)
+				if resolved then
+					icon = resolved
+				elseif not icon:match("^rbxassetid://") and not icon:match("^https?://") and not icon:match("^rbxasset://") then
+					icon = nil
+				end
+			else
 				icon = nil
 			end
+			local tabStroke = New(
+				"UIStroke",
+				{
+					Transparency = 1,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				}
+			)
+			Tab.Stroke = tabStroke
+			local initialLetter = tostring(title or "?"):gsub("<[^>]+>", ""):match("%S") or "?"
+			local tabBadge = New(
+				"TextLabel",
+				{
+					Name = "TabInitial",
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(20, 20),
+					Text = initialLetter:upper(),
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 12,
+					BackgroundTransparency = 1,
+					Visible = false,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
 			Tab.Frame =
 				New(
 					"TextButton",
@@ -6692,30 +7792,29 @@ local moduleFunctions = {
 						Name = "ATGTab_" .. tostring(tabIndex),
 						LayoutOrder = tabIndex,
 						BackgroundTransparency = 1,
+						ClipsDescendants = true,
 						Parent = parent,
 						ThemeTag = {BackgroundColor3 = "Tab"}
 					},
 					{
-						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						tabStroke,
 						New(
 							"TextLabel",
 							{
 								Name = "TabLabel",
 								AnchorPoint = Vector2.new(0, 0.5),
-								Position = icon and UDim2.new(0, 30, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
+								Position = icon and UDim2.new(0, 32, 0.5, 0) or UDim2.new(0, 12, 0.5, 0),
 								Text = title,
 								RichText = true,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
-								TextTransparency = 0,
-								FontFace = Font.new(
-									"rbxasset://fonts/families/GothamSSm.json",
-									Enum.FontWeight.Regular,
-									Enum.FontStyle.Normal
-								),
-								TextSize = 12,
+								TextTransparency = 0.08,
+								FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+								TextSize = 13,
 								TextXAlignment = "Left",
 								TextYAlignment = "Center",
-								Size = UDim2.new(1, -12, 1, 0),
+								TextTruncate = Enum.TextTruncate.AtEnd,
+								Size = icon and UDim2.new(1, -40, 1, 0) or UDim2.new(1, -20, 1, 0),
 								BackgroundTransparency = 1,
 								ThemeTag = {TextColor3 = "Text"}
 							}
@@ -6726,16 +7825,125 @@ local moduleFunctions = {
 								Name = "TabIcon",
 								AnchorPoint = Vector2.new(0, 0.5),
 								Size = UDim2.fromOffset(16, 16),
-								Position = UDim2.new(0, 8, 0.5, 0),
+								Position = UDim2.new(0, 10, 0.5, 0),
 								BackgroundTransparency = 1,
-								Image = icon and icon or nil,
-								ThemeTag = {ImageColor3 = "Text"}
+								Image = icon and icon or "",
+								Visible = icon ~= nil,
+								ImageTransparency = 0.04,
+								ThemeTag = {ImageColor3 = "SubText"}
 							}
-						)
+						),
+						tabBadge
 					}
 				)
 			Tab.Label = Tab.Frame:FindFirstChild("TabLabel")
 			Tab.IconObject = Tab.Frame:FindFirstChild("TabIcon")
+			Tab.HasIcon = icon ~= nil
+			local tabBadgeText = New(
+				"TextLabel",
+				{
+					Name = "BadgeLabel",
+					Text = "",
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 10,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1
+				}
+			)
+			local tabBadgePill = New(
+				"Frame",
+				{
+					Name = "TabBadge",
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -8, 0.5, 0),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 16),
+					BackgroundTransparency = 0.14,
+					Visible = false,
+					ZIndex = 3,
+					Parent = Tab.Frame,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}),
+					tabBadgeText
+				}
+			)
+			local tabDot = New(
+				"Frame",
+				{
+					Name = "TabDot",
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -5, 0, 5),
+					Size = UDim2.fromOffset(6, 6),
+					Visible = false,
+					ZIndex = 4,
+					Parent = Tab.Frame,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
+			local hasTabBadge = false
+			local isTabCollapsed = false
+			local tabBadgeUsesAccent = true
+			Creator.AddSignal(tabBadgePill:GetPropertyChangedSignal("BackgroundColor3"), function()
+				if tabBadgeUsesAccent and hasTabBadge then
+					tabBadgeText.TextColor3 = Creator.AutoContrast(tabBadgePill.BackgroundColor3)
+				end
+			end)
+			function Tab.SetBadge(_s, text, color)
+				if text == nil or text == "" then
+					hasTabBadge = false
+					tabBadgePill.Visible = false
+					tabDot.Visible = false
+					return
+				end
+				hasTabBadge = true
+				tabBadgeText.Text = tostring(text)
+				if typeof(color) == "Color3" then
+					tabBadgeUsesAccent = false
+					Creator.OverrideTag(tabBadgePill, {})
+					Creator.OverrideTag(tabDot, {})
+					tabBadgePill.BackgroundColor3 = color
+					tabDot.BackgroundColor3 = color
+					tabBadgeText.TextColor3 = Creator.AutoContrast(color)
+				else
+					tabBadgeUsesAccent = true
+					local acc = Creator.GetThemeProperty("Accent")
+					Creator.OverrideTag(tabBadgePill, {BackgroundColor3 = "Accent"})
+					Creator.OverrideTag(tabDot, {BackgroundColor3 = "Accent"})
+					tabBadgeText.TextColor3 = Creator.AutoContrast(acc)
+				end
+				tabBadgePill.Visible = not isTabCollapsed
+				tabDot.Visible = isTabCollapsed
+			end
+			Tab.SetCollapsed = function(collapsed)
+				collapsed = collapsed == true
+				isTabCollapsed = collapsed
+				if Tab.Label then
+					Tab.Label.Visible = not collapsed
+				end
+				if Tab.IconObject and Tab.HasIcon then
+					if collapsed then
+						Tab.IconObject.AnchorPoint = Vector2.new(0.5, 0.5)
+						Tab.IconObject.Position = UDim2.fromScale(0.5, 0.5)
+					else
+						Tab.IconObject.AnchorPoint = Vector2.new(0, 0.5)
+						Tab.IconObject.Position = UDim2.new(0, 10, 0.5, 0)
+					end
+				end
+				tabBadge.Visible = collapsed and (not Tab.HasIcon)
+				if hasTabBadge then
+					tabBadgePill.Visible = not collapsed
+					tabDot.Visible = collapsed
+				end
+			end
+			if window and window.SidebarCollapsed then
+				Tab.SetCollapsed(true)
+			end
 			-- Tab.Label is already registered with I18n by Creator.New above.
 			local listLayout = New("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
 			Tab.ContainerFrame =
@@ -6762,30 +7970,44 @@ local moduleFunctions = {
 							"UIPadding",
 							{
 								PaddingRight = UDim.new(0, 10),
-								PaddingLeft = UDim.new(0, 1),
-								PaddingTop = UDim.new(0, 1),
-								PaddingBottom = UDim.new(0, 1)
+								PaddingLeft = UDim.new(0, 2),
+								PaddingTop = UDim.new(0, 2),
+								PaddingBottom = UDim.new(0, 6)
 							}
 						)
 					}
 				)
+			local function syncTabCanvasSize()
+				if not Tab.ContainerFrame or not Tab.ContainerFrame.Parent then
+					return
+				end
+				local scale = Creator.GetEffectiveScale(Tab.ContainerFrame)
+				Tab.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, math.ceil(listLayout.AbsoluteContentSize.Y / scale) + 8)
+			end
 			Creator.AddSignal(
 				listLayout:GetPropertyChangedSignal "AbsoluteContentSize",
-				function()
-					Tab.ContainerFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 2)
-				end
+				syncTabCanvasSize
 			)
+			Creator.RegisterDPIScale(Tab.ContainerFrame, function()
+				task.defer(syncTabCanvasSize)
+			end)
 			Tab.Motor, Tab.SetTransparency = Creator.SpringMotor(1, Tab.Frame, "BackgroundTransparency")
 			Creator.AddSignal(
 				Tab.Frame.MouseEnter,
 				function()
-					Tab.SetTransparency(Tab.Selected and 0.85 or 0.89)
+					if window and type(window.HoverTab) == "function" then
+						window:HoverTab(Tab)
+					end
+					Tab.SetTransparency(Tab.Selected and 0.88 or 1)
 				end
 			)
 			Creator.AddSignal(
 				Tab.Frame.MouseLeave,
 				function()
-					Tab.SetTransparency(Tab.Selected and 0.89 or 1)
+					if window and type(window.UnhoverTab) == "function" then
+						window:UnhoverTab(Tab)
+					end
+					Tab.SetTransparency(Tab.Selected and 0.88 or 1)
 				end
 			)
 			Creator.AddSignal(
@@ -6820,8 +8042,10 @@ local moduleFunctions = {
 			local function decorateSectionTitle(sectionTitle)
 				return sectionTitle
 			end
-			function Tab.AddSection(_self, sectionTitle)
-				local Section, sectionComponent = {Type = "Section"}, requireModule(Components.Section)(decorateSectionTitle(sectionTitle), Tab.Container)
+			function Tab.AddSection(_self, sectionTitle, sectionOpts)
+				local Section, sectionComponent =
+					{Type = "Section"},
+					requireModule(Components.Section)(type(sectionTitle) == "table" and sectionTitle or decorateSectionTitle(sectionTitle), Tab.Container, sectionOpts)
 				Section.Container = sectionComponent.Container
 				-- Expose the section frame as an optional, backwards-compatible
 				-- handle. Addons can use LayoutOrder/Visible without depending on
@@ -6829,6 +8053,21 @@ local moduleFunctions = {
 				Section.Root = sectionComponent.Root
 				Section.SetVisible = function(selfOrVisible, visible)
 					return sectionComponent.SetVisible(type(selfOrVisible) == "boolean" and selfOrVisible or visible)
+				end
+				Section.SetCollapsed = function(selfOrVal, val, instant)
+					if type(selfOrVal) == "boolean" then
+						return sectionComponent.SetCollapsed(selfOrVal, val)
+					end
+					return sectionComponent.SetCollapsed(val, instant)
+				end
+				Section.Toggle = function(_s, instant)
+					return sectionComponent.Toggle(instant)
+				end
+				Section.SetBadge = function(_s, text, color)
+					return sectionComponent.SetBadge(text, color)
+				end
+				Section.SetTitle = function(_s, newTitle)
+					return sectionComponent.SetTitle(newTitle)
 				end
 				Section.ScrollFrame = Tab.Container
 				Section.Tab = Tab
@@ -6856,33 +8095,50 @@ local moduleFunctions = {
 			for _, tab in next, TabModule.Tabs do
 				tab.SetTransparency(1)
 				tab.Selected = false
+				if tab.Stroke then
+					Creator.SpringValue(tab.Stroke, "Transparency", 1, 10, 1)
+				end
+				if tab.Label then
+					Creator.SpringValue(tab.Label, "TextTransparency", 0.08, 10, 1)
+				end
+				if tab.IconObject then
+					Creator.OverrideTag(tab.IconObject, {ImageColor3 = "SubText"})
+					Creator.SpringValue(tab.IconObject, "ImageTransparency", 0.04, 10, 1)
+				end
 			end
-			targetTab.SetTransparency(0.89)
+			targetTab.SetTransparency(0.88)
 			targetTab.Selected = true
+			if targetTab.Stroke then
+				Creator.SpringValue(targetTab.Stroke, "Transparency", 0.78, 10, 1)
+			end
+			if targetTab.Label then
+				Creator.SpringValue(targetTab.Label, "TextTransparency", 0, 10, 1)
+			end
+			if targetTab.IconObject then
+				Creator.OverrideTag(targetTab.IconObject, {ImageColor3 = "Accent"})
+				Creator.SpringValue(targetTab.IconObject, "ImageTransparency", 0, 10, 1)
+			end
 			if library.Workspace and type(library.Workspace.TouchTab) == "function" then
 				library.Workspace:TouchTab(targetTab)
 			end
 			window.TabDisplay.Text = targetTab.Name
 			TranslationSystem:Register(window.TabDisplay, targetTab.Name, "Text")
-			window.SelectorPosMotor:setGoal(Spring(TabModule:GetCurrentTabPos(), {frequency = 6}))
-			task.spawn(
-				function()
-					window.ContainerPosMotor:setGoal(Spring(110, {frequency = 10}))
-					window.ContainerBackMotor:setGoal(Spring(1, {frequency = 10}))
-					task.wait(0.15)
-					if transitionId ~= TabModule._TransitionId or library.Unloaded then
-						return
-					end
-					for _, container in next, TabModule.Containers do
-						container.Visible = false
-					end
-					if TabModule.Containers[tabIndex] then
-						TabModule.Containers[tabIndex].Visible = true
-					end
-					window.ContainerPosMotor:setGoal(Spring(94, {frequency = 5}))
-					window.ContainerBackMotor:setGoal(Spring(0, {frequency = 8}))
-				end
-			)
+			window.SelectorPosMotor:setGoal(Spring(TabModule:GetCurrentTabPos(), {frequency = 4.0, dampingRatio = 0.86}))
+			for _, container in next, TabModule.Containers do
+				container.Visible = false
+			end
+			if TabModule.Containers[tabIndex] then
+				TabModule.Containers[tabIndex].Visible = true
+			end
+			if Creator.ReducedMotion then
+				window.ContainerPosMotor:setGoal(Instant(92))
+				window.ContainerBackMotor:setGoal(Instant(0))
+				return
+			end
+			-- Instant crisp tab swap + subtle spring glide-in (no nested CanvasGroup UIStroke ghosting).
+			window.ContainerPosMotor:setGoal(Instant(100))
+			window.ContainerPosMotor:setGoal(Spring(92, {frequency = 7.5}))
+			window.ContainerBackMotor:setGoal(Instant(0))
 		end
 		return TabModule
 	end,
@@ -6903,19 +8159,15 @@ local moduleFunctions = {
 				New(
 					"TextBox",
 					{
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Medium,
-							Enum.FontStyle.Normal
-						),
+						FontFace = Creator.Font(Enum.FontWeight.Medium, Enum.FontStyle.Normal),
 						TextColor3 = Color3.fromRGB(0, 0, 0),
 						TextTransparency = 0,
-						TextSize = 16,
+						TextSize = 13,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextYAlignment = Enum.TextYAlignment.Center,
 						BackgroundTransparency = 1,
 						Size = UDim2.fromScale(1, 1),
-						Position = UDim2.fromOffset(12, 0),
+						Position = UDim2.fromOffset(2, 0),
 						ClearTextOnFocus = false,
 						PlaceholderText = "",
 						ZIndex = 1,
@@ -6945,7 +8197,7 @@ local moduleFunctions = {
 				{
 					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					Thickness = 1.2,
-					Transparency = acrylic and 0.5 or 0.65,
+					Transparency = acrylic and 0.38 or 0.42,
 					ThemeTag = {Color = acrylic and "InElementBorder" or "DialogButtonBorder"},
 					ZIndex = 1
 				}
@@ -6961,9 +8213,9 @@ local moduleFunctions = {
 					"Frame",
 					{
 						Size = UDim2.new(0, 0, 0, 36),
-						BackgroundTransparency = acrylic and 0.92 or 0,
+						BackgroundTransparency = acrylic and 0.28 or 0,
 						Parent = parent,
-						ThemeTag = {BackgroundColor3 = acrylic and "Input" or "DialogInput"},
+						ThemeTag = {BackgroundColor3 = acrylic and "DialogHolder" or "DialogInput"},
 						ZIndex = 0
 					},
 					{
@@ -7016,7 +8268,7 @@ local moduleFunctions = {
 					"TextLabel",
 					{
 						Text = "",
-						Font = Enum.Font.Gotham,
+						FontFace = Creator.Font(Enum.FontWeight.Regular),
 						TextSize = 16,
 						TextColor3 = Creator.GetThemeProperty("SubText"),
 						TextTransparency = 1, -- เริ่มโปร่งตาม CSS
@@ -7026,7 +8278,8 @@ local moduleFunctions = {
 						AnchorPoint = Vector2.new(0, 0),
 						ZIndex = 3,
 						TextXAlignment = Enum.TextXAlignment.Left,
-						TextYAlignment = Enum.TextYAlignment.Center
+						TextYAlignment = Enum.TextYAlignment.Center,
+						ThemeTag = {TextColor3 = "SubText"}
 					}
 				)
 			Textbox.Label.Parent = Textbox.Frame
@@ -7219,13 +8472,13 @@ local moduleFunctions = {
 
 				-- Stroke animation: make it darker/visible
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-					Transparency = 0.2,
+					Transparency = 0.14,
 					Thickness = 1.6,
 					Color = Creator.GetThemeProperty("Accent")
 				}):Play()
 
-				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.88 or 0}):Play()
-				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "InputFocused" or "DialogHolder"})
+				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.14 or 0}):Play()
+				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = "DialogHolder"})
 				Creator.OverrideTag(Textbox.Highlight, {BackgroundColor3 = "Accent"})
 			end)
 
@@ -7245,13 +8498,13 @@ local moduleFunctions = {
 
 				-- Stroke return: revert color/transparency/thickness back using live theme
 				TweenService:Create(frameStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-					Transparency = acrylic and 0.5 or 0.65,
+					Transparency = acrylic and 0.38 or 0.42,
 					Thickness = 1.2,
 					Color = Creator.GetThemeProperty(defaultStrokeThemeKey)
 				}):Play()
 
-				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.92 or 0}):Play()
-				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "Input" or "DialogInput"})
+				TweenService:Create(Textbox.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = acrylic and 0.28 or 0}):Play()
+				Creator.OverrideTag(Textbox.Frame, {BackgroundColor3 = acrylic and "DialogHolder" or "DialogInput"})
 				Creator.OverrideTag(Textbox.Highlight, {BackgroundColor3 = acrylic and "InputIndicator" or "DialogInputLine"})
 			end)
 
@@ -7289,169 +8542,192 @@ local moduleFunctions = {
 	[16] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(16)
 		local Root, Assets = moduleScript.Parent.Parent, requireModule(moduleScript.Parent.Assets)
-		local Creator, Flipper = requireModule(Root.Creator), requireModule(Root.Packages.Flipper)
+		local Creator = requireModule(Root.Creator)
 		local New, AddSignal = Creator.New, Creator.AddSignal
 		return function(config)
-			local TitleBar, Library, BarButton =
-				{},
-			requireModule(Root),
-			function(icon, position, parent, callback)
+			local TitleBar, Library = {}, requireModule(Root)
+
+			local function BarButton(icon, position, parent, callback, isDanger)
 				local Button = {
 					Callback = callback or function()
 					end
 				}
+				local hoverBg = isDanger and Color3.fromRGB(232, 68, 86) or nil
+				local iconImg = New(
+					"ImageLabel",
+					{
+						Image = icon,
+						Size = UDim2.fromOffset(14, 14),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						Name = "Icon",
+						ThemeTag = {ImageColor3 = "Text"}
+					}
+				)
 				Button.Frame =
 					New(
 						"TextButton",
 						{
-							Size = UDim2.new(0, 34, 1, -8),
-							AnchorPoint = Vector2.new(1, 0),
+							Size = UDim2.fromOffset(30, 30),
+							AnchorPoint = Vector2.new(1, 0.5),
 							BackgroundTransparency = 1,
+							BackgroundColor3 = hoverBg or Color3.fromRGB(255, 255, 255),
 							Parent = parent,
 							Position = position,
 							Text = "",
-							ThemeTag = {BackgroundColor3 = "Text"}
+							ThemeTag = isDanger and {} or {BackgroundColor3 = "Text"}
 						},
 						{
-							New("UICorner", {CornerRadius = UDim.new(0, 7)}),
-							New(
-								"ImageLabel",
-								{
-									Image = icon,
-									Size = UDim2.fromOffset(16, 16),
-									Position = UDim2.fromScale(0.5, 0.5),
-									AnchorPoint = Vector2.new(0.5, 0.5),
-									BackgroundTransparency = 1,
-									Name = "Icon",
-									ThemeTag = {ImageColor3 = "Text"}
-								}
-							)
+							New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+							iconImg
 						}
 					)
-				local motor, setTransparency = Creator.SpringMotor(1, Button.Frame, "BackgroundTransparency")
-				AddSignal(
-					Button.Frame.MouseEnter,
-					function()
-						setTransparency(0.94)
+				local hoverAlpha = isDanger and 0.16 or 0.91
+				local downAlpha = isDanger and 0.05 or 0.86
+				AddSignal(Button.Frame.MouseEnter, function()
+					Creator.SpringValue(Button.Frame, "BackgroundTransparency", hoverAlpha, 10, 1)
+					if isDanger then
+						Creator.AnimateColor(iconImg, "ImageColor3", Color3.fromRGB(255, 255, 255), 0.12)
 					end
-				)
-				AddSignal(
-					Button.Frame.MouseLeave,
-					function()
-						setTransparency(1, true)
+				end)
+				AddSignal(Button.Frame.MouseLeave, function()
+					Creator.SpringValue(Button.Frame, "BackgroundTransparency", 1, 10, 1)
+					if isDanger then
+						Creator.AnimateColor(iconImg, "ImageColor3", Creator.GetThemeProperty("Text"), 0.15)
 					end
-				)
-				AddSignal(
-					Button.Frame.MouseButton1Down,
-					function()
-						setTransparency(0.96)
-					end
-				)
-				AddSignal(
-					Button.Frame.MouseButton1Up,
-					function()
-						setTransparency(0.94)
-					end
-				)
-				AddSignal(Button.Frame.MouseButton1Click, Button.Callback)
-				Button.SetCallback = function(callback)
-					Button.Callback = callback
+				end)
+				AddSignal(Button.Frame.MouseButton1Down, function()
+					Creator.SpringValue(Button.Frame, "BackgroundTransparency", downAlpha, 12, 1)
+				end)
+				AddSignal(Button.Frame.MouseButton1Up, function()
+					Creator.SpringValue(Button.Frame, "BackgroundTransparency", hoverAlpha, 10, 1)
+				end)
+				AddSignal(Button.Frame.MouseButton1Click, function()
+					Button.Callback()
+				end)
+				Button.SetCallback = function(cb)
+					Button.Callback = cb
 				end
 				return Button
 			end
+
+			local hasSubTitle = type(config.SubTitle) == "string" and config.SubTitle ~= ""
+			local subTitlePill = New(
+				"Frame",
+				{
+					Name = "SubTitlePill",
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 20),
+					BackgroundTransparency = 0.84,
+					Visible = hasSubTitle,
+					LayoutOrder = 3,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+					New("UIStroke", {Transparency = 0.72, Thickness = 1, ThemeTag = {Color = "Accent"}}),
+					New(
+						"TextLabel",
+						{
+							Name = "SubTitleLabel",
+							RichText = true,
+							Text = config.SubTitle or "",
+							TextTransparency = 0,
+							FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+							TextSize = 11,
+							TextXAlignment = "Center",
+							TextYAlignment = "Center",
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.new(0, 0, 1, 0),
+							BackgroundTransparency = 1,
+							ThemeTag = {TextColor3 = "Text"}
+						}
+					)
+				}
+			)
+
+			TitleBar.TitleText = config.Title or ""
 			TitleBar.Frame =
 				New(
 					"Frame",
-					{Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, Parent = config.Parent},
+					{Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, ZIndex = 5, Parent = config.Parent},
 					{
 						New(
 							"Frame",
-							-- ขยับซ้ายเล็กน้อย: Position 16 -> 8, ลด margin ขวาให้สมดุล
-							{Size = UDim2.new(1, -8, 1, 0), Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1},
+							{Size = UDim2.new(1, -222, 1, 0), Position = UDim2.new(0, 14, 0, 0), BackgroundTransparency = 1},
 							{
-								-- UIListLayout: แนวนอนและจัดกึ่งกลางแนวตั้ง
 								New(
 									"UIListLayout",
 									{
-										Padding = UDim.new(0, 6),
+										Padding = UDim.new(0, 8),
 										FillDirection = Enum.FillDirection.Horizontal,
 										SortOrder = Enum.SortOrder.LayoutOrder,
 										VerticalAlignment = Enum.VerticalAlignment.Center
 									}
 								),
-								-- ไอคอนขนาดใหญ่ขึ้นและจัดด้วย layout
 								New(
 									"ImageLabel",
 									{
 										Name = "WindowIcon",
 										Image = config.Icon or "rbxassetid://90989180960460",
-										Size = UDim2.fromOffset(32, 32), -- ขยายเป็น 32x32
+										Size = UDim2.fromOffset(26, 26),
 										BackgroundTransparency = 1,
 										LayoutOrder = 1,
 										ScaleType = Enum.ScaleType.Fit,
 										ThemeTag = {ImageColor3 = "Text"}
 									}
 								),
-								-- Title (ขนาดฟอนต์เพิ่มเล็กน้อย)
 								New(
 									"TextLabel",
 									{
+										Name = "TitleLabel",
 										RichText = true,
 										Text = config.Title or "",
-										FontFace = Font.new(
-											"rbxasset://fonts/families/GothamSSm.json",
-											Enum.FontWeight.Regular,
-											Enum.FontStyle.Normal
-										),
+										FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 										TextSize = 14,
 										TextXAlignment = "Left",
 										TextYAlignment = "Center",
 										AutomaticSize = Enum.AutomaticSize.X,
+										Size = UDim2.new(0, 0, 1, 0),
 										BackgroundTransparency = 1,
 										LayoutOrder = 2,
 										ThemeTag = {TextColor3 = "Text"}
 									}
 								),
-								-- SubTitle (ถ้ามี)
-								New(
-									"TextLabel",
-									{
-										RichText = true,
-										Text = config.SubTitle or "",
-										TextTransparency = 0.4,
-										FontFace = Font.new(
-											"rbxasset://fonts/families/GothamSSm.json",
-											Enum.FontWeight.Regular,
-											Enum.FontStyle.Normal
-										),
-										TextSize = 13,
-										TextXAlignment = "Left",
-										TextYAlignment = "Center",
-										AutomaticSize = Enum.AutomaticSize.X,
-										BackgroundTransparency = 1,
-										LayoutOrder = 3,
-										ThemeTag = {TextColor3 = "Text"}
-									}
-								)
+								subTitlePill
 							}
 						),
 						New(
 							"Frame",
 							{
-								BackgroundTransparency = 0.5,
-								Size = UDim2.new(1, 0, 0, 1),
-								Position = UDim2.new(0, 0, 1, 0),
+								BackgroundTransparency = 0.55,
+								Size = UDim2.new(1, -16, 0, 1),
+								Position = UDim2.new(0, 8, 1, -1),
 								ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+							},
+							{
+								New(
+									"UIGradient",
+									{
+										Transparency = NumberSequence.new({
+											NumberSequenceKeypoint.new(0, 0.85),
+											NumberSequenceKeypoint.new(0.1, 0.15),
+											NumberSequenceKeypoint.new(0.9, 0.15),
+											NumberSequenceKeypoint.new(1, 0.85)
+										})
+									}
+								)
 							}
 						)
 					}
 				)
 
-			-- Close: asks, then unloads the interface.
 			TitleBar.CloseButton =
 				BarButton(
 					Assets.Close,
-					UDim2.new(1, -4, 0, 4),
+					UDim2.new(1, -8, 0.5, 0),
 					TitleBar.Frame,
 					function()
 						Library.Window:Dialog {
@@ -7461,35 +8737,103 @@ local moduleFunctions = {
 								{
 									Title = "Yes",
 									Callback = function()
-										-- Library:Destroy does all cleanup, the same as a
-										-- script calling Fluent:Destroy().
 										Library:Destroy()
 									end
 								},
 								{Title = "No"}
 							}
 						}
-					end
+					end,
+					true
 				)
 
 			TitleBar.MaxButton =
 				BarButton(
 					Assets.Max,
-					UDim2.new(1, -40, 0, 4),
+					UDim2.new(1, -42, 0.5, 0),
 					TitleBar.Frame,
 					function()
 						config.Window.Maximize(not config.Window.Maximized)
-					end
+					end,
+					false
 				)
 			TitleBar.MinButton =
 				BarButton(
 					Assets.Min,
-					UDim2.new(1, -80, 0, 4),
+					UDim2.new(1, -76, 0.5, 0),
 					TitleBar.Frame,
 					function()
 						Library.Window:Minimize()
-					end
+					end,
+					false
 				)
+
+			-- Sleek Ctrl+K Spotlight trigger pill (clickable on both PC and Mobile)
+			local searchStroke = New(
+				"UIStroke",
+				{
+					Transparency = 0.4,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				}
+			)
+			local searchPill = New(
+				"TextButton",
+				{
+					Name = "CommandPaletteButton",
+					Text = "",
+					AutoButtonColor = false,
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -112, 0.5, 0),
+					Size = UDim2.fromOffset(82, 24),
+					BackgroundTransparency = 0.46,
+					Parent = TitleBar.Frame,
+					ThemeTag = {BackgroundColor3 = "Element"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+					searchStroke,
+					New("ImageLabel", {
+						Name = "Icon",
+						Image = Library:GetIcon("search") or "",
+						Size = UDim2.fromOffset(12, 12),
+						AnchorPoint = Vector2.new(0, 0.5),
+						Position = UDim2.new(0, 8, 0.5, 0),
+						BackgroundTransparency = 1,
+						ImageTransparency = 0,
+						ThemeTag = {ImageColor3 = "SubText"}
+					}),
+					New("TextLabel", {
+						Name = "Hint",
+						Text = "Ctrl+K",
+						I18nSkip = true,
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 10,
+						TextXAlignment = Enum.TextXAlignment.Right,
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, -8, 0.5, 0),
+						Size = UDim2.fromOffset(46, 16),
+						BackgroundTransparency = 1,
+						TextTransparency = 0,
+						ThemeTag = {TextColor3 = "SubText"}
+					})
+				}
+			)
+			AddSignal(searchPill.MouseEnter, function()
+				Creator.SpringValue(searchPill, "BackgroundTransparency", 0.24, 10, 1)
+				Creator.SpringValue(searchStroke, "Transparency", 0.18, 10, 1)
+			end)
+			AddSignal(searchPill.MouseLeave, function()
+				Creator.SpringValue(searchPill, "BackgroundTransparency", 0.46, 10, 1)
+				Creator.SpringValue(searchStroke, "Transparency", 0.4, 10, 1)
+			end)
+			AddSignal(searchPill.MouseButton1Click, function()
+				if type(Library.ToggleCommandPalette) == "function" then
+					Library:ToggleCommandPalette()
+				end
+			end)
+			TitleBar.CommandPaletteButton = searchPill
 			return TitleBar
 		end
 	end,
@@ -7526,22 +8870,31 @@ local moduleFunctions = {
 			false
 			local resizing, resizePos = false
 			local minimizeNotified = false
-			Window.AcrylicPaint = Acrylic.AcrylicPaint()
+			local defaultTabWidth = math.clamp(tonumber(config.TabWidth) or 166, 120, 260)
+			config.TabWidth = defaultTabWidth
+			local COLLAPSED_SIDEBAR_W = 46
+			local MIN_SIDEBAR_W = 120
+			local MAX_SIDEBAR_W = 260
+			local SNAP_COLLAPSE_W = 88
+			Window.SidebarCollapsed = false
+			Window.ExpandedTabWidth = defaultTabWidth
+			Window.AcrylicPaint = Acrylic.AcrylicPaint({Radius = Creator.Radius.Window, Shadow = false})
 			local selector, resizeStartFrame =
 				New(
 					"Frame",
 					{
-						Size = UDim2.fromOffset(4, 0),
-						BackgroundColor3 = Color3.fromRGB(76, 194, 255),
-						Position = UDim2.fromOffset(0, 17),
+						Size = UDim2.fromOffset(3, 16),
+						BackgroundColor3 = Color3.fromRGB(99, 179, 255),
+						Position = UDim2.fromOffset(2, 17),
 						AnchorPoint = Vector2.new(0, 0.5),
+						ZIndex = 4,
 						ThemeTag = {BackgroundColor3 = "Accent"}
 					},
-					{New("UICorner", {CornerRadius = UDim.new(0, 2)})}
+					{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
 				),
 			New(
 				"Frame",
-				{Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Position = UDim2.new(1, -20, 1, -20)}
+				{Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Active = true, Position = UDim2.new(1, -20, 1, -20), ZIndex = 8}
 			)
 			Window.TabHolder =
 				New(
@@ -7555,22 +8908,332 @@ local moduleFunctions = {
 						CanvasSize = UDim2.fromScale(0, 0),
 						ScrollingDirection = Enum.ScrollingDirection.Y
 					},
-					{New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})}
+					{
+						New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
+						New(
+							"UIPadding",
+							{
+								PaddingTop = UDim.new(0, 2),
+								PaddingBottom = UDim.new(0, 2),
+								PaddingLeft = UDim.new(0, 2),
+								PaddingRight = UDim.new(0, 2)
+							}
+						)
+					}
 				)
+			local tabHoverStroke = New(
+				"UIStroke",
+				{
+					Transparency = 1,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				}
+			)
+			local tabHoverPill = New(
+				"Frame",
+				{
+					Name = "TabHoverPill",
+					Size = UDim2.new(1, -4, 0, 34),
+					Position = UDim2.fromOffset(2, 0),
+					BackgroundTransparency = 1,
+					ZIndex = 0,
+					ThemeTag = {BackgroundColor3 = "Tab"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(0, 8)}), tabHoverStroke}
+			)
+			local showProfileCard = config.ShowProfileCard ~= false
 			local tabFrame =
 				New(
 					"Frame",
 					{
-						Size = UDim2.new(0, config.TabWidth, 1, -66),
-						Position = UDim2.new(0, 12, 0, 54),
+						Size = UDim2.new(0, config.TabWidth, 1, showProfileCard and -148 or -104),
+						Position = UDim2.new(0, 12, 0, 56),
 						BackgroundTransparency = 1,
 						ClipsDescendants = true
 					},
-					{Window.TabHolder, selector}
+					{tabHoverPill, Window.TabHolder, selector}
 				)
+			-- Bottom Sidebar Collapse/Expand Footer Button (pinned above Profile Card)
+			local sidebarCloseIcon = Library:GetIcon("panel-left-close") or Library:GetIcon("chevrons-left") or Assets.Min
+			local sidebarOpenIcon = Library:GetIcon("panel-left-open") or Library:GetIcon("chevrons-right") or Assets.Max
+			local sidebarFooterIcon = New(
+				"ImageLabel",
+				{
+					Name = "Icon",
+					Image = sidebarCloseIcon,
+					Size = UDim2.fromOffset(16, 16),
+					AnchorPoint = Vector2.new(0, 0.5),
+					Position = UDim2.new(0, 10, 0.5, 0),
+					BackgroundTransparency = 1,
+					ImageTransparency = 0,
+					ThemeTag = {ImageColor3 = "Text"}
+				}
+			)
+			local sidebarFooterLabel = New(
+				"TextLabel",
+				{
+					Name = "Label",
+					Text = "Collapse",
+					AnchorPoint = Vector2.new(0, 0.5),
+					Position = UDim2.new(0, 32, 0.5, 0),
+					Size = UDim2.new(1, -40, 1, 0),
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 13,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					BackgroundTransparency = 1,
+					TextTransparency = 0.04,
+					ThemeTag = {TextColor3 = "SubText"}
+				}
+			)
+			local sidebarFooterSep = New(
+				"Frame",
+				{
+					Name = "SidebarFooterSep",
+					Size = UDim2.new(0, config.TabWidth, 0, 1),
+					Position = UDim2.new(0, 12, 1, showProfileCard and -94 or -46),
+					BackgroundTransparency = 0.62,
+					ZIndex = 6,
+					ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+				}
+			)
+			local sidebarFooterStroke = New(
+				"UIStroke",
+				{
+					Transparency = 1,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				}
+			)
+			local sidebarFooterBtn = New(
+				"TextButton",
+				{
+					Name = "SidebarCollapseButton",
+					Size = UDim2.new(0, config.TabWidth, 0, showProfileCard and 28 or 32),
+					Position = UDim2.new(0, 12, 1, showProfileCard and -88 or -40),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+					Text = "",
+					ZIndex = 6,
+					ThemeTag = {BackgroundColor3 = "Tab"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+					sidebarFooterStroke,
+					sidebarFooterIcon,
+					sidebarFooterLabel
+				}
+			)
+			Creator.AddSignal(sidebarFooterBtn.MouseEnter, function()
+				Creator.SpringValue(sidebarFooterBtn, "BackgroundTransparency", 0.84, 5.2, 1)
+				Creator.SpringValue(sidebarFooterStroke, "Transparency", 0.62, 5.2, 1)
+				Creator.SpringValue(sidebarFooterIcon, "ImageTransparency", 0, 5.2, 1)
+				Creator.SpringValue(sidebarFooterLabel, "TextTransparency", 0, 5.2, 1)
+			end)
+			Creator.AddSignal(sidebarFooterBtn.MouseLeave, function()
+				Creator.SpringValue(sidebarFooterBtn, "BackgroundTransparency", 1, 5.2, 1)
+				Creator.SpringValue(sidebarFooterStroke, "Transparency", 1, 5.2, 1)
+				Creator.SpringValue(sidebarFooterIcon, "ImageTransparency", 0.12, 5.2, 1)
+				Creator.SpringValue(sidebarFooterLabel, "TextTransparency", 0.12, 5.2, 1)
+			end)
+			Creator.AddSignal(sidebarFooterBtn.MouseButton1Click, function()
+				Window:ToggleSidebar()
+			end)
+			Window.SidebarCollapseButton = sidebarFooterBtn
+
+			-- Luaward-style Sidebar Profile Card (borderless at rest, lifts on hover/open, Avatar with accent ring)
+			local localPlr = Players.LocalPlayer
+			local uid = localPlr and localPlr.UserId or 1
+			local avatarThumb = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(uid) .. "&w=100&h=100"
+			local avatarImg = New("ImageLabel", {
+				Name = "AvatarImage",
+				Image = avatarThumb,
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1
+			}, {New("UICorner", {CornerRadius = UDim.new(1, 0)})})
+			local shieldImg = New("ImageLabel", {
+				Name = "PrivacyIcon",
+				Image = Library:GetIcon("shield") or "",
+				Size = UDim2.fromOffset(15, 15),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundTransparency = 1,
+				Visible = false,
+				ThemeTag = {ImageColor3 = "Accent"}
+			})
+			local avatarRingStroke = New("UIStroke", {Transparency = 0.42, Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "Accent"}})
+			local avatarHolder = New(
+				"Frame",
+				{
+					Name = "Avatar",
+					Size = UDim2.fromOffset(30, 30),
+					AnchorPoint = Vector2.new(0, 0.5),
+					Position = UDim2.new(0, 7, 0.5, 0),
+					BackgroundTransparency = 0.2,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)}), avatarRingStroke, avatarImg, shieldImg}
+			)
+			local profileDisplayLbl = New("TextLabel", {
+				Name = "DisplayName",
+				Text = localPlr and localPlr.DisplayName or "Player",
+				I18nSkip = true,
+				FontFace = Creator.Font(Enum.FontWeight.Bold),
+				TextSize = 13,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Position = UDim2.fromOffset(0, 3),
+				Size = UDim2.new(1, 0, 0, 16),
+				BackgroundTransparency = 1,
+				ThemeTag = {TextColor3 = "Text"}
+			})
+			local profileUserLbl = New("TextLabel", {
+				Name = "Username",
+				Text = "@" .. (localPlr and localPlr.Name or "player"),
+				I18nSkip = true,
+				FontFace = Creator.Font(Enum.FontWeight.Medium),
+				TextSize = 11,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Position = UDim2.fromOffset(0, 19),
+				Size = UDim2.new(1, 0, 0, 14),
+				BackgroundTransparency = 1,
+				ThemeTag = {TextColor3 = "SubText"}
+			})
+			local profileTextCol = New(
+				"Frame",
+				{
+					Name = "TextCol",
+					Position = UDim2.fromOffset(44, 5),
+					Size = UDim2.new(1, -68, 1, -10),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true
+				},
+				{profileDisplayLbl, profileUserLbl}
+			)
+			local profileChev = New("ImageLabel", {
+				Name = "Chevron",
+				Image = Library:GetIcon("chevrons-up-down") or Library:GetIcon("chevron-down") or "",
+				Size = UDim2.fromOffset(14, 14),
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -8, 0.5, 0),
+				BackgroundTransparency = 1,
+				ThemeTag = {ImageColor3 = "SubText"}
+			})
+			local profileCardStroke = New("UIStroke", {Transparency = 1, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+			local profileCard = New(
+				"TextButton",
+				{
+					Name = "SidebarProfileCard",
+					Size = UDim2.new(0, config.TabWidth, 0, 46),
+					Position = UDim2.new(0, 12, 1, -56),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+					Visible = showProfileCard,
+					Text = "",
+					ZIndex = 6,
+					ThemeTag = {BackgroundColor3 = "Tab"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+					profileCardStroke,
+					avatarHolder,
+					profileTextCol,
+					profileChev
+				}
+			)
+			Window.ProfileCard = profileCard
+
+			local profileCardHovered = false
+			local profileMenuOpened = false
+			local function syncProfileCardVisual()
+				local bgT = profileMenuOpened and 0.78 or (profileCardHovered and 0.85 or 1)
+				local stT = profileMenuOpened and 0.48 or (profileCardHovered and 0.66 or 1)
+				Creator.SpringValue(profileCard, "BackgroundTransparency", bgT, 5.2, 1)
+				Creator.SpringValue(profileCardStroke, "Transparency", stT, 5.2, 1)
+			end
+			function Window.SetProfileMenuOpen(isOpen)
+				profileMenuOpened = isOpen == true
+				syncProfileCardVisual()
+			end
+
+			function Window.UpdateProfileCard()
+				local priv = type(Library.GetPrivacyMode) == "function" and Library:GetPrivacyMode() or {Hidden = false, Alias = "Anonymous", HideAvatar = false}
+				if priv.Hidden then
+					profileDisplayLbl.Text = tostring(priv.Alias or "Anonymous")
+					profileUserLbl.Text = "Name hidden"
+					Creator.OverrideTag(avatarRingStroke, {Color = "Accent"})
+					avatarRingStroke.Transparency = 0.22
+				else
+					profileDisplayLbl.Text = localPlr and localPlr.DisplayName or "Player"
+					profileUserLbl.Text = "@" .. (localPlr and localPlr.Name or "player")
+					Creator.OverrideTag(avatarRingStroke, {Color = "Accent"})
+					avatarRingStroke.Transparency = 0.45
+				end
+				local hideAv = priv.HideAvatar == true
+				avatarImg.Visible = not hideAv
+				shieldImg.Visible = hideAv
+			end
+			Window.UpdateProfileCard()
+
+			Creator.AddSignal(profileCard.MouseEnter, function()
+				profileCardHovered = true
+				syncProfileCardVisual()
+			end)
+			Creator.AddSignal(profileCard.MouseLeave, function()
+				profileCardHovered = false
+				syncProfileCardVisual()
+			end)
+			Creator.AddSignal(profileCard.MouseButton1Click, function()
+				if type(Library.ToggleProfileMenu) == "function" then
+					Library:ToggleProfileMenu(profileCard)
+				end
+			end)
+			local sidebarDividerLine =
+				New(
+					"Frame",
+					{
+						Name = "Line",
+						AnchorPoint = Vector2.new(0.5, 0),
+						Size = UDim2.new(0, 1, 1, 0),
+						Position = UDim2.fromScale(0.5, 0),
+						BackgroundTransparency = 0.65,
+						BorderSizePixel = 0,
+						ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+					},
+					{
+						New(
+							"UIGradient",
+							{
+								Rotation = 90,
+								Transparency = NumberSequence.new({
+									NumberSequenceKeypoint.new(0, 0.8),
+									NumberSequenceKeypoint.new(0.12, 0.15),
+									NumberSequenceKeypoint.new(0.88, 0.15),
+									NumberSequenceKeypoint.new(1, 0.85)
+								})
+							}
+						)
+					}
+				)
+			-- Interactive 10px drag handle on the right edge of the sidebar (Luaward Dashboard style)
+			local sidebarDivider =
+				New(
+					"Frame",
+					{
+						Name = "SidebarDivider",
+						Size = UDim2.new(0, 10, 1, -56),
+						Position = UDim2.new(0, config.TabWidth + 15, 0, 50),
+						BackgroundTransparency = 1,
+						Active = true,
+						ZIndex = 7
+					},
+					{sidebarDividerLine}
+				)
+			Window.SidebarDivider = sidebarDivider
 			Window.TabArea = tabFrame
-			-- Expose the existing selector only as an optional visual handle.
-			-- Workspace search can hide it while the tab rail shows live matches.
 			Window.TabSelector = selector
 			Window.TabWidth = config.TabWidth
 			Window.TabDisplay =
@@ -7581,42 +9244,150 @@ local moduleFunctions = {
 						Text = "Tab",
 						I18nSkip = true,
 						TextTransparency = 0,
-						FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
-						TextSize = 28,
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal, "Display"),
+						TextSize = 24,
 						TextXAlignment = "Left",
 						TextYAlignment = "Center",
-						Size = UDim2.new(1, -16, 0, 28),
-						Position = UDim2.fromOffset(config.TabWidth + 26, 56),
+						Size = UDim2.new(1, -config.TabWidth - 46, 0, 28),
+						Position = UDim2.fromOffset(config.TabWidth + 32, 56),
 						BackgroundTransparency = 1,
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
+			-- Frame (not nested CanvasGroup) so UIStrokes inside tabs never desync or linger
+			-- behind Window.VisualFrame's outer CanvasGroup during minimize/restore or tab switches.
 			Window.ContainerHolder =
 				New(
-					"CanvasGroup",
+					"Frame",
 					{
-						Size = UDim2.new(1, -config.TabWidth - 32, 1, -102),
-						Position = UDim2.fromOffset(config.TabWidth + 26, 90),
-						BackgroundTransparency = 1
+						Size = UDim2.new(1, -config.TabWidth - 40, 1, -104),
+						Position = UDim2.fromOffset(config.TabWidth + 32, 92),
+						BackgroundTransparency = 1,
+						ClipsDescendants = true
 					}
 				)
+			-- Separate DPI UIScale (on Window.Root) from symmetrical Center Animation UIScale (on VisualFrame)
+			-- and keep the elevated Shadow outside VisualFrame's CanvasGroup so it is never clipped.
+			local windowUIScale = New("UIScale", {Scale = Creator.DPIScale})
+			Window.UIScale = windowUIScale
+			local animUIScale = New("UIScale", {Scale = 1})
+			Window.AnimUIScale = animUIScale
+			local windowShadow = New(
+				"ImageLabel",
+				{
+					Name = "Shadow",
+					Image = "rbxassetid://8992230677",
+					ScaleType = "Slice",
+					SliceCenter = Rect.new(Vector2.new(99, 99), Vector2.new(99, 99)),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Size = UDim2.new(1, 76, 1, 76),
+					Position = UDim2.new(0.5, 0, 0.5, 4),
+					BackgroundTransparency = 1,
+					ImageColor3 = Color3.fromRGB(0, 0, 0),
+					ImageTransparency = 0.72,
+					ZIndex = 0
+				}
+			)
+			Window.Shadow = windowShadow
+			local visualFrame = New(
+				"Frame",
+				{
+					Name = "WindowBody",
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ZIndex = 1
+				},
+				{
+					animUIScale,
+					New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Window)}),
+					Window.AcrylicPaint.Frame,
+					sidebarDivider,
+					Window.TabDisplay,
+					Window.ContainerHolder,
+					tabFrame,
+					sidebarFooterSep,
+					sidebarFooterBtn,
+					profileCard,
+					resizeStartFrame
+				}
+			)
+			Window.VisualFrame = visualFrame
 			Window.Root =
 				New(
 					"Frame",
-					{BackgroundTransparency = 1, Size = Window.Size, Position = Window.Position, Parent = config.Parent},
-					{Window.AcrylicPaint.Frame, Window.TabDisplay, Window.ContainerHolder, tabFrame, resizeStartFrame}
+					{BackgroundTransparency = 1, Active = true, Size = Window.Size, Position = Window.Position, Parent = config.Parent},
+					{windowUIScale, windowShadow, visualFrame}
 				)
-			Window.TitleBar = requireModule(moduleScript.Parent.TitleBar) {Title = config.Title, SubTitle = config.SubTitle, Parent = Window.Root, Window = Window}
+			local animYOffset = 0
+			local function setVisualYOffset(y)
+				animYOffset = y
+				visualFrame.Position = UDim2.new(0.5, 0, 0.5, y)
+				windowShadow.Position = UDim2.new(0.5, 0, 0.5, y + 4)
+			end
+			local function applyCombinedScale()
+				windowUIScale.Scale = Creator.DPIScale
+			end
+			-- Smooth macOS/Apple Glass entrance spring (center-scaled + subtle float-up) without CanvasGroup downsampling blur.
+			if not Creator.ReducedMotion then
+				animUIScale.Scale = 0.92
+				windowShadow.ImageTransparency = 1
+				setVisualYOffset(14)
+				Creator.SpringValue(animUIScale, "Scale", 1, 6.4, 0.86)
+				Creator.SpringValue(windowShadow, "ImageTransparency", 0.72, 6.8, 1)
+				Creator.SpringValue(visualFrame, "YOffset", 0, 6.4, 0.88, setVisualYOffset, animYOffset)
+			end
+			Window.TitleBar = requireModule(moduleScript.Parent.TitleBar) {Title = config.Title, SubTitle = config.SubTitle, Parent = visualFrame, Window = Window}
 			if requireModule(Root).UseAcrylic then
 				Window.AcrylicPaint.AddParent(Window.Root)
+				if not Creator.ReducedMotion then
+					Window.AcrylicPaint.SetVisibility(false)
+					task.delay(0.08, function()
+						if not Window.Minimized and Window.Root and Window.Root.Parent then
+							Window.AcrylicPaint.SyncVisibility()
+						end
+					end)
+				end
 			end
 			local sizeMotor, posMotor =
 				Flipper.GroupMotor.new {X = Window.Size.X.Offset, Y = Window.Size.Y.Offset},
 			Flipper.GroupMotor.new {X = Window.Position.X.Offset, Y = Window.Position.Y.Offset}
 			Window.SelectorPosMotor = Flipper.SingleMotor.new(17)
-			Window.SelectorSizeMotor = Flipper.SingleMotor.new(0)
-			Window.ContainerBackMotor = Flipper.SingleMotor.new(0)
-			Window.ContainerPosMotor = Flipper.SingleMotor.new(94)
+			Window.SelectorSizeMotor = Flipper.SingleMotor.new(16)
+			-- Compatible proxies for Tab transitions (ContainerHolder is a Frame; no nested CanvasGroup).
+			local containerPosY = 92
+			local containerAlpha = 0
+			Window.ContainerBackMotor = {
+				getValue = function()
+					return containerAlpha
+				end,
+				setGoal = function(_, goal)
+					if type(goal) == "table" and goal._targetValue ~= nil then
+						containerAlpha = goal._targetValue
+					end
+				end
+			}
+			Window.ContainerPosMotor = {
+				getValue = function()
+					return containerPosY
+				end,
+				setGoal = function(_, goal)
+					if type(goal) == "table" and goal._targetValue ~= nil then
+						if goal._frequency and not Creator.ReducedMotion then
+							Creator.SpringValue(Window.ContainerHolder, "Position", goal._targetValue, goal._frequency, goal._dampingRatio or 1, function(y)
+								containerPosY = y
+								Window.ContainerHolder.Position = UDim2.fromOffset(config.TabWidth + 32, y)
+							end, containerPosY)
+						else
+							Creator.CancelSpring(Window.ContainerHolder, "Position")
+							containerPosY = goal._targetValue
+							Window.ContainerHolder.Position = UDim2.fromOffset(config.TabWidth + 32, containerPosY)
+						end
+					end
+				end
+			}
 			sizeMotor:onStep(
 				function(size)
 					Window.Root.Size = UDim2.new(0, size.X, 0, size.Y)
@@ -7627,47 +9398,188 @@ local moduleFunctions = {
 					Window.Root.Position = UDim2.new(0, position.X, 0, position.Y)
 				end
 			)
-			local lastValue, lastTime = 0, 0
+			local lastValue, lastTime = 0, os.clock()
 			Window.SelectorPosMotor:onStep(
 				function(value)
-					selector.Position = UDim2.new(0, 0, 0, value + 17)
+					if value ~= value then
+						return
+					end
+					selector.Position = UDim2.new(0, 2, 0, value + 17)
 					local now = os.clock()
 					local deltaTime = now - lastTime
-					if lastValue ~= nil then
-						Window.SelectorSizeMotor:setGoal(Spring((math.abs(value - lastValue) / (deltaTime * 60)) + 16))
+					if lastValue ~= nil and deltaTime > 0.001 then
+						local stretch = math.clamp((math.abs(value - lastValue) / (deltaTime * 60)) + 16, 16, 48)
+						Window.SelectorSizeMotor:setGoal(Spring(stretch))
 						lastValue = value
+						lastTime = now
 					end
-					lastTime = now
 				end
 			)
 			Window.SelectorSizeMotor:onStep(
 				function(value)
-					selector.Size = UDim2.new(0, 4, 0, value)
+					if value == value then
+						selector.Size = UDim2.new(0, 3, 0, math.clamp(value, 6, 48))
+					end
 				end
 			)
-			Window.ContainerBackMotor:onStep(
-				function(value)
-					Window.ContainerHolder.GroupTransparency = value
-				end
-			)
-			Window.ContainerPosMotor:onStep(
-				function(value)
-					Window.ContainerHolder.Position = UDim2.fromOffset(config.TabWidth + 26, value)
-				end
-			)
-			-- Public, additive layout hook used by the workspace toolbar.  Keeping
-			-- this inside Window means compact mode does not fight the existing
-			-- Flipper position motor when a tab is selected.
-			function Window.SetTabWidth(_self, width)
-				width = math.clamp(tonumber(width) or config.TabWidth, 52, 320)
+			-- Sidebar width, collapse (Icon Rail), and interactive drag-resize (Luaward Dashboard style).
+			local TabModule = nil
+			local function applyTabWidthImmediate(width)
+				width = math.clamp(tonumber(width) or defaultTabWidth, COLLAPSED_SIDEBAR_W, MAX_SIDEBAR_W)
 				config.TabWidth = width
 				Window.TabWidth = width
 				tabFrame.Size = UDim2.new(0, width, 1, tabFrame.Size.Y.Offset)
-				Window.TabDisplay.Position = UDim2.fromOffset(width + 26, 56)
-				Window.ContainerHolder.Size = UDim2.new(1, -width - 32, 1, -102)
-				Window.ContainerHolder.Position = UDim2.fromOffset(width + 26, Window.ContainerPosMotor:getValue())
+				sidebarFooterSep.Size = UDim2.new(0, width, 0, 1)
+				sidebarFooterBtn.Size = UDim2.new(0, width, 0, showProfileCard and 28 or 32)
+				if showProfileCard then
+					profileCard.Size = UDim2.new(0, width, 0, 46)
+				end
+				sidebarDivider.Position = UDim2.new(0, width + 15, 0, 50)
+				Window.TabDisplay.Position = UDim2.fromOffset(width + 32, 56)
+				Window.TabDisplay.Size = UDim2.new(1, -width - 46, 0, 28)
+				Window.ContainerHolder.Size = UDim2.new(1, -width - 40, 1, -104)
+				Window.ContainerHolder.Position = UDim2.fromOffset(width + 32, Window.ContainerPosMotor:getValue())
 			end
+			local function updateTabsCollapsedVisual(collapsed)
+				collapsed = collapsed == true
+				sidebarFooterIcon.Image = collapsed and sidebarOpenIcon or sidebarCloseIcon
+				sidebarFooterLabel.Visible = not collapsed
+				if collapsed then
+					sidebarFooterIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+					sidebarFooterIcon.Position = UDim2.fromScale(0.5, 0.5)
+					profileTextCol.Visible = false
+					profileChev.Visible = false
+					avatarHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+					avatarHolder.Position = UDim2.fromScale(0.5, 0.5)
+				else
+					sidebarFooterIcon.AnchorPoint = Vector2.new(0, 0.5)
+					sidebarFooterIcon.Position = UDim2.new(0, 10, 0.5, 0)
+					profileTextCol.Visible = true
+					profileChev.Visible = true
+					avatarHolder.AnchorPoint = Vector2.new(0, 0.5)
+					avatarHolder.Position = UDim2.new(0, 7, 0.5, 0)
+				end
+				if TabModule and TabModule.Tabs then
+					for _, tab in next, TabModule.Tabs do
+						if type(tab.SetCollapsed) == "function" then
+							tab.SetCollapsed(collapsed)
+						end
+					end
+				end
+			end
+			function Window.SetTabWidth(_self, width, instant)
+				width = math.clamp(tonumber(width) or defaultTabWidth, COLLAPSED_SIDEBAR_W, MAX_SIDEBAR_W)
+				local collapsed = width <= COLLAPSED_SIDEBAR_W + 6
+				Window.SidebarCollapsed = collapsed
+				if not collapsed then
+					Window.ExpandedTabWidth = math.clamp(width, MIN_SIDEBAR_W, MAX_SIDEBAR_W)
+				end
+				updateTabsCollapsedVisual(collapsed)
+				if instant ~= false or Creator.ReducedMotion then
+					Creator.CancelSpring(tabFrame, "SidebarWidth")
+					applyTabWidthImmediate(width)
+				else
+					Creator.SpringValue(tabFrame, "SidebarWidth", width, 7.2, 0.92, applyTabWidthImmediate, Window.TabWidth)
+				end
+			end
+			function Window.SetSidebarCollapsed(_self, collapsed, instant)
+				collapsed = collapsed == true
+				Window.SidebarCollapsed = collapsed
+				updateTabsCollapsedVisual(collapsed)
+				local targetW = collapsed and COLLAPSED_SIDEBAR_W or math.clamp(Window.ExpandedTabWidth or defaultTabWidth, MIN_SIDEBAR_W, MAX_SIDEBAR_W)
+				if instant or Creator.ReducedMotion then
+					Creator.CancelSpring(tabFrame, "SidebarWidth")
+					applyTabWidthImmediate(targetW)
+				else
+					Creator.SpringValue(tabFrame, "SidebarWidth", targetW, 7.0, 0.9, applyTabWidthImmediate, Window.TabWidth)
+				end
+			end
+			function Window.ToggleSidebar(_self, instant)
+				Window:SetSidebarCollapsed(not Window.SidebarCollapsed, instant)
+			end
+
+			-- Sidebar divider drag-resize + hover accent feedback + double-click reset
+			local sidebarDragging = false
+			local lastDividerClickAt = 0
+			local function setDividerActive(active)
+				if active then
+					Creator.OverrideTag(sidebarDividerLine, {BackgroundColor3 = "Accent"})
+					Creator.SpringValue(sidebarDividerLine, "BackgroundTransparency", 0.1, 12, 1)
+					sidebarDividerLine.Size = UDim2.new(0, 2, 1, 0)
+				else
+					Creator.OverrideTag(sidebarDividerLine, {BackgroundColor3 = "TitleBarLine"})
+					Creator.SpringValue(sidebarDividerLine, "BackgroundTransparency", 0.65, 10, 1)
+					sidebarDividerLine.Size = UDim2.new(0, 1, 1, 0)
+				end
+			end
+			Creator.AddSignal(sidebarDivider.MouseEnter, function()
+				setDividerActive(true)
+			end)
+			Creator.AddSignal(sidebarDivider.MouseLeave, function()
+				if not sidebarDragging then
+					setDividerActive(false)
+				end
+			end)
+			Creator.AddSignal(sidebarDivider.InputBegan, function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					local now = os.clock()
+					if (now - lastDividerClickAt) < 0.35 then
+						lastDividerClickAt = 0
+						Window.ExpandedTabWidth = defaultTabWidth
+						Window:SetSidebarCollapsed(false, false)
+						return
+					end
+					lastDividerClickAt = now
+					sidebarDragging = true
+					setDividerActive(true)
+					Creator.CancelSpring(tabFrame, "SidebarWidth")
+					local startX = input.Position.X
+					local startW = Window.TabWidth
+					local scale = math.max(0.01, Creator.DPIScale)
+					Creator.BeginDrag(function(moveInput)
+						if not sidebarDragging then
+							return
+						end
+						local rawW = startW + (moveInput.Position.X - startX) / scale
+						local maxAllowed = math.min(MAX_SIDEBAR_W, math.max(MIN_SIDEBAR_W, Window.Size.X.Offset - 260))
+						if rawW < SNAP_COLLAPSE_W then
+							if not Window.SidebarCollapsed then
+								Window.SidebarCollapsed = true
+								updateTabsCollapsedVisual(true)
+							end
+							applyTabWidthImmediate(COLLAPSED_SIDEBAR_W)
+						else
+							local clamped = math.clamp(rawW, MIN_SIDEBAR_W, maxAllowed)
+							if Window.SidebarCollapsed then
+								Window.SidebarCollapsed = false
+								updateTabsCollapsedVisual(false)
+							end
+							Window.ExpandedTabWidth = clamped
+							applyTabWidthImmediate(clamped)
+						end
+					end, function()
+						sidebarDragging = false
+						setDividerActive(false)
+					end)
+				end
+			end)
+			-- Ctrl+B shortcut to collapse/expand sidebar (Luaward Dashboard / VSCode standard)
+			Creator.AddSignal(UserInputService.InputBegan, function(input, gameProcessed)
+				if gameProcessed or UserInputService:GetFocusedTextBox() then
+					return
+				end
+				if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.B then
+					if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl) then
+						Window:ToggleSidebar()
+					end
+				end
+			end)
 			local oldSizeX, oldSizeY
+			local function getUsableViewport()
+				local screen = camera.ViewportSize
+				local insetY = Creator.GetGuiInsetY()
+				return screen.X, math.max(160, screen.Y - insetY)
+			end
 			Window.Maximize = function(maximized, noPos, instant)
 				Window.Maximized = maximized
 				Window.TitleBar.MaxButton.Frame.Icon.Image = maximized and Assets.Restore or Assets.Max
@@ -7675,19 +9587,48 @@ local moduleFunctions = {
 					oldSizeX = Window.Size.X.Offset
 					oldSizeY = Window.Size.Y.Offset
 				end
-				local sizeX, sizeY = maximized and camera.ViewportSize.X or oldSizeX, maximized and camera.ViewportSize.Y or oldSizeY
+				local usableW, usableH = getUsableViewport()
+				local scale = math.max(0.01, Creator.DPIScale)
+				local sizeX = maximized and math.floor(usableW / scale) or (oldSizeX or Window.Size.X.Offset)
+				local sizeY = maximized and math.floor(usableH / scale) or (oldSizeY or Window.Size.Y.Offset)
+				local useInstant = instant or Creator.ReducedMotion
 				sizeMotor:setGoal {
-					X = Flipper[instant and "Instant" or "Spring"].new(sizeX, {frequency = 6}),
-					Y = Flipper[instant and "Instant" or "Spring"].new(sizeY, {frequency = 6})
+					X = Flipper[useInstant and "Instant" or "Spring"].new(sizeX, {frequency = 6}),
+					Y = Flipper[useInstant and "Instant" or "Spring"].new(sizeY, {frequency = 6})
 				}
 				Window.Size = UDim2.fromOffset(sizeX, sizeY)
 				if not noPos then
 					posMotor:setGoal {
-						X = Spring(maximized and 0 or Window.Position.X.Offset, {frequency = 6}),
-						Y = Spring(maximized and 0 or Window.Position.Y.Offset, {frequency = 6})
+						X = Flipper[useInstant and "Instant" or "Spring"].new(maximized and 0 or Window.Position.X.Offset, {frequency = 6}),
+						Y = Flipper[useInstant and "Instant" or "Spring"].new(maximized and 0 or Window.Position.Y.Offset, {frequency = 6})
 					}
 				end
 			end
+			local function syncTabHolderCanvas()
+				local scale = Creator.GetEffectiveScale(Window.TabHolder)
+				Window.TabHolder.CanvasSize = UDim2.new(0, 0, 0, math.ceil(Window.TabHolder.UIListLayout.AbsoluteContentSize.Y / scale) + 4)
+			end
+			Creator.RegisterDPIScale(windowUIScale, function(newScale)
+				applyCombinedScale()
+				if Window.Maximized then
+					local usableW, usableH = getUsableViewport()
+					local s = math.max(0.01, newScale)
+					local sizeX, sizeY = math.floor(usableW / s), math.floor(usableH / s)
+					Window.Size = UDim2.fromOffset(sizeX, sizeY)
+					sizeMotor:setGoal {X = Instant(sizeX), Y = Instant(sizeY)}
+					posMotor:setGoal {X = Instant(0), Y = Instant(0)}
+				else
+					local usableW, usableH = getUsableViewport()
+					local renderedW = Window.Size.X.Offset * newScale
+					local x = math.clamp(Window.Position.X.Offset, VISIBLE_TITLE - renderedW, math.max(VISIBLE_TITLE - renderedW, usableW - VISIBLE_TITLE))
+					local y = math.clamp(Window.Position.Y.Offset, 0, math.max(0, usableH - VISIBLE_TITLE))
+					if x ~= Window.Position.X.Offset or y ~= Window.Position.Y.Offset then
+						Window.Position = UDim2.fromOffset(x, y)
+						posMotor:setGoal {X = Instant(x), Y = Instant(y)}
+					end
+				end
+				task.defer(syncTabHolderCanvas)
+			end)
 			Creator.AddSignal(
 				Window.TitleBar.Frame.InputBegan,
 				function(input)
@@ -7739,10 +9680,10 @@ local moduleFunctions = {
 						local delta = input.Position - mousePos
 						-- Keep part of the title bar on screen so the window can
 						-- always be dragged back.
-						local screen = camera.ViewportSize
-						local width = Window.Size.X.Offset
-						local x = math.clamp(startPos.X.Offset + delta.X, VISIBLE_TITLE - width, math.max(VISIBLE_TITLE - width, screen.X - VISIBLE_TITLE))
-						local y = math.clamp(startPos.Y.Offset + delta.Y, 0, math.max(0, screen.Y - VISIBLE_TITLE))
+						local usableW, usableH = getUsableViewport()
+						local width = Window.Size.X.Offset * Creator.DPIScale
+						local x = math.clamp(startPos.X.Offset + delta.X, VISIBLE_TITLE - width, math.max(VISIBLE_TITLE - width, usableW - VISIBLE_TITLE))
+						local y = math.clamp(startPos.Y.Offset + delta.Y, 0, math.max(0, usableH - VISIBLE_TITLE))
 						Window.Position = UDim2.fromOffset(x, y)
 						posMotor:setGoal {X = Instant(Window.Position.X.Offset), Y = Instant(Window.Position.Y.Offset)}
 						if Window.Maximized then
@@ -7754,12 +9695,13 @@ local moduleFunctions = {
 							input.UserInputType == Enum.UserInputType.Touch) and
 						resizing
 					then
-						local delta, startSize = input.Position - resizePos, Window.Size
+						local scale = math.max(0.01, Creator.DPIScale)
+						local delta, startSize = (input.Position - resizePos) / scale, Window.Size
 						local targetSize = Vector3.new(startSize.X.Offset, startSize.Y.Offset, 0) + Vector3.new(1, 1, 0) * delta
 						-- The minimum size shrinks on screens smaller than it.
-						local screen = camera.ViewportSize
-						local minimumX = math.max(200, math.min(470, screen.X - SCREEN_MARGIN * 2))
-						local minimumY = math.max(160, math.min(380, screen.Y - SCREEN_MARGIN * 2))
+						local usableW, usableH = getUsableViewport()
+						local minimumX = math.max(200, math.min(470, (usableW - SCREEN_MARGIN * 2) / scale))
+						local minimumY = math.max(160, math.min(380, (usableH - SCREEN_MARGIN * 2) / scale))
 						local clampedSize = Vector2.new(math.clamp(targetSize.X, minimumX, 2048), math.clamp(targetSize.Y, minimumY, 2048))
 						sizeMotor:setGoal {X = Flipper.Instant.new(clampedSize.X), Y = Flipper.Instant.new(clampedSize.Y)}
 					end
@@ -7776,9 +9718,7 @@ local moduleFunctions = {
 			)
 			Creator.AddSignal(
 				Window.TabHolder.UIListLayout:GetPropertyChangedSignal "AbsoluteContentSize",
-				function()
-					Window.TabHolder.CanvasSize = UDim2.new(0, 0, 0, Window.TabHolder.UIListLayout.AbsoluteContentSize.Y)
-				end
+				syncTabHolderCanvas
 			)
 			-- Minimize key. A modifier key (Ctrl, Shift, Alt) minimizes when it is
 			-- released, and only if nothing else was pressed while it was held, so
@@ -7839,14 +9779,96 @@ local moduleFunctions = {
 					heldModifier, heldChord = nil, false
 				end
 			)
+			local minimizeTransitionId = 0
+			Window._MinimizeListeners = {}
+			function Window.OnMinimizeChanged(_self, fn)
+				if type(fn) == "function" then
+					table.insert(Window._MinimizeListeners, fn)
+				end
+			end
+			Window.TitleText = config.Title
+			function Window.OpenCommandPalette(_self)
+				if Library and type(Library.OpenCommandPalette) == "function" then
+					Library:OpenCommandPalette()
+				end
+			end
+			function Window.ToggleCommandPalette(_self)
+				if Library and type(Library.ToggleCommandPalette) == "function" then
+					Library:ToggleCommandPalette()
+				end
+			end
+			function Window.SetFloatingPill(_self, enabledOrOpts)
+				if Library and type(Library.SetFloatingPill) == "function" then
+					return Library:SetFloatingPill(enabledOrOpts)
+				end
+				return nil
+			end
 			function Window.Minimize(_self)
 				Window.Minimized = not Window.Minimized
+				minimizeTransitionId += 1
+				local myTransition = minimizeTransitionId
 				if Window.Minimized and type(Library._CloseDropdowns) == "function" then
 					Library._CloseDropdowns()
 				end
-				Window.Root.Visible = not Window.Minimized
-				if Window.AcrylicPaint and type(Window.AcrylicPaint.SyncVisibility) == "function" then
-					Window.AcrylicPaint.SyncVisibility()
+				for _, listener in ipairs(Window._MinimizeListeners) do
+					pcall(listener, Window.Minimized)
+				end
+				if Window.Minimized then
+					-- Immediately hide 3D AcrylicBlur before animating out so blur never lingers.
+					if Window.AcrylicPaint and type(Window.AcrylicPaint.SetVisibility) == "function" then
+						Window.AcrylicPaint.SetVisibility(false)
+					end
+					if Creator.ReducedMotion then
+						Creator.CancelSpring(animUIScale, "Scale")
+						Creator.CancelSpring(visualFrame, "YOffset")
+						Creator.CancelSpring(windowShadow, "ImageTransparency")
+						animUIScale.Scale = 1
+						windowShadow.ImageTransparency = 0.72
+						setVisualYOffset(0)
+						Window.Root.Visible = false
+					else
+						Creator.SpringValue(animUIScale, "Scale", 0.92, 8.0, 1)
+						Creator.SpringValue(windowShadow, "ImageTransparency", 1, 9.0, 1)
+						Creator.SpringValue(visualFrame, "YOffset", 14, 8.0, 1, setVisualYOffset, animYOffset)
+						task.delay(0.18, function()
+							if myTransition == minimizeTransitionId and Window.Minimized and Window.Root and Window.Root.Parent then
+								Window.Root.Visible = false
+								if Window.AcrylicPaint and type(Window.AcrylicPaint.SyncVisibility) == "function" then
+									Window.AcrylicPaint.SyncVisibility()
+								end
+							end
+						end)
+					end
+				else
+					Window.Root.Visible = true
+					if Creator.ReducedMotion then
+						Creator.CancelSpring(animUIScale, "Scale")
+						Creator.CancelSpring(visualFrame, "YOffset")
+						Creator.CancelSpring(windowShadow, "ImageTransparency")
+						animUIScale.Scale = 1
+						windowShadow.ImageTransparency = 0.72
+						setVisualYOffset(0)
+						if Window.AcrylicPaint and type(Window.AcrylicPaint.SyncVisibility) == "function" then
+							Window.AcrylicPaint.SyncVisibility()
+						end
+					else
+						Creator.CancelSpring(animUIScale, "Scale")
+						Creator.CancelSpring(visualFrame, "YOffset")
+						Creator.CancelSpring(windowShadow, "ImageTransparency")
+						animUIScale.Scale = 0.92
+						windowShadow.ImageTransparency = 1
+						setVisualYOffset(14)
+						Creator.SpringValue(animUIScale, "Scale", 1, 6.4, 0.86)
+						Creator.SpringValue(windowShadow, "ImageTransparency", 0.72, 6.8, 1)
+						Creator.SpringValue(visualFrame, "YOffset", 0, 6.4, 0.88, setVisualYOffset, animYOffset)
+						task.delay(0.06, function()
+							if myTransition == minimizeTransitionId and not Window.Minimized and Window.Root and Window.Root.Parent then
+								if Window.AcrylicPaint and type(Window.AcrylicPaint.SyncVisibility) == "function" then
+									Window.AcrylicPaint.SyncVisibility()
+								end
+							end
+						end)
+					end
 				end
 				if not minimizeNotified then
 					minimizeNotified = true
@@ -7872,7 +9894,7 @@ local moduleFunctions = {
 					New(
 						"TextLabel",
 						{
-							FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
+							FontFace = Creator.Font(),
 							Text = dialogConfig.Content,
 							TextColor3 = Color3.fromRGB(240, 240, 240),
 							TextSize = 14,
@@ -7881,6 +9903,7 @@ local moduleFunctions = {
 							Size = UDim2.new(1, -40, 1, 0),
 							Position = UDim2.fromOffset(20, 60),
 							BackgroundTransparency = 1,
+							ZIndex = 32,
 							Parent = dialog.Root,
 							ClipsDescendants = false,
 							ThemeTag = {TextColor3 = "Text"}
@@ -7901,7 +9924,7 @@ local moduleFunctions = {
 				end
 				dialog:Open()
 			end
-			local TabModule = requireModule(Components.Tab):Init(Window)
+			TabModule = requireModule(Components.Tab):Init(Window)
 			function Window.AddTab(_self, tabConfig)
 				local tab = TabModule:New(tabConfig.Title, tabConfig.Icon, Window.TabHolder)
 				if Window.Library and Window.Library.Workspace and type(Window.Library.Workspace.RegisterTab) == "function" then
@@ -7918,12 +9941,55 @@ local moduleFunctions = {
 					TabModule:SelectTab(1)
 				end
 			end
+			local hoveredTab, hoverPillY, hoverPillVisible, hoverLeaveGen = nil, 0, false, 0
+			local function setHoverPillY(y)
+				hoverPillY = y
+				tabHoverPill.Position = UDim2.fromOffset(2, y)
+			end
+			function Window.HoverTab(_self, tab)
+				if not tab or not tab.Frame or not Window.TabHolder then
+					return
+				end
+				hoverLeaveGen += 1
+				hoveredTab = tab
+				local scale = Creator.GetEffectiveScale(Window.TabHolder)
+				local targetY = (tab.Frame.AbsolutePosition.Y - Window.TabHolder.AbsolutePosition.Y) / scale
+				if not hoverPillVisible then
+					hoverPillVisible = true
+					Creator.CancelSpring(tabHoverPill, "HoverY")
+					setHoverPillY(targetY)
+				else
+					Creator.SpringValue(tabHoverPill, "HoverY", targetY, 5.2, 0.88, setHoverPillY, hoverPillY)
+				end
+				Creator.SpringValue(tabHoverPill, "BackgroundTransparency", 0.86, 5.2, 1)
+				Creator.SpringValue(tabHoverStroke, "Transparency", 0.56, 5.2, 1)
+			end
+			function Window.UnhoverTab(_self, tab)
+				if hoveredTab ~= tab then
+					return
+				end
+				hoverLeaveGen += 1
+				local myGen = hoverLeaveGen
+				task.delay(0.03, function()
+					if myGen == hoverLeaveGen and hoveredTab == tab then
+						hoveredTab = nil
+						hoverPillVisible = false
+						Creator.SpringValue(tabHoverPill, "BackgroundTransparency", 1, 5.2, 1)
+						Creator.SpringValue(tabHoverStroke, "Transparency", 1, 5.2, 1)
+					end
+				end)
+			end
+			Window.TabHoverPill = tabHoverPill
 			Creator.AddSignal(
 				Window.TabHolder:GetPropertyChangedSignal "CanvasPosition",
 				function()
 					lastValue = TabModule:GetCurrentTabPos() + 16
 					lastTime = 0
 					Window.SelectorPosMotor:setGoal(Instant(TabModule:GetCurrentTabPos()))
+					if hoveredTab and hoveredTab.Frame then
+						local scale = Creator.GetEffectiveScale(Window.TabHolder)
+						setHoverPillY((hoveredTab.Frame.AbsolutePosition.Y - Window.TabHolder.AbsolutePosition.Y) / scale)
+					end
 				end
 			)
 			return Window
@@ -7948,18 +10014,57 @@ local moduleFunctions = {
 
 		local RunService = getService("RunService")
 		local UserInputService = getService("UserInputService")
+		local GuiService = getService("GuiService")
 		local Themes, Flipper = requireModule(Root.Themes), requireModule(Root.Packages.Flipper)
 
-		-- Weak-key registries avoid per-instance Destroying connections and closures.
-		-- Values never hold back-references to the key Instance so destroyed GUIs GC cleanly.
+		-- Strong registries with dead-parent pruning + Disconnect clear.
+		-- Avoids both per-instance Destroying connections AND Luau weak-wrapper GC
+		-- evicting live Roblox Instances that only exist in the C++ GUI tree.
 		local Creator = {
 			CloneRef = cloneRef,
 			GetService = getService,
-			Registry = setmetatable({}, {__mode = "k"}),
+			Registry = {},
 			Signals = {},
 			TransparencyMotors = {},
-			TransparencyTargets = setmetatable({}, {__mode = "k"}),
-			DefaultProperties = {
+			TransparencyTargets = {},
+			DPIScale = 1,
+			ReducedMotion = false,
+			Radius = {
+				Window = 12,
+				Card = 8,
+				Control = 7,
+				Pill = 999
+			},
+			Fonts = {
+				UI = "rbxassetid://12187365364",
+				Display = "rbxassetid://12187365364",
+				Mono = "rbxasset://fonts/families/RobotoMono.json",
+				BuilderSans = "rbxasset://fonts/families/BuilderSans.json",
+				Gotham = "rbxasset://fonts/families/GothamSSm.json"
+			}
+		}
+
+		local fontFaceCache = {}
+		function Creator.Font(weight, style, familyKey)
+			local resolvedWeight = weight or Enum.FontWeight.Regular
+			local resolvedStyle = style or Enum.FontStyle.Normal
+			local key = familyKey or "UI"
+			local family = Creator.Fonts[key] or (type(familyKey) == "string" and familyKey) or Creator.Fonts.UI
+			local cacheKey = tostring(family) .. "|" .. tostring(resolvedWeight) .. "|" .. tostring(resolvedStyle)
+			local cached = fontFaceCache[cacheKey]
+			if cached then
+				return cached
+			end
+			local ok, face = pcall(Font.new, family, resolvedWeight, resolvedStyle)
+			if not ok or not face then
+				local fbOk, fbFace = pcall(Font.new, Creator.Fonts.BuilderSans, resolvedWeight, resolvedStyle)
+				face = fbOk and fbFace or Font.fromEnum(Enum.Font.BuilderSans)
+			end
+			fontFaceCache[cacheKey] = face
+			return face
+		end
+
+		Creator.DefaultProperties = {
 				ScreenGui = {ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling},
 				Frame = {
 					BackgroundColor3 = Color3.new(1, 1, 1),
@@ -7974,7 +10079,7 @@ local moduleFunctions = {
 				TextLabel = {
 					BackgroundColor3 = Color3.new(1, 1, 1),
 					BorderColor3 = Color3.new(0, 0, 0),
-					Font = Enum.Font.SourceSans,
+					FontFace = Creator.Font(),
 					Text = "",
 					TextColor3 = Color3.new(0, 0, 0),
 					BackgroundTransparency = 1,
@@ -7984,7 +10089,7 @@ local moduleFunctions = {
 					BackgroundColor3 = Color3.new(1, 1, 1),
 					BorderColor3 = Color3.new(0, 0, 0),
 					AutoButtonColor = false,
-					Font = Enum.Font.SourceSans,
+					FontFace = Creator.Font(),
 					Text = "",
 					TextColor3 = Color3.new(0, 0, 0),
 					TextSize = 14
@@ -7993,7 +10098,7 @@ local moduleFunctions = {
 					BackgroundColor3 = Color3.new(1, 1, 1),
 					BorderColor3 = Color3.new(0, 0, 0),
 					ClearTextOnFocus = false,
-					Font = Enum.Font.SourceSans,
+					FontFace = Creator.Font(),
 					Text = "",
 					TextColor3 = Color3.new(0, 0, 0),
 					TextSize = 14
@@ -8015,7 +10120,6 @@ local moduleFunctions = {
 					BorderSizePixel = 0
 				}
 			}
-		}
 
 		local TEXT_CLASSES = {TextLabel = true, TextButton = true, TextBox = true}
 		local META_KEYS = {
@@ -8063,12 +10167,80 @@ local moduleFunctions = {
 		end
 
 		-- ============================================================================
-		-- Shared zero-alloc scalar spring animator
-		-- Drives hover / fade / micro-interaction springs on one RenderStepped loop
-		-- without allocating Flipper motors or signals at UI mount time.
+		-- Oklab Perceptual Color Interpolation & Auto-Contrast
+		-- Prevents muddy gray midpoints during theme and state color transitions.
+		-- ============================================================================
+		local function srgbToLinear(c)
+			return c <= 0.04045 and (c / 12.92) or ((c + 0.055) / 1.055) ^ 2.4
+		end
+
+		local function linearToSrgb(c)
+			if c <= 0 then
+				return 0
+			elseif c >= 1 then
+				return 1
+			end
+			return c <= 0.0031308 and (12.92 * c) or (1.055 * (c ^ (1 / 2.4)) - 0.055)
+		end
+
+		local function colorToOklab(color)
+			local r = srgbToLinear(color.R)
+			local g = srgbToLinear(color.G)
+			local b = srgbToLinear(color.B)
+			local l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ^ (1 / 3)
+			local m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ^ (1 / 3)
+			local s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ^ (1 / 3)
+			return
+				0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+				1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+				0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+		end
+
+		local function oklabToColor(L, a, b)
+			local l_ = L + 0.3963377774 * a + 0.2158037573 * b
+			local m_ = L - 0.1055613458 * a - 0.0638541728 * b
+			local s_ = L - 0.0894841775 * a - 1.2914855480 * b
+			local l = l_ * l_ * l_
+			local m = m_ * m_ * m_
+			local s = s_ * s_ * s_
+			local r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
+			local g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
+			local bl = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
+			return Color3.new(linearToSrgb(r), linearToSrgb(g), linearToSrgb(bl))
+		end
+
+		function Creator.LerpColorOklab(fromColor, toColor, alpha)
+			if alpha <= 0 then
+				return fromColor
+			elseif alpha >= 1 then
+				return toColor
+			end
+			local L1, a1, b1 = colorToOklab(fromColor)
+			local L2, a2, b2 = colorToOklab(toColor)
+			return oklabToColor(L1 + (L2 - L1) * alpha, a1 + (a2 - a1) * alpha, b1 + (b2 - b1) * alpha)
+		end
+
+		-- Perceived brightness contrast picker (YIQ luminance).
+		function Creator.AutoContrast(color, lightColor, darkColor)
+			if typeof(color) ~= "Color3" then
+				return lightColor or Color3.fromRGB(244, 246, 252)
+			end
+			local luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
+			if luminance > 0.58 then
+				return darkColor or Color3.fromRGB(14, 16, 22)
+			end
+			return lightColor or Color3.fromRGB(246, 248, 254)
+		end
+
+		-- ============================================================================
+		-- Shared zero-alloc scalar spring + Oklab color animator
+		-- Drives hover / fade / theme color / micro-interaction animations on one
+		-- RenderStepped loop without allocating Flipper motors or signals at mount.
 		-- ============================================================================
 		local activeSprings = {}
 		local activeSpringCount = 0
+		local activeColorTweens = {}
+		local activeColorCount = 0
 		local springConnection = nil
 		local SPRING_EPSILON = 0.001
 
@@ -8079,91 +10251,138 @@ local moduleFunctions = {
 			end
 			table.clear(activeSprings)
 			activeSpringCount = 0
+			table.clear(activeColorTweens)
+			activeColorCount = 0
 		end
 
 		local function stepSprings(deltaTime)
 			if deltaTime > 0.05 then
 				deltaTime = 0.05
 			end
-			for key, state in next, activeSprings do
-				local instance = state.instance
+			for instance, propMap in next, activeSprings do
 				if not instance or not instance.Parent then
-					activeSprings[key] = nil
-					activeSpringCount -= 1
-				else
-					local f = state.angularFreq
-					local d = state.damping
-					local offset = state.value - state.target
-					local velocity = state.velocity
-					local decay = math.exp(-d * f * deltaTime)
-					local nextValue, nextVelocity
-					if d == 1 then
-						nextValue = (offset * (1 + f * deltaTime) + velocity * deltaTime) * decay + state.target
-						nextVelocity = (velocity * (1 - f * deltaTime) - offset * (f * f * deltaTime)) * decay
-					elseif d < 1 then
-						local c = math.sqrt(1 - d * d)
-						local i = math.cos(f * c * deltaTime)
-						local j = math.sin(f * c * deltaTime)
-						nextValue = (offset * i + ((velocity + d * f * offset) / (f * c)) * j) * decay + state.target
-						nextVelocity = (velocity * (i - (d / c) * j) - offset * (f / c) * j) * decay
-					else
-						local c = math.sqrt(d * d - 1)
-						local r1 = -f * (d - c)
-						local r2 = -f * (d + c)
-						local co2 = (velocity - r1 * offset) / (2 * f * c)
-						local co1 = offset - co2
-						local e1 = co1 * math.exp(r1 * deltaTime)
-						local e2 = co2 * math.exp(r2 * deltaTime)
-						nextValue = e1 + e2 + state.target
-						nextVelocity = r1 * e1 + r2 * e2
-					end
-					if math.abs(nextValue - state.target) <= SPRING_EPSILON and math.abs(nextVelocity) <= SPRING_EPSILON then
-						state.value = state.target
-						state.velocity = 0
-						if state.setter then
-							state.setter(state.target)
-						else
-							instance[state.property] = state.target
-						end
-						activeSprings[key] = nil
+					for _ in next, propMap do
 						activeSpringCount -= 1
-					else
-						state.value = nextValue
-						state.velocity = nextVelocity
-						if state.setter then
-							state.setter(nextValue)
+					end
+					activeSprings[instance] = nil
+				else
+					local remaining = 0
+					for prop, state in next, propMap do
+						local f = state.angularFreq
+						local d = state.damping
+						local offset = state.value - state.target
+						local velocity = state.velocity
+						local decay = math.exp(-d * f * deltaTime)
+						local nextValue, nextVelocity
+						if d == 1 then
+							nextValue = (offset * (1 + f * deltaTime) + velocity * deltaTime) * decay + state.target
+							nextVelocity = (velocity * (1 - f * deltaTime) - offset * (f * f * deltaTime)) * decay
+						elseif d < 1 then
+							local c = math.sqrt(1 - d * d)
+							local i = math.cos(f * c * deltaTime)
+							local j = math.sin(f * c * deltaTime)
+							nextValue = (offset * i + ((velocity + d * f * offset) / (f * c)) * j) * decay + state.target
+							nextVelocity = (velocity * (i - (d / c) * j) - offset * (f / c) * j) * decay
 						else
-							instance[state.property] = nextValue
+							local c = math.sqrt(d * d - 1)
+							local r1 = -f * (d - c)
+							local r2 = -f * (d + c)
+							local co2 = (velocity - r1 * offset) / (2 * f * c)
+							local co1 = offset - co2
+							local e1 = co1 * math.exp(r1 * deltaTime)
+							local e2 = co2 * math.exp(r2 * deltaTime)
+							nextValue = e1 + e2 + state.target
+							nextVelocity = r1 * e1 + r2 * e2
 						end
+						if math.abs(nextValue - state.target) <= SPRING_EPSILON and math.abs(nextVelocity) <= SPRING_EPSILON then
+							state.value = state.target
+							state.velocity = 0
+							if state.setter then
+								state.setter(state.target)
+							else
+								instance[state.property] = state.target
+							end
+							propMap[prop] = nil
+							activeSpringCount -= 1
+						else
+							state.value = nextValue
+							state.velocity = nextVelocity
+							if state.setter then
+								state.setter(nextValue)
+							else
+								instance[state.property] = nextValue
+							end
+							remaining += 1
+						end
+					end
+					if remaining == 0 then
+						activeSprings[instance] = nil
 					end
 				end
 			end
-			if activeSpringCount <= 0 and springConnection then
+
+			for instance, propMap in next, activeColorTweens do
+				if not instance or not instance.Parent then
+					for _ in next, propMap do
+						activeColorCount -= 1
+					end
+					activeColorTweens[instance] = nil
+				else
+					local remaining = 0
+					for prop, tween in next, propMap do
+						tween.elapsed += deltaTime
+						local t = tween.duration > 0 and math.clamp(tween.elapsed / tween.duration, 0, 1) or 1
+						-- Smooth cubic ease-out in Oklab space
+						local inv = 1 - t
+						local eased = 1 - (inv * inv * inv)
+						if t >= 1 then
+							instance[prop] = tween.toColor
+							propMap[prop] = nil
+							activeColorCount -= 1
+						else
+							instance[prop] = oklabToColor(
+								tween.L1 + (tween.L2 - tween.L1) * eased,
+								tween.a1 + (tween.a2 - tween.a1) * eased,
+								tween.b1 + (tween.b2 - tween.b1) * eased
+							)
+							remaining += 1
+						end
+					end
+					if remaining == 0 then
+						activeColorTweens[instance] = nil
+					end
+				end
+			end
+
+			if activeSpringCount <= 0 and activeColorCount <= 0 and springConnection then
 				springConnection:Disconnect()
 				springConnection = nil
 				activeSpringCount = 0
+				activeColorCount = 0
 			end
 		end
 
-		function Creator.SpringValue(instance, property, target, frequency, damping, setter)
+		local function ensureSpringScheduler()
+			if not springConnection then
+				springConnection = RunService.RenderStepped:Connect(stepSprings)
+			end
+		end
+
+		function Creator.SpringValue(instance, property, target, frequency, damping, setter, startValue)
 			if not instance then
 				return
 			end
-			local key = tostring(property) .. "|" .. tostring(instance)
-			-- Use a per-instance subtable so keys never rely on tostring collisions.
-			local slot = activeSprings[instance]
-			if slot and slot.property == property then
-				slot.target = target
-				slot.angularFreq = (frequency or 8) * 2 * math.pi
-				slot.damping = damping or 1
+			if Creator.ReducedMotion then
+				Creator.CancelSpring(instance, property)
 				if setter then
-					slot.setter = setter
+					setter(target)
+				else
+					instance[property] = target
 				end
 				return
 			end
-			-- Multi-property support on the same instance uses composite key fallback.
-			local mapKey = (slot == nil) and instance or key
-			local existing = activeSprings[mapKey]
+			local propMap = activeSprings[instance]
+			local existing = propMap and propMap[property] or nil
 			if existing then
 				existing.target = target
 				existing.angularFreq = (frequency or 8) * 2 * math.pi
@@ -8174,7 +10393,9 @@ local moduleFunctions = {
 				return
 			end
 			local currentValue = target
-			if not setter then
+			if type(startValue) == "number" then
+				currentValue = startValue
+			elseif not setter then
 				local ok, val = pcall(function()
 					return instance[property]
 				end)
@@ -8190,7 +10411,11 @@ local moduleFunctions = {
 				end
 				return
 			end
-			activeSprings[mapKey] = {
+			if not propMap then
+				propMap = {}
+				activeSprings[instance] = propMap
+			end
+			propMap[property] = {
 				instance = instance,
 				property = property,
 				value = currentValue,
@@ -8201,25 +10426,203 @@ local moduleFunctions = {
 				setter = setter
 			}
 			activeSpringCount += 1
-			if not springConnection then
-				springConnection = RunService.RenderStepped:Connect(stepSprings)
-			end
+			ensureSpringScheduler()
 		end
 
-		function Creator.CancelSpring(instance, property)
-			local slot = activeSprings[instance]
-			if slot and (property == nil or slot.property == property) then
-				activeSprings[instance] = nil
-				activeSpringCount = math.max(0, activeSpringCount - 1)
+		local function cancelColorTween(instance, property)
+			local propMap = activeColorTweens[instance]
+			if not propMap then
+				return
 			end
-			if property ~= nil then
-				local key = tostring(property) .. "|" .. tostring(instance)
-				if activeSprings[key] then
-					activeSprings[key] = nil
-					activeSpringCount = math.max(0, activeSpringCount - 1)
+			if property == nil then
+				for _ in next, propMap do
+					activeColorCount = math.max(0, activeColorCount - 1)
+				end
+				activeColorTweens[instance] = nil
+			elseif propMap[property] then
+				propMap[property] = nil
+				activeColorCount = math.max(0, activeColorCount - 1)
+				if next(propMap) == nil then
+					activeColorTweens[instance] = nil
 				end
 			end
 		end
+
+		function Creator.AnimateColor(instance, property, targetColor, duration)
+			if not instance or typeof(targetColor) ~= "Color3" then
+				return
+			end
+			if Creator.ReducedMotion or (duration ~= nil and duration <= 0) then
+				cancelColorTween(instance, property)
+				instance[property] = targetColor
+				return
+			end
+			local ok, current = pcall(function()
+				return instance[property]
+			end)
+			if not ok or typeof(current) ~= "Color3" then
+				cancelColorTween(instance, property)
+				instance[property] = targetColor
+				return
+			end
+			if math.abs(current.R - targetColor.R) < 0.002 and math.abs(current.G - targetColor.G) < 0.002 and math.abs(current.B - targetColor.B) < 0.002 then
+				cancelColorTween(instance, property)
+				instance[property] = targetColor
+				return
+			end
+			local L1, a1, b1 = colorToOklab(current)
+			local L2, a2, b2 = colorToOklab(targetColor)
+			local propMap = activeColorTweens[instance]
+			local existing = propMap and propMap[property] or nil
+			if existing then
+				existing.L1, existing.a1, existing.b1 = L1, a1, b1
+				existing.L2, existing.a2, existing.b2 = L2, a2, b2
+				existing.toColor = targetColor
+				existing.elapsed = 0
+				existing.duration = duration or 0.22
+				return
+			end
+			if not propMap then
+				propMap = {}
+				activeColorTweens[instance] = propMap
+			end
+			propMap[property] = {
+				L1 = L1, a1 = a1, b1 = b1,
+				L2 = L2, a2 = a2, b2 = b2,
+				toColor = targetColor,
+				elapsed = 0,
+				duration = duration or 0.22
+			}
+			activeColorCount += 1
+			ensureSpringScheduler()
+		end
+
+		function Creator.CancelSpring(instance, property)
+			local propMap = activeSprings[instance]
+			if not propMap then
+				return
+			end
+			if property == nil then
+				for _ in next, propMap do
+					activeSpringCount = math.max(0, activeSpringCount - 1)
+				end
+				activeSprings[instance] = nil
+			elseif propMap[property] then
+				propMap[property] = nil
+				activeSpringCount = math.max(0, activeSpringCount - 1)
+				if next(propMap) == nil then
+					activeSprings[instance] = nil
+				end
+			end
+		end
+
+		-- Compute the real rendered UIScale multiplier affecting `instance` so any
+		-- AbsoluteSize / AbsoluteContentSize / AbsolutePosition reading can be cleanly
+		-- converted back to unscaled UDim2 offsets without DPI^2 bloat or entrance drift.
+		function Creator.GetEffectiveScale(instance)
+			local scale = 1
+			local node = instance
+			local depth = 0
+			while node and depth < 16 do
+				if node:IsA("ScreenGui") then
+					break
+				end
+				local uiScale = node:FindFirstChildOfClass("UIScale")
+				if uiScale then
+					scale *= uiScale.Scale
+				end
+				node = node.Parent
+				depth += 1
+			end
+			if scale <= 0.01 then
+				return math.max(0.01, Creator.DPIScale)
+			end
+			return scale
+		end
+
+		function Creator.GetGuiInsetY()
+			local ok, tl = pcall(function()
+				return GuiService:GetGuiInset()
+			end)
+			if ok and typeof(tl) == "Vector2" then
+				return tl.Y
+			end
+			return 36
+		end
+
+		-- DPI Scale Registry: allows Library:SetDPIScale(scale) to scale Window,
+		-- Notifications, and Popovers consistently while preserving spring anim multipliers.
+		-- Strong map with parent-pruning + Disconnect clear prevents Roblox Instance wrapper GC eviction.
+		local dpiTargets = {}
+		function Creator.RegisterDPIScale(uiScale, onUpdate)
+			if not uiScale then
+				return
+			end
+			dpiTargets[uiScale] = onUpdate or true
+			if type(onUpdate) == "function" then
+				onUpdate(Creator.DPIScale)
+			else
+				uiScale.Scale = Creator.DPIScale
+			end
+		end
+
+		function Creator.SetDPIScale(scale)
+			scale = math.clamp(tonumber(scale) or 1, 0.75, 1.5)
+			Creator.DPIScale = scale
+			for uiScale, handler in next, dpiTargets do
+				if uiScale and uiScale.Parent then
+					if type(handler) == "function" then
+						pcall(handler, scale)
+					else
+						uiScale.Scale = scale
+					end
+				else
+					dpiTargets[uiScale] = nil
+				end
+			end
+			return scale
+		end
+
+		function Creator.SetReducedMotion(enabled)
+			Creator.ReducedMotion = enabled == true
+			if Creator.ReducedMotion then
+				-- Flush active animations immediately to their target values.
+				for instance, propMap in next, activeSprings do
+					if instance and instance.Parent then
+						for _, state in next, propMap do
+							if state.setter then
+								pcall(state.setter, state.target)
+							else
+								pcall(function() instance[state.property] = state.target end)
+							end
+						end
+					end
+					activeSprings[instance] = nil
+				end
+				for instance, propMap in next, activeColorTweens do
+					if instance and instance.Parent then
+						for prop, tween in next, propMap do
+							pcall(function() instance[prop] = tween.toColor end)
+						end
+					end
+					activeColorTweens[instance] = nil
+				end
+				stopSpringScheduler()
+			end
+			return Creator.ReducedMotion
+		end
+
+		Creator.Motion = {
+			Spring = Creator.SpringValue,
+			Color = Creator.AnimateColor,
+			LerpColorOklab = Creator.LerpColorOklab,
+			AutoContrast = Creator.AutoContrast,
+			Cancel = Creator.CancelSpring,
+			SetReduced = Creator.SetReducedMotion,
+			IsReduced = function()
+				return Creator.ReducedMotion
+			end
+		}
 
 		-- ============================================================================
 		-- Shared InputRouter: single UserInputService dispatcher for drags & keybinds.
@@ -8346,7 +10749,7 @@ local moduleFunctions = {
 			DialogBorder = true,
 			DialogInputLine = true
 		}
-		local rainbowTargets = setmetatable({}, {__mode = "k"})
+		local rainbowTargets = {}
 		local rainbowColor = nil
 		local rainbowConnection = nil
 		local function usesRainbowKey(properties)
@@ -8363,11 +10766,16 @@ local moduleFunctions = {
 		local function stepRainbow()
 			rainbowColor = rainbowNow()
 			for object in next, rainbowTargets do
-				local properties = Creator.Registry[object]
-				if properties then
-					for property, themeKey in next, properties do
-						if RAINBOW_KEYS[themeKey] then
-							object[property] = rainbowColor
+				if not object or not object.Parent then
+					rainbowTargets[object] = nil
+					Creator.Registry[object] = nil
+				else
+					local properties = Creator.Registry[object]
+					if properties then
+						for property, themeKey in next, properties do
+							if RAINBOW_KEYS[themeKey] then
+								object[property] = rainbowColor
+							end
 						end
 					end
 				end
@@ -8404,6 +10812,10 @@ local moduleFunctions = {
 		function Creator.Disconnect()
 			stopSpringScheduler()
 			stopDragConnections()
+			table.clear(dpiTargets)
+			table.clear(Creator.Registry)
+			table.clear(Creator.TransparencyTargets)
+			table.clear(rainbowTargets)
 			if keybindBeganConn then
 				keybindBeganConn:Disconnect()
 				keybindBeganConn = nil
@@ -8427,22 +10839,42 @@ local moduleFunctions = {
 			return Themes.Dark[property]
 		end
 
-		function Creator.UpdateTheme()
+		function Creator.UpdateTheme(instant)
 			local theme = Themes[getLibrary().Theme]
 			if theme and theme.IsRGB then
 				startRainbow()
 			else
 				stopRainbow()
 			end
+			local useOklab = (instant ~= true) and (not Creator.ReducedMotion) and (not (theme and theme.IsRGB))
 			local elementTransparency = Creator.GetThemeProperty("ElementTransparency")
 			for object, properties in next, Creator.Registry do
-				for property, themeKey in next, properties do
-					object[property] = Creator.GetThemeProperty(themeKey)
+				if object and object.Parent then
+					for property, themeKey in next, properties do
+						local targetVal = Creator.GetThemeProperty(themeKey)
+						if useOklab and typeof(targetVal) == "Color3" then
+							Creator.AnimateColor(object, property, targetVal, 0.22)
+						else
+							cancelColorTween(object, property)
+							object[property] = targetVal
+						end
+					end
+				else
+					Creator.Registry[object] = nil
+					rainbowTargets[object] = nil
 				end
 			end
 			for instance, property in next, Creator.TransparencyTargets do
-				Creator.CancelSpring(instance, property)
-				instance[property] = elementTransparency
+				if instance and instance.Parent then
+					if useOklab then
+						Creator.SpringValue(instance, property, elementTransparency, 10, 1)
+					else
+						Creator.CancelSpring(instance, property)
+						instance[property] = elementTransparency
+					end
+				else
+					Creator.TransparencyTargets[instance] = nil
+				end
 			end
 			for _, motor in next, Creator.TransparencyMotors do
 				motor:setGoal(Flipper.Instant.new(elementTransparency))
@@ -8453,15 +10885,18 @@ local moduleFunctions = {
 			Creator.Registry[object] = properties
 			rainbowTargets[object] = usesRainbowKey(properties) or nil
 			for property, themeKey in next, properties do
+				cancelColorTween(object, property)
 				object[property] = Creator.GetThemeProperty(themeKey)
 			end
 			return object
 		end
 
 		function Creator.OverrideTag(object, properties)
+			properties = properties or {}
 			Creator.Registry[object] = properties
 			rainbowTargets[object] = usesRainbowKey(properties) or nil
 			for property, themeKey in next, properties do
+				cancelColorTween(object, property)
 				object[property] = Creator.GetThemeProperty(themeKey)
 			end
 		end
@@ -8565,27 +11000,216 @@ local moduleFunctions = {
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
 		Element.__type = "Button"
+
+		local DANGER_BG = Color3.fromRGB(220, 38, 38)
+		local DANGER_BORDER = Color3.fromRGB(248, 113, 113)
+		local WARN_BG = Color3.fromRGB(217, 119, 6)
+
 		function Element.New(parent, config)
 			assert(config.Title, "Button - Missing Title")
 			config.Callback = config.Callback or function()
 			end
-			local buttonFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
-			local icon =
-				New(
-					"ImageLabel",
-					{
-						Image = "rbxassetid://10709791437",
-						Size = UDim2.fromOffset(16, 16),
-						AnchorPoint = Vector2.new(1, 0.5),
-						Position = UDim2.new(1, -10, 0.5, 0),
-						BackgroundTransparency = 1,
-						Parent = buttonFrame.Frame,
-						ThemeTag = {ImageColor3 = "Text"}
-					}
-				)
+			local variant = config.Variant or "Default"
+			local inlineConfirm = config.InlineConfirm == true
+			local buttonFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, variant == "Default")
+			buttonFrame.TitleLabel.Size = UDim2.new(1, -40, 0, 14)
+			buttonFrame.DescLabel.Size = UDim2.new(1, -40, 0, 14)
+
+			local iconName = config.Icon
+			local rightIconAsset = (type(iconName) == "string" and (parent.Library:GetIcon(iconName) or (iconName:match("^rbxassetid://") and iconName)))
+				or parent.Library:GetIcon("chevron-right")
+				or "rbxassetid://10709791437"
+
+			local icon = New(
+				"ImageLabel",
+				{
+					Image = rightIconAsset,
+					Size = UDim2.fromOffset(16, 16),
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -12, 0.5, 0),
+					BackgroundTransparency = 1,
+					ImageTransparency = 0.04,
+					Parent = buttonFrame.Frame,
+					ThemeTag = variant == "Default" and {ImageColor3 = "SubText"} or nil
+				}
+			)
+
+			local function applyVariantVisual(mode)
+				if mode == "Primary" then
+					local accent = Creator.GetThemeProperty("Accent")
+					local contrast = Creator.AutoContrast(accent)
+					Creator.OverrideTag(buttonFrame.Frame, {BackgroundColor3 = "Accent"})
+					Creator.OverrideTag(buttonFrame.Border, {Color = "Accent"})
+					Creator.OverrideTag(buttonFrame.TitleLabel, {})
+					Creator.OverrideTag(buttonFrame.DescLabel, {})
+					buttonFrame.Frame.BackgroundTransparency = 0.14
+					buttonFrame.Border.Transparency = 0.2
+					buttonFrame.TitleLabel.TextColor3 = contrast
+					buttonFrame.DescLabel.TextColor3 = contrast
+					buttonFrame.DescLabel.TextTransparency = 0.04
+					icon.ImageColor3 = contrast
+				elseif mode == "Danger" then
+					Creator.OverrideTag(buttonFrame.Frame, {})
+					Creator.OverrideTag(buttonFrame.Border, {})
+					Creator.OverrideTag(buttonFrame.TitleLabel, {})
+					Creator.OverrideTag(buttonFrame.DescLabel, {})
+					buttonFrame.Frame.BackgroundColor3 = DANGER_BG
+					buttonFrame.Frame.BackgroundTransparency = 0.22
+					buttonFrame.Border.Color = DANGER_BORDER
+					buttonFrame.Border.Transparency = 0.25
+					buttonFrame.TitleLabel.TextColor3 = Color3.fromRGB(255, 245, 245)
+					buttonFrame.DescLabel.TextColor3 = Color3.fromRGB(254, 215, 215)
+					icon.ImageColor3 = Color3.fromRGB(255, 245, 245)
+				elseif mode == "ConfirmPending" then
+					Creator.OverrideTag(buttonFrame.Frame, {})
+					Creator.OverrideTag(buttonFrame.Border, {})
+					Creator.OverrideTag(buttonFrame.TitleLabel, {})
+					buttonFrame.Frame.BackgroundColor3 = WARN_BG
+					buttonFrame.Frame.BackgroundTransparency = 0.14
+					buttonFrame.Border.Color = Color3.fromRGB(251, 191, 36)
+					buttonFrame.Border.Transparency = 0.15
+					buttonFrame.TitleLabel.TextColor3 = Color3.fromRGB(255, 251, 235)
+					icon.ImageColor3 = Color3.fromRGB(255, 251, 235)
+				else
+					Creator.OverrideTag(buttonFrame.Frame, {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"})
+					Creator.OverrideTag(buttonFrame.Border, {Color = "ElementBorder"})
+					Creator.OverrideTag(buttonFrame.TitleLabel, {TextColor3 = "Text"})
+					Creator.OverrideTag(buttonFrame.DescLabel, {TextColor3 = "SubText"})
+					Creator.OverrideTag(icon, {ImageColor3 = "SubText"})
+					buttonFrame.DescLabel.TextTransparency = 0
+				end
+			end
+
+			if variant ~= "Default" then
+				applyVariantVisual(variant)
+				if variant == "Primary" then
+					Creator.AddSignal(buttonFrame.Frame:GetPropertyChangedSignal("BackgroundColor3"), function()
+						if not confirmPending then
+							local contrast = Creator.AutoContrast(buttonFrame.Frame.BackgroundColor3)
+							buttonFrame.TitleLabel.TextColor3 = contrast
+							buttonFrame.DescLabel.TextColor3 = contrast
+							icon.ImageColor3 = contrast
+						end
+					end)
+				end
+				Creator.AddSignal(buttonFrame.Frame.MouseEnter, function()
+					Creator.SpringValue(buttonFrame.Frame, "BackgroundTransparency", 0.04, 10, 1)
+				end)
+				Creator.AddSignal(buttonFrame.Frame.MouseLeave, function()
+					Creator.SpringValue(buttonFrame.Frame, "BackgroundTransparency", variant == "Primary" and 0.14 or 0.22, 10, 1)
+				end)
+			end
+
+			Creator.AddSignal(buttonFrame.Frame.MouseEnter, function()
+				Creator.SpringValue(icon, "ImageTransparency", 0, 10, 1)
+				Creator.SpringValue(icon, "Position", -9, 10, 0.85, function(xOff)
+					icon.Position = UDim2.new(1, xOff, 0.5, 0)
+				end, icon.Position.X.Offset)
+			end)
+			Creator.AddSignal(buttonFrame.Frame.MouseLeave, function()
+				Creator.SpringValue(icon, "ImageTransparency", 0.04, 10, 1)
+				Creator.SpringValue(icon, "Position", -12, 10, 0.85, function(xOff)
+					icon.Position = UDim2.new(1, xOff, 0.5, 0)
+				end, icon.Position.X.Offset)
+			end)
+
+			local confirmPending = false
+			local confirmGen = 0
+			local savedTitle = config.Title
+			local loading = false
+			local loadingSpinner = nil
+
+			function buttonFrame:SetLoading(isLoading, loadingText)
+				local on = isLoading ~= false
+				if on then
+					if not loading then
+						savedTitle = buttonFrame.TitleLabel.Text
+					end
+					loading = true
+					if type(loadingText) == "string" and loadingText ~= "" then
+						buttonFrame.TitleLabel.Text = loadingText
+					end
+					icon.Visible = false
+					if not loadingSpinner then
+						local SpinnerModule = requireModule(Root.Elements.Spinner)
+						local colorOverride = variant ~= "Default" and Creator.AutoContrast(buttonFrame.Frame.BackgroundColor3) or nil
+						loadingSpinner = SpinnerModule.CreateIndicator(buttonFrame.Frame, {
+							Variant = "Ring",
+							Size = 15,
+							Color = colorOverride,
+							Active = true,
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -12, 0.5, 0)
+						})
+					else
+						if variant ~= "Default" then
+							loadingSpinner:SetColor(Creator.AutoContrast(buttonFrame.Frame.BackgroundColor3))
+						end
+						loadingSpinner:SetActive(true)
+					end
+					if variant == "Default" then
+						Creator.SpringValue(buttonFrame.Frame, "BackgroundTransparency", 0.92, 10, 1)
+					else
+						Creator.SpringValue(buttonFrame.Frame, "BackgroundTransparency", 0.34, 10, 1)
+					end
+				else
+					loading = false
+					buttonFrame.TitleLabel.Text = savedTitle
+					if loadingSpinner then
+						loadingSpinner:SetActive(false)
+					end
+					icon.Visible = true
+					applyVariantVisual(confirmPending and "ConfirmPending" or variant)
+				end
+				return buttonFrame
+			end
+
+			local baseDestroy = buttonFrame.Destroy
+			function buttonFrame:Destroy()
+				if loadingSpinner then
+					loadingSpinner:Destroy()
+					loadingSpinner = nil
+				end
+				if type(baseDestroy) == "function" then
+					baseDestroy(buttonFrame)
+				end
+			end
+
+			Creator.AddSignal(buttonFrame.Frame.Destroying, function()
+				if loadingSpinner then
+					loadingSpinner:Destroy()
+					loadingSpinner = nil
+				end
+			end)
+
 			Creator.AddSignal(
 				buttonFrame.Frame.MouseButton1Click,
 				function()
+					if loading then
+						return
+					end
+					if inlineConfirm and not confirmPending then
+						confirmPending = true
+						confirmGen += 1
+						local myGen = confirmGen
+						savedTitle = buttonFrame.TitleLabel.Text
+						buttonFrame.TitleLabel.Text = config.ConfirmText or "Click again to confirm"
+						applyVariantVisual("ConfirmPending")
+						task.delay(3, function()
+							if myGen == confirmGen and confirmPending and buttonFrame.Frame and buttonFrame.Frame.Parent then
+								confirmPending = false
+								buttonFrame.TitleLabel.Text = savedTitle
+								applyVariantVisual(variant)
+							end
+						end)
+						return
+					end
+					if confirmPending then
+						confirmPending = false
+						confirmGen += 1
+						buttonFrame.TitleLabel.Text = savedTitle
+						applyVariantVisual(variant)
+					end
 					parent.Library._TouchElement(buttonFrame)
 					parent.Library:SafeCallback(config.Callback)
 				end
@@ -8596,25 +11220,53 @@ local moduleFunctions = {
 	end,
 	[21] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(21)
-		local UserInputService, TouchInputService, RunService, Players =
-			game:GetService "UserInputService",
-		game:GetService "TouchInputService",
-		game:GetService "RunService",
-		game:GetService "Players"
-		local RenderStepped, LocalPlayer = RunService.RenderStepped, Players.LocalPlayer
-		local mouse, Root = LocalPlayer:GetMouse(), moduleScript.Parent.Parent
+		local Root = moduleScript.Parent.Parent
 		local Creator = requireModule(Root.Creator)
+		local TweenService = Creator.GetService("TweenService")
+		local UserInputService = Creator.GetService("UserInputService")
+		local Players = Creator.GetService("Players")
+		local Workspace = Creator.GetService("Workspace")
+		local mouse = Players.LocalPlayer:GetMouse()
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
 		Element.__type = "Colorpicker"
+
+		local PRESET_SWATCHES = {
+			Color3.fromRGB(99, 179, 255),
+			Color3.fromRGB(129, 140, 248),
+			Color3.fromRGB(168, 85, 247),
+			Color3.fromRGB(244, 114, 182),
+			Color3.fromRGB(248, 113, 113),
+			Color3.fromRGB(251, 191, 36),
+			Color3.fromRGB(52, 211, 153),
+			Color3.fromRGB(244, 246, 252)
+		}
+
+		local function copyToClipboard(text)
+			local fn = setclipboard or toclipboard or (syn and syn.write_clipboard)
+			if type(fn) == "function" then
+				return pcall(fn, tostring(text))
+			end
+			return false
+		end
+
 		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
 			local Library = parent.Library
-			assert(config.Title, "Colorpicker - Missing Title")
+			local isInline = config and config._InlineHolder ~= nil
+			if not isInline then
+				assert(config.Title, "Colorpicker - Missing Title")
+			end
 			assert(config.Default, "AddColorPicker: Missing default value.")
 			local Colorpicker = {
 				Value = config.Default,
 				Transparency = config.Transparency or 0,
+				HasAlpha = config.Transparency ~= nil,
 				Type = "Colorpicker",
+				Opened = false,
 				Title = type(config.Title) == "string" and config.Title or "Colorpicker",
 				Callback = config.Callback or function(_color)
 				end
@@ -8626,435 +11278,810 @@ local moduleFunctions = {
 				Colorpicker.Vib = vib
 			end
 			Colorpicker:SetHSVFromRGB(Colorpicker.Value)
-			local colorpickerFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
-			Colorpicker.SetTitle = colorpickerFrame.SetTitle
-			Colorpicker.SetDesc = colorpickerFrame.SetDesc
-			Colorpicker.Frame = colorpickerFrame.Frame
-			local displayFrame =
-				New(
+
+			local colorpickerFrame, hexPreviewLabel, displayFrame, swatchButton, hitAnchorFrame
+			if isInline then
+				displayFrame = New(
 					"Frame",
-					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colorpicker.Value, Parent = colorpickerFrame.Frame},
-					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
+					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colorpicker.Value, BackgroundTransparency = Colorpicker.Transparency},
+					{New("UICorner", {CornerRadius = UDim.new(0, 5)})}
 				)
-			local displayFrameHolder, createColorDialog =
-				New(
+				swatchButton = New(
+					"TextButton",
+					{
+						Name = "InlineColorSwatch",
+						Text = "",
+						Size = UDim2.fromOffset(22, 18),
+						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+						BackgroundTransparency = 0.85,
+						AutoButtonColor = false,
+						LayoutOrder = config._LayoutOrder or 2,
+						ZIndex = 4,
+						Parent = config._InlineHolder
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+						New("UIStroke", {Transparency = 0.34, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+						displayFrame
+					}
+				)
+				hitAnchorFrame = swatchButton
+				Colorpicker.Frame = swatchButton
+			else
+				colorpickerFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+				colorpickerFrame.TitleLabel.Size = UDim2.new(1, -118, 0, 14)
+				colorpickerFrame.DescLabel.Size = UDim2.new(1, -118, 0, 14)
+				Colorpicker.SetTitle = colorpickerFrame.SetTitle
+				Colorpicker.SetDesc = colorpickerFrame.SetDesc
+				Colorpicker.SetBadge = colorpickerFrame.SetBadge
+				Colorpicker.Frame = colorpickerFrame.Frame
+				hitAnchorFrame = colorpickerFrame.Frame
+
+				hexPreviewLabel = New(
+					"TextLabel",
+					{
+						Name = "HexPreview",
+						FontFace = Creator.Font(Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+						Text = "#" .. Colorpicker.Value:ToHex():upper(),
+						I18nSkip = true,
+						TextSize = 11,
+						TextXAlignment = Enum.TextXAlignment.Right,
+						Size = UDim2.fromOffset(58, 22),
+						Position = UDim2.new(1, -48, 0.5, 0),
+						AnchorPoint = Vector2.new(1, 0.5),
+						BackgroundTransparency = 1,
+						Parent = colorpickerFrame.Frame,
+						ThemeTag = {TextColor3 = "SubText"}
+					}
+				)
+
+				displayFrame = New(
+					"Frame",
+					{Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colorpicker.Value, BackgroundTransparency = Colorpicker.Transparency},
+					{New("UICorner", {CornerRadius = UDim.new(0, 6)})}
+				)
+				swatchButton = New(
 					"ImageLabel",
 					{
-						Size = UDim2.fromOffset(26, 26),
-						Position = UDim2.new(1, -10, 0.5, 0),
+						Name = "Swatch",
+						Size = UDim2.fromOffset(30, 20),
+						Position = UDim2.new(1, -12, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
 						Parent = colorpickerFrame.Frame,
-						Image = "http://www.roblox.com/asset/?id=14204231522",
+						Image = "rbxassetid://14204231522",
 						ImageTransparency = 0.45,
 						ScaleType = Enum.ScaleType.Tile,
-						TileSize = UDim2.fromOffset(40, 40)
+						TileSize = UDim2.fromOffset(24, 24)
 					},
-					{New("UICorner", {CornerRadius = UDim.new(0, 4)}), displayFrame}
-				),
-			function()
-				local dialog = requireModule(Components.Dialog):Create()
-				dialog.Title.Text = Colorpicker.Title
-				dialog.Root.Size = UDim2.fromOffset(430, 330)
-				local hue, sat, vib, transparency, createInput, createInputLabel =
-					Colorpicker.Hue,
-				Colorpicker.Sat,
-				Colorpicker.Vib,
-				Colorpicker.Transparency,
-				function()
-					local box = requireModule(Components.Textbox)()
-					box.Frame.Parent = dialog.Root
-					box.Frame.Size = UDim2.new(0, 90, 0, 32)
-					return box
-				end,
-				function(text, position)
-					return New(
-						"TextLabel",
-						{
-							FontFace = Font.new(
-								"rbxasset://fonts/families/GothamSSm.json",
-								Enum.FontWeight.Medium,
-								Enum.FontStyle.Normal
-							),
-							Text = text,
-							TextColor3 = Color3.fromRGB(240, 240, 240),
-							TextSize = 13,
-							TextXAlignment = Enum.TextXAlignment.Left,
-							Size = UDim2.new(1, 0, 0, 32),
-							Position = position,
-							BackgroundTransparency = 1,
-							Parent = dialog.Root,
-							ThemeTag = {TextColor3 = "Text"}
-						}
-					)
-				end
-				local getRGB, satCursor =
-					function()
-						local color = Color3.fromHSV(hue, sat, vib)
-						return {R = math.floor(color.r * 255), G = math.floor(color.g * 255), B = math.floor(color.b * 255)}
-					end,
-				New(
-					"ImageLabel",
 					{
-						Size = UDim2.new(0, 18, 0, 18),
-						ScaleType = Enum.ScaleType.Fit,
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						BackgroundTransparency = 1,
-						Image = "http://www.roblox.com/asset/?id=4805639000"
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIStroke", {Transparency = 0.34, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+						displayFrame
 					}
 				)
-				local satVibMap, oldColorFrame =
-					New(
-						"ImageLabel",
-						{
-							Size = UDim2.fromOffset(180, 160),
-							Position = UDim2.fromOffset(20, 55),
-							Image = "rbxassetid://4155801252",
-							BackgroundColor3 = Colorpicker.Value,
-							BackgroundTransparency = 0,
-							Parent = dialog.Root
-						},
-						{New("UICorner", {CornerRadius = UDim.new(0, 4)}), satCursor}
-					),
-				New(
-					"Frame",
-					{
-						BackgroundColor3 = Colorpicker.Value,
-						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = Colorpicker.Transparency
-					},
-					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
-				)
-				local oldColorFrameChecker, dialogDisplayFrame =
-					New(
-						"ImageLabel",
-						{
-							Image = "http://www.roblox.com/asset/?id=14204231522",
-							ImageTransparency = 0.45,
-							ScaleType = Enum.ScaleType.Tile,
-							TileSize = UDim2.fromOffset(40, 40),
-							BackgroundTransparency = 1,
-							Position = UDim2.fromOffset(112, 220),
-							Size = UDim2.fromOffset(88, 24),
-							Parent = dialog.Root
-						},
-						{
-							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
-							New("UIStroke", {Thickness = 2, Transparency = 0.75}),
-							oldColorFrame
-						}
-					),
-				New(
-					"Frame",
-					{BackgroundColor3 = Colorpicker.Value, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0},
-					{New("UICorner", {CornerRadius = UDim.new(0, 4)})}
-				)
-				local dialogDisplayFrameChecker, sequenceTable =
-					New(
-						"ImageLabel",
-						{
-							Image = "http://www.roblox.com/asset/?id=14204231522",
-							ImageTransparency = 0.45,
-							ScaleType = Enum.ScaleType.Tile,
-							TileSize = UDim2.fromOffset(40, 40),
-							BackgroundTransparency = 1,
-							Position = UDim2.fromOffset(20, 220),
-							Size = UDim2.fromOffset(88, 24),
-							Parent = dialog.Root
-						},
-						{
-							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
-							New("UIStroke", {Thickness = 2, Transparency = 0.75}),
-							dialogDisplayFrame
-						}
-					),
-				{}
-				for step = 0, 1, 0.1 do
-					table.insert(sequenceTable, ColorSequenceKeypoint.new(step, Color3.fromHSV(step, 1, 1)))
-				end
-				local hueSliderGradient, hueDragHolder =
-					New("UIGradient", {Color = ColorSequence.new(sequenceTable), Rotation = 90}),
-				New(
-					"Frame",
-					{
-						Size = UDim2.new(1, 0, 1, -10),
-						Position = UDim2.fromOffset(0, 5),
-						BackgroundTransparency = 1
-					}
-				)
-				local hueDrag, hueSlider, hexInput =
-					New(
-						"ImageLabel",
-						{
-							Size = UDim2.fromOffset(14, 14),
-							Image = "http://www.roblox.com/asset/?id=12266946128",
-							Parent = hueDragHolder,
-							ThemeTag = {ImageColor3 = "DialogInput"}
-						}
-					),
-				New(
-					"Frame",
-					{Size = UDim2.fromOffset(12, 190), Position = UDim2.fromOffset(210, 55), Parent = dialog.Root},
-					{New("UICorner", {CornerRadius = UDim.new(1, 0)}), hueSliderGradient, hueDragHolder}
-				),
-				createInput()
-				hexInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 55)
-				createInputLabel("Hex", UDim2.fromOffset(config.Transparency and 360 or 340, 55))
-				local redInput = createInput()
-				redInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 95)
-				createInputLabel("Red", UDim2.fromOffset(config.Transparency and 360 or 340, 95))
-				local greenInput = createInput()
-				greenInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 135)
-				createInputLabel("Green", UDim2.fromOffset(config.Transparency and 360 or 340, 135))
-				local blueInput = createInput()
-				blueInput.Frame.Position = UDim2.fromOffset(config.Transparency and 260 or 240, 175)
-				createInputLabel("Blue", UDim2.fromOffset(config.Transparency and 360 or 340, 175))
-				local alphaInput
-				if config.Transparency then
-					alphaInput = createInput()
-					alphaInput.Frame.Position = UDim2.fromOffset(260, 215)
-					createInputLabel("Alpha", UDim2.fromOffset(360, 215))
-				end
-				local transparencySlider, transparencyDrag, transparencyColor
-				if config.Transparency then
-					local transparencyDragHolder =
-						New(
-							"Frame",
-							{
-								Size = UDim2.new(1, 0, 1, -10),
-								Position = UDim2.fromOffset(0, 5),
-								BackgroundTransparency = 1
-							}
-						)
-					transparencyDrag =
-						New(
-							"ImageLabel",
-							{
-								Size = UDim2.fromOffset(14, 14),
-								Image = "http://www.roblox.com/asset/?id=12266946128",
-								Parent = transparencyDragHolder,
-								ThemeTag = {ImageColor3 = "DialogInput"}
-							}
-						)
-					transparencyColor =
-						New(
-							"Frame",
-							{Size = UDim2.fromScale(1, 1)},
-							{
-								New(
-									"UIGradient",
-									{
-										Transparency = NumberSequence.new {
-											NumberSequenceKeypoint.new(0, 0),
-											NumberSequenceKeypoint.new(1, 1)
-										},
-										Rotation = 270
-									}
-								),
-								New("UICorner", {CornerRadius = UDim.new(1, 0)})
-							}
-						)
-					transparencySlider =
-						New(
-							"Frame",
-							{
-								Size = UDim2.fromOffset(12, 190),
-								Position = UDim2.fromOffset(230, 55),
-								Parent = dialog.Root,
-								BackgroundTransparency = 1
-							},
-							{
-								New("UICorner", {CornerRadius = UDim.new(1, 0)}),
-								New(
-									"ImageLabel",
-									{
-										Image = "http://www.roblox.com/asset/?id=14204231522",
-										ImageTransparency = 0.45,
-										ScaleType = Enum.ScaleType.Tile,
-										TileSize = UDim2.fromOffset(40, 40),
-										BackgroundTransparency = 1,
-										Size = UDim2.fromScale(1, 1),
-										Parent = dialog.Root
-									},
-									{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
-								),
-								transparencyColor,
-								transparencyDragHolder
-							}
-						)
-				end
-				local display = function()
-					satVibMap.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
-					hueDrag.Position = UDim2.new(0, -1, hue, -6)
-					satCursor.Position = UDim2.new(sat, 0, 1 - vib, 0)
-					dialogDisplayFrame.BackgroundColor3 = Color3.fromHSV(hue, sat, vib)
-					hexInput.Input.Text = "#" .. Color3.fromHSV(hue, sat, vib):ToHex()
-					redInput.Input.Text = getRGB().R
-					greenInput.Input.Text = getRGB().G
-					blueInput.Input.Text = getRGB().B
-					if config.Transparency then
-						transparencyColor.BackgroundColor3 = Color3.fromHSV(hue, sat, vib)
-						dialogDisplayFrame.BackgroundTransparency = transparency
-						transparencyDrag.Position = UDim2.new(0, -1, 1 - transparency, -6)
-						alphaInput.Input.Text = requireModule(Root):Round((1 - transparency) * 100, 0) .. "%"
-					end
-				end
-				Creator.AddSignal(
-					hexInput.Input.FocusLost,
-					function(enter)
-						if enter then
-							local ok, result = pcall(Color3.fromHex, hexInput.Input.Text)
-							if ok and typeof(result) == "Color3" then
-								hue, sat, vib = Color3.toHSV(result)
-							end
-						end
-						display()
-					end
-				)
-				Creator.AddSignal(
-					redInput.Input.FocusLost,
-					function(enter)
-						if enter then
-							local rgb = getRGB()
-							local ok, result = pcall(Color3.fromRGB, redInput.Input.Text, rgb.G, rgb.B)
-							if ok and typeof(result) == "Color3" then
-								if tonumber(redInput.Input.Text) <= 255 then
-									hue, sat, vib = Color3.toHSV(result)
-								end
-							end
-						end
-						display()
-					end
-				)
-				Creator.AddSignal(
-					greenInput.Input.FocusLost,
-					function(enter)
-						if enter then
-							local rgb = getRGB()
-							local ok, result = pcall(Color3.fromRGB, rgb.R, greenInput.Input.Text, rgb.B)
-							if ok and typeof(result) == "Color3" then
-								if tonumber(greenInput.Input.Text) <= 255 then
-									hue, sat, vib = Color3.toHSV(result)
-								end
-							end
-						end
-						display()
-					end
-				)
-				Creator.AddSignal(
-					blueInput.Input.FocusLost,
-					function(enter)
-						if enter then
-							local rgb = getRGB()
-							local ok, result = pcall(Color3.fromRGB, rgb.R, rgb.G, blueInput.Input.Text)
-							if ok and typeof(result) == "Color3" then
-								if tonumber(blueInput.Input.Text) <= 255 then
-									hue, sat, vib = Color3.toHSV(result)
-								end
-							end
-						end
-						display()
-					end
-				)
-				if config.Transparency then
-					Creator.AddSignal(
-						alphaInput.Input.FocusLost,
-						function(enter)
-							if enter then
-								pcall(
-									function()
-										local alpha = tonumber(alphaInput.Input.Text)
-										if alpha >= 0 and alpha <= 100 then
-											transparency = 1 - alpha * 0.01
-										end
-									end
-								)
-							end
-							display()
-						end
-					)
-				end
-				Creator.AddSignal(
-					satVibMap.InputBegan,
-					function(input)
-						if
-							input.UserInputType == Enum.UserInputType.MouseButton1 or
-							input.UserInputType == Enum.UserInputType.Touch
-						then
-							while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-								local minX = satVibMap.AbsolutePosition.X
-								local maxX = minX + satVibMap.AbsoluteSize.X
-								local mouseX, minY = math.clamp(mouse.X, minX, maxX), satVibMap.AbsolutePosition.Y
-								local maxY = minY + satVibMap.AbsoluteSize.Y
-								local mouseY = math.clamp(mouse.Y, minY, maxY)
-								sat = (mouseX - minX) / (maxX - minX)
-								vib = 1 - ((mouseY - minY) / (maxY - minY))
-								display()
-								RenderStepped:Wait()
-							end
-						end
-					end
-				)
-				Creator.AddSignal(
-					hueSlider.InputBegan,
-					function(input)
-						if
-							input.UserInputType == Enum.UserInputType.MouseButton1 or
-							input.UserInputType == Enum.UserInputType.Touch
-						then
-							while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-								local minY = hueSlider.AbsolutePosition.Y
-								local maxY = minY + hueSlider.AbsoluteSize.Y
-								local mouseY = math.clamp(mouse.Y, minY, maxY)
-								hue = ((mouseY - minY) / (maxY - minY))
-								display()
-								RenderStepped:Wait()
-							end
-						end
-					end
-				)
-				if config.Transparency then
-					Creator.AddSignal(
-						transparencySlider.InputBegan,
-						function(input)
-							if input.UserInputType == Enum.UserInputType.MouseButton1 then
-								while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-									local minY = transparencySlider.AbsolutePosition.Y
-									local maxY = minY + transparencySlider.AbsoluteSize.Y
-									local mouseY = math.clamp(mouse.Y, minY, maxY)
-									transparency = 1 - ((mouseY - minY) / (maxY - minY))
-									display()
-									RenderStepped:Wait()
-								end
-							end
-						end
-					)
-				end
-				display()
-				dialog:Button(
-					"Done",
-					function()
-						Colorpicker:SetValue({hue, sat, vib}, transparency)
-						Library._TouchElement(Colorpicker)
-					end
-				)
-				dialog:Button "Cancel"
-				dialog:Open()
 			end
-			function Colorpicker.Display(_self)
+
+			-- Lazy Anchored Popover state (built on first open, zero boot cost)
+			local scrollFrame = parent.ScrollFrame
+			local popoverBuilt = false
+			local popoverCanvas, popoverCard, popoverScale, popoverShadow, popoverStroke
+			local satVibMap, satCursor, hueBar, hueThumb, alphaBar, alphaThumb, alphaGradFrame
+			local hexBox, copyBtnIcon, previewNew, previewOld
+			local openConnections = {}
+			local openTransitionId = 0
+			local initialSnapshotColor = Colorpicker.Value
+			local initialSnapshotAlpha = Colorpicker.Transparency
+			local POPOVER_WIDTH = 248
+			local POPOVER_HEIGHT = Colorpicker.HasAlpha and 284 or 262
+
+			local function disconnectWhileOpen()
+				for i = #openConnections, 1, -1 do
+					openConnections[i]:Disconnect()
+					openConnections[i] = nil
+				end
+			end
+
+			local function syncPopoverVisuals()
+				if not popoverBuilt then
+					return
+				end
+				local h, s, v = Colorpicker.Hue, Colorpicker.Sat, Colorpicker.Vib
+				local current = Color3.fromHSV(h, s, v)
+				satVibMap.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+				satCursor.Position = UDim2.new(s, 0, 1 - v, 0)
+				hueThumb.Position = UDim2.new(h, 0, 0.5, 0)
+				previewNew.BackgroundColor3 = current
+				previewNew.BackgroundTransparency = Colorpicker.Transparency
+				if hexBox and not hexBox:IsFocused() then
+					hexBox.Text = "#" .. current:ToHex():upper()
+				end
+				if Colorpicker.HasAlpha and alphaThumb and alphaGradFrame then
+					alphaGradFrame.BackgroundColor3 = current
+					alphaThumb.Position = UDim2.new(1 - Colorpicker.Transparency, 0, 0.5, 0)
+				end
+			end
+
+			local function commitColor(touch)
 				Colorpicker.Value = Color3.fromHSV(Colorpicker.Hue, Colorpicker.Sat, Colorpicker.Vib)
 				displayFrame.BackgroundColor3 = Colorpicker.Value
 				displayFrame.BackgroundTransparency = Colorpicker.Transparency
-				Element.Library:SafeCallback(Colorpicker.Callback, Colorpicker.Value)
-				Element.Library:SafeCallback(Colorpicker.Changed, Colorpicker.Value)
+				if hexPreviewLabel then
+					hexPreviewLabel.Text = "#" .. Colorpicker.Value:ToHex():upper()
+				end
+				syncPopoverVisuals()
+				Library:SafeCallback(Colorpicker.Callback, Colorpicker.Value)
+				Library:SafeCallback(Colorpicker.Changed, Colorpicker.Value)
+				if touch then
+					Library._TouchElement(Colorpicker)
+				end
+			end
+
+			local function repositionPopover()
+				if not popoverBuilt then
+					return
+				end
+				local camera = Workspace.CurrentCamera
+				local rawViewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+				local insetY = Creator.GetGuiInsetY()
+				local usableW = rawViewport.X
+				local usableH = math.max(160, rawViewport.Y - insetY)
+				local pos = swatchButton.AbsolutePosition
+				local sz = swatchButton.AbsoluteSize
+				local scale = Creator.DPIScale
+				local scaledW = POPOVER_WIDTH * scale
+				local scaledH = POPOVER_HEIGHT * scale
+
+				local x = pos.X + sz.X + 14
+				if x + scaledW > usableW - 10 then
+					x = pos.X - scaledW - 14
+				end
+				x = math.clamp(x, 10, math.max(10, usableW - scaledW - 10))
+
+				local y = pos.Y - 24
+				y = math.clamp(y, 10, math.max(10, usableH - scaledH - 10))
+				popoverCanvas.Position = UDim2.fromOffset(x, y)
+			end
+
+			local function ensurePopover()
+				if popoverBuilt then
+					return
+				end
+				popoverBuilt = true
+
+				local hueKeypoints = {}
+				for step = 0, 10 do
+					local t = step / 10
+					table.insert(hueKeypoints, ColorSequenceKeypoint.new(t, Color3.fromHSV(t, 1, 1)))
+				end
+
+				satCursor = New(
+					"Frame",
+					{
+						Size = UDim2.fromOffset(14, 14),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ZIndex = 45
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 2}),
+						New("Frame", {
+							Size = UDim2.fromOffset(16, 16),
+							Position = UDim2.fromScale(0.5, 0.5),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							BackgroundTransparency = 1,
+							ZIndex = 43
+						}, {
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							New("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Transparency = 0.45})
+						})
+					}
+				)
+
+				-- Pure 2-layer vector UIGradient SV pad (0ms load, crisp at any DPI, no external image asset)
+				satVibMap = New(
+					"Frame",
+					{
+						Name = "SVPad",
+						Size = UDim2.new(1, -24, 0, 128),
+						Position = UDim2.fromOffset(12, 34),
+						BackgroundColor3 = Color3.fromHSV(Colorpicker.Hue, 1, 1),
+						BackgroundTransparency = 0,
+						ClipsDescendants = true,
+						Active = true,
+						ZIndex = 42
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						-- Saturation white-to-transparent horizontal layer
+						New("Frame", {
+							Name = "SatGradient",
+							Size = UDim2.fromScale(1, 1),
+							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+							BorderSizePixel = 0,
+							ZIndex = 42
+						}, {
+							New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+							New("UIGradient", {
+								Rotation = 0,
+								Transparency = NumberSequence.new({
+									NumberSequenceKeypoint.new(0, 0),
+									NumberSequenceKeypoint.new(1, 1)
+								})
+							})
+						}),
+						-- Value transparent-to-black vertical layer
+						New("Frame", {
+							Name = "ValGradient",
+							Size = UDim2.fromScale(1, 1),
+							BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+							BorderSizePixel = 0,
+							ZIndex = 43
+						}, {
+							New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+							New("UIGradient", {
+								Rotation = 90,
+								Transparency = NumberSequence.new({
+									NumberSequenceKeypoint.new(0, 1),
+									NumberSequenceKeypoint.new(1, 0)
+								})
+							})
+						}),
+						New("UIStroke", {Transparency = 0.55, Thickness = 1, ZIndex = 44, ThemeTag = {Color = "InElementBorder"}}),
+						satCursor
+					}
+				)
+
+				hueThumb = New(
+					"Frame",
+					{
+						Size = UDim2.fromOffset(14, 14),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0, 0, 0.5, 0),
+						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+						ZIndex = 44
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New("UIStroke", {Color = Color3.fromRGB(15, 17, 24), Thickness = 1.5})
+					}
+				)
+
+				hueBar = New(
+					"Frame",
+					{
+						Name = "HueBar",
+						Size = UDim2.new(1, -24, 0, 12),
+						Position = UDim2.fromOffset(12, 172),
+						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+						Active = true,
+						ZIndex = 42
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New("UIGradient", {Color = ColorSequence.new(hueKeypoints), Rotation = 0}),
+						hueThumb
+					}
+				)
+
+				local nextY = 194
+				if Colorpicker.HasAlpha then
+					alphaThumb = New(
+						"Frame",
+						{
+							Size = UDim2.fromOffset(14, 14),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							Position = UDim2.new(1, 0, 0.5, 0),
+							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+							ZIndex = 44
+						},
+						{
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							New("UIStroke", {Color = Color3.fromRGB(15, 17, 24), Thickness = 1.5})
+						}
+					)
+					alphaGradFrame = New(
+						"Frame",
+						{Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colorpicker.Value, ZIndex = 43},
+						{
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							New("UIGradient", {
+								Transparency = NumberSequence.new({
+									NumberSequenceKeypoint.new(0, 1),
+									NumberSequenceKeypoint.new(1, 0)
+								}),
+								Rotation = 0
+							})
+						}
+					)
+					alphaBar = New(
+						"ImageLabel",
+						{
+							Name = "AlphaBar",
+							Size = UDim2.new(1, -24, 0, 12),
+							Position = UDim2.fromOffset(12, nextY),
+							Image = "rbxassetid://14204231522",
+							ImageTransparency = 0.4,
+							ScaleType = Enum.ScaleType.Tile,
+							TileSize = UDim2.fromOffset(16, 16),
+							Active = true,
+							ZIndex = 42
+						},
+						{New("UICorner", {CornerRadius = UDim.new(1, 0)}), alphaGradFrame, alphaThumb}
+					)
+					nextY += 22
+				end
+
+				-- Hex input + Copy button + Old/New preview chip row
+				previewOld = New("Frame", {Size = UDim2.new(0.5, 0, 1, 0), BackgroundColor3 = Colorpicker.Value, ZIndex = 43})
+				previewNew = New("Frame", {Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromScale(0.5, 0), BackgroundColor3 = Colorpicker.Value, ZIndex = 43})
+				local previewChip = New(
+					"TextButton",
+					{
+						Name = "CompareChip",
+						Text = "",
+						Size = UDim2.fromOffset(42, 26),
+						Position = UDim2.fromOffset(12, nextY),
+						BackgroundTransparency = 1,
+						ClipsDescendants = true,
+						ZIndex = 42
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIStroke", {Transparency = 0.45, Thickness = 1, ThemeTag = {Color = "InElementBorder"}}),
+						previewOld,
+						previewNew
+					}
+				)
+				-- Clicking left/compare chip resets to color before opening
+				Creator.AddSignal(previewChip.MouseButton1Click, function()
+					Colorpicker:SetHSVFromRGB(initialSnapshotColor)
+					Colorpicker.Transparency = initialSnapshotAlpha
+					commitColor(true)
+				end)
+
+				hexBox = New(
+					"TextBox",
+					{
+						Name = "HexInput",
+						Size = UDim2.new(1, -106, 0, 26),
+						Position = UDim2.fromOffset(60, nextY),
+						BackgroundTransparency = 0.22,
+						Text = "#" .. Colorpicker.Value:ToHex():upper(),
+						PlaceholderText = "#RRGGBB",
+						I18nSkip = true,
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 12,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						ZIndex = 42,
+						ThemeTag = {BackgroundColor3 = "DialogHolder", TextColor3 = "Text", PlaceholderColor3 = "SubText"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+						New("UIStroke", {Transparency = 0.38, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+					}
+				)
+
+				local copyAsset = Library:GetIcon("copy") or "rbxassetid://10709812159"
+				local checkAsset = Library:GetIcon("check") or "rbxassetid://10709790644"
+				copyBtnIcon = New(
+					"ImageLabel",
+					{
+						Image = copyAsset,
+						Size = UDim2.fromOffset(13, 13),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ZIndex = 43,
+						ThemeTag = {ImageColor3 = "Text"}
+					}
+				)
+				local copyButton = New(
+					"TextButton",
+					{
+						Name = "CopyHex",
+						Text = "",
+						Size = UDim2.fromOffset(28, 26),
+						Position = UDim2.new(1, -40, 0, nextY),
+						BackgroundTransparency = 0.28,
+						ZIndex = 42,
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIStroke", {Transparency = 0.38, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+						copyBtnIcon
+					}
+				)
+				Creator.AddSignal(copyButton.MouseButton1Click, function()
+					copyToClipboard("#" .. Colorpicker.Value:ToHex():upper())
+					copyBtnIcon.Image = checkAsset
+					Creator.OverrideTag(copyBtnIcon, {ImageColor3 = "Accent"})
+					task.delay(0.9, function()
+						if copyBtnIcon and copyBtnIcon.Parent then
+							copyBtnIcon.Image = copyAsset
+							Creator.OverrideTag(copyBtnIcon, {ImageColor3 = "Text"})
+						end
+					end)
+				end)
+
+				-- Swatches row
+				local swatchesRow = New(
+					"Frame",
+					{
+						Name = "Swatches",
+						Size = UDim2.new(1, -24, 0, 22),
+						Position = UDim2.fromOffset(12, nextY + 34),
+						BackgroundTransparency = 1,
+						ZIndex = 42
+					},
+					{
+						New("UIListLayout", {
+							FillDirection = Enum.FillDirection.Horizontal,
+							HorizontalAlignment = Enum.HorizontalAlignment.Left,
+							VerticalAlignment = Enum.VerticalAlignment.Center,
+							Padding = UDim.new(0, 6)
+						})
+					}
+				)
+				for _, swatchColor in ipairs(PRESET_SWATCHES) do
+					local chip = New(
+						"TextButton",
+						{
+							Text = "",
+							Size = UDim2.fromOffset(22, 20),
+							BackgroundColor3 = swatchColor,
+							ZIndex = 43,
+							Parent = swatchesRow
+						},
+						{
+							New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+							New("UIStroke", {Transparency = 0.55, Thickness = 1, Color = Color3.fromRGB(255, 255, 255)})
+						}
+					)
+					Creator.AddSignal(chip.MouseButton1Click, function()
+						Colorpicker:SetHSVFromRGB(swatchColor)
+						commitColor(true)
+					end)
+				end
+
+				local headerTitle = New(
+					"TextLabel",
+					{
+						Text = Colorpicker.Title,
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 12,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						Size = UDim2.new(1, -46, 0, 24),
+						Position = UDim2.fromOffset(12, 6),
+						BackgroundTransparency = 1,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						ZIndex = 42,
+						ThemeTag = {TextColor3 = "Text"}
+					}
+				)
+				local closeBtn = New(
+					"TextButton",
+					{
+						Text = "",
+						Size = UDim2.fromOffset(22, 22),
+						Position = UDim2.new(1, -10, 0, 7),
+						AnchorPoint = Vector2.new(1, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 43,
+						ThemeTag = {BackgroundColor3 = "Text"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("ImageLabel", {
+							Image = Library:GetIcon("x") or "rbxassetid://10747384394",
+							Size = UDim2.fromOffset(12, 12),
+							Position = UDim2.fromScale(0.5, 0.5),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							BackgroundTransparency = 1,
+							ZIndex = 44,
+							ThemeTag = {ImageColor3 = "SubText"}
+						})
+					}
+				)
+				Creator.AddSignal(closeBtn.MouseButton1Click, function()
+					Colorpicker:Close()
+				end)
+
+				popoverStroke = New("UIStroke", {Thickness = 1.2, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}})
+				local popoverBorderFrame = New(
+					"Frame",
+					{Name = "Border", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 46},
+					{New("UICorner", {CornerRadius = UDim.new(0, 10)}), popoverStroke}
+				)
+				local cardChildren = {
+					New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+					popoverBorderFrame,
+					headerTitle,
+					closeBtn,
+					satVibMap,
+					hueBar,
+					previewChip,
+					hexBox,
+					copyButton,
+					swatchesRow
+				}
+				if alphaBar then
+					table.insert(cardChildren, alphaBar)
+				end
+
+				popoverCard = New(
+					"CanvasGroup",
+					{
+						Name = "PopoverCard",
+						Size = UDim2.fromScale(1, 1),
+						GroupTransparency = 1,
+						Active = true,
+						ZIndex = 41,
+						ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+					},
+					cardChildren
+				)
+
+				local animS = 1
+				popoverScale = New("UIScale", {Scale = Creator.DPIScale})
+				local function syncPopScale()
+					popoverScale.Scale = Creator.DPIScale * animS
+				end
+				Creator.RegisterDPIScale(popoverScale, function()
+					syncPopScale()
+					if Colorpicker.Opened then
+						task.defer(repositionPopover)
+					end
+				end)
+
+				popoverShadow = New("ImageLabel", {
+					BackgroundTransparency = 1,
+					Image = "rbxassetid://5554236805",
+					ScaleType = Enum.ScaleType.Slice,
+					SliceCenter = Rect.new(23, 23, 277, 277),
+					Size = UDim2.new(1, 24, 1, 24),
+					Position = UDim2.fromOffset(-12, -10),
+					ImageColor3 = Color3.fromRGB(0, 0, 0),
+					ImageTransparency = 1,
+					ZIndex = 40
+				})
+				popoverCanvas = New(
+					"Frame",
+					{
+						Name = "AcryvenColorPopover",
+						BackgroundTransparency = 1,
+						Size = UDim2.fromOffset(POPOVER_WIDTH, POPOVER_HEIGHT),
+						Visible = false,
+						ZIndex = 40,
+						Parent = Library.OverlayGUI or Library.GUI
+					},
+					{
+						popoverScale,
+						popoverShadow,
+						popoverCard
+					}
+				)
+				table.insert(Library.OpenFrames, popoverCanvas)
+
+				-- Hex text entry
+				Creator.AddSignal(hexBox.FocusLost, function()
+					local cleaned = tostring(hexBox.Text):gsub("^%s+", ""):gsub("%s+$", "")
+					local ok, parsed = pcall(Color3.fromHex, cleaned)
+					if ok and typeof(parsed) == "Color3" then
+						Colorpicker:SetHSVFromRGB(parsed)
+						commitColor(true)
+					else
+						syncPopoverVisuals()
+					end
+				end)
+
+				-- Drag handlers via shared Creator.BeginDrag (zero blocking while loops!)
+				local function updateSV(pos)
+					local minX, minY = satVibMap.AbsolutePosition.X, satVibMap.AbsolutePosition.Y
+					local w, h = math.max(1, satVibMap.AbsoluteSize.X), math.max(1, satVibMap.AbsoluteSize.Y)
+					Colorpicker.Sat = math.clamp((pos.X - minX) / w, 0, 1)
+					Colorpicker.Vib = 1 - math.clamp((pos.Y - minY) / h, 0, 1)
+					commitColor(false)
+				end
+				Creator.AddSignal(satVibMap.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						updateSV(input.Position)
+						Creator.BeginDrag(function(mv)
+							updateSV(mv.Position)
+						end, function()
+							Library._TouchElement(Colorpicker)
+						end)
+					end
+				end)
+
+				local function updateHue(pos)
+					local minX = hueBar.AbsolutePosition.X
+					local w = math.max(1, hueBar.AbsoluteSize.X)
+					Colorpicker.Hue = math.clamp((pos.X - minX) / w, 0, 1)
+					commitColor(false)
+				end
+				Creator.AddSignal(hueBar.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						updateHue(input.Position)
+						Creator.BeginDrag(function(mv)
+							updateHue(mv.Position)
+						end, function()
+							Library._TouchElement(Colorpicker)
+						end)
+					end
+				end)
+
+				if alphaBar then
+					local function updateAlpha(pos)
+						local minX = alphaBar.AbsolutePosition.X
+						local w = math.max(1, alphaBar.AbsoluteSize.X)
+						Colorpicker.Transparency = 1 - math.clamp((pos.X - minX) / w, 0, 1)
+						commitColor(false)
+					end
+					Creator.AddSignal(alphaBar.InputBegan, function(input)
+						if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+							updateAlpha(input.Position)
+							Creator.BeginDrag(function(mv)
+								updateAlpha(mv.Position)
+							end, function()
+								Library._TouchElement(Colorpicker)
+							end)
+						end
+					end)
+				end
+
+				Colorpicker._SetAnimScale = function(target, instant)
+					if instant or Creator.ReducedMotion then
+						Creator.CancelSpring(popoverScale, "Scale")
+						animS = target
+						syncPopScale()
+					else
+						Creator.SpringValue(popoverScale, "Scale", target, 10, 0.85, function(v)
+							animS = v
+							syncPopScale()
+						end, animS)
+					end
+				end
+			end
+
+			function Colorpicker.Open(_self)
+				if Colorpicker.Opened then
+					return
+				end
+				-- Close other open dropdowns/popovers first
+				Library._CloseDropdowns()
+				ensurePopover()
+				openTransitionId += 1
+				Colorpicker.Opened = true
+				Library._OpenDropdowns[Colorpicker] = true
+				if scrollFrame then
+					scrollFrame.ScrollingEnabled = false
+				end
+				initialSnapshotColor = Colorpicker.Value
+				initialSnapshotAlpha = Colorpicker.Transparency
+				if previewOld then
+					previewOld.BackgroundColor3 = initialSnapshotColor
+					previewOld.BackgroundTransparency = initialSnapshotAlpha
+				end
+				syncPopoverVisuals()
+				repositionPopover()
+				popoverCanvas.Visible = true
+
+				local function fadePopoverStrokes(toHidden, instant)
+					if not popoverCard then return end
+					for _, desc in ipairs(popoverCard:GetDescendants()) do
+						if desc:IsA("UIStroke") then
+							local rest = desc:GetAttribute("AcryvenRestTrans")
+							if rest == nil then
+								rest = (desc == popoverStroke) and 0.35 or desc.Transparency
+								desc:SetAttribute("AcryvenRestTrans", rest)
+							end
+							local target = toHidden and 1 or rest
+							if instant then
+								Creator.CancelSpring(desc, "Transparency")
+								desc.Transparency = target
+							else
+								Creator.SpringValue(desc, "Transparency", target, toHidden and 13 or 10, 1)
+							end
+						end
+					end
+				end
+
+				if Creator.ReducedMotion then
+					popoverCard.GroupTransparency = 0
+					if popoverShadow then popoverShadow.ImageTransparency = 0.58 end
+					fadePopoverStrokes(false, true)
+					Colorpicker._SetAnimScale(1, true)
+				else
+					popoverCard.GroupTransparency = 1
+					if popoverShadow then popoverShadow.ImageTransparency = 1 end
+					fadePopoverStrokes(true, true)
+					Colorpicker._SetAnimScale(0.92, true)
+					Creator.SpringValue(popoverCard, "GroupTransparency", 0, 10, 1)
+					fadePopoverStrokes(false, false)
+					if popoverShadow then
+						Creator.SpringValue(popoverShadow, "ImageTransparency", 0.58, 10, 1)
+					end
+					Colorpicker._SetAnimScale(1)
+				end
+
+				table.insert(openConnections, Creator.AddSignal(swatchButton:GetPropertyChangedSignal("AbsolutePosition"), repositionPopover))
+				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, function(input)
+					if not Colorpicker.Opened then
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
+						Colorpicker:Close()
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						local ix, iy = input.Position.X, input.Position.Y
+						local pPos, pSz = popoverCard.AbsolutePosition, popoverCard.AbsoluteSize
+						local sPos, sSz = hitAnchorFrame.AbsolutePosition, hitAnchorFrame.AbsoluteSize
+						local outPop = ix < pPos.X or ix > pPos.X + pSz.X or iy < pPos.Y or iy > pPos.Y + pSz.Y
+						local outRow = ix < sPos.X or ix > sPos.X + sSz.X or iy < sPos.Y or iy > sPos.Y + sSz.Y
+						if outPop and outRow then
+							Colorpicker:Close()
+						end
+					end
+				end))
+			end
+
+			function Colorpicker.Close(_self)
+				if not Colorpicker.Opened then
+					return
+				end
+				openTransitionId += 1
+				local myTransition = openTransitionId
+				Colorpicker.Opened = false
+				Library._OpenDropdowns[Colorpicker] = nil
+				disconnectWhileOpen()
+				if scrollFrame then
+					scrollFrame.ScrollingEnabled = true
+				end
+				if not popoverBuilt or not popoverCanvas then
+					return
+				end
+				if Creator.ReducedMotion then
+					popoverCanvas.Visible = false
+					return
+				end
+				Creator.SpringValue(popoverCard, "GroupTransparency", 1, 12, 1)
+				for _, desc in ipairs(popoverCard:GetDescendants()) do
+					if desc:IsA("UIStroke") then
+						Creator.SpringValue(desc, "Transparency", 1, 14, 1)
+					end
+				end
+				if popoverShadow then
+					Creator.SpringValue(popoverShadow, "ImageTransparency", 1, 12, 1)
+				end
+				if Colorpicker._SetAnimScale then
+					Colorpicker._SetAnimScale(0.94)
+				end
+				task.delay(0.16, function()
+					if myTransition == openTransitionId and not Colorpicker.Opened and popoverCanvas and popoverCanvas.Parent then
+						popoverCanvas.Visible = false
+					end
+				end)
+			end
+
+			function Colorpicker.Display(_self)
+				commitColor(false)
 			end
 			function Colorpicker.SetValue(_self, hsv, transparency)
 				local color = Color3.fromHSV(hsv[1], hsv[2], hsv[3])
-				Colorpicker.Transparency = transparency or 0
+				if transparency ~= nil then
+					Colorpicker.Transparency = transparency
+				end
 				Colorpicker:SetHSVFromRGB(color)
 				Colorpicker:Display()
 			end
 			function Colorpicker.SetValueRGB(_self, color, transparency)
-				Colorpicker.Transparency = transparency or 0
+				if transparency ~= nil then
+					Colorpicker.Transparency = transparency
+				end
 				Colorpicker:SetHSVFromRGB(color)
 				Colorpicker:Display()
 			end
@@ -9063,17 +12090,41 @@ local moduleFunctions = {
 				callback(Colorpicker.Value)
 			end
 			function Colorpicker.Destroy(_self)
-				colorpickerFrame:Destroy()
-				Library.Options[idx] = nil
-			end
-			Creator.AddSignal(
-				colorpickerFrame.Frame.MouseButton1Click,
-				function()
-					createColorDialog()
+				Colorpicker:Close()
+				disconnectWhileOpen()
+				Library._OpenDropdowns[Colorpicker] = nil
+				if popoverCanvas then
+					local openIdx = table.find(Library.OpenFrames, popoverCanvas)
+					if openIdx then
+						table.remove(Library.OpenFrames, openIdx)
+					end
+					pcall(function()
+						popoverCanvas:Destroy()
+					end)
+					popoverCanvas = nil
 				end
-			)
+				if colorpickerFrame then
+					colorpickerFrame:Destroy()
+				elseif swatchButton and swatchButton.Parent then
+					swatchButton:Destroy()
+				end
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			Creator.AddSignal(hitAnchorFrame.MouseButton1Click, function()
+				if Colorpicker.Opened then
+					Colorpicker:Close()
+				else
+					Colorpicker:Open()
+				end
+			end)
+
 			Colorpicker:Display()
-			Library.Options[idx] = Colorpicker
+			if idx ~= nil then
+				Library.Options[idx] = Colorpicker
+			end
 			return Colorpicker
 		end
 		return Element
@@ -9117,7 +12168,8 @@ local moduleFunctions = {
 				end
 			}
 			local dropdownFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
-			dropdownFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+			dropdownFrame.TitleLabel.Size = UDim2.new(1, -190, 0, 0)
+			dropdownFrame.DescLabel.Size = UDim2.new(1, -190, 0, 0)
 			Dropdown.SetTitle = dropdownFrame.SetTitle
 			Dropdown.SetDesc = dropdownFrame.SetDesc
 			Dropdown.Frame = dropdownFrame.Frame
@@ -9126,18 +12178,14 @@ local moduleFunctions = {
 				New(
 					"TextLabel",
 					{
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Regular,
-							Enum.FontStyle.Normal
-						),
+						FontFace = Creator.Font(Enum.FontWeight.Medium, Enum.FontStyle.Normal),
 						Text = "--",
 						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
 						TextSize = 13,
 						TextXAlignment = Enum.TextXAlignment.Left,
-						Size = UDim2.new(1, -30, 0, 14),
-						Position = UDim2.new(0, 8, 0.5, 0),
+						Size = UDim2.new(1, -34, 0, 16),
+						Position = UDim2.new(0, 10, 0.5, 0),
 						AnchorPoint = Vector2.new(0, 0.5),
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
@@ -9145,59 +12193,123 @@ local moduleFunctions = {
 						ThemeTag = {TextColor3 = "Text"}
 					}
 				)
+			local countText = New(
+				"TextLabel",
+				{
+					Name = "Count",
+					Text = "0",
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.Bold),
+					TextSize = 10,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1
+				}
+			)
+			local countBadge = New(
+				"Frame",
+				{
+					Name = "SelectedBadge",
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 18),
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -28, 0.5, 0),
+					BackgroundTransparency = 0.08,
+					Visible = false,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}),
+					countText
+				}
+			)
 			local dropdownIcon =
 				New(
 					"ImageLabel",
 					{
-						Image = "rbxassetid://10709790948",
-						Size = UDim2.fromOffset(16, 16),
+						Image = parent.Library:GetIcon("chevron-down") or "rbxassetid://134243273101015",
+						Size = UDim2.fromOffset(15, 15),
 						AnchorPoint = Vector2.new(1, 0.5),
-						Position = UDim2.new(1, -8, 0.5, 0),
+						Position = UDim2.new(1, -9, 0.5, 0),
 						BackgroundTransparency = 1,
+						ImageTransparency = 0,
 						ThemeTag = {ImageColor3 = "SubText"}
+					}
+				)
+			local triggerStroke =
+				New(
+					"UIStroke",
+					{
+						Thickness = 1.2,
+						Transparency = 0.28,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "InElementBorder"}
 					}
 				)
 			local dropdownInner =
 				New(
 					"TextButton",
 					{
-						Size = UDim2.fromOffset(160, 34),
+						Size = UDim2.fromOffset(176, 34),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
-						BackgroundTransparency = 0.9,
+						BackgroundTransparency = 0.14,
+						Text = "",
 						ClipsDescendants = true,
 						Parent = dropdownFrame.Frame,
-						ThemeTag = {BackgroundColor3 = "DropdownFrame"}
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
 					},
 					{
 						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
 						New(
-							"UIStroke",
+							"UIGradient",
 							{
-								Transparency = 0.5,
-								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-								ThemeTag = {Color = "InElementBorder"}
+								Rotation = 90,
+								Color = ColorSequence.new({
+									ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+									ColorSequenceKeypoint.new(1, Color3.fromRGB(224, 228, 236))
+								})
 							}
 						),
+						triggerStroke,
+						countBadge,
 						dropdownIcon,
 						dropdownDisplay
 					}
 				)
+
+			local triggerHovered = false
+			local function syncTriggerVisual()
+				local active = triggerHovered or Dropdown.Opened
+				Creator.OverrideTag(triggerStroke, {Color = active and "Accent" or "InElementBorder"})
+				Creator.SpringValue(triggerStroke, "Transparency", active and 0.08 or 0.28, 10, 1)
+				Creator.OverrideTag(dropdownIcon, {ImageColor3 = active and "Accent" or "SubText"})
+				Creator.SpringValue(dropdownInner, "BackgroundTransparency", active and 0.06 or 0.14, 10, 1)
+			end
+			Creator.AddSignal(dropdownInner.MouseEnter, function()
+				triggerHovered = true
+				syncTriggerVisual()
+			end)
+			Creator.AddSignal(dropdownInner.MouseLeave, function()
+				triggerHovered = false
+				syncTriggerVisual()
+			end)
 
 			local function getTextWidth(label, text)
 				local ok, size = pcall(function()
 					return TextService:GetTextSize(
 						text or label.Text,
 						label.TextSize,
-						Enum.Font.Gotham,
+						Enum.Font.BuilderSans,
 						Vector2.new(10000, math.max(label.AbsoluteSize.Y, 34))
 					)
 				end)
 				return ok and size.X or label.TextBounds.X
 			end
 
-			local selectedLabelDefaultPosition = UDim2.new(0, 8, 0.5, 0)
-			local selectedLabelDefaultSize = UDim2.new(1, -30, 0, 14)
+			local selectedLabelDefaultPosition = UDim2.new(0, 10, 0.5, 0)
+			local selectedLabelDefaultSize = UDim2.new(1, -34, 0, 16)
 			local selectedLabelScrollTween = nil
 			local function stopSelectedLabelScroll()
 				if selectedLabelScrollTween then
@@ -9205,24 +12317,25 @@ local moduleFunctions = {
 					selectedLabelScrollTween = nil
 				end
 				dropdownDisplay.TextTruncate = Enum.TextTruncate.AtEnd
-				dropdownDisplay.Size = selectedLabelDefaultSize
+				dropdownDisplay.Size = UDim2.new(1, countBadge.Visible and -58 or -34, 0, 16)
 				dropdownDisplay.Position = selectedLabelDefaultPosition
 			end
 			local function startSelectedLabelScroll()
-				local visibleWidth = math.max(dropdownInner.AbsoluteSize.X - 30, 0)
+				local scale = Creator.GetEffectiveScale(dropdownInner)
+				local visibleWidth = math.max((dropdownInner.AbsoluteSize.X / scale) - (countBadge.Visible and 58 or 34), 0)
 				local textWidth = getTextWidth(dropdownDisplay, dropdownDisplay.Text) + 8
 				if textWidth <= visibleWidth then
 					return
 				end
 				stopSelectedLabelScroll()
 				dropdownDisplay.TextTruncate = Enum.TextTruncate.None
-				dropdownDisplay.Size = UDim2.fromOffset(textWidth, 14)
+				dropdownDisplay.Size = UDim2.fromOffset(textWidth, 16)
 				local travel = textWidth - visibleWidth
 				selectedLabelScrollTween =
 					TweenService:Create(
 						dropdownDisplay,
 						TweenInfo.new(math.clamp(travel / 35, 1.2, 5), Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.25),
-						{Position = UDim2.new(0, 8 - travel, 0.5, 0)}
+						{Position = UDim2.new(0, 10 - travel, 0.5, 0)}
 					)
 				selectedLabelScrollTween:Play()
 			end
@@ -9252,13 +12365,16 @@ local moduleFunctions = {
 			local dropdownBuilt = false
 			local dropdownRows = {}
 			local searchRevision = 0
-			local listSizeX = 170
+			local listSizeX = 196
 			local isClearButtonVisible = false
 			local hasSelectionState = false
+			local openedUpward = false
+			local ddCardYOffset = 0
 			local openConnections = {}
 
 			local searchBox, searchBoxStroke, clearButton, clearButtonStroke, clearIcon
-			local selectAllButton, dropdownListLayout, dropdownScrollFrame, dropdownHolderFrame, dropdownHolderCanvas
+			local selectAllButton, dropdownListLayout, dropdownScrollFrame, dropdownHolderFrame, dropdownHolderCanvas, dropdownShadow, emptyStateLabel
+			local ddAnimScale, ddHoverStroke
 
 			local function showClearButton(instant)
 				if not popupBuilt or not clearButton or isClearButtonVisible then
@@ -9321,58 +12437,88 @@ local moduleFunctions = {
 				end)
 			end
 
+			local function setCardYOffset(y)
+				ddCardYOffset = y
+				if dropdownHolderFrame then
+					dropdownHolderFrame.Position = UDim2.new(0.5, 0, openedUpward and 1 or 0, y)
+				end
+			end
+
 			local function recalculateListPosition()
 				if not popupBuilt then return end
 				local camera = Workspace.CurrentCamera
-				local viewportSize = camera and camera.ViewportSize or Vector2.new(1280, 720)
+				local rawViewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+				local insetY = Creator.GetGuiInsetY()
+				local usableW = rawViewport.X
+				local usableH = math.max(160, rawViewport.Y - insetY)
 				local mainFrame = dropdownInner.AbsolutePosition
 				local mainSize = dropdownInner.AbsoluteSize
-				local dropdownWidth = listSizeX
+				local scale = math.max(0.01, Creator.DPIScale)
+				local panelW = math.max(listSizeX, math.ceil(mainSize.X / scale))
+				if dropdownHolderCanvas.Size.X.Offset ~= panelW then
+					dropdownHolderCanvas.Size = UDim2.fromOffset(panelW, dropdownHolderCanvas.Size.Y.Offset)
+				end
+				local dropdownWidth = panelW * scale
+				local dropdownHeight = dropdownHolderCanvas.Size.Y.Offset * scale
 
-				local xPos = mainFrame.X + mainSize.X + 10
-				if xPos + dropdownWidth > viewportSize.X then
-					xPos = mainFrame.X - dropdownWidth - 10
-				end
-				if xPos < 0 then
-					xPos = math.min(mainFrame.X + mainSize.X + 10, viewportSize.X - dropdownWidth - 10)
-					xPos = math.max(xPos, 10)
-				end
+				-- Luaward GlassSelect placement: bottom end by default, flipping to top end near viewport bottom
+				local xPos = mainFrame.X + mainSize.X - dropdownWidth
+				xPos = math.clamp(xPos, 10, math.max(10, usableW - dropdownWidth - 10))
 
-				local yPos = mainFrame.Y - 5
-				local maxY = viewportSize.Y - dropdownHolderCanvas.AbsoluteSize.Y - 10
-				if yPos > maxY then
-					yPos = maxY
+				local belowY = mainFrame.Y + mainSize.Y + 6
+				local aboveY = mainFrame.Y - dropdownHeight - 6
+				local yPos
+				if belowY + dropdownHeight <= usableH - 10 or aboveY < 10 then
+					openedUpward = false
+					yPos = math.clamp(belowY, 10, math.max(10, usableH - dropdownHeight - 10))
+				else
+					openedUpward = true
+					yPos = math.clamp(aboveY, 10, math.max(10, usableH - dropdownHeight - 10))
 				end
-				if yPos < 10 then
-					yPos = 10
+				if dropdownHolderFrame then
+					dropdownHolderFrame.AnchorPoint = Vector2.new(0.5, openedUpward and 1 or 0)
+					dropdownHolderFrame.Position = UDim2.new(0.5, 0, openedUpward and 1 or 0, ddCardYOffset)
 				end
 				dropdownHolderCanvas.Position = UDim2.fromOffset(xPos, yPos)
 			end
 
 			local function recalculateListSize()
 				if not popupBuilt then return end
+				local scale = Creator.GetEffectiveScale(dropdownScrollFrame)
 				local maxHeight = 280
-				local contentHeight = dropdownListLayout.AbsoluteContentSize.Y + (config.Multi and 87 or 54)
-				local finalHeight = math.min(contentHeight, maxHeight)
-				dropdownHolderCanvas.Size = UDim2.fromOffset(listSizeX, finalHeight)
+				local unscaledContent = math.ceil(dropdownListLayout.AbsoluteContentSize.Y / scale) + 6
+				local contentHeight = unscaledContent + (config.Multi and 87 or 54)
+				local finalHeight = math.clamp(contentHeight, config.Multi and 122 or 94, maxHeight)
+				local dpi = math.max(0.01, Creator.DPIScale)
+				local panelW = math.max(listSizeX, math.ceil(dropdownInner.AbsoluteSize.X / dpi))
+				dropdownHolderCanvas.Size = UDim2.fromOffset(panelW, finalHeight)
+				recalculateListPosition()
 			end
 
 			local function recalculateCanvasSize()
 				if not popupBuilt then return end
-				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, dropdownListLayout.AbsoluteContentSize.Y)
+				local scale = Creator.GetEffectiveScale(dropdownScrollFrame)
+				dropdownScrollFrame.CanvasSize = UDim2.fromOffset(0, math.ceil(dropdownListLayout.AbsoluteContentSize.Y / scale) + 6)
 			end
 
 			local function applySearchFilter()
 				if not popupBuilt then return end
 				local query = Dropdown.SearchText
+				local shownCount = 0
 				for _, row in ipairs(dropdownRows) do
 					local shown = query == "" or row.SearchTarget:find(query, 1, true) ~= nil
+					if shown then
+						shownCount += 1
+					end
 					if row.Button.Visible ~= shown then
 						row.Button.Visible = shown
 						if not shown then
 							row:ResetHover()
 						end
 					end
+				end
+				if emptyStateLabel then
+					emptyStateLabel.Visible = (shownCount == 0)
 				end
 				recalculateCanvasSize()
 				recalculateListSize()
@@ -9384,15 +12530,21 @@ local moduleFunctions = {
 			end
 
 			local function closeOnOutsideInput(input)
+				if not Dropdown.Opened or not popupBuilt then
+					return
+				end
+				if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
+					Dropdown:Close()
+					return
+				end
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-					if Dropdown.Opened and popupBuilt then
-						local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
-						local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
-						local outsideDropdown = mouse.X < holderPos.X or mouse.X > holderPos.X + holderSize.X or mouse.Y < holderPos.Y or mouse.Y > holderPos.Y + holderSize.Y
-						local outsideButton = mouse.X < innerPos.X or mouse.X > innerPos.X + innerSize.X or mouse.Y < innerPos.Y or mouse.Y > innerPos.Y + innerSize.Y
-						if outsideDropdown and outsideButton then
-							Dropdown:Close()
-						end
+					local ix, iy = input.Position.X, input.Position.Y
+					local holderPos, holderSize = dropdownHolderFrame.AbsolutePosition, dropdownHolderFrame.AbsoluteSize
+					local innerPos, innerSize = dropdownInner.AbsolutePosition, dropdownInner.AbsoluteSize
+					local outsideDropdown = ix < holderPos.X or ix > holderPos.X + holderSize.X or iy < holderPos.Y or iy > holderPos.Y + holderSize.Y
+					local outsideButton = ix < innerPos.X or ix > innerPos.X + innerSize.X or iy < innerPos.Y or iy > innerPos.Y + innerSize.Y
+					if outsideDropdown and outsideButton then
+						Dropdown:Close()
 					end
 				end
 			end
@@ -9426,7 +12578,7 @@ local moduleFunctions = {
 				searchBoxStroke = New(
 					"UIStroke",
 					{
-						Transparency = 0.5,
+						Transparency = 0.38,
 						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 						ThemeTag = {Color = "InElementBorder"}
 					}
@@ -9435,17 +12587,17 @@ local moduleFunctions = {
 				searchBox = New(
 					"TextBox",
 					{
-						Size = UDim2.new(1, -50, 0, 34),
+						Size = UDim2.new(1, canClear and -50 or -10, 0, 34),
 						Position = UDim2.fromOffset(5, 5),
-						BackgroundTransparency = 0.9,
+						BackgroundTransparency = 0.12,
 						PlaceholderText = "Search...",
 						Text = "",
 						TextColor3 = Color3.fromRGB(240, 240, 240),
-						PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
+						PlaceholderColor3 = Color3.fromRGB(168, 178, 198),
 						TextSize = 13,
 						TextXAlignment = Enum.TextXAlignment.Left,
-						FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json"),
-						ThemeTag = {BackgroundColor3 = "Input", TextColor3 = "Text"}
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						ThemeTag = {BackgroundColor3 = "DialogHolder", TextColor3 = "Text"}
 					},
 					{
 						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
@@ -9455,10 +12607,11 @@ local moduleFunctions = {
 							{
 								Name = "SearchIcon",
 								Image = searchIconAsset,
-								Size = UDim2.fromOffset(14, 14),
+								Size = UDim2.fromOffset(15, 15),
 								Position = UDim2.new(0, -19, 0.5, 0),
 								AnchorPoint = Vector2.new(0, 0.5),
 								BackgroundTransparency = 1,
+								ImageTransparency = 0,
 								ThemeTag = {ImageColor3 = "SubText"}
 							}
 						),
@@ -9515,7 +12668,7 @@ local moduleFunctions = {
 							Name = "Title",
 							Text = "Select All",
 							TextSize = 12,
-							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
 							BackgroundTransparency = 1,
 							AutomaticSize = Enum.AutomaticSize.X,
 							Size = UDim2.new(0, 0, 1, 0),
@@ -9586,36 +12739,111 @@ local moduleFunctions = {
 						ScrollBarImageTransparency = 0.92,
 						ScrollBarThickness = 5,
 						BorderSizePixel = 0,
+						ZIndex = 37,
 						CanvasSize = UDim2.fromScale(0, 0),
 						ThemeTag = {ScrollBarImageColor3 = "Accent"}
 					},
-					{dropdownListLayout}
+					{
+						dropdownListLayout,
+						New(
+							"UIPadding",
+							{
+								PaddingTop = UDim.new(0, 2),
+								PaddingBottom = UDim.new(0, 4),
+								PaddingLeft = UDim.new(0, 2),
+								PaddingRight = UDim.new(0, 2)
+							}
+						)
+					}
+				)
+
+				ddHoverStroke = New(
+					"UIStroke",
+					{
+						Transparency = 1,
+						Thickness = 1,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "InElementBorder"}
+					}
+				)
+				local ddHoverPill = New(
+					"Frame",
+					{
+						Name = "DropdownHoverPill",
+						Size = UDim2.new(1, -14, 0, 34),
+						Position = UDim2.fromOffset(2, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 36,
+						ThemeTag = {BackgroundColor3 = "DropdownOption"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+						ddHoverStroke
+					}
+				)
+				local ddHoverLayer = New(
+					"Frame",
+					{
+						Name = "HoverLayer",
+						Size = UDim2.new(1, -10, 1, scrollYSize),
+						Position = UDim2.fromOffset(5, scrollYPos),
+						BackgroundTransparency = 1,
+						ClipsDescendants = true,
+						ZIndex = 36
+					},
+					{ddHoverPill}
+				)
+				Dropdown._HoverPill = ddHoverPill
+				Dropdown._HoverStroke = ddHoverStroke
+				Dropdown._HoverVisible = false
+				Dropdown._HoverY = 0
+				Creator.AddSignal(dropdownScrollFrame.MouseLeave, function()
+					Dropdown._HoverVisible = false
+					Creator.SpringValue(ddHoverPill, "BackgroundTransparency", 1, 5.5, 1)
+					Creator.SpringValue(ddHoverStroke, "Transparency", 1, 5.5, 1)
+				end)
+
+				emptyStateLabel = New(
+					"TextLabel",
+					{
+						Name = "EmptyState",
+						Text = "No matching options",
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 12,
+						Size = UDim2.new(1, -16, 0, 32),
+						Position = UDim2.new(0.5, 0, 0.5, math.floor(scrollYPos * 0.45)),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						Visible = false,
+						ZIndex = 38,
+						ThemeTag = {TextColor3 = "SubText"}
+					}
 				)
 
 				local uChildren = {
 					searchBox,
 					clearButton,
+					ddHoverLayer,
 					dropdownScrollFrame,
-					New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+					emptyStateLabel,
+					New("UICorner", {CornerRadius = UDim.new(0, 10)}),
 					New(
-						"UIStroke",
+						"UIGradient",
 						{
-							Thickness = 1.5,
-							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-							ThemeTag = {Color = "DropdownBorder"}
+							Rotation = 90,
+							Color = ColorSequence.new({
+								ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+								ColorSequenceKeypoint.new(1, Color3.fromRGB(234, 238, 246))
+							})
 						}
 					),
 					New(
-						"ImageLabel",
+						"UIStroke",
 						{
-							BackgroundTransparency = 1,
-							Image = "http://www.roblox.com/asset/?id=5554236805",
-							ScaleType = Enum.ScaleType.Slice,
-							SliceCenter = Rect.new(23, 23, 277, 277),
-							Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30),
-							Position = UDim2.fromOffset(-15, -15),
-							ImageColor3 = Color3.fromRGB(0, 0, 0),
-							ImageTransparency = 0.1
+							Thickness = 1.2,
+							Transparency = 0.18,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "DropdownBorder"}
 						}
 					)
 				}
@@ -9623,30 +12851,73 @@ local moduleFunctions = {
 					table.insert(uChildren, selectAllButton)
 				end
 
+				ddAnimScale = New("UIScale", {Scale = 1})
+				table.insert(uChildren, ddAnimScale)
 				dropdownHolderFrame = New(
 					"Frame",
-					{Size = UDim2.fromScale(1, 0.5), ThemeTag = {BackgroundColor3 = "DropdownHolder"}},
+					{
+						Size = UDim2.fromScale(1, 1),
+						AnchorPoint = Vector2.new(0.5, 0),
+						Position = UDim2.fromScale(0.5, 0),
+						ClipsDescendants = true,
+						Active = true,
+						BackgroundTransparency = 0.03,
+						ZIndex = 36,
+						ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+					},
 					uChildren
 				)
 
+				local ddScale = New("UIScale", {Scale = Creator.DPIScale})
+				Creator.RegisterDPIScale(ddScale, function(scale)
+					ddScale.Scale = scale
+					if Dropdown.Opened then
+						task.defer(function()
+							recalculateCanvasSize()
+							recalculateListSize()
+						end)
+					end
+				end)
+				dropdownShadow = New(
+					"ImageLabel",
+					{
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://5554236805",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(23, 23, 277, 277),
+						Size = UDim2.new(1, 24, 1, 24),
+						Position = UDim2.fromOffset(-12, -10),
+						ImageColor3 = Color3.fromRGB(0, 0, 0),
+						ImageTransparency = 1,
+						ZIndex = 35
+					}
+				)
 				dropdownHolderCanvas = New(
 					"Frame",
 					{
+						Name = "AcryvenDropdownPopup",
 						BackgroundTransparency = 1,
 						Size = UDim2.fromOffset(listSizeX, 250),
-						Parent = parent.Library.GUI,
+						Parent = parent.Library.OverlayGUI or parent.Library.GUI,
+						ZIndex = 35,
 						Visible = false
 					},
-					{dropdownHolderFrame, New("UISizeConstraint", {MinSize = Vector2.new(170, 0), MaxSize = Vector2.new(250, 320)})}
+					{
+						ddScale,
+						dropdownShadow,
+						dropdownHolderFrame
+					}
 				)
 				table.insert(Library.OpenFrames, dropdownHolderCanvas)
 
 				-- Search box focus & debounced filter
 				Creator.AddSignal(searchBox.Focused, function()
-					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
+					Creator.OverrideTag(searchBoxStroke, {Color = "Accent"})
+					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.12}):Play()
 				end)
 				Creator.AddSignal(searchBox.FocusLost, function()
-					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+					Creator.OverrideTag(searchBoxStroke, {Color = "InElementBorder"})
+					TweenService:Create(searchBoxStroke, TweenInfo.new(0.2), {Transparency = 0.38}):Play()
 				end)
 				Creator.AddSignal(searchBox:GetPropertyChangedSignal("Text"), function()
 					searchRevision = searchRevision + 1
@@ -9740,12 +13011,18 @@ local moduleFunctions = {
 				end
 			end)
 
+			local ddTransitionId = 0
+			local selectCloseGen = 0
 			function Dropdown.Open(_self)
 				if Dropdown.Opened then
 					return
 				end
+				-- Close other open dropdowns or colorpicker popovers so popups never stack.
+				Library._CloseDropdowns()
 				ensurePopup()
+				ddTransitionId += 1
 				Dropdown.Opened = true
+				syncTriggerVisual()
 				Library._OpenDropdowns[Dropdown] = true
 				connectWhileOpen()
 				if scrollFrame then
@@ -9760,41 +13037,78 @@ local moduleFunctions = {
 				else
 					applySearchFilter()
 				end
-				recalculateListPosition()
 				recalculateListSize()
+				recalculateListPosition()
 
-				Creator.SpringValue(dropdownIcon, "Rotation", 180, 4, 0.8)
+				Creator.SpringValue(dropdownIcon, "Rotation", 180, 4.6, 0.85)
+				Dropdown._HoverVisible = false
+				if Dropdown._HoverPill then
+					Creator.CancelSpring(Dropdown._HoverPill, "BackgroundTransparency")
+					Dropdown._HoverPill.BackgroundTransparency = 1
+				end
+				if Dropdown._HoverStroke then
+					Creator.CancelSpring(Dropdown._HoverStroke, "Transparency")
+					Dropdown._HoverStroke.Transparency = 1
+				end
 
-				dropdownHolderFrame.Size = UDim2.fromScale(1, 0.3)
-				TweenService:Create(
-					dropdownHolderFrame,
-					TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-					{Size = UDim2.fromScale(1, 1)}
-				):Play()
+				if Creator.ReducedMotion then
+					if ddAnimScale then ddAnimScale.Scale = 1 end
+					setCardYOffset(0)
+					if dropdownShadow then dropdownShadow.ImageTransparency = 0.52 end
+				else
+					-- HeroUI / Luaward Select Popover entrance: subtle scale + directional slide (never squishes height)
+					local startY = openedUpward and 6 or -6
+					if ddAnimScale then
+						Creator.CancelSpring(ddAnimScale, "Scale")
+						ddAnimScale.Scale = 0.94
+						Creator.SpringValue(ddAnimScale, "Scale", 1, 5.0, 0.86)
+					end
+					setCardYOffset(startY)
+					Creator.SpringValue(dropdownHolderFrame, "CardY", 0, 5.0, 0.88, setCardYOffset, startY)
+					if dropdownShadow then
+						dropdownShadow.ImageTransparency = 1
+						Creator.SpringValue(dropdownShadow, "ImageTransparency", 0.52, 5.4, 1)
+					end
+				end
 			end
 
 			function Dropdown.Close(_self)
 				if not Dropdown.Opened then
 					return
 				end
+				ddTransitionId += 1
+				local myTransition = ddTransitionId
 				Dropdown.Opened = false
+				syncTriggerVisual()
 				Library._OpenDropdowns[Dropdown] = nil
 				disconnectWhileOpen()
 				if scrollFrame then
 					scrollFrame.ScrollingEnabled = true
 				end
-				Creator.SpringValue(dropdownIcon, "Rotation", 0, 4, 0.8)
+				Creator.SpringValue(dropdownIcon, "Rotation", 0, 4.6, 0.85)
 				if not popupBuilt then
 					return
 				end
-				local closeTween = TweenService:Create(
-					dropdownHolderFrame,
-					TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-					{Size = UDim2.fromScale(1, 0.3)}
-				)
-				closeTween:Play()
-				closeTween.Completed:Connect(function()
-					if not Dropdown.Opened and dropdownHolderCanvas and dropdownHolderCanvas.Parent then
+				Dropdown._HoverVisible = false
+				if Dropdown._HoverPill then
+					Creator.SpringValue(Dropdown._HoverPill, "BackgroundTransparency", 1, 6.2, 1)
+				end
+				if Dropdown._HoverStroke then
+					Creator.SpringValue(Dropdown._HoverStroke, "Transparency", 1, 6.2, 1)
+				end
+				if Creator.ReducedMotion then
+					dropdownHolderCanvas.Visible = false
+					return
+				end
+				if dropdownShadow then
+					Creator.SpringValue(dropdownShadow, "ImageTransparency", 1, 6.8, 1)
+				end
+				if ddAnimScale then
+					Creator.SpringValue(ddAnimScale, "Scale", 0.95, 6.4, 1)
+				end
+				Creator.SpringValue(dropdownHolderFrame, "CardY", openedUpward and 4 or -4, 6.4, 1, setCardYOffset, ddCardYOffset)
+				task.delay(0.14, function()
+					if myTransition == ddTransitionId and not Dropdown.Opened and dropdownHolderCanvas and dropdownHolderCanvas.Parent then
 						dropdownHolderCanvas.Visible = false
 					end
 				end)
@@ -9803,6 +13117,7 @@ local moduleFunctions = {
 			function Dropdown.Display(_self)
 				local values, text = Dropdown.Values, ""
 				local hasSelection = false
+				local multiCount = 0
 				if config.Multi then
 					local parts = {}
 					for _, value in next, values do
@@ -9810,6 +13125,7 @@ local moduleFunctions = {
 							local _, cleanText = parseColorCode(value)
 							table.insert(parts, cleanText)
 							hasSelection = true
+							multiCount += 1
 						end
 					end
 					text = table.concat(parts, ", ")
@@ -9821,6 +13137,13 @@ local moduleFunctions = {
 					end
 					text = displayText
 					hasSelection = Dropdown.Value ~= nil and Dropdown.Value ~= ""
+				end
+				if config.Multi and multiCount > 0 then
+					countText.Text = tostring(multiCount)
+					countText.TextColor3 = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+					countBadge.Visible = true
+				else
+					countBadge.Visible = false
 				end
 				hasSelectionState = hasSelection
 				stopSelectedLabelScroll()
@@ -9851,12 +13174,14 @@ local moduleFunctions = {
 				ensurePopup()
 				local values, buttons = Dropdown.Values, {}
 				for _, child in next, dropdownScrollFrame:GetChildren() do
-					if not child:IsA("UIListLayout") then
+					if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
 						child:Destroy()
 					end
 				end
 				Dropdown.Buttons = {}
 				dropdownRows = {}
+				local checkIconAsset = Library:GetIcon("check") or ""
+				local accentContrast = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
 
 				for _, value in next, values do
 					local customColor, cleanText = parseColorCode(value)
@@ -9876,38 +13201,64 @@ local moduleFunctions = {
 
 					local selected = config.Multi and (Dropdown.Value[value] == true) or (Dropdown.Value == value)
 					local defaultTransparency = customColor and bgTransparency or 1
-					local hoverTransparency = customColor and math.max(bgTransparency - 0.2, 0.3) or 0.89
-					local selectedTransparency = customColor and math.max(bgTransparency - 0.3, 0.2) or 0.89
+					local hoverTransparency = customColor and math.max(bgTransparency - 0.2, 0.3) or 0.92
+					local selectedTransparency = customColor and math.max(bgTransparency - 0.3, 0.2) or 0.80
 
 					local buttonSelector = New(
 						"Frame",
 						{
-							Size = UDim2.fromOffset(5, selected and 16 or 6),
+							Size = UDim2.fromOffset(3, selected and 18 or 6),
 							BackgroundColor3 = Color3.fromRGB(76, 194, 255),
 							BackgroundTransparency = selected and 0 or 1,
-							Position = UDim2.fromOffset(-1, 17),
+							Position = UDim2.fromOffset(5, 17),
 							AnchorPoint = Vector2.new(0, 0.5),
+							ZIndex = 39,
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						},
+						{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+					)
+
+					local checkIcon = New(
+						"ImageLabel",
+						{
+							Name = "Check",
+							Image = checkIconAsset,
+							Size = UDim2.fromOffset(11, 11),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							Position = UDim2.fromScale(0.5, 0.5),
+							BackgroundTransparency = 1,
+							ImageTransparency = selected and 0 or 1,
+							ImageColor3 = accentContrast,
+							ZIndex = 40
+						}
+					)
+					local checkScale = New("UIScale", {Scale = selected and 1 or 0.35})
+					local checkBadge = New(
+						"Frame",
+						{
+							Name = "CheckBadge",
+							Size = UDim2.fromOffset(18, 18),
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -10, 0.5, 0),
+							BackgroundTransparency = selected and 0.04 or 1,
+							Visible = selected,
+							ZIndex = 39,
 							ThemeTag = {BackgroundColor3 = "Accent"}
 						},
 						{
-							New("UICorner", {CornerRadius = UDim.new(0, 2)}),
-							New(
-								"UIGradient",
-								{
-									Color = ColorSequence.new({
-										ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 194, 255)),
-										ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 210, 255))
-									}),
-									Rotation = 90
-								}
-							)
+							checkScale,
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							checkIcon
 						}
 					)
+					Creator.AddSignal(checkBadge:GetPropertyChangedSignal("BackgroundColor3"), function()
+						checkIcon.ImageColor3 = Creator.AutoContrast(checkBadge.BackgroundColor3)
+					end)
 
 					local buttonLabel = New(
 						"TextLabel",
 						{
-							FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+							FontFace = Creator.Font(selected and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium, Enum.FontStyle.Normal),
 							Text = cleanText,
 							I18nSkip = true,
 							TextSize = 13,
@@ -9919,8 +13270,7 @@ local moduleFunctions = {
 							Name = "ButtonLabel",
 							TextTruncate = Enum.TextTruncate.AtEnd,
 							TextColor3 = Color3.fromRGB(255, 255, 255),
-							TextStrokeTransparency = 0.8,
-							TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+							ZIndex = 39,
 							ThemeTag = {TextColor3 = "Text"}
 						}
 					)
@@ -9928,14 +13278,25 @@ local moduleFunctions = {
 					local labelClip = New(
 						"Frame",
 						{
-							Size = UDim2.new(1, -24, 1, 0),
-							Position = UDim2.fromOffset(12, 0),
+							Size = UDim2.new(1, -44, 1, 0),
+							Position = UDim2.fromOffset(14, 0),
 							BackgroundTransparency = 1,
 							ClipsDescendants = true
 						},
 						{buttonLabel}
 					)
 
+					local rowStroke = New(
+						"UIStroke",
+						{
+							Thickness = 1.2,
+							Transparency = selected and 0.24 or 1,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = selected and "Accent" or "InElementBorder"}
+						}
+					)
+
+					local rowScale = New("UIScale", {Scale = 1})
 					local button = New(
 						"TextButton",
 						{
@@ -9943,24 +13304,18 @@ local moduleFunctions = {
 							BackgroundColor3 = bgColor,
 							BackgroundTransparency = selected and selectedTransparency or defaultTransparency,
 							ClipsDescendants = true,
-							ZIndex = 23,
+							ZIndex = 38,
 							Text = "",
 							Parent = dropdownScrollFrame,
-							ThemeTag = customColor and {} or {BackgroundColor3 = "DropdownOption"}
+							ThemeTag = customColor and {} or {BackgroundColor3 = selected and "Accent" or "DropdownOption"}
 						},
 						{
+							rowScale,
 							buttonSelector,
 							labelClip,
-							New("UICorner", {CornerRadius = UDim.new(0, 6)}),
-							New(
-								"UIStroke",
-								{
-									Thickness = 1.2,
-									Transparency = 0.7,
-									ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-									ThemeTag = {Color = "InElementBorder"}
-								}
-							)
+							checkBadge,
+							New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+							rowStroke
 						}
 					)
 
@@ -9977,14 +13332,15 @@ local moduleFunctions = {
 						buttonLabel.Position = labelDefaultPosition
 					end
 					local function startLabelScroll()
-						local visibleWidth = math.max(labelClip.AbsoluteSize.X, 0)
+						local scale = Creator.GetEffectiveScale(labelClip)
+						local visibleWidth = math.max(labelClip.AbsoluteSize.X / scale, 0)
 						local textWidth = getTextWidth(buttonLabel, cleanText) + 6
 						if textWidth <= visibleWidth then
 							return
 						end
 						stopLabelScroll()
 						buttonLabel.TextTruncate = Enum.TextTruncate.None
-						buttonLabel.Size = UDim2.fromOffset(textWidth, button.AbsoluteSize.Y)
+						buttonLabel.Size = UDim2.fromOffset(textWidth, math.ceil(button.AbsoluteSize.Y / scale))
 						local travel = textWidth - visibleWidth
 						labelScrollTween = TweenService:Create(
 							buttonLabel,
@@ -9997,43 +13353,101 @@ local moduleFunctions = {
 					local hovered = false
 					button.MouseEnter:Connect(function()
 						hovered = true
-						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or hoverTransparency, 8, 1)
+						if Dropdown._HoverPill and dropdownScrollFrame then
+							local scale = Creator.GetEffectiveScale(dropdownScrollFrame)
+							local targetY = (button.AbsolutePosition.Y - dropdownScrollFrame.AbsolutePosition.Y) / scale
+							if not Dropdown._HoverVisible then
+								Dropdown._HoverVisible = true
+								Creator.CancelSpring(Dropdown._HoverPill, "HoverY")
+								Dropdown._HoverY = targetY
+								Dropdown._HoverPill.Position = UDim2.fromOffset(2, targetY)
+							else
+								Creator.SpringValue(Dropdown._HoverPill, "HoverY", targetY, 5.2, 0.88, function(y)
+									Dropdown._HoverY = y
+									Dropdown._HoverPill.Position = UDim2.fromOffset(2, y)
+								end, Dropdown._HoverY)
+							end
+							Creator.SpringValue(Dropdown._HoverPill, "BackgroundTransparency", 0.74, 5.5, 1)
+							if Dropdown._HoverStroke then
+								Creator.SpringValue(Dropdown._HoverStroke, "Transparency", 0.52, 5.5, 1)
+							end
+						end
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or hoverTransparency, 5.2, 1)
 						startLabelScroll()
 					end)
 					button.MouseLeave:Connect(function()
 						hovered = false
-						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or defaultTransparency, 8, 1)
+						Creator.SpringValue(rowScale, "Scale", 1, 6.0, 0.85)
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or defaultTransparency, 5.2, 1)
 						stopLabelScroll()
 					end)
 					button.MouseButton1Down:Connect(function()
-						Creator.SpringValue(button, "BackgroundTransparency", customColor and 0.3 or 0.92, 8, 1)
+						Creator.SpringValue(rowScale, "Scale", 0.98, 6.5, 0.9)
+						Creator.SpringValue(button, "BackgroundTransparency", customColor and 0.3 or 0.92, 5.5, 1)
 					end)
 					button.MouseButton1Up:Connect(function()
-						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or hoverTransparency, 8, 1)
+						Creator.SpringValue(rowScale, "Scale", 1, 5.5, 0.8)
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or hoverTransparency, 5.5, 1)
 					end)
 
 					function row.ResetHover(_self)
 						if not hovered then return end
 						hovered = false
-						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or defaultTransparency, 8, 1)
+						Creator.SpringValue(rowScale, "Scale", 1, 6.0, 0.85)
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or defaultTransparency, 5.2, 1)
 						stopLabelScroll()
 					end
 
-					local selectorHeight = selected and 16 or 6
+					local wasSelected = selected
+					local selectorHeight = selected and 18 or 6
+					local checkAnimGen = 0
 					function row.UpdateButton(_self)
 						if config.Multi then
 							selected = Dropdown.Value[value] == true
 						else
 							selected = Dropdown.Value == value
 						end
-						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or (hovered and hoverTransparency or defaultTransparency), 8, 1)
-						Creator.SpringValue(buttonSelector, "BackgroundTransparency", selected and 0 or 1, 8, 1)
-						local targetHeight = selected and 16 or 6
+						if not customColor then
+							Creator.OverrideTag(button, {BackgroundColor3 = selected and "Accent" or "DropdownOption"})
+						end
+						Creator.OverrideTag(rowStroke, {Color = selected and "Accent" or "InElementBorder"})
+						Creator.SpringValue(rowStroke, "Transparency", selected and 0.24 or 1, 5.2, 1)
+						if selected ~= wasSelected then
+							checkAnimGen += 1
+							local myAnim = checkAnimGen
+							if Creator.ReducedMotion then
+								Creator.CancelSpring(checkScale, "Scale")
+								checkScale.Scale = selected and 1 or 0.38
+								checkBadge.BackgroundTransparency = selected and 0.04 or 1
+								checkIcon.ImageTransparency = selected and 0 or 1
+								checkBadge.Visible = selected
+							elseif selected then
+								checkBadge.Visible = true
+								checkScale.Scale = 0.38
+								Creator.SpringValue(checkScale, "Scale", 1, 4.6, 0.62)
+								Creator.SpringValue(checkBadge, "BackgroundTransparency", 0.04, 5.2, 1)
+								Creator.SpringValue(checkIcon, "ImageTransparency", 0, 5.2, 1)
+							else
+								Creator.SpringValue(checkScale, "Scale", 0.38, 5.8, 1)
+								Creator.SpringValue(checkBadge, "BackgroundTransparency", 1, 5.8, 1)
+								Creator.SpringValue(checkIcon, "ImageTransparency", 1, 5.8, 1)
+								task.delay(0.17, function()
+									if myAnim == checkAnimGen and not selected and checkBadge and checkBadge.Parent then
+										checkBadge.Visible = false
+									end
+								end)
+							end
+							wasSelected = selected
+						end
+						buttonLabel.FontFace = Creator.Font(selected and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+						Creator.SpringValue(button, "BackgroundTransparency", selected and selectedTransparency or (hovered and hoverTransparency or defaultTransparency), 5.2, 1)
+						Creator.SpringValue(buttonSelector, "BackgroundTransparency", selected and 0 or 1, 5.2, 1)
+						local targetHeight = selected and 18 or 6
 						if targetHeight ~= selectorHeight then
 							selectorHeight = targetHeight
-							Creator.SpringValue(buttonSelector, "Size", targetHeight, 6, 0.8, function(h)
-								buttonSelector.Size = UDim2.fromOffset(5, h)
-							end)
+							Creator.SpringValue(buttonSelector, "Size", targetHeight, 5.0, 0.82, function(h)
+								buttonSelector.Size = UDim2.fromOffset(3, h)
+							end, buttonSelector.Size.Y.Offset)
 						end
 					end
 
@@ -10061,7 +13475,9 @@ local moduleFunctions = {
 								selected = newSelected
 								Dropdown.Value = selected and value or nil
 								for _, otherRow in next, buttons do
-									otherRow:UpdateButton()
+									if otherRow ~= row then
+										otherRow:UpdateButton()
+									end
 								end
 							end
 							row:UpdateButton()
@@ -10069,6 +13485,16 @@ local moduleFunctions = {
 							Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
 							Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
 							Library._TouchElement(Dropdown)
+							if not config.Multi and config.CloseOnSelect ~= false then
+								selectCloseGen += 1
+								local myGen = selectCloseGen
+								local myOpenId = ddTransitionId
+								task.delay(Creator.ReducedMotion and 0 or 0.18, function()
+									if myGen == selectCloseGen and myOpenId == ddTransitionId and Dropdown.Opened then
+										Dropdown:Close()
+									end
+								end)
+							end
 						end
 					end)
 
@@ -10101,7 +13527,7 @@ local moduleFunctions = {
 				callback(Dropdown.Value)
 			end
 
-			function Dropdown.SetValue(_self, value)
+			function Dropdown.SetValue(_self, value, silent)
 				if Dropdown.Multi then
 					Dropdown.Value = toSelectionSet(value)
 				else
@@ -10118,8 +13544,10 @@ local moduleFunctions = {
 					end
 				end
 				Dropdown:Display()
-				Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
-				Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+				if not silent then
+					Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+					Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+				end
 			end
 
 			function Dropdown.Destroy(_self)
@@ -10202,6 +13630,8 @@ local moduleFunctions = {
 					Type = "Input"
 				},
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			inputFrame.TitleLabel.Size = UDim2.new(1, -180, 0, 14)
+			inputFrame.DescLabel.Size = UDim2.new(1, -180, 0, 14)
 			Input.SetTitle = inputFrame.SetTitle
 			Input.SetDesc = inputFrame.SetDesc
 			Input.Frame = inputFrame.Frame
@@ -10277,6 +13707,8 @@ local moduleFunctions = {
 			local Keybind, picking, keybindFrame =
 				{
 					Value = config.Default,
+					Default = config.Default,
+					Title = config.Title,
 					Toggled = false,
 					Mode = config.Mode or "Toggle",
 					Type = "Keybind",
@@ -10287,6 +13719,8 @@ local moduleFunctions = {
 				},
 			false,
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
+			keybindFrame.TitleLabel.Size = UDim2.new(1, -110, 0, 14)
+			keybindFrame.DescLabel.Size = UDim2.new(1, -110, 0, 14)
 			Keybind.SetTitle = keybindFrame.SetTitle
 			Keybind.SetDesc = keybindFrame.SetDesc
 			Keybind.Frame = keybindFrame.Frame
@@ -10294,11 +13728,7 @@ local moduleFunctions = {
 				New(
 					"TextLabel",
 					{
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Regular,
-							Enum.FontStyle.Normal
-						),
+						FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal),
 						Text = config.Default,
 						I18nSkip = true,
 						TextColor3 = Color3.fromRGB(240, 240, 240),
@@ -10320,10 +13750,10 @@ local moduleFunctions = {
 						Size = UDim2.fromOffset(0, 30),
 						Position = UDim2.new(1, -10, 0.5, 0),
 						AnchorPoint = Vector2.new(1, 0.5),
-						BackgroundTransparency = 0.9,
+						BackgroundTransparency = 0.24,
 						Parent = keybindFrame.Frame,
 						AutomaticSize = Enum.AutomaticSize.X,
-						ThemeTag = {BackgroundColor3 = "Keybind"}
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
 					},
 					{
 						New("UICorner", {CornerRadius = UDim.new(0, 5)}),
@@ -10331,7 +13761,7 @@ local moduleFunctions = {
 						New(
 							"UIStroke",
 							{
-								Transparency = 0.5,
+								Transparency = 0.38,
 								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 								ThemeTag = {Color = "InElementBorder"}
 							}
@@ -10369,6 +13799,9 @@ local moduleFunctions = {
 				keybindDisplayLabel.Text = key
 				Keybind.Value = key
 				Keybind.Mode = mode
+				if type(Library._NotifyKeybindChanged) == "function" then
+					Library._NotifyKeybindChanged()
+				end
 			end
 			function Keybind.OnClick(_self, callback)
 				Keybind.Clicked = callback
@@ -10380,6 +13813,9 @@ local moduleFunctions = {
 			function Keybind.DoClick(_self)
 				Library:SafeCallback(Keybind.Callback, Keybind.Toggled)
 				Library:SafeCallback(Keybind.Clicked, Keybind.Toggled)
+				if type(Library._NotifyKeybindChanged) == "function" then
+					Library._NotifyKeybindChanged()
+				end
 			end
 
 			-- Route through Creator's single shared keybind listener instead of
@@ -10399,9 +13835,15 @@ local moduleFunctions = {
 					Keybind:DoClick()
 				end
 			})
+			if not config._Internal and type(Library._TrackKeybind) == "function" then
+				Library._TrackKeybind(Keybind)
+			end
 
 			function Keybind.Destroy(_self)
 				Creator.UnregisterKeybind(routerEntry)
+				if type(Library._UntrackKeybind) == "function" then
+					Library._UntrackKeybind(Keybind)
+				end
 				keybindFrame:Destroy()
 				Library.Options[idx] = nil
 			end
@@ -10463,15 +13905,19 @@ local moduleFunctions = {
 	[25] = function()
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(25)
 		local Root = moduleScript.Parent.Parent
-		local Components, Flipper, Creator, Paragraph = Root.Components, requireModule(Root.Packages.Flipper), requireModule(Root.Creator), {}
+		local Components, Creator, Paragraph = Root.Components, requireModule(Root.Creator), {}
 		Paragraph.__index = Paragraph
 		Paragraph.__type = "Paragraph"
-		function Paragraph.New(_self, config)
-			assert(config.Title, "Paragraph - Missing Title")
+		function Paragraph.New(parent, config)
+			if type(parent) == "table" and config == nil and parent.Title ~= nil then
+				config = parent
+				parent = Paragraph
+			end
+			assert(config and config.Title, "Paragraph - Missing Title")
 			config.Content = config.Content or ""
-			local paragraph = requireModule(Components.Element)(config.Title, config.Content, Paragraph.Container, false)
-			paragraph.Frame.BackgroundTransparency = 0.92
-			paragraph.Border.Transparency = 0.6
+			local container = (parent and parent.Container) or Paragraph.Container
+			local paragraph = requireModule(Components.Element)(config.Title, config.Content, container, false)
+			paragraph.Border.Transparency = 0.36
 			return paragraph
 		end
 		return Paragraph
@@ -10496,108 +13942,180 @@ local moduleFunctions = {
 					Min = config.Min,
 					Max = config.Max,
 					Rounding = config.Rounding,
+					Prefix = type(config.Prefix) == "string" and config.Prefix or "",
+					Suffix = type(config.Suffix) == "string" and config.Suffix or "",
 					Callback = config.Callback or function(_value)
 					end,
 					Type = "Slider"
 				},
 			false,
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
-			sliderFrame.DescLabel.Size = UDim2.new(1, -170, 0, 14)
+			sliderFrame.TitleLabel.Size = UDim2.new(1, -210, 0, 14)
+			sliderFrame.DescLabel.Size = UDim2.new(1, -210, 0, 14)
 			Slider.SetTitle = sliderFrame.SetTitle
 			Slider.SetDesc = sliderFrame.SetDesc
 			Slider.Frame = sliderFrame.Frame
-			local sliderDot =
-				New(
-					"ImageLabel",
-					{
-						AnchorPoint = Vector2.new(0, 0.5),
-						Position = UDim2.new(0, -7, 0.5, 0),
-						Size = UDim2.fromOffset(14, 14),
-						Image = "http://www.roblox.com/asset/?id=12266946128",
-						ThemeTag = {ImageColor3 = "Accent"}
-					}
-				)
 
-			local sliderRail, sliderFill, sliderDisplay =
-				New(
-					"Frame",
-					{BackgroundTransparency = 1, Position = UDim2.fromOffset(7, 0), Size = UDim2.new(1, -14, 1, 0)},
-					{sliderDot}
-				),
-			New(
+			-- Pure Vector Thumb with crisp accent ring (replaces legacy circle asset)
+			local thumbStroke = New(
+				"UIStroke",
+				{
+					Thickness = 2,
+					Transparency = 0.05,
+					ThemeTag = {Color = "Accent"}
+				}
+			)
+			local sliderDot = New(
+				"Frame",
+				{
+					Name = "Thumb",
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(0, 0, 0.5, 0),
+					Size = UDim2.fromOffset(13, 13),
+					BackgroundColor3 = Color3.fromRGB(248, 250, 255),
+					BackgroundTransparency = 0,
+					ZIndex = 3,
+					ThemeTag = {BackgroundColor3 = "Text"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)}), thumbStroke}
+			)
+
+			local sliderRail = New(
+				"Frame",
+				{BackgroundTransparency = 1, Position = UDim2.fromOffset(6, 0), Size = UDim2.new(1, -12, 1, 0)},
+				{sliderDot}
+			)
+			local sliderFill = New(
 				"Frame",
 				{Size = UDim2.new(0, 0, 1, 0), ThemeTag = {BackgroundColor3 = "Accent"}},
 				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
-			),
-			New(
+			)
+
+			-- Styled editable value pill next to track
+			local pillStroke = New(
+				"UIStroke",
+				{
+					Transparency = 0.38,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				}
+			)
+			local sliderDisplay = New(
 				"TextBox",
 				{
-					FontFace = Font.new "rbxasset://fonts/families/GothamSSm.json",
-					Text = "Value",
+					Name = "ValueInput",
+					FontFace = Creator.Font(Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+					Text = "0",
 					I18nSkip = true,
-					TextSize = 12,
+					TextSize = 11,
 					ClearTextOnFocus = false,
-					TextWrapped = true,
-					TextXAlignment = Enum.TextXAlignment.Right,
-					BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-					BackgroundTransparency = 1,
-					Size = UDim2.new(0, 100, 0, 14),
-					Position = UDim2.new(0, -12, 0.5, 0),
+					TextWrapped = false,
+					TextXAlignment = Enum.TextXAlignment.Center,
+					BackgroundTransparency = 0.24,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(36, 22),
+					Position = UDim2.new(0, -10, 0.5, 0),
 					AnchorPoint = Vector2.new(1, 0.5),
-					ThemeTag = {TextColor3 = "SubText"},
+					ThemeTag = {BackgroundColor3 = "DialogHolder", TextColor3 = "Text"},
 					TextEditable = true
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}),
+					New("UISizeConstraint", {MinSize = Vector2.new(36, 22), MaxSize = Vector2.new(88, 22)}),
+					pillStroke
 				}
 			)
 
-			local sliderInner =
-				New(
-					"Frame",
-					{
-						Size = UDim2.new(1, 0, 0, 4),
-						AnchorPoint = Vector2.new(1, 0.5),
-						Position = UDim2.new(1, -10, 0.5, 0),
-						BackgroundTransparency = 0.4,
-						Parent = sliderFrame.Frame,
-						ThemeTag = {BackgroundColor3 = "SliderRail"}
-					},
-					{
-						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
-						New("UISizeConstraint", {MaxSize = Vector2.new(150, math.huge)}),
-						sliderDisplay,
-						sliderFill,
-						sliderRail
-					}
-				)
+			local sliderInner = New(
+				"Frame",
+				{
+					Name = "Track",
+					Size = UDim2.new(1, 0, 0, 5),
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -12, 0.5, 0),
+					BackgroundTransparency = 0.72,
+					Parent = sliderFrame.Frame,
+					ThemeTag = {BackgroundColor3 = "SliderRail"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					New("UISizeConstraint", {MaxSize = Vector2.new(146, math.huge)}),
+					sliderDisplay,
+					sliderFill,
+					sliderRail
+				}
+			)
 
 			local editingNumber = false
+			local function setThumbSize(px)
+				Creator.SpringValue(sliderDot, "Size", px, 12, 0.8, function(sz)
+					sliderDot.Size = UDim2.fromOffset(sz, sz)
+				end, sliderDot.Size.X.Offset)
+			end
 
-			local function updateFromPosition(posX)
-				local width = sliderRail.AbsoluteSize.X
+			local function formatValue(val)
+				if Slider.Prefix ~= "" or Slider.Suffix ~= "" then
+					return Slider.Prefix .. tostring(val) .. Slider.Suffix
+				end
+				return tostring(val)
+			end
+
+			local dragRailX, dragRailW = nil, nil
+			local function updateFromPosition(posX, useSnapshot)
+				local railX = (useSnapshot and dragRailX) or sliderRail.AbsolutePosition.X
+				local width = (useSnapshot and dragRailW) or sliderRail.AbsoluteSize.X
 				if width <= 0 then
 					return
 				end
-				local ratio = math.clamp((posX - sliderRail.AbsolutePosition.X) / width, 0, 1)
+				local ratio = math.clamp((posX - railX) / width, 0, 1)
 				Slider:SetValue(Slider.Min + ((Slider.Max - Slider.Min) * ratio))
 			end
 
-			-- Shared Creator.BeginDrag attaches InputChanged/InputEnded ONLY while actively
-			-- dragging, eliminating 2 persistent global UIS connections per Slider.
-			local function startDrag(input)
+			local function startDrag(_input)
 				if editingNumber then
 					return
 				end
 				dragging = true
+				-- Snapshot rail bounds so sliders that resize their own window (e.g. DPI Scale)
+				-- never oscillate in a feedback loop while dragging.
+				dragRailX = sliderRail.AbsolutePosition.X
+				dragRailW = sliderRail.AbsoluteSize.X
+				setThumbSize(16)
 				Library._TouchElement(Slider)
 				Creator.BeginDrag(function(moveInput)
 					if not dragging or editingNumber then
 						return
 					end
-					updateFromPosition(moveInput.Position.X)
+					updateFromPosition(moveInput.Position.X, true)
 				end, function()
 					dragging = false
+					dragRailX = nil
+					dragRailW = nil
+					setThumbSize(13)
 				end)
 			end
 
+			local railHitArea = New("Frame", {
+				Name = "HitArea",
+				BackgroundTransparency = 1,
+				Active = true,
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, -6, 0.5, 0),
+				Size = UDim2.new(1, 12, 0, 26),
+				Parent = sliderRail
+			})
+			Creator.AddSignal(railHitArea.MouseEnter, function()
+				if not dragging then
+					setThumbSize(15)
+				end
+			end)
+			Creator.AddSignal(railHitArea.MouseLeave, function()
+				if not dragging then
+					setThumbSize(13)
+				end
+			end)
 			Creator.AddSignal(
 				sliderDot.InputBegan,
 				function(input)
@@ -10606,54 +14124,45 @@ local moduleFunctions = {
 					end
 				end
 			)
-
-			local railHitArea = New("Frame", {
-				Name = "HitArea",
-				BackgroundTransparency = 1,
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.fromScale(0, 0.5),
-				Size = UDim2.new(1, 0, 0, 24),
-				Parent = sliderRail
-			})
 			Creator.AddSignal(
 				railHitArea.InputBegan,
 				function(input)
 					if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
 						and not editingNumber and sliderRail.AbsoluteSize.X > 0 then
-						updateFromPosition(input.Position.X)
 						startDrag(input)
+						updateFromPosition(input.Position.X, true)
 					end
 				end
 			)
 
-			sliderDisplay.Focused:Connect(
-				function()
-					editingNumber = true
-					if dragging then
-						dragging = false
-						Creator.EndDrag()
-					end
+			sliderDisplay.Focused:Connect(function()
+				editingNumber = true
+				if dragging then
+					dragging = false
+					setThumbSize(13)
+					Creator.EndDrag()
 				end
-			)
+				if Slider.Value ~= nil then
+					sliderDisplay.Text = tostring(Slider.Value)
+				end
+				Creator.SpringValue(pillStroke, "Transparency", 0.14, 10, 1)
+				Creator.OverrideTag(pillStroke, {Color = "Accent"})
+			end)
 
-			sliderDisplay.FocusLost:Connect(
-				function()
-					editingNumber = false
-					local text = tostring(sliderDisplay.Text):gsub(",", ".")
-					local num = tonumber(text)
-					if num then
-						local newVal = Library:Round(math.clamp(num, Slider.Min, Slider.Max), Slider.Rounding)
-						Slider:SetValue(newVal)
-						Library._TouchElement(Slider)
-					else
-						if Slider.Value ~= nil then
-							sliderDisplay.Text = tostring(Slider.Value)
-						else
-							sliderDisplay.Text = tostring(config.Default)
-						end
-					end
+			sliderDisplay.FocusLost:Connect(function()
+				editingNumber = false
+				Creator.SpringValue(pillStroke, "Transparency", 0.38, 10, 1)
+				Creator.OverrideTag(pillStroke, {Color = "InElementBorder"})
+				local text = tostring(sliderDisplay.Text):gsub(",", "."):match("[-+]?%d*%.?%d+")
+				local num = text and tonumber(text) or nil
+				if num then
+					local newVal = Library:Round(math.clamp(num, Slider.Min, Slider.Max), Slider.Rounding)
+					Slider:SetValue(newVal)
+					Library._TouchElement(Slider)
+				else
+					sliderDisplay.Text = formatValue(Slider.Value ~= nil and Slider.Value or config.Default)
 				end
-			)
+			end)
 
 			function Slider.OnChanged(_self, callback)
 				Slider.Changed = callback
@@ -10663,9 +14172,9 @@ local moduleFunctions = {
 				target.Value = Library:Round(math.clamp(value, Slider.Min, Slider.Max), Slider.Rounding)
 				local range = Slider.Max - Slider.Min
 				local ratio = range ~= 0 and ((target.Value - Slider.Min) / range) or 0
-				sliderDot.Position = UDim2.new(ratio, -7, 0.5, 0)
+				sliderDot.Position = UDim2.new(ratio, 0, 0.5, 0)
 				sliderFill.Size = UDim2.fromScale(ratio, 1)
-				sliderDisplay.Text = tostring(target.Value)
+				sliderDisplay.Text = formatValue(target.Value)
 				Library:SafeCallback(Slider.Callback, target.Value)
 				Library:SafeCallback(Slider.Changed, target.Value)
 			end
@@ -10688,81 +14197,407 @@ local moduleFunctions = {
 		local Root = moduleScript.Parent.Parent
 		local Creator = requireModule(Root.Creator)
 		local TweenService = Creator.GetService("TweenService")
+		local UserInputService = Creator.GetService("UserInputService")
 		local New, Components, Element = Creator.New, Root.Components, {}
 		Element.__index = Element
 		Element.__type = "Toggle"
-		local TOGGLE_TWEEN = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+		local SLIDE_TWEEN = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+		local STRETCH_IN = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local STRETCH_OUT = TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
 			local Library = parent.Library
 			assert(config.Title, "Toggle - Missing Title")
 			local Toggle, toggleFrame =
 				{
 					Value = config.Default or false,
+					Default = config.Default or false,
+					Title = config.Title,
 					Callback = config.Callback or function(_value)
 					end,
-					Type = "Toggle"
+					Type = "Toggle",
+					Addons = {}
 				},
 			requireModule(Components.Element)(config.Title, config.Description, parent.Container, true)
-			toggleFrame.DescLabel.Size = UDim2.new(1, -54, 0, 14)
+			toggleFrame.TitleLabel.Size = UDim2.new(1, -60, 0, 14)
+			toggleFrame.DescLabel.Size = UDim2.new(1, -60, 0, 14)
 			Toggle.SetTitle = toggleFrame.SetTitle
 			Toggle.SetDesc = toggleFrame.SetDesc
+			Toggle.SetBadge = toggleFrame.SetBadge
 			Toggle.Frame = toggleFrame.Frame
-			local toggleCircle, toggleBorder =
-				New(
-					"ImageLabel",
+			local parentScrollFrame = parent.ScrollFrame
+
+			-- Pure Vector Pill Thumb (replaces legacy raster circle asset, crisp at any DPI)
+			local toggleThumb = New(
+				"Frame",
+				{
+					Name = "Thumb",
+					AnchorPoint = Vector2.new(0, 0.5),
+					Size = UDim2.fromOffset(14, 14),
+					Position = UDim2.new(0, 3, 0.5, 0),
+					BackgroundTransparency = 0.2,
+					BorderSizePixel = 0,
+					ThemeTag = {BackgroundColor3 = "ToggleSlider"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
+			local toggleBorder = New("UIStroke", {Transparency = 0.36, Thickness = 1, ThemeTag = {Color = "ToggleSlider"}})
+			local toggleTrack = New(
+				"Frame",
+				{
+					Name = "Track",
+					Size = UDim2.fromOffset(40, 20),
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -12, 0.5, 0),
+					Parent = toggleFrame.Frame,
+					BackgroundTransparency = 0.88,
+					ThemeTag = {BackgroundColor3 = "ToggleSlider"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)}), toggleBorder, toggleThumb}
+			)
+
+			-- Inline Addons container (sits neatly to the left of the Toggle switch)
+			local addonHolder, addonLayout = nil, nil
+			local function ensureAddonHolder()
+				if addonHolder then
+					return addonHolder
+				end
+				addonLayout = New(
+					"UIListLayout",
 					{
-						AnchorPoint = Vector2.new(0, 0.5),
-						Size = UDim2.fromOffset(14, 14),
-						Position = UDim2.new(0, 2, 0.5, 0),
-						Image = "http://www.roblox.com/asset/?id=12266946128",
-						ImageTransparency = 0.5,
-						ThemeTag = {ImageColor3 = "ToggleSlider"}
+						FillDirection = Enum.FillDirection.Horizontal,
+						HorizontalAlignment = Enum.HorizontalAlignment.Right,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 6)
 					}
-				),
-			New("UIStroke", {Transparency = 0.5, ThemeTag = {Color = "ToggleSlider"}})
-			local toggleSlider =
-				New(
+				)
+				addonHolder = New(
 					"Frame",
 					{
-						Size = UDim2.fromOffset(36, 18),
+						Name = "Addons",
 						AnchorPoint = Vector2.new(1, 0.5),
-						Position = UDim2.new(1, -10, 0.5, 0),
-						Parent = toggleFrame.Frame,
+						Position = UDim2.new(1, -60, 0.5, 0),
+						Size = UDim2.fromOffset(160, 26),
 						BackgroundTransparency = 1,
-						ThemeTag = {BackgroundColor3 = "Accent"}
+						ZIndex = 4,
+						Parent = toggleFrame.Frame
 					},
-					{New("UICorner", {CornerRadius = UDim.new(0, 9)}), toggleBorder, toggleCircle}
+					{addonLayout}
 				)
+				local function syncLabelBudget()
+					if not addonHolder or not addonHolder.Parent then
+						return
+					end
+					local scale = Creator.GetEffectiveScale(addonHolder)
+					local usedW = math.ceil(addonLayout.AbsoluteContentSize.X / scale)
+					local rightReserve = 66 + usedW
+					toggleFrame.TitleLabel.Size = UDim2.new(1, -rightReserve, 0, 14)
+					toggleFrame.DescLabel.Size = UDim2.new(1, -rightReserve, 0, 14)
+				end
+				Creator.AddSignal(addonLayout:GetPropertyChangedSignal("AbsoluteContentSize"), syncLabelBudget)
+				Creator.RegisterDPIScale(addonHolder, function()
+					task.defer(syncLabelBudget)
+				end)
+				task.defer(syncLabelBudget)
+				return addonHolder
+			end
+
+			-- Inline Addon: Toggle:AddKeybind(idx, opts)
+			function Toggle.AddKeybind(_self, keyIdx, keyOpts)
+				if type(keyIdx) == "table" and keyOpts == nil then
+					keyOpts = keyIdx
+					keyIdx = nil
+				end
+				keyOpts = type(keyOpts) == "table" and keyOpts or {}
+				local holder = ensureAddonHolder()
+				local syncToggle = keyOpts.SyncToggleState ~= false
+				local picking = false
+				local Kb = {
+					Value = tostring(keyOpts.Default or "None"),
+					Default = tostring(keyOpts.Default or "None"),
+					Mode = keyOpts.Mode or "Toggle",
+					Title = tostring(keyOpts.Title or Toggle.Title or "Keybind"),
+					Toggled = Toggle.Value,
+					Type = "Keybind",
+					SyncToggleState = syncToggle,
+					Callback = keyOpts.Callback or function() end,
+					ChangedCallback = keyOpts.ChangedCallback or function() end
+				}
+
+				local kbLabel = New(
+					"TextLabel",
+					{
+						Name = "KeyLabel",
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						Text = Kb.Value,
+						I18nSkip = true,
+						TextSize = 11,
+						TextXAlignment = Enum.TextXAlignment.Center,
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.new(0, 0, 1, 0),
+						BackgroundTransparency = 1,
+						ThemeTag = {TextColor3 = "Text"}
+					}
+				)
+				local kbStroke = New(
+					"UIStroke",
+					{
+						Transparency = 0.38,
+						Thickness = 1,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "InElementBorder"}
+					}
+				)
+				local kbBtn = New(
+					"TextButton",
+					{
+						Name = "InlineKeybind",
+						Text = "",
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.fromOffset(0, 22),
+						BackgroundTransparency = 0.24,
+						AutoButtonColor = false,
+						LayoutOrder = #Toggle.Addons + 1,
+						ZIndex = 5,
+						Parent = holder,
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}),
+						New("UISizeConstraint", {MinSize = Vector2.new(26, 22), MaxSize = Vector2.new(110, 22)}),
+						kbStroke,
+						kbLabel
+					}
+				)
+				Kb.Frame = kbBtn
+
+				local function notifyHud()
+					if type(Library._NotifyKeybindChanged) == "function" then
+						Library._NotifyKeybindChanged()
+					end
+				end
+
+				function Kb.GetState(_s)
+					if UserInputService:GetFocusedTextBox() and Kb.Mode ~= "Always" then
+						return false
+					end
+					if Kb.Mode == "Always" then
+						return true
+					elseif Kb.Mode == "Hold" then
+						if Kb.Value == "None" then
+							return false
+						end
+						if Kb.Value == "MouseLeft" then
+							return UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+						elseif Kb.Value == "MouseRight" then
+							return UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+						end
+						local ok, kc = pcall(function() return Enum.KeyCode[Kb.Value] end)
+						return ok and kc ~= nil and UserInputService:IsKeyDown(kc)
+					else
+						return syncToggle and Toggle.Value or Kb.Toggled
+					end
+				end
+
+				function Kb.SetValue(_s, key, mode)
+					Kb.Value = tostring(key or Kb.Value)
+					Kb.Mode = mode or Kb.Mode
+					kbLabel.Text = Kb.Value
+					notifyHud()
+				end
+				function Kb.OnChanged(_s, cb)
+					Kb.Changed = cb
+					cb(Kb.Value)
+				end
+				function Kb.OnClick(_s, cb)
+					Kb.Clicked = cb
+				end
+
+				local routerEntry = Creator.RegisterKeybind({
+					IsPicking = function() return picking end,
+					GetMode = function() return Kb.Mode end,
+					GetKey = function() return Kb.Value end,
+					Trigger = function()
+						if syncToggle then
+							Toggle:SetValue(not Toggle.Value)
+							Kb.Toggled = Toggle.Value
+						else
+							Kb.Toggled = not Kb.Toggled
+						end
+						Library:SafeCallback(Kb.Callback, Kb.Toggled)
+						Library:SafeCallback(Kb.Clicked, Kb.Toggled)
+						notifyHud()
+					end
+				})
+
+				if type(Library._TrackKeybind) == "function" then
+					Library._TrackKeybind(Kb)
+				end
+
+				function Kb.Destroy(_s)
+					Creator.UnregisterKeybind(routerEntry)
+					if type(Library._UntrackKeybind) == "function" then
+						Library._UntrackKeybind(Kb)
+					end
+					if kbBtn and kbBtn.Parent then
+						kbBtn:Destroy()
+					end
+					if keyIdx ~= nil then
+						Library.Options[keyIdx] = nil
+					end
+				end
+
+				Creator.AddSignal(kbBtn.MouseEnter, function()
+					Creator.SpringValue(kbStroke, "Transparency", 0.16, 10, 1)
+				end)
+				Creator.AddSignal(kbBtn.MouseLeave, function()
+					if not picking then
+						Creator.SpringValue(kbStroke, "Transparency", 0.38, 10, 1)
+					end
+				end)
+				Creator.AddSignal(kbBtn.MouseButton1Click, function()
+					if picking then
+						return
+					end
+					picking = true
+					kbLabel.Text = "..."
+					Creator.OverrideTag(kbStroke, {Color = "Accent"})
+					task.delay(0.12, function()
+						local beganConn
+						beganConn = UserInputService.InputBegan:Connect(function(keyInput)
+							local key = nil
+							if keyInput.UserInputType == Enum.UserInputType.Keyboard then
+								if keyInput.KeyCode == Enum.KeyCode.Escape or keyInput.KeyCode == Enum.KeyCode.Backspace then
+									key = "None"
+								else
+									key = keyInput.KeyCode.Name
+								end
+							elseif keyInput.UserInputType == Enum.UserInputType.MouseButton1 then
+								key = "MouseLeft"
+							elseif keyInput.UserInputType == Enum.UserInputType.MouseButton2 then
+								key = "MouseRight"
+							end
+							if beganConn then
+								beganConn:Disconnect()
+							end
+							picking = false
+							Creator.OverrideTag(kbStroke, {Color = "InElementBorder"})
+							if key == nil then
+								kbLabel.Text = Kb.Value
+								return
+							end
+							Kb.Value = key
+							kbLabel.Text = key
+							Library._TouchElement(Toggle)
+							Library:SafeCallback(Kb.ChangedCallback, keyInput.KeyCode or keyInput.UserInputType)
+							Library:SafeCallback(Kb.Changed, key)
+							notifyHud()
+						end)
+					end)
+				end)
+
+				table.insert(Toggle.Addons, Kb)
+				if keyIdx ~= nil then
+					Library.Options[keyIdx] = Kb
+				end
+				notifyHud()
+				return Kb
+			end
+
+			-- Inline Addon: Toggle:AddColorpicker(idx, opts)
+			function Toggle.AddColorpicker(_self, cpIdx, cpOpts)
+				if type(cpIdx) == "table" and cpOpts == nil then
+					cpOpts = cpIdx
+					cpIdx = nil
+				end
+				cpOpts = type(cpOpts) == "table" and cpOpts or {}
+				local holder = ensureAddonHolder()
+				local ColorpickerModule = requireModule(Root.Elements.Colorpicker)
+				local inlineConfig = {}
+				for k, v in next, cpOpts do
+					inlineConfig[k] = v
+				end
+				inlineConfig.Title = cpOpts.Title or Toggle.Title
+				inlineConfig.Default = cpOpts.Default or Color3.fromRGB(99, 179, 255)
+				inlineConfig._InlineHolder = holder
+				inlineConfig._LayoutOrder = #Toggle.Addons + 1
+				local fakeParent = {Library = Library, Container = holder, ScrollFrame = parentScrollFrame}
+				local cp = ColorpickerModule.New(fakeParent, cpIdx, inlineConfig)
+				table.insert(Toggle.Addons, cp)
+				return cp
+			end
+
 			function Toggle.OnChanged(_self, callback)
 				Toggle.Changed = callback
 				callback(Toggle.Value)
 			end
+
+			local animGen = 0
 			local function applyVisual(value, instant)
+				animGen += 1
+				local myGen = animGen
+				local useInstant = instant or Creator.ReducedMotion
 				Creator.OverrideTag(toggleBorder, {Color = value and "Accent" or "ToggleSlider"})
-				Creator.OverrideTag(toggleCircle, {ImageColor3 = value and "ToggleToggled" or "ToggleSlider"})
-				local targetPos = UDim2.new(0, value and 19 or 2, 0.5, 0)
-				local targetBg = value and 0 or 1
-				if instant then
-					toggleCircle.Position = targetPos
-					toggleSlider.BackgroundTransparency = targetBg
+				Creator.OverrideTag(toggleTrack, {BackgroundColor3 = value and "Accent" or "ToggleSlider"})
+				Creator.OverrideTag(toggleThumb, {BackgroundColor3 = value and "ToggleToggled" or "ToggleSlider"})
+
+				local targetX = value and 23 or 3
+				local targetPos = UDim2.new(0, targetX, 0.5, 0)
+				local targetBg = value and 0 or 0.88
+				local targetThumbAlpha = value and 0 or 0.18
+				local targetBorderAlpha = value and 0.12 or 0.36
+
+				if useInstant then
+					toggleThumb.Position = targetPos
+					toggleThumb.Size = UDim2.fromOffset(14, 14)
+					toggleThumb.BackgroundTransparency = targetThumbAlpha
+					toggleTrack.BackgroundTransparency = targetBg
+					toggleBorder.Transparency = targetBorderAlpha
 				else
-					TweenService:Create(toggleCircle, TOGGLE_TWEEN, {Position = targetPos}):Play()
-					TweenService:Create(toggleSlider, TOGGLE_TWEEN, {BackgroundTransparency = targetBg}):Play()
+					-- Tactile squash-and-stretch pill elongation while sliding
+					TweenService:Create(toggleThumb, SLIDE_TWEEN, {Position = targetPos, BackgroundTransparency = targetThumbAlpha}):Play()
+					TweenService:Create(toggleTrack, SLIDE_TWEEN, {BackgroundTransparency = targetBg}):Play()
+					TweenService:Create(toggleBorder, SLIDE_TWEEN, {Transparency = targetBorderAlpha}):Play()
+					local stretch = TweenService:Create(toggleThumb, STRETCH_IN, {Size = UDim2.fromOffset(18, 13)})
+					stretch:Play()
+					stretch.Completed:Connect(function()
+						if myGen == animGen and toggleThumb.Parent then
+							TweenService:Create(toggleThumb, STRETCH_OUT, {Size = UDim2.fromOffset(14, 14)}):Play()
+						end
+					end)
 				end
-				toggleCircle.ImageTransparency = value and 0 or 0.5
 			end
+
 			function Toggle.SetValue(_self, value, instant)
 				value = not (not value)
 				Toggle.Value = value
 				applyVisual(value, instant == true)
 				Library:SafeCallback(Toggle.Callback, Toggle.Value)
 				Library:SafeCallback(Toggle.Changed, Toggle.Value)
+				if type(Library._NotifyKeybindChanged) == "function" and #Toggle.Addons > 0 then
+					Library._NotifyKeybindChanged()
+				end
 			end
+
 			function Toggle.Destroy(_self)
+				for _, addon in ipairs(Toggle.Addons) do
+					if type(addon.Destroy) == "function" then
+						pcall(addon.Destroy, addon)
+					end
+				end
+				table.clear(Toggle.Addons)
 				toggleFrame:Destroy()
-				Library.Options[idx] = nil
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
 			end
+
 			Creator.AddSignal(
 				toggleFrame.Frame.MouseButton1Click,
 				function()
@@ -10770,839 +14605,1891 @@ local moduleFunctions = {
 					Library._TouchElement(Toggle)
 				end
 			)
-			-- Apply initial state instantaneously (zero Tween allocations at boot).
 			Toggle:SetValue(Toggle.Value, true)
-			Library.Options[idx] = Toggle
+			if idx ~= nil then
+				Library.Options[idx] = Toggle
+			end
 			return Toggle
 		end
 		return Element
 	end,
 	[28] = function()
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(28)
+		local rawAssets = {
+			["a-arrow-down"] = "rbxassetid://92867583610071",
+			["a-arrow-up"] = "rbxassetid://132318504999733",
+			["a-large-small"] = "rbxassetid://111491496660216",
+			["accessibility"] = "rbxassetid://114029945302017",
+			["activity"] = "rbxassetid://94212016861936",
+			["air-vent"] = "rbxassetid://81517226012329",
+			["airplay"] = "rbxassetid://115020759309179",
+			["alarm-clock"] = "rbxassetid://126259032907535",
+			["alarm-clock-check"] = "rbxassetid://76437352099157",
+			["alarm-clock-minus"] = "rbxassetid://77364179863205",
+			["alarm-clock-off"] = "rbxassetid://97904885874823",
+			["alarm-clock-plus"] = "rbxassetid://80468822979214",
+			["alarm-smoke"] = "rbxassetid://96965448419685",
+			["album"] = "rbxassetid://127358331163602",
+			["align-center-horizontal"] = "rbxassetid://81570549209434",
+			["align-center-vertical"] = "rbxassetid://118470463752466",
+			["align-end-horizontal"] = "rbxassetid://139502909745427",
+			["align-end-vertical"] = "rbxassetid://96528869059554",
+			["align-horizontal-distribute-center"] = "rbxassetid://97220086126656",
+			["align-horizontal-distribute-end"] = "rbxassetid://106128590702022",
+			["align-horizontal-distribute-start"] = "rbxassetid://76074660002997",
+			["align-horizontal-justify-center"] = "rbxassetid://75732302772427",
+			["align-horizontal-justify-end"] = "rbxassetid://129167626402283",
+			["align-horizontal-justify-start"] = "rbxassetid://130161830325281",
+			["align-horizontal-space-around"] = "rbxassetid://91646106782950",
+			["align-horizontal-space-between"] = "rbxassetid://103886093046990",
+			["align-start-horizontal"] = "rbxassetid://125674804697729",
+			["align-start-vertical"] = "rbxassetid://105020230154823",
+			["align-vertical-distribute-center"] = "rbxassetid://93791183635525",
+			["align-vertical-distribute-end"] = "rbxassetid://139354223511433",
+			["align-vertical-distribute-start"] = "rbxassetid://74961997822126",
+			["align-vertical-justify-center"] = "rbxassetid://134754696166569",
+			["align-vertical-justify-end"] = "rbxassetid://92569381441969",
+			["align-vertical-justify-start"] = "rbxassetid://99692844572718",
+			["align-vertical-space-around"] = "rbxassetid://96206012459190",
+			["align-vertical-space-between"] = "rbxassetid://124998077349706",
+			["ambulance"] = "rbxassetid://78599995190651",
+			["ampersand"] = "rbxassetid://75272915739209",
+			["ampersands"] = "rbxassetid://126947193455996",
+			["amphora"] = "rbxassetid://137370389604364",
+			["anchor"] = "rbxassetid://92181172123618",
+			["angry"] = "rbxassetid://74237056000103",
+			["annoyed"] = "rbxassetid://80064369052011",
+			["antenna"] = "rbxassetid://99628923540956",
+			["anvil"] = "rbxassetid://100203029845919",
+			["aperture"] = "rbxassetid://83396154449972",
+			["app-window"] = "rbxassetid://93142176757189",
+			["app-window-mac"] = "rbxassetid://79587216113811",
+			["apple"] = "rbxassetid://104349242902442",
+			["archive"] = "rbxassetid://122180020814574",
+			["archive-restore"] = "rbxassetid://78956681942188",
+			["archive-x"] = "rbxassetid://75830115088395",
+			["armchair"] = "rbxassetid://105384358373973",
+			["arrow-big-down"] = "rbxassetid://81081164158885",
+			["arrow-big-down-dash"] = "rbxassetid://137987229582002",
+			["arrow-big-left"] = "rbxassetid://85973092492641",
+			["arrow-big-left-dash"] = "rbxassetid://97827621354677",
+			["arrow-big-right"] = "rbxassetid://82960676755590",
+			["arrow-big-right-dash"] = "rbxassetid://117825834972403",
+			["arrow-big-up"] = "rbxassetid://93136954756149",
+			["arrow-big-up-dash"] = "rbxassetid://99260194327483",
+			["arrow-down"] = "rbxassetid://98764963621439",
+			["arrow-down-0-1"] = "rbxassetid://120961896217875",
+			["arrow-down-1-0"] = "rbxassetid://93474255891850",
+			["arrow-down-a-z"] = "rbxassetid://99554596207900",
+			["arrow-down-from-line"] = "rbxassetid://132045845807798",
+			["arrow-down-left"] = "rbxassetid://102899325237364",
+			["arrow-down-narrow-wide"] = "rbxassetid://129105261655061",
+			["arrow-down-right"] = "rbxassetid://123109928624974",
+			["arrow-down-to-dot"] = "rbxassetid://101675355931221",
+			["arrow-down-to-line"] = "rbxassetid://87050478931254",
+			["arrow-down-up"] = "rbxassetid://85780258549577",
+			["arrow-down-wide-narrow"] = "rbxassetid://88461733425991",
+			["arrow-down-z-a"] = "rbxassetid://76115279362232",
+			["arrow-left"] = "rbxassetid://102531941843733",
+			["arrow-left-from-line"] = "rbxassetid://87857914437603",
+			["arrow-left-right"] = "rbxassetid://131324733048447",
+			["arrow-left-to-line"] = "rbxassetid://118645136026970",
+			["arrow-right"] = "rbxassetid://113692007244654",
+			["arrow-right-from-line"] = "rbxassetid://74073639809355",
+			["arrow-right-left"] = "rbxassetid://77015754304300",
+			["arrow-right-to-line"] = "rbxassetid://78632510329852",
+			["arrow-up"] = "rbxassetid://89282378235317",
+			["arrow-up-0-1"] = "rbxassetid://105257823943016",
+			["arrow-up-1-0"] = "rbxassetid://134175521693798",
+			["arrow-up-a-z"] = "rbxassetid://77763416595160",
+			["arrow-up-down"] = "rbxassetid://81019887641527",
+			["arrow-up-from-dot"] = "rbxassetid://124408496673275",
+			["arrow-up-from-line"] = "rbxassetid://95777664626453",
+			["arrow-up-left"] = "rbxassetid://123490598231261",
+			["arrow-up-narrow-wide"] = "rbxassetid://73006024672636",
+			["arrow-up-right"] = "rbxassetid://129280608535523",
+			["arrow-up-to-line"] = "rbxassetid://108818207813537",
+			["arrow-up-wide-narrow"] = "rbxassetid://87437426951568",
+			["arrow-up-z-a"] = "rbxassetid://107546173611884",
+			["arrows-up-from-line"] = "rbxassetid://133710016938621",
+			["asterisk"] = "rbxassetid://88552752106723",
+			["at-sign"] = "rbxassetid://79059152889146",
+			["atom"] = "rbxassetid://73167696981648",
+			["audio-lines"] = "rbxassetid://70930641819242",
+			["audio-waveform"] = "rbxassetid://86462036665209",
+			["award"] = "rbxassetid://132740088158419",
+			["axe"] = "rbxassetid://132405197863294",
+			["axis-3d"] = "rbxassetid://122438676546804",
+			["baby"] = "rbxassetid://93472926933440",
+			["backpack"] = "rbxassetid://140420225386018",
+			["badge"] = "rbxassetid://116620312917084",
+			["badge-alert"] = "rbxassetid://101829200081951",
+			["badge-cent"] = "rbxassetid://133345018873154",
+			["badge-check"] = "rbxassetid://76078495178149",
+			["badge-dollar-sign"] = "rbxassetid://127139803581141",
+			["badge-euro"] = "rbxassetid://120016477674659",
+			["badge-indian-rupee"] = "rbxassetid://75659682309981",
+			["badge-info"] = "rbxassetid://131995373201472",
+			["badge-japanese-yen"] = "rbxassetid://99081574588615",
+			["badge-minus"] = "rbxassetid://140321561183881",
+			["badge-percent"] = "rbxassetid://121359224294885",
+			["badge-plus"] = "rbxassetid://100325578561866",
+			["badge-pound-sterling"] = "rbxassetid://119688217279444",
+			["badge-question-mark"] = "rbxassetid://121464963737502",
+			["badge-russian-ruble"] = "rbxassetid://108839463659864",
+			["badge-swiss-franc"] = "rbxassetid://91447608372740",
+			["badge-turkish-lira"] = "rbxassetid://137839965873529",
+			["badge-x"] = "rbxassetid://122931434733842",
+			["baggage-claim"] = "rbxassetid://86922213051957",
+			["balloon"] = "rbxassetid://97489111621526",
+			["ban"] = "rbxassetid://90767043015246",
+			["banana"] = "rbxassetid://140713420056179",
+			["bandage"] = "rbxassetid://129660129590770",
+			["banknote"] = "rbxassetid://104840231536668",
+			["banknote-arrow-down"] = "rbxassetid://139366449345199",
+			["banknote-arrow-up"] = "rbxassetid://133758343082529",
+			["banknote-x"] = "rbxassetid://95348701438065",
+			["barcode"] = "rbxassetid://118473018143689",
+			["barrel"] = "rbxassetid://130647115622774",
+			["baseline"] = "rbxassetid://124677132511270",
+			["bath"] = "rbxassetid://76031400297942",
+			["battery"] = "rbxassetid://70765800346189",
+			["battery-charging"] = "rbxassetid://80139357470047",
+			["battery-full"] = "rbxassetid://70906718268972",
+			["battery-low"] = "rbxassetid://139659256984314",
+			["battery-medium"] = "rbxassetid://105934079398915",
+			["battery-plus"] = "rbxassetid://91931341486966",
+			["battery-warning"] = "rbxassetid://115230083817257",
+			["beaker"] = "rbxassetid://80902539995520",
+			["bean"] = "rbxassetid://89491967076869",
+			["bean-off"] = "rbxassetid://98164436608714",
+			["bed"] = "rbxassetid://97726529032925",
+			["bed-double"] = "rbxassetid://73820193212911",
+			["bed-single"] = "rbxassetid://113423940880634",
+			["beef"] = "rbxassetid://105850162318915",
+			["beef-off"] = "rbxassetid://99869959725200",
+			["beer"] = "rbxassetid://116404978807744",
+			["beer-off"] = "rbxassetid://120333134736361",
+			["bell"] = "rbxassetid://97392696311902",
+			["bell-dot"] = "rbxassetid://93161277118810",
+			["bell-electric"] = "rbxassetid://100277767266983",
+			["bell-minus"] = "rbxassetid://126334890449727",
+			["bell-off"] = "rbxassetid://78560046118930",
+			["bell-plus"] = "rbxassetid://77014333795836",
+			["bell-ring"] = "rbxassetid://94612128913941",
+			["between-horizontal-end"] = "rbxassetid://81602774794322",
+			["between-horizontal-start"] = "rbxassetid://76112384929846",
+			["between-vertical-end"] = "rbxassetid://72817612571631",
+			["between-vertical-start"] = "rbxassetid://85278312190301",
+			["biceps-flexed"] = "rbxassetid://82004462003936",
+			["bike"] = "rbxassetid://102930322246035",
+			["binary"] = "rbxassetid://91751953950088",
+			["binoculars"] = "rbxassetid://101460003267896",
+			["biohazard"] = "rbxassetid://95956532900432",
+			["bird"] = "rbxassetid://132284145117371",
+			["birdhouse"] = "rbxassetid://83999157401433",
+			["bitcoin"] = "rbxassetid://95459240442938",
+			["blend"] = "rbxassetid://111679612185257",
+			["blinds"] = "rbxassetid://71164165283925",
+			["blocks"] = "rbxassetid://72212693357737",
+			["bluetooth"] = "rbxassetid://90506573139443",
+			["bluetooth-connected"] = "rbxassetid://96315134002985",
+			["bluetooth-off"] = "rbxassetid://80600044218117",
+			["bluetooth-searching"] = "rbxassetid://100673019606426",
+			["bold"] = "rbxassetid://116141470019166",
+			["bolt"] = "rbxassetid://102881251417484",
+			["bomb"] = "rbxassetid://139223800924636",
+			["bone"] = "rbxassetid://111242153474115",
+			["book"] = "rbxassetid://125383279695672",
+			["book-a"] = "rbxassetid://104067275658465",
+			["book-alert"] = "rbxassetid://124159928044853",
+			["book-audio"] = "rbxassetid://109208148317037",
+			["book-check"] = "rbxassetid://115999656081696",
+			["book-copy"] = "rbxassetid://108543407492005",
+			["book-dashed"] = "rbxassetid://127430784795958",
+			["book-down"] = "rbxassetid://101011730128222",
+			["book-headphones"] = "rbxassetid://108670200799574",
+			["book-heart"] = "rbxassetid://112788845135284",
+			["book-image"] = "rbxassetid://80808285757226",
+			["book-key"] = "rbxassetid://116024426170705",
+			["book-lock"] = "rbxassetid://118765061220571",
+			["book-marked"] = "rbxassetid://73211024251780",
+			["book-minus"] = "rbxassetid://112724962046282",
+			["book-open"] = "rbxassetid://129845326810392",
+			["book-open-check"] = "rbxassetid://130848362492667",
+			["book-open-text"] = "rbxassetid://100629528672195",
+			["book-plus"] = "rbxassetid://140267785051233",
+			["book-search"] = "rbxassetid://132585409504950",
+			["book-text"] = "rbxassetid://94011772484232",
+			["book-type"] = "rbxassetid://97817304725443",
+			["book-up"] = "rbxassetid://98640174079190",
+			["book-up-2"] = "rbxassetid://130161620853665",
+			["book-user"] = "rbxassetid://128489189240523",
+			["book-x"] = "rbxassetid://118754548186537",
+			["bookmark"] = "rbxassetid://121093149326239",
+			["bookmark-check"] = "rbxassetid://93940443347986",
+			["bookmark-minus"] = "rbxassetid://96807096039910",
+			["bookmark-plus"] = "rbxassetid://121469724491615",
+			["bookmark-x"] = "rbxassetid://112272342584706",
+			["boom-box"] = "rbxassetid://99901322535868",
+			["bot"] = "rbxassetid://80451686744860",
+			["bot-message-square"] = "rbxassetid://96145330292478",
+			["bot-off"] = "rbxassetid://140417690560013",
+			["bottle-wine"] = "rbxassetid://131675403196921",
+			["bow-arrow"] = "rbxassetid://124089655150375",
+			["box"] = "rbxassetid://101768155599700",
+			["boxes"] = "rbxassetid://136372617578355",
+			["braces"] = "rbxassetid://117761094704041",
+			["brackets"] = "rbxassetid://74368995728099",
+			["brain"] = "rbxassetid://92424107303177",
+			["brain-circuit"] = "rbxassetid://70547962410202",
+			["brain-cog"] = "rbxassetid://132039205501538",
+			["brick-wall"] = "rbxassetid://112878522258821",
+			["brick-wall-fire"] = "rbxassetid://92980588705520",
+			["brick-wall-shield"] = "rbxassetid://75954432775071",
+			["briefcase"] = "rbxassetid://96754188164225",
+			["briefcase-business"] = "rbxassetid://129135125207283",
+			["briefcase-conveyor-belt"] = "rbxassetid://108665725653714",
+			["briefcase-medical"] = "rbxassetid://119917756334087",
+			["bring-to-front"] = "rbxassetid://132975903553748",
+			["brush"] = "rbxassetid://127035535799640",
+			["brush-cleaning"] = "rbxassetid://71728977448805",
+			["bubbles"] = "rbxassetid://106183424168227",
+			["bug"] = "rbxassetid://83626408925438",
+			["bug-off"] = "rbxassetid://88020025049245",
+			["bug-play"] = "rbxassetid://80107955888092",
+			["building"] = "rbxassetid://110616258983082",
+			["building-2"] = "rbxassetid://77873775611951",
+			["bus"] = "rbxassetid://133798469717463",
+			["bus-front"] = "rbxassetid://89863432456045",
+			["cable"] = "rbxassetid://128449944504901",
+			["cable-car"] = "rbxassetid://128643682205596",
+			["cake"] = "rbxassetid://103131590503275",
+			["cake-slice"] = "rbxassetid://136769828413242",
+			["calculator"] = "rbxassetid://74915716529646",
+			["calendar"] = "rbxassetid://114792700814035",
+			["calendar-1"] = "rbxassetid://98458364171044",
+			["calendar-arrow-down"] = "rbxassetid://108415736543437",
+			["calendar-arrow-up"] = "rbxassetid://70574654109118",
+			["calendar-check"] = "rbxassetid://71551019465748",
+			["calendar-check-2"] = "rbxassetid://120231170248276",
+			["calendar-clock"] = "rbxassetid://119132152594595",
+			["calendar-cog"] = "rbxassetid://122402172360287",
+			["calendar-days"] = "rbxassetid://99072017568595",
+			["calendar-fold"] = "rbxassetid://117368871270394",
+			["calendar-heart"] = "rbxassetid://88839008103676",
+			["calendar-minus"] = "rbxassetid://137354318924383",
+			["calendar-minus-2"] = "rbxassetid://98846170279891",
+			["calendar-off"] = "rbxassetid://109726151749217",
+			["calendar-plus"] = "rbxassetid://125266115249843",
+			["calendar-plus-2"] = "rbxassetid://112264562093883",
+			["calendar-range"] = "rbxassetid://103641849247576",
+			["calendar-search"] = "rbxassetid://92010083223634",
+			["calendar-sync"] = "rbxassetid://78082218499697",
+			["calendar-x"] = "rbxassetid://106703374806500",
+			["calendar-x-2"] = "rbxassetid://107518051061147",
+			["calendars"] = "rbxassetid://130944763042289",
+			["camera"] = "rbxassetid://79950339943067",
+			["camera-off"] = "rbxassetid://81057636835256",
+			["candy"] = "rbxassetid://107812129154678",
+			["candy-cane"] = "rbxassetid://71689468772492",
+			["candy-off"] = "rbxassetid://110232752314832",
+			["cannabis"] = "rbxassetid://98792006538601",
+			["cannabis-off"] = "rbxassetid://101938500363812",
+			["captions"] = "rbxassetid://104960225031445",
+			["captions-off"] = "rbxassetid://105223545364193",
+			["car"] = "rbxassetid://121065933462582",
+			["car-front"] = "rbxassetid://87380942739063",
+			["car-taxi-front"] = "rbxassetid://122455403384057",
+			["caravan"] = "rbxassetid://120070979471783",
+			["card-sim"] = "rbxassetid://134490550095771",
+			["carrot"] = "rbxassetid://119118221444304",
+			["case-lower"] = "rbxassetid://129303130603241",
+			["case-sensitive"] = "rbxassetid://125410273293056",
+			["case-upper"] = "rbxassetid://111633433531325",
+			["cassette-tape"] = "rbxassetid://137065788934157",
+			["cast"] = "rbxassetid://98202245922071",
+			["castle"] = "rbxassetid://119275077187784",
+			["cat"] = "rbxassetid://124252153404931",
+			["cctv"] = "rbxassetid://99979894766624",
+			["cctv-off"] = "rbxassetid://75925370187295",
+			["chart-area"] = "rbxassetid://123446436762366",
+			["chart-bar"] = "rbxassetid://105389816384108",
+			["chart-bar-big"] = "rbxassetid://72336824986044",
+			["chart-bar-decreasing"] = "rbxassetid://107217459044963",
+			["chart-bar-increasing"] = "rbxassetid://88268905998571",
+			["chart-bar-stacked"] = "rbxassetid://98478751113024",
+			["chart-candlestick"] = "rbxassetid://125676898615697",
+			["chart-column"] = "rbxassetid://97915995538580",
+			["chart-column-big"] = "rbxassetid://98598733210787",
+			["chart-column-decreasing"] = "rbxassetid://73586137373563",
+			["chart-column-increasing"] = "rbxassetid://120421615068601",
+			["chart-column-stacked"] = "rbxassetid://86031449675105",
+			["chart-gantt"] = "rbxassetid://88811660555940",
+			["chart-line"] = "rbxassetid://101833156055618",
+			["chart-network"] = "rbxassetid://104027882693561",
+			["chart-no-axes-column"] = "rbxassetid://94078751170351",
+			["chart-no-axes-column-decreasing"] = "rbxassetid://123371717192542",
+			["chart-no-axes-column-increasing"] = "rbxassetid://140383830943049",
+			["chart-no-axes-combined"] = "rbxassetid://121424233161912",
+			["chart-no-axes-gantt"] = "rbxassetid://131936541106368",
+			["chart-pie"] = "rbxassetid://113412261630136",
+			["chart-scatter"] = "rbxassetid://108217585014571",
+			["chart-spline"] = "rbxassetid://90307460742494",
+			["check"] = "rbxassetid://93898873302694",
+			["check-check"] = "rbxassetid://95183312173858",
+			["check-line"] = "rbxassetid://115122343485290",
+			["chef-hat"] = "rbxassetid://121744015002573",
+			["cherry"] = "rbxassetid://139519182403183",
+			["chess-bishop"] = "rbxassetid://121701705580238",
+			["chess-king"] = "rbxassetid://90885687223462",
+			["chess-knight"] = "rbxassetid://96467707042169",
+			["chess-pawn"] = "rbxassetid://111318574652751",
+			["chess-queen"] = "rbxassetid://98304702099749",
+			["chess-rook"] = "rbxassetid://76223925830262",
+			["chevron-down"] = "rbxassetid://134243273101015",
+			["chevron-first"] = "rbxassetid://105243363790238",
+			["chevron-last"] = "rbxassetid://89268452603731",
+			["chevron-left"] = "rbxassetid://73780377692148",
+			["chevron-right"] = "rbxassetid://92473583511724",
+			["chevron-up"] = "rbxassetid://122444883127455",
+			["chevrons-down"] = "rbxassetid://100524612205956",
+			["chevrons-down-up"] = "rbxassetid://139404716013205",
+			["chevrons-left"] = "rbxassetid://82617201744347",
+			["chevrons-left-right"] = "rbxassetid://87910685945204",
+			["chevrons-left-right-ellipsis"] = "rbxassetid://125035817741526",
+			["chevrons-right"] = "rbxassetid://139121276490483",
+			["chevrons-right-left"] = "rbxassetid://87149546686569",
+			["chevrons-up"] = "rbxassetid://100467452364672",
+			["chevrons-up-down"] = "rbxassetid://131833120209646",
+			["chromium"] = "rbxassetid://128165143739006",
+			["church"] = "rbxassetid://113714744350666",
+			["cigarette"] = "rbxassetid://137149549886852",
+			["cigarette-off"] = "rbxassetid://77797883078452",
+			["circle"] = "rbxassetid://130359823580534",
+			["circle-alert"] = "rbxassetid://83898160590116",
+			["circle-arrow-down"] = "rbxassetid://95901860261344",
+			["circle-arrow-left"] = "rbxassetid://102148876968988",
+			["circle-arrow-out-down-left"] = "rbxassetid://140598097856694",
+			["circle-arrow-out-down-right"] = "rbxassetid://119952801379305",
+			["circle-arrow-out-up-left"] = "rbxassetid://132858212688303",
+			["circle-arrow-out-up-right"] = "rbxassetid://81783743753173",
+			["circle-arrow-right"] = "rbxassetid://70786767999559",
+			["circle-arrow-up"] = "rbxassetid://84395128546494",
+			["circle-check"] = "rbxassetid://85262178816537",
+			["circle-check-big"] = "rbxassetid://93202927221730",
+			["circle-chevron-down"] = "rbxassetid://137069490345718",
+			["circle-chevron-left"] = "rbxassetid://130250009740827",
+			["circle-chevron-right"] = "rbxassetid://125943696958495",
+			["circle-chevron-up"] = "rbxassetid://111223574026321",
+			["circle-dashed"] = "rbxassetid://126799443883746",
+			["circle-divide"] = "rbxassetid://106398997754208",
+			["circle-dollar-sign"] = "rbxassetid://91106238890387",
+			["circle-dot"] = "rbxassetid://82947033619201",
+			["circle-dot-dashed"] = "rbxassetid://111451232827180",
+			["circle-ellipsis"] = "rbxassetid://91687150884779",
+			["circle-equal"] = "rbxassetid://95133963751438",
+			["circle-fading-arrow-up"] = "rbxassetid://104648212910336",
+			["circle-fading-plus"] = "rbxassetid://91847890443490",
+			["circle-gauge"] = "rbxassetid://108157549473765",
+			["circle-minus"] = "rbxassetid://133556159576809",
+			["circle-off"] = "rbxassetid://97923456918886",
+			["circle-parking"] = "rbxassetid://124034962915196",
+			["circle-parking-off"] = "rbxassetid://128369410981252",
+			["circle-pause"] = "rbxassetid://139337739700879",
+			["circle-percent"] = "rbxassetid://133311912860256",
+			["circle-pile"] = "rbxassetid://116353155251541",
+			["circle-play"] = "rbxassetid://120408917249739",
+			["circle-plus"] = "rbxassetid://113157136350384",
+			["circle-pound-sterling"] = "rbxassetid://105476153083828",
+			["circle-power"] = "rbxassetid://140676030155098",
+			["circle-question-mark"] = "rbxassetid://97516698664325",
+			["circle-slash"] = "rbxassetid://125206439913049",
+			["circle-slash-2"] = "rbxassetid://136766902186549",
+			["circle-small"] = "rbxassetid://73685402843600",
+			["circle-star"] = "rbxassetid://120318414957104",
+			["circle-stop"] = "rbxassetid://87400503942659",
+			["circle-user"] = "rbxassetid://136220511671311",
+			["circle-user-round"] = "rbxassetid://95489465399880",
+			["circle-x"] = "rbxassetid://76821953846248",
+			["circuit-board"] = "rbxassetid://107695264369312",
+			["citrus"] = "rbxassetid://139018222976433",
+			["clapperboard"] = "rbxassetid://132660667070200",
+			["clipboard"] = "rbxassetid://89601995828423",
+			["clipboard-check"] = "rbxassetid://92649798577170",
+			["clipboard-clock"] = "rbxassetid://123957515687745",
+			["clipboard-copy"] = "rbxassetid://125851897718493",
+			["clipboard-list"] = "rbxassetid://96460215958908",
+			["clipboard-minus"] = "rbxassetid://107968008485671",
+			["clipboard-paste"] = "rbxassetid://74382068849983",
+			["clipboard-pen"] = "rbxassetid://75290966822953",
+			["clipboard-pen-line"] = "rbxassetid://77711589791615",
+			["clipboard-plus"] = "rbxassetid://134285318675662",
+			["clipboard-type"] = "rbxassetid://89949374318028",
+			["clipboard-x"] = "rbxassetid://102222456890103",
+			["clock"] = "rbxassetid://121808839832144",
+			["clock-1"] = "rbxassetid://129363225422045",
+			["clock-10"] = "rbxassetid://104332695855541",
+			["clock-11"] = "rbxassetid://119023205186105",
+			["clock-12"] = "rbxassetid://117789618723068",
+			["clock-2"] = "rbxassetid://134710777209413",
+			["clock-3"] = "rbxassetid://136385631189327",
+			["clock-4"] = "rbxassetid://121808839832144",
+			["clock-5"] = "rbxassetid://85082019959457",
+			["clock-6"] = "rbxassetid://71009733505593",
+			["clock-7"] = "rbxassetid://103111188546225",
+			["clock-8"] = "rbxassetid://110059272125337",
+			["clock-9"] = "rbxassetid://77610027126437",
+			["clock-alert"] = "rbxassetid://97157344465162",
+			["clock-arrow-down"] = "rbxassetid://92349314416042",
+			["clock-arrow-up"] = "rbxassetid://111484286332629",
+			["clock-check"] = "rbxassetid://85231630218857",
+			["clock-fading"] = "rbxassetid://93205297285245",
+			["clock-plus"] = "rbxassetid://93367709263150",
+			["closed-caption"] = "rbxassetid://99832644030788",
+			["cloud"] = "rbxassetid://121226497050352",
+			["cloud-alert"] = "rbxassetid://91967273658626",
+			["cloud-backup"] = "rbxassetid://111649579696132",
+			["cloud-check"] = "rbxassetid://97318598202432",
+			["cloud-cog"] = "rbxassetid://96497764065749",
+			["cloud-download"] = "rbxassetid://121435581993566",
+			["cloud-drizzle"] = "rbxassetid://139525315752605",
+			["cloud-fog"] = "rbxassetid://76650233148776",
+			["cloud-hail"] = "rbxassetid://72320462748242",
+			["cloud-lightning"] = "rbxassetid://133517088924849",
+			["cloud-moon"] = "rbxassetid://71938114737914",
+			["cloud-moon-rain"] = "rbxassetid://127667837827018",
+			["cloud-off"] = "rbxassetid://131907154501444",
+			["cloud-rain"] = "rbxassetid://105547081967408",
+			["cloud-rain-wind"] = "rbxassetid://107414583736721",
+			["cloud-snow"] = "rbxassetid://72307126270226",
+			["cloud-sun"] = "rbxassetid://86114208148727",
+			["cloud-sun-rain"] = "rbxassetid://99041604425705",
+			["cloud-sync"] = "rbxassetid://79393911188593",
+			["cloud-upload"] = "rbxassetid://93307473217005",
+			["cloudy"] = "rbxassetid://105360479023346",
+			["clover"] = "rbxassetid://74925550436750",
+			["club"] = "rbxassetid://108490365816628",
+			["code"] = "rbxassetid://107380207681249",
+			["code-xml"] = "rbxassetid://130150477351734",
+			["codepen"] = "rbxassetid://135643965971885",
+			["codesandbox"] = "rbxassetid://106911852964823",
+			["coffee"] = "rbxassetid://106864403231093",
+			["cog"] = "rbxassetid://116544501716299",
+			["coins"] = "rbxassetid://116510979641930",
+			["columns-2"] = "rbxassetid://113004100221850",
+			["columns-3"] = "rbxassetid://115223357399375",
+			["columns-3-cog"] = "rbxassetid://121589691981064",
+			["columns-4"] = "rbxassetid://130807991968419",
+			["combine"] = "rbxassetid://79908476334048",
+			["command"] = "rbxassetid://93648221906330",
+			["compass"] = "rbxassetid://115123411028382",
+			["component"] = "rbxassetid://110027788875080",
+			["computer"] = "rbxassetid://77480056459407",
+			["concierge-bell"] = "rbxassetid://140384259310436",
+			["cone"] = "rbxassetid://97759550688437",
+			["construction"] = "rbxassetid://106539489968173",
+			["contact"] = "rbxassetid://75868297719012",
+			["contact-round"] = "rbxassetid://71907624112229",
+			["container"] = "rbxassetid://91507237573499",
+			["contrast"] = "rbxassetid://112796643981497",
+			["cookie"] = "rbxassetid://73159504540002",
+			["cooking-pot"] = "rbxassetid://94959783129799",
+			["copy"] = "rbxassetid://78979572434545",
+			["copy-check"] = "rbxassetid://91177247988892",
+			["copy-minus"] = "rbxassetid://109524509933035",
+			["copy-plus"] = "rbxassetid://113618379616952",
+			["copy-slash"] = "rbxassetid://93805787810390",
+			["copy-x"] = "rbxassetid://106557557978061",
+			["copyleft"] = "rbxassetid://78559055698593",
+			["copyright"] = "rbxassetid://129433635747111",
+			["corner-down-left"] = "rbxassetid://90473561177832",
+			["corner-down-right"] = "rbxassetid://86512767702085",
+			["corner-left-down"] = "rbxassetid://139876989150630",
+			["corner-left-up"] = "rbxassetid://126228268096099",
+			["corner-right-down"] = "rbxassetid://89237035551302",
+			["corner-right-up"] = "rbxassetid://112851237026705",
+			["corner-up-left"] = "rbxassetid://84669279763024",
+			["corner-up-right"] = "rbxassetid://115099889693145",
+			["cpu"] = "rbxassetid://77549309870247",
+			["creative-commons"] = "rbxassetid://90408210735312",
+			["credit-card"] = "rbxassetid://99163352872346",
+			["croissant"] = "rbxassetid://130710485559420",
+			["crop"] = "rbxassetid://116344601101413",
+			["cross"] = "rbxassetid://101833377863588",
+			["crosshair"] = "rbxassetid://134242818164054",
+			["crown"] = "rbxassetid://127843403295538",
+			["cuboid"] = "rbxassetid://75618807946111",
+			["cup-soda"] = "rbxassetid://121098640829562",
+			["currency"] = "rbxassetid://90551250119972",
+			["cylinder"] = "rbxassetid://90569677179169",
+			["dam"] = "rbxassetid://76874486231393",
+			["database"] = "rbxassetid://126791525623846",
+			["database-backup"] = "rbxassetid://103403210984699",
+			["database-search"] = "rbxassetid://92017137080138",
+			["database-zap"] = "rbxassetid://131199921258418",
+			["decimals-arrow-left"] = "rbxassetid://120198500638749",
+			["decimals-arrow-right"] = "rbxassetid://118263047146797",
+			["delete"] = "rbxassetid://126279426372342",
+			["dessert"] = "rbxassetid://71508133278830",
+			["diameter"] = "rbxassetid://97429051503783",
+			["diamond"] = "rbxassetid://105846996304890",
+			["diamond-minus"] = "rbxassetid://128989071438290",
+			["diamond-percent"] = "rbxassetid://107717860105959",
+			["diamond-plus"] = "rbxassetid://134701163723675",
+			["dice-1"] = "rbxassetid://112650149591038",
+			["dice-2"] = "rbxassetid://112278274566793",
+			["dice-3"] = "rbxassetid://118526270626312",
+			["dice-4"] = "rbxassetid://113365650364004",
+			["dice-5"] = "rbxassetid://72768312430593",
+			["dice-6"] = "rbxassetid://85376239182543",
+			["dices"] = "rbxassetid://81268120302865",
+			["diff"] = "rbxassetid://135052708609715",
+			["disc"] = "rbxassetid://101908120120777",
+			["disc-2"] = "rbxassetid://91419420404185",
+			["disc-3"] = "rbxassetid://135470554736048",
+			["disc-album"] = "rbxassetid://74693460404344",
+			["divide"] = "rbxassetid://136678191878278",
+			["dna"] = "rbxassetid://74007982981741",
+			["dna-off"] = "rbxassetid://89612426361540",
+			["dock"] = "rbxassetid://121997427160252",
+			["dog"] = "rbxassetid://71920105558570",
+			["dollar-sign"] = "rbxassetid://127320961224019",
+			["donut"] = "rbxassetid://72204922742657",
+			["door-closed"] = "rbxassetid://136249099949073",
+			["door-closed-locked"] = "rbxassetid://74027613267551",
+			["door-open"] = "rbxassetid://91306356501736",
+			["dot"] = "rbxassetid://137321056643916",
+			["download"] = "rbxassetid://134814648082393",
+			["drafting-compass"] = "rbxassetid://99701976182841",
+			["drama"] = "rbxassetid://110297795801577",
+			["dribbble"] = "rbxassetid://80231809663849",
+			["drill"] = "rbxassetid://108644821412796",
+			["drone"] = "rbxassetid://117299095794783",
+			["droplet"] = "rbxassetid://100597455015098",
+			["droplet-off"] = "rbxassetid://119365002225172",
+			["droplets"] = "rbxassetid://140111846025180",
+			["drum"] = "rbxassetid://136979060344890",
+			["drumstick"] = "rbxassetid://104662462521709",
+			["dumbbell"] = "rbxassetid://80277236776212",
+			["ear"] = "rbxassetid://121894949934209",
+			["ear-off"] = "rbxassetid://87421916192807",
+			["earth"] = "rbxassetid://76231597751076",
+			["earth-lock"] = "rbxassetid://88814147073745",
+			["eclipse"] = "rbxassetid://114829622118222",
+			["egg"] = "rbxassetid://117851493400222",
+			["egg-fried"] = "rbxassetid://90622538210545",
+			["egg-off"] = "rbxassetid://92288321309285",
+			["ellipse"] = "rbxassetid://71559658267482",
+			["ellipsis"] = "rbxassetid://140019550645825",
+			["ellipsis-vertical"] = "rbxassetid://117978708573781",
+			["equal"] = "rbxassetid://123467780715624",
+			["equal-approximately"] = "rbxassetid://105382689698323",
+			["equal-not"] = "rbxassetid://76864449458032",
+			["eraser"] = "rbxassetid://133957773112410",
+			["ethernet-port"] = "rbxassetid://75391715149314",
+			["euro"] = "rbxassetid://72229646524456",
+			["ev-charger"] = "rbxassetid://97906158859623",
+			["expand"] = "rbxassetid://137492887754537",
+			["external-link"] = "rbxassetid://129331830773832",
+			["eye"] = "rbxassetid://100033680381365",
+			["eye-closed"] = "rbxassetid://111063268625789",
+			["eye-off"] = "rbxassetid://135928786788378",
+			["facebook"] = "rbxassetid://72098528632192",
+			["factory"] = "rbxassetid://102170024318039",
+			["fan"] = "rbxassetid://78391400440696",
+			["fast-forward"] = "rbxassetid://121615540167909",
+			["feather"] = "rbxassetid://91872927606406",
+			["fence"] = "rbxassetid://123451565578029",
+			["ferris-wheel"] = "rbxassetid://79729205796176",
+			["figma"] = "rbxassetid://134182122852301",
+			["file"] = "rbxassetid://74748492079329",
+			["file-archive"] = "rbxassetid://77018106869967",
+			["file-axis-3d"] = "rbxassetid://133912328009885",
+			["file-badge"] = "rbxassetid://74564895394477",
+			["file-box"] = "rbxassetid://119264004071690",
+			["file-braces"] = "rbxassetid://95314128621234",
+			["file-braces-corner"] = "rbxassetid://77253337986109",
+			["file-chart-column"] = "rbxassetid://82048481252560",
+			["file-chart-column-increasing"] = "rbxassetid://134449481172067",
+			["file-chart-line"] = "rbxassetid://71954360551345",
+			["file-chart-pie"] = "rbxassetid://81072193564497",
+			["file-check"] = "rbxassetid://82604001452455",
+			["file-check-corner"] = "rbxassetid://76295552859171",
+			["file-clock"] = "rbxassetid://102325208830990",
+			["file-code"] = "rbxassetid://130978036895504",
+			["file-code-corner"] = "rbxassetid://78293841184371",
+			["file-cog"] = "rbxassetid://101385347151368",
+			["file-diff"] = "rbxassetid://96147216772241",
+			["file-digit"] = "rbxassetid://89220220354580",
+			["file-down"] = "rbxassetid://120650154178290",
+			["file-exclamation-point"] = "rbxassetid://102821865889635",
+			["file-headphone"] = "rbxassetid://100533735901986",
+			["file-heart"] = "rbxassetid://132214916401696",
+			["file-image"] = "rbxassetid://123334057511782",
+			["file-input"] = "rbxassetid://124728604166044",
+			["file-key"] = "rbxassetid://118790255921100",
+			["file-lock"] = "rbxassetid://72170228691242",
+			["file-minus"] = "rbxassetid://111014798459222",
+			["file-minus-corner"] = "rbxassetid://119263271735124",
+			["file-music"] = "rbxassetid://134948051536671",
+			["file-output"] = "rbxassetid://92146832572911",
+			["file-pen"] = "rbxassetid://79556179730240",
+			["file-pen-line"] = "rbxassetid://104622936345006",
+			["file-play"] = "rbxassetid://89006821567838",
+			["file-plus"] = "rbxassetid://78881710800060",
+			["file-plus-corner"] = "rbxassetid://76544604043974",
+			["file-question-mark"] = "rbxassetid://127617422859576",
+			["file-scan"] = "rbxassetid://129480105228213",
+			["file-search"] = "rbxassetid://97780235974933",
+			["file-search-corner"] = "rbxassetid://90974165234008",
+			["file-signal"] = "rbxassetid://122070252538165",
+			["file-sliders"] = "rbxassetid://85787771732439",
+			["file-spreadsheet"] = "rbxassetid://134501869359270",
+			["file-stack"] = "rbxassetid://138929929862605",
+			["file-symlink"] = "rbxassetid://91865722036510",
+			["file-terminal"] = "rbxassetid://116757454755476",
+			["file-text"] = "rbxassetid://90496405707281",
+			["file-type"] = "rbxassetid://115272552799361",
+			["file-type-corner"] = "rbxassetid://124902230275209",
+			["file-up"] = "rbxassetid://131173039312748",
+			["file-user"] = "rbxassetid://99552018455009",
+			["file-video-camera"] = "rbxassetid://81719056173960",
+			["file-volume"] = "rbxassetid://111264764438958",
+			["file-x"] = "rbxassetid://107333775515154",
+			["file-x-corner"] = "rbxassetid://87554136773609",
+			["files"] = "rbxassetid://102806336233202",
+			["film"] = "rbxassetid://120978945609706",
+			["fingerprint"] = "rbxassetid://112173305232811",
+			["fingerprint-pattern"] = "rbxassetid://80934710831288",
+			["fire-extinguisher"] = "rbxassetid://111643493006960",
+			["fish"] = "rbxassetid://124360663785796",
+			["fish-off"] = "rbxassetid://89756724887508",
+			["fish-symbol"] = "rbxassetid://118475177681618",
+			["fishing-hook"] = "rbxassetid://121038780855899",
+			["fishing-rod"] = "rbxassetid://71754848048049",
+			["flag"] = "rbxassetid://78183383236196",
+			["flag-off"] = "rbxassetid://112944528856799",
+			["flag-triangle-left"] = "rbxassetid://88045221285272",
+			["flag-triangle-right"] = "rbxassetid://108292480304566",
+			["flame"] = "rbxassetid://98218034436456",
+			["flame-kindling"] = "rbxassetid://139728976917928",
+			["flashlight"] = "rbxassetid://100286985600444",
+			["flashlight-off"] = "rbxassetid://79780362871740",
+			["flask-conical"] = "rbxassetid://128406680901165",
+			["flask-conical-off"] = "rbxassetid://112597970025298",
+			["flask-round"] = "rbxassetid://127508287324940",
+			["flip-horizontal"] = "rbxassetid://122937530107837",
+			["flip-horizontal-2"] = "rbxassetid://103726993598186",
+			["flip-vertical"] = "rbxassetid://108003917346888",
+			["flip-vertical-2"] = "rbxassetid://103836358956328",
+			["flower"] = "rbxassetid://86129438272762",
+			["flower-2"] = "rbxassetid://72934574245145",
+			["focus"] = "rbxassetid://87493973153317",
+			["fold-horizontal"] = "rbxassetid://92835712442240",
+			["fold-vertical"] = "rbxassetid://108873727253656",
+			["folder"] = "rbxassetid://80846616596607",
+			["folder-archive"] = "rbxassetid://97312009460206",
+			["folder-check"] = "rbxassetid://128492920904557",
+			["folder-clock"] = "rbxassetid://111964836738545",
+			["folder-closed"] = "rbxassetid://118286209350843",
+			["folder-code"] = "rbxassetid://70624096349370",
+			["folder-cog"] = "rbxassetid://85299519462846",
+			["folder-dot"] = "rbxassetid://138687772725278",
+			["folder-down"] = "rbxassetid://118044108459225",
+			["folder-git"] = "rbxassetid://121885778095158",
+			["folder-git-2"] = "rbxassetid://101394054141166",
+			["folder-heart"] = "rbxassetid://79104747211105",
+			["folder-input"] = "rbxassetid://90699920697871",
+			["folder-kanban"] = "rbxassetid://78313285104072",
+			["folder-key"] = "rbxassetid://85270407596791",
+			["folder-lock"] = "rbxassetid://119201572260567",
+			["folder-minus"] = "rbxassetid://85648718999010",
+			["folder-open"] = "rbxassetid://76018996254888",
+			["folder-open-dot"] = "rbxassetid://74741494767354",
+			["folder-output"] = "rbxassetid://101532447937612",
+			["folder-pen"] = "rbxassetid://112770491173911",
+			["folder-plus"] = "rbxassetid://91865663406119",
+			["folder-root"] = "rbxassetid://103333751154693",
+			["folder-search"] = "rbxassetid://110568075123861",
+			["folder-search-2"] = "rbxassetid://71276453442655",
+			["folder-symlink"] = "rbxassetid://127485747227189",
+			["folder-sync"] = "rbxassetid://91544602659796",
+			["folder-tree"] = "rbxassetid://85577554337861",
+			["folder-up"] = "rbxassetid://72008269765857",
+			["folder-x"] = "rbxassetid://91699618247635",
+			["folders"] = "rbxassetid://110351216219061",
+			["footprints"] = "rbxassetid://139192589041315",
+			["forklift"] = "rbxassetid://72030930983101",
+			["form"] = "rbxassetid://72999643971000",
+			["forward"] = "rbxassetid://97545944739523",
+			["frame"] = "rbxassetid://109080612832751",
+			["framer"] = "rbxassetid://108384807262391",
+			["frown"] = "rbxassetid://124407301067982",
+			["fuel"] = "rbxassetid://106447647274511",
+			["fullscreen"] = "rbxassetid://77793665526178",
+			["funnel"] = "rbxassetid://108829540827529",
+			["funnel-plus"] = "rbxassetid://100780233821928",
+			["funnel-x"] = "rbxassetid://70984385812555",
+			["gallery-horizontal"] = "rbxassetid://80004001442122",
+			["gallery-horizontal-end"] = "rbxassetid://74672430161161",
+			["gallery-thumbnails"] = "rbxassetid://136219289862706",
+			["gallery-vertical"] = "rbxassetid://119299431466725",
+			["gallery-vertical-end"] = "rbxassetid://106461402088317",
+			["gamepad"] = "rbxassetid://121607283959010",
+			["gamepad-2"] = "rbxassetid://92483947987410",
+			["gamepad-directional"] = "rbxassetid://84342305212226",
+			["gauge"] = "rbxassetid://110273524101447",
+			["gavel"] = "rbxassetid://78952298198456",
+			["gem"] = "rbxassetid://112904952151156",
+			["georgian-lari"] = "rbxassetid://98084432591687",
+			["ghost"] = "rbxassetid://113822048130017",
+			["gift"] = "rbxassetid://109855212076373",
+			["git-branch"] = "rbxassetid://90490195516649",
+			["git-branch-minus"] = "rbxassetid://97385010649411",
+			["git-branch-plus"] = "rbxassetid://125944221134316",
+			["git-commit-horizontal"] = "rbxassetid://133646041800147",
+			["git-commit-vertical"] = "rbxassetid://122098032990350",
+			["git-compare"] = "rbxassetid://91945124438792",
+			["git-compare-arrows"] = "rbxassetid://84874426520216",
+			["git-fork"] = "rbxassetid://89954992404765",
+			["git-graph"] = "rbxassetid://86166832019304",
+			["git-merge"] = "rbxassetid://131833355158059",
+			["git-merge-conflict"] = "rbxassetid://85677801675703",
+			["git-pull-request"] = "rbxassetid://138463010991471",
+			["git-pull-request-arrow"] = "rbxassetid://94507974577439",
+			["git-pull-request-closed"] = "rbxassetid://78070600389091",
+			["git-pull-request-create"] = "rbxassetid://105929577383926",
+			["git-pull-request-create-arrow"] = "rbxassetid://127422677061091",
+			["git-pull-request-draft"] = "rbxassetid://76173459869943",
+			["github"] = "rbxassetid://120349554354380",
+			["gitlab"] = "rbxassetid://114054627192933",
+			["glass-water"] = "rbxassetid://115526102400988",
+			["glasses"] = "rbxassetid://87936407455373",
+			["globe"] = "rbxassetid://114238209622913",
+			["globe-lock"] = "rbxassetid://134065526704402",
+			["globe-off"] = "rbxassetid://77775243585824",
+			["globe-x"] = "rbxassetid://109268097029296",
+			["goal"] = "rbxassetid://120517954878160",
+			["gpu"] = "rbxassetid://95577823614219",
+			["graduation-cap"] = "rbxassetid://93771896340220",
+			["grape"] = "rbxassetid://134760640415561",
+			["grid-2x2"] = "rbxassetid://99050491897640",
+			["grid-2x2-check"] = "rbxassetid://138468840220821",
+			["grid-2x2-plus"] = "rbxassetid://91811610580247",
+			["grid-2x2-x"] = "rbxassetid://72407303981388",
+			["grid-3x2"] = "rbxassetid://95528684210010",
+			["grid-3x3"] = "rbxassetid://70419024781206",
+			["grip"] = "rbxassetid://109058783556768",
+			["grip-horizontal"] = "rbxassetid://136255899715930",
+			["grip-vertical"] = "rbxassetid://137183678565296",
+			["group"] = "rbxassetid://107643418926671",
+			["guitar"] = "rbxassetid://75915531867926",
+			["ham"] = "rbxassetid://74465607934635",
+			["hamburger"] = "rbxassetid://93086916815495",
+			["hammer"] = "rbxassetid://83545120140895",
+			["hand"] = "rbxassetid://130703864968637",
+			["hand-coins"] = "rbxassetid://126990543175462",
+			["hand-fist"] = "rbxassetid://83341608917591",
+			["hand-grab"] = "rbxassetid://88867162163985",
+			["hand-heart"] = "rbxassetid://117507367668412",
+			["hand-helping"] = "rbxassetid://89897738419446",
+			["hand-metal"] = "rbxassetid://113619498548713",
+			["hand-platter"] = "rbxassetid://88594727743168",
+			["handbag"] = "rbxassetid://135675846264061",
+			["handshake"] = "rbxassetid://78442115255814",
+			["hard-drive"] = "rbxassetid://88183305858463",
+			["hard-drive-download"] = "rbxassetid://73913801230614",
+			["hard-drive-upload"] = "rbxassetid://85762133615118",
+			["hard-hat"] = "rbxassetid://128050846767382",
+			["hash"] = "rbxassetid://82890331678520",
+			["hat-glasses"] = "rbxassetid://101165538224815",
+			["haze"] = "rbxassetid://108857561768901",
+			["hd"] = "rbxassetid://71682790698278",
+			["hdmi-port"] = "rbxassetid://103693661037020",
+			["heading"] = "rbxassetid://129254312067735",
+			["heading-1"] = "rbxassetid://118129315662110",
+			["heading-2"] = "rbxassetid://110209069670094",
+			["heading-3"] = "rbxassetid://90267885237062",
+			["heading-4"] = "rbxassetid://129625620307602",
+			["heading-5"] = "rbxassetid://120386663181267",
+			["heading-6"] = "rbxassetid://90959079775093",
+			["headphone-off"] = "rbxassetid://85038251615641",
+			["headphones"] = "rbxassetid://118833729589183",
+			["headset"] = "rbxassetid://129269236787694",
+			["heart"] = "rbxassetid://116559368303288",
+			["heart-crack"] = "rbxassetid://110987638564119",
+			["heart-handshake"] = "rbxassetid://111483078692002",
+			["heart-minus"] = "rbxassetid://96827380163326",
+			["heart-off"] = "rbxassetid://89748414415617",
+			["heart-plus"] = "rbxassetid://94877796283249",
+			["heart-pulse"] = "rbxassetid://129352925579546",
+			["heater"] = "rbxassetid://140478466880916",
+			["helicopter"] = "rbxassetid://111557171735930",
+			["hexagon"] = "rbxassetid://127592089339199",
+			["highlighter"] = "rbxassetid://77411555641113",
+			["history"] = "rbxassetid://123980022019922",
+			["hop"] = "rbxassetid://82778923997672",
+			["hop-off"] = "rbxassetid://103386036934034",
+			["hospital"] = "rbxassetid://105868763850707",
+			["hotel"] = "rbxassetid://132283390859718",
+			["hourglass"] = "rbxassetid://86160434939203",
+			["house"] = "rbxassetid://98755624629571",
+			["house-heart"] = "rbxassetid://136054771868597",
+			["house-plug"] = "rbxassetid://71438263712075",
+			["house-plus"] = "rbxassetid://118495165208309",
+			["house-wifi"] = "rbxassetid://126495519725698",
+			["ice-cream-bowl"] = "rbxassetid://124867218454386",
+			["ice-cream-cone"] = "rbxassetid://90751397288639",
+			["id-card"] = "rbxassetid://75354294622640",
+			["id-card-lanyard"] = "rbxassetid://90761480469224",
+			["image"] = "rbxassetid://112751259236831",
+			["image-down"] = "rbxassetid://78972295741235",
+			["image-minus"] = "rbxassetid://101066016918565",
+			["image-off"] = "rbxassetid://81934811700938",
+			["image-play"] = "rbxassetid://129501806784210",
+			["image-plus"] = "rbxassetid://70391970623917",
+			["image-up"] = "rbxassetid://126610009605241",
+			["image-upscale"] = "rbxassetid://106963545024679",
+			["images"] = "rbxassetid://79350649395557",
+			["import"] = "rbxassetid://116545008906029",
+			["inbox"] = "rbxassetid://112591360302868",
+			["indian-rupee"] = "rbxassetid://113038778381805",
+			["infinity"] = "rbxassetid://98083086936965",
+			["info"] = "rbxassetid://124560466474914",
+			["inspection-panel"] = "rbxassetid://70905313146088",
+			["instagram"] = "rbxassetid://119864798614855",
+			["italic"] = "rbxassetid://96220378864282",
+			["iteration-ccw"] = "rbxassetid://140221832794083",
+			["iteration-cw"] = "rbxassetid://95534489554662",
+			["japanese-yen"] = "rbxassetid://106362863465813",
+			["joystick"] = "rbxassetid://99416790224739",
+			["kanban"] = "rbxassetid://125934100055431",
+			["kayak"] = "rbxassetid://136107544609389",
+			["key"] = "rbxassetid://96510194465420",
+			["key-round"] = "rbxassetid://83619031955390",
+			["key-square"] = "rbxassetid://94621420033649",
+			["keyboard"] = "rbxassetid://121474456068237",
+			["keyboard-music"] = "rbxassetid://121058541758636",
+			["keyboard-off"] = "rbxassetid://92466375369772",
+			["lamp"] = "rbxassetid://110730830653382",
+			["lamp-ceiling"] = "rbxassetid://80032758469141",
+			["lamp-desk"] = "rbxassetid://85290686983238",
+			["lamp-floor"] = "rbxassetid://104585881375892",
+			["lamp-wall-down"] = "rbxassetid://91271394132073",
+			["lamp-wall-up"] = "rbxassetid://132141464337445",
+			["land-plot"] = "rbxassetid://96449039620294",
+			["landmark"] = "rbxassetid://76885079756393",
+			["languages"] = "rbxassetid://90816903776498",
+			["laptop"] = "rbxassetid://111387063244975",
+			["laptop-minimal"] = "rbxassetid://136705765566068",
+			["laptop-minimal-check"] = "rbxassetid://114352019833865",
+			["lasso"] = "rbxassetid://121072936884007",
+			["lasso-select"] = "rbxassetid://105609719912753",
+			["laugh"] = "rbxassetid://104491311361166",
+			["layers"] = "rbxassetid://81973586053257",
+			["layers-2"] = "rbxassetid://70536710516357",
+			["layers-plus"] = "rbxassetid://77587765623057",
+			["layout-dashboard"] = "rbxassetid://139929981863901",
+			["layout-grid"] = "rbxassetid://81344910161871",
+			["layout-list"] = "rbxassetid://87462136296578",
+			["layout-panel-left"] = "rbxassetid://125092469751491",
+			["layout-panel-top"] = "rbxassetid://91943941515944",
+			["layout-template"] = "rbxassetid://115564446417985",
+			["leaf"] = "rbxassetid://119951075637174",
+			["leafy-green"] = "rbxassetid://105146290493154",
+			["lectern"] = "rbxassetid://106166425183862",
+			["lens-concave"] = "rbxassetid://94819631937027",
+			["lens-convex"] = "rbxassetid://74736504195474",
+			["library"] = "rbxassetid://114334671982047",
+			["library-big"] = "rbxassetid://106794530191412",
+			["life-buoy"] = "rbxassetid://81168450671956",
+			["ligature"] = "rbxassetid://111397873269411",
+			["lightbulb"] = "rbxassetid://103871245626488",
+			["lightbulb-off"] = "rbxassetid://83795722296178",
+			["line-dot-right-horizontal"] = "rbxassetid://104718593155221",
+			["line-squiggle"] = "rbxassetid://109555164424447",
+			["line-style"] = "rbxassetid://90176717785772",
+			["link"] = "rbxassetid://131607023382430",
+			["link-2"] = "rbxassetid://86072351557466",
+			["link-2-off"] = "rbxassetid://76885956296867",
+			["linkedin"] = "rbxassetid://132842789255788",
+			["list"] = "rbxassetid://113179976918783",
+			["list-check"] = "rbxassetid://72374358471156",
+			["list-checks"] = "rbxassetid://99809353635593",
+			["list-chevrons-down-up"] = "rbxassetid://137409641500711",
+			["list-chevrons-up-down"] = "rbxassetid://81825351389084",
+			["list-collapse"] = "rbxassetid://124505247702401",
+			["list-end"] = "rbxassetid://77650610048119",
+			["list-filter"] = "rbxassetid://103321376129527",
+			["list-filter-plus"] = "rbxassetid://96385120752336",
+			["list-indent-decrease"] = "rbxassetid://137879979228193",
+			["list-indent-increase"] = "rbxassetid://79051053161201",
+			["list-minus"] = "rbxassetid://138507965142671",
+			["list-music"] = "rbxassetid://126380635781840",
+			["list-ordered"] = "rbxassetid://83212528113913",
+			["list-plus"] = "rbxassetid://112384738137814",
+			["list-restart"] = "rbxassetid://91703153577421",
+			["list-start"] = "rbxassetid://84828348299727",
+			["list-todo"] = "rbxassetid://132980603752108",
+			["list-tree"] = "rbxassetid://97685396239010",
+			["list-video"] = "rbxassetid://93648525452489",
+			["list-x"] = "rbxassetid://113025303988861",
+			["loader"] = "rbxassetid://78408734580845",
+			["loader-circle"] = "rbxassetid://116535712789945",
+			["loader-pinwheel"] = "rbxassetid://108513357940900",
+			["locate"] = "rbxassetid://84467676590391",
+			["locate-fixed"] = "rbxassetid://137367361548433",
+			["locate-off"] = "rbxassetid://73729216338137",
+			["lock"] = "rbxassetid://134724289526879",
+			["lock-keyhole"] = "rbxassetid://78672912777756",
+			["lock-keyhole-open"] = "rbxassetid://110863509313073",
+			["lock-open"] = "rbxassetid://93597915325122",
+			["log-in"] = "rbxassetid://103768533135201",
+			["log-out"] = "rbxassetid://84895399304975",
+			["logs"] = "rbxassetid://89772091251787",
+			["lollipop"] = "rbxassetid://84681611583044",
+			["luggage"] = "rbxassetid://76619236486400",
+			["magnet"] = "rbxassetid://135162361226972",
+			["mail"] = "rbxassetid://103945161245599",
+			["mail-check"] = "rbxassetid://86921536259917",
+			["mail-minus"] = "rbxassetid://81989813236553",
+			["mail-open"] = "rbxassetid://122785416858638",
+			["mail-plus"] = "rbxassetid://104886401588341",
+			["mail-question-mark"] = "rbxassetid://126540170949819",
+			["mail-search"] = "rbxassetid://135616173775287",
+			["mail-warning"] = "rbxassetid://81495303676089",
+			["mail-x"] = "rbxassetid://74607841705644",
+			["mailbox"] = "rbxassetid://82765503320335",
+			["mails"] = "rbxassetid://90673453450080",
+			["map"] = "rbxassetid://95107167260947",
+			["map-minus"] = "rbxassetid://129525760577747",
+			["map-pin"] = "rbxassetid://84279202219901",
+			["map-pin-check"] = "rbxassetid://118110914690154",
+			["map-pin-check-inside"] = "rbxassetid://107130529843809",
+			["map-pin-house"] = "rbxassetid://80546885029816",
+			["map-pin-minus"] = "rbxassetid://74518762643623",
+			["map-pin-minus-inside"] = "rbxassetid://79005529692964",
+			["map-pin-off"] = "rbxassetid://82474689391020",
+			["map-pin-pen"] = "rbxassetid://113515395277504",
+			["map-pin-plus"] = "rbxassetid://91875228967029",
+			["map-pin-plus-inside"] = "rbxassetid://134639656514430",
+			["map-pin-search"] = "rbxassetid://89065012915078",
+			["map-pin-x"] = "rbxassetid://101085273547316",
+			["map-pin-x-inside"] = "rbxassetid://126235934252379",
+			["map-pinned"] = "rbxassetid://103963788475034",
+			["map-plus"] = "rbxassetid://129388826743495",
+			["mars"] = "rbxassetid://111287112372511",
+			["mars-stroke"] = "rbxassetid://131973193186828",
+			["martini"] = "rbxassetid://82977695401058",
+			["maximize"] = "rbxassetid://76045941763188",
+			["maximize-2"] = "rbxassetid://73085922906397",
+			["medal"] = "rbxassetid://79016002264450",
+			["megaphone"] = "rbxassetid://118759541854879",
+			["megaphone-off"] = "rbxassetid://124280774193935",
+			["meh"] = "rbxassetid://132197867028557",
+			["memory-stick"] = "rbxassetid://93212591343119",
+			["menu"] = "rbxassetid://77021539815611",
+			["merge"] = "rbxassetid://126201866476775",
+			["message-circle"] = "rbxassetid://127255077587058",
+			["message-circle-check"] = "rbxassetid://132772297689418",
+			["message-circle-code"] = "rbxassetid://112865244991651",
+			["message-circle-dashed"] = "rbxassetid://81525157881897",
+			["message-circle-heart"] = "rbxassetid://101990756073677",
+			["message-circle-more"] = "rbxassetid://92856823884663",
+			["message-circle-off"] = "rbxassetid://134955643890328",
+			["message-circle-plus"] = "rbxassetid://106562979649273",
+			["message-circle-question-mark"] = "rbxassetid://107700302759934",
+			["message-circle-reply"] = "rbxassetid://137071749508334",
+			["message-circle-warning"] = "rbxassetid://119020096067894",
+			["message-circle-x"] = "rbxassetid://126843387725536",
+			["message-square"] = "rbxassetid://83881670383280",
+			["message-square-check"] = "rbxassetid://125789987055668",
+			["message-square-code"] = "rbxassetid://110968863152123",
+			["message-square-dashed"] = "rbxassetid://107653455516238",
+			["message-square-diff"] = "rbxassetid://75472190472625",
+			["message-square-dot"] = "rbxassetid://127806382463916",
+			["message-square-heart"] = "rbxassetid://75612811742074",
+			["message-square-lock"] = "rbxassetid://81268215619563",
+			["message-square-more"] = "rbxassetid://120139782405970",
+			["message-square-off"] = "rbxassetid://99961019005789",
+			["message-square-plus"] = "rbxassetid://76934450256199",
+			["message-square-quote"] = "rbxassetid://116670768629340",
+			["message-square-reply"] = "rbxassetid://130985622754637",
+			["message-square-share"] = "rbxassetid://131017005324026",
+			["message-square-text"] = "rbxassetid://94899503194205",
+			["message-square-warning"] = "rbxassetid://138432903962261",
+			["message-square-x"] = "rbxassetid://137285463279462",
+			["messages-square"] = "rbxassetid://97532166733358",
+			["metronome"] = "rbxassetid://101991829345965",
+			["mic"] = "rbxassetid://89640799126523",
+			["mic-off"] = "rbxassetid://82123034444822",
+			["mic-vocal"] = "rbxassetid://99082286164362",
+			["microchip"] = "rbxassetid://73937907669903",
+			["microscope"] = "rbxassetid://116875530102782",
+			["microwave"] = "rbxassetid://108411735353008",
+			["milestone"] = "rbxassetid://101618292325920",
+			["milk"] = "rbxassetid://96221903896918",
+			["milk-off"] = "rbxassetid://72388480962742",
+			["minimize"] = "rbxassetid://121304296213645",
+			["minimize-2"] = "rbxassetid://116269596042539",
+			["minus"] = "rbxassetid://118026365011536",
+			["mirror-rectangular"] = "rbxassetid://109046769760336",
+			["mirror-round"] = "rbxassetid://121534049429097",
+			["monitor"] = "rbxassetid://72664649203050",
+			["monitor-check"] = "rbxassetid://86651948439229",
+			["monitor-cloud"] = "rbxassetid://85931096038318",
+			["monitor-cog"] = "rbxassetid://94345128715799",
+			["monitor-dot"] = "rbxassetid://130394010063680",
+			["monitor-down"] = "rbxassetid://97466933743423",
+			["monitor-off"] = "rbxassetid://74395526657953",
+			["monitor-pause"] = "rbxassetid://76002184067562",
+			["monitor-play"] = "rbxassetid://133018824306217",
+			["monitor-smartphone"] = "rbxassetid://84335680433378",
+			["monitor-speaker"] = "rbxassetid://81744810060380",
+			["monitor-stop"] = "rbxassetid://98708958984757",
+			["monitor-up"] = "rbxassetid://96035360858377",
+			["monitor-x"] = "rbxassetid://126265210441423",
+			["moon"] = "rbxassetid://83380517901735",
+			["moon-star"] = "rbxassetid://82782200506348",
+			["motorbike"] = "rbxassetid://94580787368233",
+			["mountain"] = "rbxassetid://73269957566415",
+			["mountain-snow"] = "rbxassetid://105315495740588",
+			["mouse"] = "rbxassetid://73096068864710",
+			["mouse-left"] = "rbxassetid://99144293708743",
+			["mouse-off"] = "rbxassetid://75267871697595",
+			["mouse-pointer"] = "rbxassetid://72322454962935",
+			["mouse-pointer-2"] = "rbxassetid://117093892862228",
+			["mouse-pointer-2-off"] = "rbxassetid://104701076865632",
+			["mouse-pointer-ban"] = "rbxassetid://106849413057133",
+			["mouse-pointer-click"] = "rbxassetid://107150227368485",
+			["mouse-right"] = "rbxassetid://88331710212594",
+			["move"] = "rbxassetid://116138709011735",
+			["move-3d"] = "rbxassetid://103365982054003",
+			["move-diagonal"] = "rbxassetid://101433481954184",
+			["move-diagonal-2"] = "rbxassetid://117298577948096",
+			["move-down"] = "rbxassetid://70510115135583",
+			["move-down-left"] = "rbxassetid://102819433534567",
+			["move-down-right"] = "rbxassetid://101479760041877",
+			["move-horizontal"] = "rbxassetid://88513523439149",
+			["move-left"] = "rbxassetid://137614740247980",
+			["move-right"] = "rbxassetid://132455779472989",
+			["move-up"] = "rbxassetid://84505444262658",
+			["move-up-left"] = "rbxassetid://139079815540148",
+			["move-up-right"] = "rbxassetid://105885140592646",
+			["move-vertical"] = "rbxassetid://86234730730899",
+			["music"] = "rbxassetid://113343203848535",
+			["music-2"] = "rbxassetid://134397426600888",
+			["music-3"] = "rbxassetid://94466120066498",
+			["music-4"] = "rbxassetid://132459323665838",
+			["navigation"] = "rbxassetid://79308213542922",
+			["navigation-2"] = "rbxassetid://81889066747907",
+			["navigation-2-off"] = "rbxassetid://116569611780763",
+			["navigation-off"] = "rbxassetid://87003270290777",
+			["network"] = "rbxassetid://127410729922644",
+			["newspaper"] = "rbxassetid://123479530460544",
+			["nfc"] = "rbxassetid://76822396542242",
+			["non-binary"] = "rbxassetid://78442360386235",
+			["notebook"] = "rbxassetid://136132108664987",
+			["notebook-pen"] = "rbxassetid://140380614761023",
+			["notebook-tabs"] = "rbxassetid://127371085570083",
+			["notebook-text"] = "rbxassetid://93061585217270",
+			["notepad-text"] = "rbxassetid://93404682958966",
+			["notepad-text-dashed"] = "rbxassetid://135793446376219",
+			["nut"] = "rbxassetid://127146410705656",
+			["nut-off"] = "rbxassetid://78795397311573",
+			["octagon"] = "rbxassetid://120803515514852",
+			["octagon-alert"] = "rbxassetid://140438367956051",
+			["octagon-minus"] = "rbxassetid://74720436795421",
+			["octagon-pause"] = "rbxassetid://103161463909039",
+			["octagon-x"] = "rbxassetid://90498161006311",
+			["omega"] = "rbxassetid://70414080018786",
+			["option"] = "rbxassetid://100776883894054",
+			["orbit"] = "rbxassetid://108926136860562",
+			["origami"] = "rbxassetid://136020626667101",
+			["package"] = "rbxassetid://97261141732706",
+			["package-2"] = "rbxassetid://70394974762575",
+			["package-check"] = "rbxassetid://102374216055130",
+			["package-minus"] = "rbxassetid://114492858789692",
+			["package-open"] = "rbxassetid://132890233237818",
+			["package-plus"] = "rbxassetid://129261988138366",
+			["package-search"] = "rbxassetid://95465120894145",
+			["package-x"] = "rbxassetid://70818501607442",
+			["paint-bucket"] = "rbxassetid://124275586663284",
+			["paint-roller"] = "rbxassetid://115248074358348",
+			["paintbrush"] = "rbxassetid://125572663700289",
+			["paintbrush-vertical"] = "rbxassetid://105151296591292",
+			["palette"] = "rbxassetid://86350350950064",
+			["panda"] = "rbxassetid://132509022802512",
+			["panel-bottom"] = "rbxassetid://132127145048511",
+			["panel-bottom-close"] = "rbxassetid://74287004071159",
+			["panel-bottom-dashed"] = "rbxassetid://131084651621603",
+			["panel-bottom-open"] = "rbxassetid://107768659586540",
+			["panel-left"] = "rbxassetid://97419752870313",
+			["panel-left-close"] = "rbxassetid://126579818823552",
+			["panel-left-dashed"] = "rbxassetid://75536606374585",
+			["panel-left-open"] = "rbxassetid://111075816195767",
+			["panel-left-right-dashed"] = "rbxassetid://110100707973959",
+			["panel-right"] = "rbxassetid://116365035443156",
+			["panel-right-close"] = "rbxassetid://139528655524132",
+			["panel-right-dashed"] = "rbxassetid://94959793877311",
+			["panel-right-open"] = "rbxassetid://118114419142794",
+			["panel-top"] = "rbxassetid://75838479462875",
+			["panel-top-bottom-dashed"] = "rbxassetid://134737235653344",
+			["panel-top-close"] = "rbxassetid://83578325777808",
+			["panel-top-dashed"] = "rbxassetid://70522913169237",
+			["panel-top-open"] = "rbxassetid://137959875507454",
+			["panels-left-bottom"] = "rbxassetid://72996856149149",
+			["panels-right-bottom"] = "rbxassetid://90659068960726",
+			["panels-top-left"] = "rbxassetid://79858853850600",
+			["paperclip"] = "rbxassetid://92088291163453",
+			["parentheses"] = "rbxassetid://78950955173096",
+			["parking-meter"] = "rbxassetid://84652733960568",
+			["party-popper"] = "rbxassetid://111626795712193",
+			["pause"] = "rbxassetid://74873705394436",
+			["paw-print"] = "rbxassetid://112218825427601",
+			["pc-case"] = "rbxassetid://122978648019101",
+			["pen"] = "rbxassetid://72037878096321",
+			["pen-line"] = "rbxassetid://109108135755303",
+			["pen-off"] = "rbxassetid://84807123119438",
+			["pen-tool"] = "rbxassetid://106145404953445",
+			["pencil"] = "rbxassetid://137986121120732",
+			["pencil-line"] = "rbxassetid://88392917053533",
+			["pencil-off"] = "rbxassetid://103330927652832",
+			["pencil-ruler"] = "rbxassetid://110120288284597",
+			["pentagon"] = "rbxassetid://79184802179890",
+			["percent"] = "rbxassetid://130155041032013",
+			["person-standing"] = "rbxassetid://125020872044147",
+			["philippine-peso"] = "rbxassetid://91173798254675",
+			["phone"] = "rbxassetid://128804946640049",
+			["phone-call"] = "rbxassetid://70555587592860",
+			["phone-forwarded"] = "rbxassetid://113269614319737",
+			["phone-incoming"] = "rbxassetid://82863576359288",
+			["phone-missed"] = "rbxassetid://130156165198376",
+			["phone-off"] = "rbxassetid://133318623553383",
+			["phone-outgoing"] = "rbxassetid://104576478735825",
+			["pi"] = "rbxassetid://74936036243146",
+			["piano"] = "rbxassetid://85008880789520",
+			["pickaxe"] = "rbxassetid://105888023317688",
+			["picture-in-picture"] = "rbxassetid://80579597835123",
+			["picture-in-picture-2"] = "rbxassetid://112803319544468",
+			["piggy-bank"] = "rbxassetid://79498575790721",
+			["pilcrow"] = "rbxassetid://139512780392871",
+			["pilcrow-left"] = "rbxassetid://103803000849583",
+			["pilcrow-right"] = "rbxassetid://104881733911870",
+			["pill"] = "rbxassetid://73280534813448",
+			["pill-bottle"] = "rbxassetid://118394692404597",
+			["pin"] = "rbxassetid://120978111007514",
+			["pin-off"] = "rbxassetid://127696372451750",
+			["pipette"] = "rbxassetid://133167932934404",
+			["pizza"] = "rbxassetid://126964453193501",
+			["plane"] = "rbxassetid://126985561580989",
+			["plane-landing"] = "rbxassetid://122555692211889",
+			["plane-takeoff"] = "rbxassetid://117179478829575",
+			["play"] = "rbxassetid://135609604299893",
+			["plug"] = "rbxassetid://99782373064495",
+			["plug-2"] = "rbxassetid://97912386476366",
+			["plug-zap"] = "rbxassetid://74506269884055",
+			["plus"] = "rbxassetid://111774323017047",
+			["pocket"] = "rbxassetid://136686762542964",
+			["pocket-knife"] = "rbxassetid://134075428063965",
+			["podcast"] = "rbxassetid://109577075549215",
+			["pointer"] = "rbxassetid://92615117311099",
+			["pointer-off"] = "rbxassetid://95488389312794",
+			["popcorn"] = "rbxassetid://139446511232750",
+			["popsicle"] = "rbxassetid://112696318077073",
+			["pound-sterling"] = "rbxassetid://127482649469130",
+			["power"] = "rbxassetid://96479131758775",
+			["power-off"] = "rbxassetid://118768311012214",
+			["presentation"] = "rbxassetid://106134583757890",
+			["printer"] = "rbxassetid://76080649734247",
+			["printer-check"] = "rbxassetid://130273549443689",
+			["printer-x"] = "rbxassetid://103002721801548",
+			["projector"] = "rbxassetid://103281856385283",
+			["proportions"] = "rbxassetid://130046855997237",
+			["puzzle"] = "rbxassetid://136837798892463",
+			["pyramid"] = "rbxassetid://107811442374127",
+			["qr-code"] = "rbxassetid://105329945723350",
+			["quote"] = "rbxassetid://103271711590001",
+			["rabbit"] = "rbxassetid://98580518804206",
+			["radar"] = "rbxassetid://138528222906635",
+			["radiation"] = "rbxassetid://104499586848433",
+			["radical"] = "rbxassetid://132758286926047",
+			["radio"] = "rbxassetid://85611589536956",
+			["radio-off"] = "rbxassetid://80359258046586",
+			["radio-receiver"] = "rbxassetid://129598303378835",
+			["radio-tower"] = "rbxassetid://93958663130054",
+			["radius"] = "rbxassetid://89814505307129",
+			["rail-symbol"] = "rbxassetid://134295386306962",
+			["rainbow"] = "rbxassetid://132488862841895",
+			["rat"] = "rbxassetid://127400975953159",
+			["ratio"] = "rbxassetid://126369423897295",
+			["receipt"] = "rbxassetid://77877895901792",
+			["receipt-cent"] = "rbxassetid://91557573925201",
+			["receipt-euro"] = "rbxassetid://94015722210295",
+			["receipt-indian-rupee"] = "rbxassetid://89718170439990",
+			["receipt-japanese-yen"] = "rbxassetid://132472560758851",
+			["receipt-pound-sterling"] = "rbxassetid://73934967569625",
+			["receipt-russian-ruble"] = "rbxassetid://105164576936853",
+			["receipt-swiss-franc"] = "rbxassetid://72503668620116",
+			["receipt-text"] = "rbxassetid://138483536013737",
+			["receipt-turkish-lira"] = "rbxassetid://91950765836342",
+			["rectangle-circle"] = "rbxassetid://100642423153903",
+			["rectangle-ellipsis"] = "rbxassetid://112919953980965",
+			["rectangle-goggles"] = "rbxassetid://98605436666727",
+			["rectangle-horizontal"] = "rbxassetid://90224199814966",
+			["rectangle-vertical"] = "rbxassetid://117277050590967",
+			["recycle"] = "rbxassetid://140417023381961",
+			["redo"] = "rbxassetid://116150342119054",
+			["redo-2"] = "rbxassetid://70451039017914",
+			["redo-dot"] = "rbxassetid://94252981719732",
+			["refresh-ccw"] = "rbxassetid://117913330389477",
+			["refresh-ccw-dot"] = "rbxassetid://106702246753270",
+			["refresh-cw"] = "rbxassetid://138133190015277",
+			["refresh-cw-off"] = "rbxassetid://140179498843054",
+			["refrigerator"] = "rbxassetid://102614042652753",
+			["regex"] = "rbxassetid://100727200791841",
+			["remove-formatting"] = "rbxassetid://112833162022628",
+			["repeat"] = "rbxassetid://121886242955173",
+			["repeat-1"] = "rbxassetid://130144534857095",
+			["repeat-2"] = "rbxassetid://85927537182704",
+			["replace"] = "rbxassetid://128404082279430",
+			["replace-all"] = "rbxassetid://127862728198635",
+			["reply"] = "rbxassetid://109788633497028",
+			["reply-all"] = "rbxassetid://71723137343562",
+			["rewind"] = "rbxassetid://95205297521988",
+			["ribbon"] = "rbxassetid://94265331526851",
+			["road"] = "rbxassetid://120251329173530",
+			["rocket"] = "rbxassetid://87412317685854",
+			["rocking-chair"] = "rbxassetid://110420269495360",
+			["roller-coaster"] = "rbxassetid://112426178972099",
+			["rose"] = "rbxassetid://126336840238769",
+			["rotate-3d"] = "rbxassetid://76300551576392",
+			["rotate-ccw"] = "rbxassetid://110116685948665",
+			["rotate-ccw-key"] = "rbxassetid://74976035240976",
+			["rotate-ccw-square"] = "rbxassetid://90515853170424",
+			["rotate-cw"] = "rbxassetid://84183336178654",
+			["rotate-cw-square"] = "rbxassetid://77095448159303",
+			["route"] = "rbxassetid://89968303228953",
+			["route-off"] = "rbxassetid://106350402024079",
+			["router"] = "rbxassetid://102130331994471",
+			["rows-2"] = "rbxassetid://112556185960101",
+			["rows-3"] = "rbxassetid://117215586961375",
+			["rows-4"] = "rbxassetid://125646021959055",
+			["rss"] = "rbxassetid://131789058984793",
+			["ruler"] = "rbxassetid://81432445547423",
+			["ruler-dimension-line"] = "rbxassetid://70673861371412",
+			["russian-ruble"] = "rbxassetid://126357936542156",
+			["sailboat"] = "rbxassetid://87110567187540",
+			["salad"] = "rbxassetid://128864507821603",
+			["sandwich"] = "rbxassetid://104573187458917",
+			["satellite"] = "rbxassetid://134967053164645",
+			["satellite-dish"] = "rbxassetid://136742443888305",
+			["saudi-riyal"] = "rbxassetid://102282769104635",
+			["save"] = "rbxassetid://126116963775616",
+			["save-all"] = "rbxassetid://116946975799440",
+			["save-off"] = "rbxassetid://87085435778560",
+			["scale"] = "rbxassetid://108203682317477",
+			["scale-3d"] = "rbxassetid://72414199620352",
+			["scaling"] = "rbxassetid://122360365318466",
+			["scan"] = "rbxassetid://123104789658180",
+			["scan-barcode"] = "rbxassetid://96889457154761",
+			["scan-eye"] = "rbxassetid://99244790601968",
+			["scan-face"] = "rbxassetid://109959345069668",
+			["scan-heart"] = "rbxassetid://106280819776142",
+			["scan-line"] = "rbxassetid://126544908146540",
+			["scan-qr-code"] = "rbxassetid://105409149549927",
+			["scan-search"] = "rbxassetid://80009010551347",
+			["scan-text"] = "rbxassetid://73702396787766",
+			["school"] = "rbxassetid://76351530290068",
+			["scissors"] = "rbxassetid://118665510911274",
+			["scissors-line-dashed"] = "rbxassetid://122237447974173",
+			["scooter"] = "rbxassetid://100035452787934",
+			["screen-share"] = "rbxassetid://85137895705653",
+			["screen-share-off"] = "rbxassetid://107677572669805",
+			["scroll"] = "rbxassetid://74072101474951",
+			["scroll-text"] = "rbxassetid://97321022666868",
+			["search"] = "rbxassetid://121018724060431",
+			["search-alert"] = "rbxassetid://127597984617505",
+			["search-check"] = "rbxassetid://75442076191356",
+			["search-code"] = "rbxassetid://117114794592802",
+			["search-slash"] = "rbxassetid://96483932261041",
+			["search-x"] = "rbxassetid://137319957522951",
+			["section"] = "rbxassetid://91732188298948",
+			["send"] = "rbxassetid://127751956873796",
+			["send-horizontal"] = "rbxassetid://111734392411664",
+			["send-to-back"] = "rbxassetid://75340312862253",
+			["separator-horizontal"] = "rbxassetid://84864453699927",
+			["separator-vertical"] = "rbxassetid://84031801478581",
+			["server"] = "rbxassetid://92188766517878",
+			["server-cog"] = "rbxassetid://138470287250966",
+			["server-crash"] = "rbxassetid://132810618000212",
+			["server-off"] = "rbxassetid://114048751507723",
+			["settings"] = "rbxassetid://80758916183665",
+			["settings-2"] = "rbxassetid://135684703553372",
+			["shapes"] = "rbxassetid://129989433311409",
+			["share"] = "rbxassetid://87340985053299",
+			["share-2"] = "rbxassetid://71210767962065",
+			["sheet"] = "rbxassetid://134902122480171",
+			["shell"] = "rbxassetid://140212943563599",
+			["shelving-unit"] = "rbxassetid://80116568514793",
+			["shield"] = "rbxassetid://110987169760162",
+			["shield-alert"] = "rbxassetid://114995877719925",
+			["shield-ban"] = "rbxassetid://108765041044649",
+			["shield-check"] = "rbxassetid://87354736164608",
+			["shield-cog"] = "rbxassetid://129235695057857",
+			["shield-cog-corner"] = "rbxassetid://111694066132698",
+			["shield-ellipsis"] = "rbxassetid://114794739892123",
+			["shield-half"] = "rbxassetid://117842634172647",
+			["shield-minus"] = "rbxassetid://89965059528921",
+			["shield-off"] = "rbxassetid://133426959132690",
+			["shield-plus"] = "rbxassetid://100664857995498",
+			["shield-question-mark"] = "rbxassetid://135722075265150",
+			["shield-user"] = "rbxassetid://124832775645347",
+			["shield-x"] = "rbxassetid://73370117343811",
+			["ship"] = "rbxassetid://83995100553930",
+			["ship-wheel"] = "rbxassetid://130797795829448",
+			["shirt"] = "rbxassetid://106579555405966",
+			["shopping-bag"] = "rbxassetid://71885477293226",
+			["shopping-basket"] = "rbxassetid://138646411956433",
+			["shopping-cart"] = "rbxassetid://128420521375441",
+			["shovel"] = "rbxassetid://102465000512056",
+			["shower-head"] = "rbxassetid://75884944024117",
+			["shredder"] = "rbxassetid://122125164414463",
+			["shrimp"] = "rbxassetid://102625900815307",
+			["shrink"] = "rbxassetid://90953687918880",
+			["shrub"] = "rbxassetid://127326280714343",
+			["shuffle"] = "rbxassetid://132382786975101",
+			["sigma"] = "rbxassetid://126884244870899",
+			["signal"] = "rbxassetid://78424889355261",
+			["signal-high"] = "rbxassetid://130436670012270",
+			["signal-low"] = "rbxassetid://73674683500458",
+			["signal-medium"] = "rbxassetid://125003021367019",
+			["signal-zero"] = "rbxassetid://130045332414754",
+			["signature"] = "rbxassetid://114402748013000",
+			["signpost"] = "rbxassetid://106584743791433",
+			["signpost-big"] = "rbxassetid://115780185675001",
+			["siren"] = "rbxassetid://134210267818039",
+			["skip-back"] = "rbxassetid://70466132711334",
+			["skip-forward"] = "rbxassetid://124844823753990",
+			["skull"] = "rbxassetid://137726256442333",
+			["slack"] = "rbxassetid://96089719516736",
+			["slash"] = "rbxassetid://117792185664263",
+			["slice"] = "rbxassetid://95810504278179",
+			["sliders-horizontal"] = "rbxassetid://85538382643347",
+			["sliders-vertical"] = "rbxassetid://101190569086853",
+			["smartphone"] = "rbxassetid://96623008834511",
+			["smartphone-charging"] = "rbxassetid://102837532613995",
+			["smartphone-nfc"] = "rbxassetid://82326425754446",
+			["smile"] = "rbxassetid://105880397565283",
+			["smile-plus"] = "rbxassetid://131981881472144",
+			["snail"] = "rbxassetid://70904536548363",
+			["snowflake"] = "rbxassetid://101235206534566",
+			["soap-dispenser-droplet"] = "rbxassetid://77258480479465",
+			["sofa"] = "rbxassetid://114427687218324",
+			["solar-panel"] = "rbxassetid://132448188047921",
+			["soup"] = "rbxassetid://115092551871618",
+			["space"] = "rbxassetid://87072088914178",
+			["spade"] = "rbxassetid://131444449466462",
+			["sparkle"] = "rbxassetid://111044800239623",
+			["sparkles"] = "rbxassetid://138635884129147",
+			["speaker"] = "rbxassetid://96227183003618",
+			["speech"] = "rbxassetid://87013139446349",
+			["spell-check"] = "rbxassetid://91913483031334",
+			["spell-check-2"] = "rbxassetid://81556731785534",
+			["spline"] = "rbxassetid://129406685807412",
+			["spline-pointer"] = "rbxassetid://84842840956804",
+			["split"] = "rbxassetid://105112438805988",
+			["spool"] = "rbxassetid://124541981347743",
+			["sport-shoe"] = "rbxassetid://120495992692630",
+			["spotlight"] = "rbxassetid://77571742539344",
+			["spray-can"] = "rbxassetid://128372039366326",
+			["sprout"] = "rbxassetid://100091687832508",
+			["square"] = "rbxassetid://86304921356806",
+			["square-activity"] = "rbxassetid://89496630185293",
+			["square-arrow-down"] = "rbxassetid://135962519626588",
+			["square-arrow-down-left"] = "rbxassetid://108194680296901",
+			["square-arrow-down-right"] = "rbxassetid://99403846801050",
+			["square-arrow-left"] = "rbxassetid://111671474549238",
+			["square-arrow-out-down-left"] = "rbxassetid://125714881756353",
+			["square-arrow-out-down-right"] = "rbxassetid://89971003001390",
+			["square-arrow-out-up-left"] = "rbxassetid://103759986579087",
+			["square-arrow-out-up-right"] = "rbxassetid://91221896066807",
+			["square-arrow-right"] = "rbxassetid://113920471701361",
+			["square-arrow-right-enter"] = "rbxassetid://138867831495334",
+			["square-arrow-right-exit"] = "rbxassetid://133688575845430",
+			["square-arrow-up"] = "rbxassetid://106998604646718",
+			["square-arrow-up-left"] = "rbxassetid://112424670290693",
+			["square-arrow-up-right"] = "rbxassetid://76602291406940",
+			["square-asterisk"] = "rbxassetid://89186832353625",
+			["square-bottom-dashed-scissors"] = "rbxassetid://79076980104803",
+			["square-centerline-dashed-horizontal"] = "rbxassetid://77780104374341",
+			["square-centerline-dashed-vertical"] = "rbxassetid://107878435803525",
+			["square-chart-gantt"] = "rbxassetid://104034017316411",
+			["square-check"] = "rbxassetid://134682053539509",
+			["square-check-big"] = "rbxassetid://115320390907184",
+			["square-chevron-down"] = "rbxassetid://91032307924592",
+			["square-chevron-left"] = "rbxassetid://73143404829510",
+			["square-chevron-right"] = "rbxassetid://90612077729930",
+			["square-chevron-up"] = "rbxassetid://85565910197337",
+			["square-code"] = "rbxassetid://81604576616881",
+			["square-dashed"] = "rbxassetid://136905537847606",
+			["square-dashed-bottom"] = "rbxassetid://101102319625624",
+			["square-dashed-bottom-code"] = "rbxassetid://100354801563230",
+			["square-dashed-kanban"] = "rbxassetid://90388067649847",
+			["square-dashed-mouse-pointer"] = "rbxassetid://121016142178467",
+			["square-dashed-top-solid"] = "rbxassetid://117157577548540",
+			["square-divide"] = "rbxassetid://99894657101970",
+			["square-dot"] = "rbxassetid://116613421354866",
+			["square-equal"] = "rbxassetid://110283363706707",
+			["square-function"] = "rbxassetid://86075219551088",
+			["square-kanban"] = "rbxassetid://114537101260131",
+			["square-library"] = "rbxassetid://73810931222081",
+			["square-m"] = "rbxassetid://117662700410577",
+			["square-menu"] = "rbxassetid://104067089444415",
+			["square-minus"] = "rbxassetid://116764432015770",
+			["square-mouse-pointer"] = "rbxassetid://76141850603920",
+			["square-parking"] = "rbxassetid://133116656122387",
+			["square-parking-off"] = "rbxassetid://100857293535141",
+			["square-pause"] = "rbxassetid://86608552787615",
+			["square-pen"] = "rbxassetid://120239476110475",
+			["square-percent"] = "rbxassetid://87111930314567",
+			["square-pi"] = "rbxassetid://75383328781618",
+			["square-pilcrow"] = "rbxassetid://131854284699367",
+			["square-play"] = "rbxassetid://108186325238481",
+			["square-plus"] = "rbxassetid://114713264461873",
+			["square-power"] = "rbxassetid://129240437805187",
+			["square-radical"] = "rbxassetid://132645931868292",
+			["square-round-corner"] = "rbxassetid://104592745113567",
+			["square-scissors"] = "rbxassetid://110601255612411",
+			["square-sigma"] = "rbxassetid://113231244246816",
+			["square-slash"] = "rbxassetid://105477013908757",
+			["square-split-horizontal"] = "rbxassetid://76095370148660",
+			["square-split-vertical"] = "rbxassetid://88589192032058",
+			["square-square"] = "rbxassetid://136555087357875",
+			["square-stack"] = "rbxassetid://100463396619394",
+			["square-star"] = "rbxassetid://94506958703720",
+			["square-stop"] = "rbxassetid://80018708472943",
+			["square-terminal"] = "rbxassetid://83969264476798",
+			["square-user"] = "rbxassetid://70771214183445",
+			["square-user-round"] = "rbxassetid://86484997229302",
+			["square-x"] = "rbxassetid://125136183850190",
+			["squares-exclude"] = "rbxassetid://102345385822324",
+			["squares-intersect"] = "rbxassetid://120869602570119",
+			["squares-subtract"] = "rbxassetid://131484650948795",
+			["squares-unite"] = "rbxassetid://96673080107843",
+			["squircle"] = "rbxassetid://82426632573807",
+			["squircle-dashed"] = "rbxassetid://129936702532522",
+			["squirrel"] = "rbxassetid://112864252085343",
+			["stamp"] = "rbxassetid://92370779813368",
+			["star"] = "rbxassetid://136141469398409",
+			["star-half"] = "rbxassetid://117449275562979",
+			["star-off"] = "rbxassetid://75742832732503",
+			["step-back"] = "rbxassetid://108672750005121",
+			["step-forward"] = "rbxassetid://126131872136145",
+			["stethoscope"] = "rbxassetid://122331031702148",
+			["sticker"] = "rbxassetid://79938203791608",
+			["sticky-note"] = "rbxassetid://111894074643919",
+			["stone"] = "rbxassetid://135161057497830",
+			["store"] = "rbxassetid://90338129673705",
+			["stretch-horizontal"] = "rbxassetid://87665042192343",
+			["stretch-vertical"] = "rbxassetid://95265463417122",
+			["strikethrough"] = "rbxassetid://103417324549613",
+			["subscript"] = "rbxassetid://74553514785183",
+			["sun"] = "rbxassetid://110150589884127",
+			["sun-dim"] = "rbxassetid://129141645592715",
+			["sun-medium"] = "rbxassetid://130278807964710",
+			["sun-moon"] = "rbxassetid://75752898854559",
+			["sun-snow"] = "rbxassetid://112791898014579",
+			["sunrise"] = "rbxassetid://134705665494098",
+			["sunset"] = "rbxassetid://75904872203588",
+			["superscript"] = "rbxassetid://96887696590118",
+			["swatch-book"] = "rbxassetid://126786244872453",
+			["swiss-franc"] = "rbxassetid://113497920041625",
+			["switch-camera"] = "rbxassetid://76841154349737",
+			["sword"] = "rbxassetid://124448418211665",
+			["swords"] = "rbxassetid://81872698913435",
+			["syringe"] = "rbxassetid://123891270479254",
+			["table"] = "rbxassetid://109109148250737",
+			["table-2"] = "rbxassetid://95751552281545",
+			["table-cells-merge"] = "rbxassetid://95363715175258",
+			["table-cells-split"] = "rbxassetid://114799086088649",
+			["table-columns-split"] = "rbxassetid://111011625447949",
+			["table-of-contents"] = "rbxassetid://135044763275414",
+			["table-properties"] = "rbxassetid://125062886015372",
+			["table-rows-split"] = "rbxassetid://96443733673997",
+			["tablet"] = "rbxassetid://128403991264386",
+			["tablet-smartphone"] = "rbxassetid://133680859813404",
+			["tablets"] = "rbxassetid://80835787970735",
+			["tag"] = "rbxassetid://129104970103940",
+			["tags"] = "rbxassetid://107179263080798",
+			["tally-1"] = "rbxassetid://115301298241643",
+			["tally-2"] = "rbxassetid://110363186864027",
+			["tally-3"] = "rbxassetid://97655344572540",
+			["tally-4"] = "rbxassetid://102633494371890",
+			["tally-5"] = "rbxassetid://88031817475886",
+			["tangent"] = "rbxassetid://123263132981724",
+			["target"] = "rbxassetid://87563802520297",
+			["telescope"] = "rbxassetid://91755049143647",
+			["tent"] = "rbxassetid://109779587826330",
+			["tent-tree"] = "rbxassetid://76698322463977",
+			["terminal"] = "rbxassetid://106783148545356",
+			["test-tube"] = "rbxassetid://98801015650164",
+			["test-tube-diagonal"] = "rbxassetid://75662704378840",
+			["test-tubes"] = "rbxassetid://92555361447433",
+			["text-align-center"] = "rbxassetid://84051028246390",
+			["text-align-end"] = "rbxassetid://130041738343555",
+			["text-align-justify"] = "rbxassetid://80279880143030",
+			["text-align-start"] = "rbxassetid://134489585487649",
+			["text-cursor"] = "rbxassetid://115984654447300",
+			["text-cursor-input"] = "rbxassetid://107551944047171",
+			["text-initial"] = "rbxassetid://129458097472087",
+			["text-quote"] = "rbxassetid://139278366448736",
+			["text-search"] = "rbxassetid://92345384671606",
+			["text-select"] = "rbxassetid://117087320884956",
+			["text-wrap"] = "rbxassetid://114804318314018",
+			["theater"] = "rbxassetid://108558145549163",
+			["thermometer"] = "rbxassetid://106546011492311",
+			["thermometer-snowflake"] = "rbxassetid://121876188028425",
+			["thermometer-sun"] = "rbxassetid://106693240074310",
+			["thumbs-down"] = "rbxassetid://87794009914015",
+			["thumbs-up"] = "rbxassetid://111137070767020",
+			["ticket"] = "rbxassetid://126527071492145",
+			["ticket-check"] = "rbxassetid://105428777212507",
+			["ticket-minus"] = "rbxassetid://78966299769328",
+			["ticket-percent"] = "rbxassetid://80834774406405",
+			["ticket-plus"] = "rbxassetid://110086734392189",
+			["ticket-slash"] = "rbxassetid://89045681172265",
+			["ticket-x"] = "rbxassetid://88674114109926",
+			["tickets"] = "rbxassetid://135268612687833",
+			["tickets-plane"] = "rbxassetid://100367018248695",
+			["timer"] = "rbxassetid://85473888890506",
+			["timer-off"] = "rbxassetid://110916370767271",
+			["timer-reset"] = "rbxassetid://110052125369932",
+			["toggle-left"] = "rbxassetid://85887872573050",
+			["toggle-right"] = "rbxassetid://90411952142550",
+			["toilet"] = "rbxassetid://80930782432931",
+			["tool-case"] = "rbxassetid://87533537832522",
+			["toolbox"] = "rbxassetid://85341033903792",
+			["tornado"] = "rbxassetid://88358291515768",
+			["torus"] = "rbxassetid://70855707283051",
+			["touchpad"] = "rbxassetid://74882354908014",
+			["touchpad-off"] = "rbxassetid://78784008075456",
+			["towel-rack"] = "rbxassetid://125223915620991",
+			["tower-control"] = "rbxassetid://95937619060532",
+			["toy-brick"] = "rbxassetid://86293483924633",
+			["tractor"] = "rbxassetid://103376704722051",
+			["traffic-cone"] = "rbxassetid://74110220470369",
+			["train-front"] = "rbxassetid://125237934215370",
+			["train-front-tunnel"] = "rbxassetid://105194827005114",
+			["train-track"] = "rbxassetid://77451032453723",
+			["tram-front"] = "rbxassetid://93315182364998",
+			["transgender"] = "rbxassetid://135530817673639",
+			["trash"] = "rbxassetid://106723740584310",
+			["trash-2"] = "rbxassetid://109843431391323",
+			["tree-deciduous"] = "rbxassetid://123124389219004",
+			["tree-palm"] = "rbxassetid://103846705893963",
+			["tree-pine"] = "rbxassetid://124662547202594",
+			["trees"] = "rbxassetid://121203841375919",
+			["trello"] = "rbxassetid://130987241149527",
+			["trending-down"] = "rbxassetid://139309232226438",
+			["trending-up"] = "rbxassetid://81819858538839",
+			["trending-up-down"] = "rbxassetid://85083293981691",
+			["triangle"] = "rbxassetid://126330486745540",
+			["triangle-alert"] = "rbxassetid://125920361880643",
+			["triangle-dashed"] = "rbxassetid://124324079103935",
+			["triangle-right"] = "rbxassetid://116930791412791",
+			["trophy"] = "rbxassetid://131545003268773",
+			["truck"] = "rbxassetid://86662707764771",
+			["truck-electric"] = "rbxassetid://111873446387359",
+			["turkish-lira"] = "rbxassetid://114589876174070",
+			["turntable"] = "rbxassetid://129870346487856",
+			["turtle"] = "rbxassetid://118295081560334",
+			["tv"] = "rbxassetid://135687724791776",
+			["tv-minimal"] = "rbxassetid://100382201729427",
+			["tv-minimal-play"] = "rbxassetid://99201833426972",
+			["twitch"] = "rbxassetid://71383308134888",
+			["twitter"] = "rbxassetid://88791703276842",
+			["type"] = "rbxassetid://133543553793564",
+			["type-outline"] = "rbxassetid://80108627791690",
+			["umbrella"] = "rbxassetid://127502210274589",
+			["umbrella-off"] = "rbxassetid://72395143739955",
+			["underline"] = "rbxassetid://123709229216544",
+			["undo"] = "rbxassetid://111258459077271",
+			["undo-2"] = "rbxassetid://113885292059932",
+			["undo-dot"] = "rbxassetid://132055277744844",
+			["unfold-horizontal"] = "rbxassetid://117128358526398",
+			["unfold-vertical"] = "rbxassetid://116593025265499",
+			["ungroup"] = "rbxassetid://106674800451003",
+			["university"] = "rbxassetid://84652528263642",
+			["unlink"] = "rbxassetid://139835795227752",
+			["unlink-2"] = "rbxassetid://128131898892572",
+			["unplug"] = "rbxassetid://90171381619874",
+			["upload"] = "rbxassetid://138212042425501",
+			["usb"] = "rbxassetid://117230058949613",
+			["user"] = "rbxassetid://81589895647169",
+			["user-check"] = "rbxassetid://81775205032725",
+			["user-cog"] = "rbxassetid://92795491530865",
+			["user-key"] = "rbxassetid://105403041782190",
+			["user-lock"] = "rbxassetid://78892639693821",
+			["user-minus"] = "rbxassetid://126976941957511",
+			["user-pen"] = "rbxassetid://87445472574836",
+			["user-plus"] = "rbxassetid://118514469915884",
+			["user-round"] = "rbxassetid://136485052187963",
+			["user-round-check"] = "rbxassetid://118794737621941",
+			["user-round-cog"] = "rbxassetid://78239503290053",
+			["user-round-key"] = "rbxassetid://124547549008939",
+			["user-round-minus"] = "rbxassetid://98944176636447",
+			["user-round-pen"] = "rbxassetid://108155244324878",
+			["user-round-plus"] = "rbxassetid://113301899567470",
+			["user-round-search"] = "rbxassetid://71565774381870",
+			["user-round-x"] = "rbxassetid://122367980560930",
+			["user-search"] = "rbxassetid://101335649828115",
+			["user-star"] = "rbxassetid://98777846316000",
+			["user-x"] = "rbxassetid://139748155894754",
+			["users"] = "rbxassetid://115398113982385",
+			["users-round"] = "rbxassetid://103005444008339",
+			["utensils"] = "rbxassetid://139952569804235",
+			["utensils-crossed"] = "rbxassetid://109520762270383",
+			["utility-pole"] = "rbxassetid://101965541238242",
+			["van"] = "rbxassetid://122066377022942",
+			["variable"] = "rbxassetid://104743088438151",
+			["vault"] = "rbxassetid://108049164599845",
+			["vector-square"] = "rbxassetid://86713728565344",
+			["vegan"] = "rbxassetid://119489190688082",
+			["venetian-mask"] = "rbxassetid://102636443033920",
+			["venus"] = "rbxassetid://82891342220859",
+			["venus-and-mars"] = "rbxassetid://120227752103771",
+			["vibrate"] = "rbxassetid://108330910738733",
+			["vibrate-off"] = "rbxassetid://113446447326246",
+			["video"] = "rbxassetid://107587444636945",
+			["video-off"] = "rbxassetid://132239189859305",
+			["videotape"] = "rbxassetid://114816894323398",
+			["view"] = "rbxassetid://118717253976805",
+			["voicemail"] = "rbxassetid://134313454010227",
+			["volleyball"] = "rbxassetid://83889351124153",
+			["volume"] = "rbxassetid://103236289817396",
+			["volume-1"] = "rbxassetid://98514588731639",
+			["volume-2"] = "rbxassetid://89344380902620",
+			["volume-off"] = "rbxassetid://103047478058767",
+			["volume-x"] = "rbxassetid://139252359189540",
+			["vote"] = "rbxassetid://89409762851246",
+			["wallet"] = "rbxassetid://132331555762628",
+			["wallet-cards"] = "rbxassetid://129728715308337",
+			["wallet-minimal"] = "rbxassetid://137800448816116",
+			["wallpaper"] = "rbxassetid://74682121235494",
+			["wand"] = "rbxassetid://114580617777835",
+			["wand-sparkles"] = "rbxassetid://82546429942392",
+			["warehouse"] = "rbxassetid://78388887451080",
+			["washing-machine"] = "rbxassetid://104194127573858",
+			["watch"] = "rbxassetid://130544621618405",
+			["waves"] = "rbxassetid://96340135183647",
+			["waves-arrow-down"] = "rbxassetid://129215220911792",
+			["waves-arrow-up"] = "rbxassetid://102314705716217",
+			["waves-ladder"] = "rbxassetid://101808619355514",
+			["waypoints"] = "rbxassetid://102450133666017",
+			["webcam"] = "rbxassetid://104148487911129",
+			["webhook"] = "rbxassetid://112812457747322",
+			["webhook-off"] = "rbxassetid://96370548093471",
+			["weight"] = "rbxassetid://103860559844854",
+			["weight-tilde"] = "rbxassetid://112081212176951",
+			["wheat"] = "rbxassetid://85261952080359",
+			["wheat-off"] = "rbxassetid://133294844612307",
+			["whole-word"] = "rbxassetid://90111083954485",
+			["wifi"] = "rbxassetid://104669375183960",
+			["wifi-cog"] = "rbxassetid://110500263326209",
+			["wifi-high"] = "rbxassetid://81954601342139",
+			["wifi-low"] = "rbxassetid://138217335635913",
+			["wifi-off"] = "rbxassetid://74113634330106",
+			["wifi-pen"] = "rbxassetid://91290205064712",
+			["wifi-sync"] = "rbxassetid://84043971055177",
+			["wifi-zero"] = "rbxassetid://124286465246123",
+			["wind"] = "rbxassetid://114551690399915",
+			["wind-arrow-down"] = "rbxassetid://127753987414870",
+			["wine"] = "rbxassetid://115743721332829",
+			["wine-off"] = "rbxassetid://108294164302317",
+			["workflow"] = "rbxassetid://99186544029189",
+			["worm"] = "rbxassetid://115752311548091",
+			["wrench"] = "rbxassetid://112148279212860",
+			["x"] = "rbxassetid://110786993356448",
+			["x-line-top"] = "rbxassetid://140592656289509",
+			["youtube"] = "rbxassetid://123663668456341",
+			["zap"] = "rbxassetid://130551565616516",
+			["zap-off"] = "rbxassetid://81385483183652",
+			["zodiac-aquarius"] = "rbxassetid://74560047770362",
+			["zodiac-aries"] = "rbxassetid://73255859670234",
+			["zodiac-cancer"] = "rbxassetid://131985162532947",
+			["zodiac-capricorn"] = "rbxassetid://97859568140652",
+			["zodiac-gemini"] = "rbxassetid://80997588122992",
+			["zodiac-leo"] = "rbxassetid://75509406718106",
+			["zodiac-libra"] = "rbxassetid://113222735060218",
+			["zodiac-ophiuchus"] = "rbxassetid://129180108892480",
+			["zodiac-pisces"] = "rbxassetid://95845819440327",
+			["zodiac-sagittarius"] = "rbxassetid://82651026742181",
+			["zodiac-scorpio"] = "rbxassetid://113640924054631",
+			["zodiac-taurus"] = "rbxassetid://123053219704400",
+			["zodiac-virgo"] = "rbxassetid://99462994613661",
+			["zoom-in"] = "rbxassetid://127956924984803",
+			["zoom-out"] = "rbxassetid://108334162607319",
+		}
+
+		local aliases = {
+			["alarm-check"] = "alarm-clock-check",
+			["alarm-minus"] = "alarm-clock-minus",
+			["alarm-plus"] = "alarm-clock-plus",
+			["alert-circle"] = "circle-alert",
+			["alert-octagon"] = "octagon-alert",
+			["alert-triangle"] = "triangle-alert",
+			["align-center"] = "text-align-center",
+			["align-justify"] = "text-align-justify",
+			["align-left"] = "text-align-start",
+			["align-right"] = "text-align-end",
+			["arrow-down-circle"] = "circle-arrow-down",
+			["arrow-left-circle"] = "circle-arrow-left",
+			["arrow-right-circle"] = "circle-arrow-right",
+			["arrow-up-circle"] = "circle-arrow-up",
+			["bar-chart"] = "chart-no-axes-column-increasing",
+			["bar-chart-2"] = "chart-no-axes-column",
+			["bar-chart-3"] = "chart-column",
+			["bar-chart-4"] = "chart-column-increasing",
+			["bar-chart-horizontal"] = "chart-bar",
+			["box-select"] = "square-dashed",
+			["charge"] = "battery-charging",
+			["check-circle"] = "circle-check",
+			["check-circle-2"] = "circle-check-big",
+			["check-square"] = "square-check",
+			["circle-slashed"] = "circle-off",
+			["clipboard-edit"] = "clipboard-pen",
+			["clipboard-signature"] = "clipboard-pen-line",
+			["code-2"] = "code-xml",
+			["columns"] = "columns-2",
+			["connection"] = "wifi",
+			["curly-braces"] = "braces",
+			["divide-circle"] = "circle-divide",
+			["divide-square"] = "square-divide",
+			["download-cloud"] = "cloud-download",
+			["edit"] = "square-pen",
+			["edit-2"] = "pencil",
+			["edit-3"] = "pen-line",
+			["electricity"] = "zap",
+			["electricity-off"] = "zap-off",
+			["file-audio"] = "file-music",
+			["file-audio-2"] = "file-music",
+			["file-badge-2"] = "file-badge",
+			["file-bar-chart"] = "file-chart-column-increasing",
+			["file-bar-chart-2"] = "file-chart-column",
+			["file-check-2"] = "file-check",
+			["file-cog-2"] = "file-cog",
+			["file-edit"] = "file-pen",
+			["file-json"] = "file-braces",
+			["file-json-2"] = "file-braces-corner",
+			["file-key-2"] = "file-key",
+			["file-line-chart"] = "file-chart-line",
+			["file-lock-2"] = "file-lock",
+			["file-minus-2"] = "file-minus",
+			["file-pie-chart"] = "file-chart-pie",
+			["file-plus-2"] = "file-plus",
+			["file-question"] = "file-question-mark",
+			["file-search-2"] = "file-search",
+			["file-signature"] = "file-pen-line",
+			["file-type-2"] = "file-type",
+			["file-video"] = "file-play",
+			["file-video-2"] = "file-play",
+			["file-volume-2"] = "file-volume",
+			["file-warning"] = "file-exclamation-point",
+			["file-x-2"] = "file-x",
+			["filter"] = "funnel",
+			["folder-cog-2"] = "folder-cog",
+			["folder-edit"] = "folder-pen",
+			["form-input"] = "text-cursor-input",
+			["function-square"] = "square-function",
+			["git-commit"] = "git-commit-horizontal",
+			["glass-2"] = "martini",
+			["globe-2"] = "earth",
+			["grab"] = "hand",
+			["grid"] = "grid-2x2",
+			["home"] = "house",
+			["ice-cream"] = "ice-cream-cone",
+			["indent"] = "list-indent-increase",
+			["inspect"] = "square-mouse-pointer",
+			["laptop-2"] = "laptop",
+			["layout"] = "layout-dashboard",
+			["line-chart"] = "chart-line",
+			["loader-2"] = "loader-circle",
+			["mail-question"] = "mail-question-mark",
+			["mic-2"] = "mic",
+			["minus-circle"] = "circle-minus",
+			["minus-square"] = "square-minus",
+			["more-horizontal"] = "ellipsis",
+			["more-vertical"] = "ellipsis-vertical",
+			["outdent"] = "list-indent-decrease",
+			["paintbrush-2"] = "paintbrush-vertical",
+			["palmtree"] = "tree-palm",
+			["pause-circle"] = "circle-pause",
+			["pause-octagon"] = "octagon-pause",
+			["pie-chart"] = "chart-pie",
+			["play-circle"] = "circle-play",
+			["plus-circle"] = "circle-plus",
+			["plus-square"] = "square-plus",
+			["shield-close"] = "shield-x",
+			["sidebar"] = "panel-left",
+			["sidebar-close"] = "panel-left-close",
+			["sidebar-open"] = "panel-left-open",
+			["sliders"] = "sliders-horizontal",
+			["sort-asc"] = "arrow-up-narrow-wide",
+			["sort-desc"] = "arrow-down-wide-narrow",
+			["stop-circle"] = "circle-stop",
+			["terminal-square"] = "square-terminal",
+			["train"] = "train-front",
+			["tv-2"] = "tv",
+			["unlock"] = "lock-open",
+			["upload-cloud"] = "cloud-upload",
+			["verified"] = "badge-check",
+			["wand-2"] = "wand-sparkles",
+			["wrap-text"] = "text-wrap",
+			["x-circle"] = "circle-x",
+			["x-octagon"] = "octagon-x",
+			["x-square"] = "square-x",
+		}
+
+		local legacyFallback = {
+			["chrome"] = "rbxassetid://10709797725",
+			["gift-card"] = "rbxassetid://10723396225",
+			["glass"] = "rbxassetid://10723397788",
+			["help-circle"] = "rbxassetid://10723406988",
+		}
+
+		local function lookupIcon(name)
+			if type(name) ~= "string" or name == "" then
+				return nil
+			end
+			local clean = name:lower():gsub("^lucide%-", "")
+			local direct = rawAssets[clean]
+			if direct then
+				return direct
+			end
+			local aliased = aliases[clean]
+			if aliased then
+				return rawAssets[aliased]
+			end
+			return legacyFallback[clean]
+		end
+
+		local assets = setmetatable({}, {
+			__index = function(_, key)
+				return lookupIcon(key)
+			end
+		})
+
 		return {
-			assets = {
-				["lucide-accessibility"] = "rbxassetid://10709751939",
-				["lucide-activity"] = "rbxassetid://10709752035",
-				["lucide-air-vent"] = "rbxassetid://10709752131",
-				["lucide-airplay"] = "rbxassetid://10709752254",
-				["lucide-alarm-check"] = "rbxassetid://10709752405",
-				["lucide-alarm-clock"] = "rbxassetid://10709752630",
-				["lucide-alarm-clock-off"] = "rbxassetid://10709752508",
-				["lucide-alarm-minus"] = "rbxassetid://10709752732",
-				["lucide-alarm-plus"] = "rbxassetid://10709752825",
-				["lucide-album"] = "rbxassetid://10709752906",
-				["lucide-alert-circle"] = "rbxassetid://10709752996",
-				["lucide-alert-octagon"] = "rbxassetid://10709753064",
-				["lucide-alert-triangle"] = "rbxassetid://10709753149",
-				["lucide-align-center"] = "rbxassetid://10709753570",
-				["lucide-align-center-horizontal"] = "rbxassetid://10709753272",
-				["lucide-align-center-vertical"] = "rbxassetid://10709753421",
-				["lucide-align-end-horizontal"] = "rbxassetid://10709753692",
-				["lucide-align-end-vertical"] = "rbxassetid://10709753808",
-				["lucide-align-horizontal-distribute-center"] = "rbxassetid://10747779791",
-				["lucide-align-horizontal-distribute-end"] = "rbxassetid://10747784534",
-				["lucide-align-horizontal-distribute-start"] = "rbxassetid://10709754118",
-				["lucide-align-horizontal-justify-center"] = "rbxassetid://10709754204",
-				["lucide-align-horizontal-justify-end"] = "rbxassetid://10709754317",
-				["lucide-align-horizontal-justify-start"] = "rbxassetid://10709754436",
-				["lucide-align-horizontal-space-around"] = "rbxassetid://10709754590",
-				["lucide-align-horizontal-space-between"] = "rbxassetid://10709754749",
-				["lucide-align-justify"] = "rbxassetid://10709759610",
-				["lucide-align-left"] = "rbxassetid://10709759764",
-				["lucide-align-right"] = "rbxassetid://10709759895",
-				["lucide-align-start-horizontal"] = "rbxassetid://10709760051",
-				["lucide-align-start-vertical"] = "rbxassetid://10709760244",
-				["lucide-align-vertical-distribute-center"] = "rbxassetid://10709760351",
-				["lucide-align-vertical-distribute-end"] = "rbxassetid://10709760434",
-				["lucide-align-vertical-distribute-start"] = "rbxassetid://10709760612",
-				["lucide-align-vertical-justify-center"] = "rbxassetid://10709760814",
-				["lucide-align-vertical-justify-end"] = "rbxassetid://10709761003",
-				["lucide-align-vertical-justify-start"] = "rbxassetid://10709761176",
-				["lucide-align-vertical-space-around"] = "rbxassetid://10709761324",
-				["lucide-align-vertical-space-between"] = "rbxassetid://10709761434",
-				["lucide-anchor"] = "rbxassetid://10709761530",
-				["lucide-angry"] = "rbxassetid://10709761629",
-				["lucide-annoyed"] = "rbxassetid://10709761722",
-				["lucide-aperture"] = "rbxassetid://10709761813",
-				["lucide-apple"] = "rbxassetid://10709761889",
-				["lucide-archive"] = "rbxassetid://10709762233",
-				["lucide-archive-restore"] = "rbxassetid://10709762058",
-				["lucide-armchair"] = "rbxassetid://10709762327",
-				["lucide-arrow-big-down"] = "rbxassetid://10747796644",
-				["lucide-arrow-big-left"] = "rbxassetid://10709762574",
-				["lucide-arrow-big-right"] = "rbxassetid://10709762727",
-				["lucide-arrow-big-up"] = "rbxassetid://10709762879",
-				["lucide-arrow-down"] = "rbxassetid://10709767827",
-				["lucide-arrow-down-circle"] = "rbxassetid://10709763034",
-				["lucide-arrow-down-left"] = "rbxassetid://10709767656",
-				["lucide-arrow-down-right"] = "rbxassetid://10709767750",
-				["lucide-arrow-left"] = "rbxassetid://10709768114",
-				["lucide-arrow-left-circle"] = "rbxassetid://10709767936",
-				["lucide-arrow-left-right"] = "rbxassetid://10709768019",
-				["lucide-arrow-right"] = "rbxassetid://10709768347",
-				["lucide-arrow-right-circle"] = "rbxassetid://10709768226",
-				["lucide-arrow-up"] = "rbxassetid://10709768939",
-				["lucide-arrow-up-circle"] = "rbxassetid://10709768432",
-				["lucide-arrow-up-down"] = "rbxassetid://10709768538",
-				["lucide-arrow-up-left"] = "rbxassetid://10709768661",
-				["lucide-arrow-up-right"] = "rbxassetid://10709768787",
-				["lucide-asterisk"] = "rbxassetid://10709769095",
-				["lucide-at-sign"] = "rbxassetid://10709769286",
-				["lucide-award"] = "rbxassetid://10709769406",
-				["lucide-axe"] = "rbxassetid://10709769508",
-				["lucide-axis-3d"] = "rbxassetid://10709769598",
-				["lucide-baby"] = "rbxassetid://10709769732",
-				["lucide-backpack"] = "rbxassetid://10709769841",
-				["lucide-baggage-claim"] = "rbxassetid://10709769935",
-				["lucide-banana"] = "rbxassetid://10709770005",
-				["lucide-banknote"] = "rbxassetid://10709770178",
-				["lucide-bar-chart"] = "rbxassetid://10709773755",
-				["lucide-bar-chart-2"] = "rbxassetid://10709770317",
-				["lucide-bar-chart-3"] = "rbxassetid://10709770431",
-				["lucide-bar-chart-4"] = "rbxassetid://10709770560",
-				["lucide-bar-chart-horizontal"] = "rbxassetid://10709773669",
-				["lucide-barcode"] = "rbxassetid://10747360675",
-				["lucide-baseline"] = "rbxassetid://10709773863",
-				["lucide-bath"] = "rbxassetid://10709773963",
-				["lucide-battery"] = "rbxassetid://10709774640",
-				["lucide-battery-charging"] = "rbxassetid://10709774068",
-				["lucide-battery-full"] = "rbxassetid://10709774206",
-				["lucide-battery-low"] = "rbxassetid://10709774370",
-				["lucide-battery-medium"] = "rbxassetid://10709774513",
-				["lucide-beaker"] = "rbxassetid://10709774756",
-				["lucide-bed"] = "rbxassetid://10709775036",
-				["lucide-bed-double"] = "rbxassetid://10709774864",
-				["lucide-bed-single"] = "rbxassetid://10709774968",
-				["lucide-beer"] = "rbxassetid://10709775167",
-				["lucide-bell"] = "rbxassetid://10709775704",
-				["lucide-bell-minus"] = "rbxassetid://10709775241",
-				["lucide-bell-off"] = "rbxassetid://10709775320",
-				["lucide-bell-plus"] = "rbxassetid://10709775448",
-				["lucide-bell-ring"] = "rbxassetid://10709775560",
-				["lucide-bike"] = "rbxassetid://10709775894",
-				["lucide-binary"] = "rbxassetid://10709776050",
-				["lucide-bitcoin"] = "rbxassetid://10709776126",
-				["lucide-bluetooth"] = "rbxassetid://10709776655",
-				["lucide-bluetooth-connected"] = "rbxassetid://10709776240",
-				["lucide-bluetooth-off"] = "rbxassetid://10709776344",
-				["lucide-bluetooth-searching"] = "rbxassetid://10709776501",
-				["lucide-bold"] = "rbxassetid://10747813908",
-				["lucide-bomb"] = "rbxassetid://10709781460",
-				["lucide-bone"] = "rbxassetid://10709781605",
-				["lucide-book"] = "rbxassetid://10709781824",
-				["lucide-book-open"] = "rbxassetid://10709781717",
-				["lucide-bookmark"] = "rbxassetid://10709782154",
-				["lucide-bookmark-minus"] = "rbxassetid://10709781919",
-				["lucide-bookmark-plus"] = "rbxassetid://10709782044",
-				["lucide-bot"] = "rbxassetid://10709782230",
-				["lucide-box"] = "rbxassetid://10709782497",
-				["lucide-box-select"] = "rbxassetid://10709782342",
-				["lucide-boxes"] = "rbxassetid://10709782582",
-				["lucide-briefcase"] = "rbxassetid://10709782662",
-				["lucide-brush"] = "rbxassetid://10709782758",
-				["lucide-bug"] = "rbxassetid://10709782845",
-				["lucide-building"] = "rbxassetid://10709783051",
-				["lucide-building-2"] = "rbxassetid://10709782939",
-				["lucide-bus"] = "rbxassetid://10709783137",
-				["lucide-cake"] = "rbxassetid://10709783217",
-				["lucide-calculator"] = "rbxassetid://10709783311",
-				["lucide-calendar"] = "rbxassetid://10709789505",
-				["lucide-calendar-check"] = "rbxassetid://10709783474",
-				["lucide-calendar-check-2"] = "rbxassetid://10709783392",
-				["lucide-calendar-clock"] = "rbxassetid://10709783577",
-				["lucide-calendar-days"] = "rbxassetid://10709783673",
-				["lucide-calendar-heart"] = "rbxassetid://10709783835",
-				["lucide-calendar-minus"] = "rbxassetid://10709783959",
-				["lucide-calendar-off"] = "rbxassetid://10709788784",
-				["lucide-calendar-plus"] = "rbxassetid://10709788937",
-				["lucide-calendar-range"] = "rbxassetid://10709789053",
-				["lucide-calendar-search"] = "rbxassetid://10709789200",
-				["lucide-calendar-x"] = "rbxassetid://10709789407",
-				["lucide-calendar-x-2"] = "rbxassetid://10709789329",
-				["lucide-camera"] = "rbxassetid://10709789686",
-				["lucide-camera-off"] = "rbxassetid://10747822677",
-				["lucide-car"] = "rbxassetid://10709789810",
-				["lucide-carrot"] = "rbxassetid://10709789960",
-				["lucide-cast"] = "rbxassetid://10709790097",
-				["lucide-charge"] = "rbxassetid://10709790202",
-				["lucide-check"] = "rbxassetid://10709790644",
-				["lucide-check-circle"] = "rbxassetid://10709790387",
-				["lucide-check-circle-2"] = "rbxassetid://10709790298",
-				["lucide-check-square"] = "rbxassetid://10709790537",
-				["lucide-chef-hat"] = "rbxassetid://10709790757",
-				["lucide-cherry"] = "rbxassetid://10709790875",
-				["lucide-chevron-down"] = "rbxassetid://10709790948",
-				["lucide-chevron-first"] = "rbxassetid://10709791015",
-				["lucide-chevron-last"] = "rbxassetid://10709791130",
-				["lucide-chevron-left"] = "rbxassetid://10709791281",
-				["lucide-chevron-right"] = "rbxassetid://10709791437",
-				["lucide-chevron-up"] = "rbxassetid://10709791523",
-				["lucide-chevrons-down"] = "rbxassetid://10709796864",
-				["lucide-chevrons-down-up"] = "rbxassetid://10709791632",
-				["lucide-chevrons-left"] = "rbxassetid://10709797151",
-				["lucide-chevrons-left-right"] = "rbxassetid://10709797006",
-				["lucide-chevrons-right"] = "rbxassetid://10709797382",
-				["lucide-chevrons-right-left"] = "rbxassetid://10709797274",
-				["lucide-chevrons-up"] = "rbxassetid://10709797622",
-				["lucide-chevrons-up-down"] = "rbxassetid://10709797508",
-				["lucide-chrome"] = "rbxassetid://10709797725",
-				["lucide-circle"] = "rbxassetid://10709798174",
-				["lucide-circle-dot"] = "rbxassetid://10709797837",
-				["lucide-circle-ellipsis"] = "rbxassetid://10709797985",
-				["lucide-circle-slashed"] = "rbxassetid://10709798100",
-				["lucide-citrus"] = "rbxassetid://10709798276",
-				["lucide-clapperboard"] = "rbxassetid://10709798350",
-				["lucide-clipboard"] = "rbxassetid://10709799288",
-				["lucide-clipboard-check"] = "rbxassetid://10709798443",
-				["lucide-clipboard-copy"] = "rbxassetid://10709798574",
-				["lucide-clipboard-edit"] = "rbxassetid://10709798682",
-				["lucide-clipboard-list"] = "rbxassetid://10709798792",
-				["lucide-clipboard-signature"] = "rbxassetid://10709798890",
-				["lucide-clipboard-type"] = "rbxassetid://10709798999",
-				["lucide-clipboard-x"] = "rbxassetid://10709799124",
-				["lucide-clock"] = "rbxassetid://10709805144",
-				["lucide-clock-1"] = "rbxassetid://10709799535",
-				["lucide-clock-10"] = "rbxassetid://10709799718",
-				["lucide-clock-11"] = "rbxassetid://10709799818",
-				["lucide-clock-12"] = "rbxassetid://10709799962",
-				["lucide-clock-2"] = "rbxassetid://10709803876",
-				["lucide-clock-3"] = "rbxassetid://10709803989",
-				["lucide-clock-4"] = "rbxassetid://10709804164",
-				["lucide-clock-5"] = "rbxassetid://10709804291",
-				["lucide-clock-6"] = "rbxassetid://10709804435",
-				["lucide-clock-7"] = "rbxassetid://10709804599",
-				["lucide-clock-8"] = "rbxassetid://10709804784",
-				["lucide-clock-9"] = "rbxassetid://10709804996",
-				["lucide-cloud"] = "rbxassetid://10709806740",
-				["lucide-cloud-cog"] = "rbxassetid://10709805262",
-				["lucide-cloud-drizzle"] = "rbxassetid://10709805371",
-				["lucide-cloud-fog"] = "rbxassetid://10709805477",
-				["lucide-cloud-hail"] = "rbxassetid://10709805596",
-				["lucide-cloud-lightning"] = "rbxassetid://10709805727",
-				["lucide-cloud-moon"] = "rbxassetid://10709805942",
-				["lucide-cloud-moon-rain"] = "rbxassetid://10709805838",
-				["lucide-cloud-off"] = "rbxassetid://10709806060",
-				["lucide-cloud-rain"] = "rbxassetid://10709806277",
-				["lucide-cloud-rain-wind"] = "rbxassetid://10709806166",
-				["lucide-cloud-snow"] = "rbxassetid://10709806374",
-				["lucide-cloud-sun"] = "rbxassetid://10709806631",
-				["lucide-cloud-sun-rain"] = "rbxassetid://10709806475",
-				["lucide-cloudy"] = "rbxassetid://10709806859",
-				["lucide-clover"] = "rbxassetid://10709806995",
-				["lucide-code"] = "rbxassetid://10709810463",
-				["lucide-code-2"] = "rbxassetid://10709807111",
-				["lucide-codepen"] = "rbxassetid://10709810534",
-				["lucide-codesandbox"] = "rbxassetid://10709810676",
-				["lucide-coffee"] = "rbxassetid://10709810814",
-				["lucide-cog"] = "rbxassetid://10709810948",
-				["lucide-coins"] = "rbxassetid://10709811110",
-				["lucide-columns"] = "rbxassetid://10709811261",
-				["lucide-command"] = "rbxassetid://10709811365",
-				["lucide-compass"] = "rbxassetid://10709811445",
-				["lucide-component"] = "rbxassetid://10709811595",
-				["lucide-concierge-bell"] = "rbxassetid://10709811706",
-				["lucide-connection"] = "rbxassetid://10747361219",
-				["lucide-contact"] = "rbxassetid://10709811834",
-				["lucide-contrast"] = "rbxassetid://10709811939",
-				["lucide-cookie"] = "rbxassetid://10709812067",
-				["lucide-copy"] = "rbxassetid://10709812159",
-				["lucide-copyleft"] = "rbxassetid://10709812251",
-				["lucide-copyright"] = "rbxassetid://10709812311",
-				["lucide-corner-down-left"] = "rbxassetid://10709812396",
-				["lucide-corner-down-right"] = "rbxassetid://10709812485",
-				["lucide-corner-left-down"] = "rbxassetid://10709812632",
-				["lucide-corner-left-up"] = "rbxassetid://10709812784",
-				["lucide-corner-right-down"] = "rbxassetid://10709812939",
-				["lucide-corner-right-up"] = "rbxassetid://10709813094",
-				["lucide-corner-up-left"] = "rbxassetid://10709813185",
-				["lucide-corner-up-right"] = "rbxassetid://10709813281",
-				["lucide-cpu"] = "rbxassetid://10709813383",
-				["lucide-croissant"] = "rbxassetid://10709818125",
-				["lucide-crop"] = "rbxassetid://10709818245",
-				["lucide-cross"] = "rbxassetid://10709818399",
-				["lucide-crosshair"] = "rbxassetid://10709818534",
-				["lucide-crown"] = "rbxassetid://10709818626",
-				["lucide-cup-soda"] = "rbxassetid://10709818763",
-				["lucide-curly-braces"] = "rbxassetid://10709818847",
-				["lucide-currency"] = "rbxassetid://10709818931",
-				["lucide-database"] = "rbxassetid://10709818996",
-				["lucide-delete"] = "rbxassetid://10709819059",
-				["lucide-diamond"] = "rbxassetid://10709819149",
-				["lucide-dice-1"] = "rbxassetid://10709819266",
-				["lucide-dice-2"] = "rbxassetid://10709819361",
-				["lucide-dice-3"] = "rbxassetid://10709819508",
-				["lucide-dice-4"] = "rbxassetid://10709819670",
-				["lucide-dice-5"] = "rbxassetid://10709819801",
-				["lucide-dice-6"] = "rbxassetid://10709819896",
-				["lucide-dices"] = "rbxassetid://10723343321",
-				["lucide-diff"] = "rbxassetid://10723343416",
-				["lucide-disc"] = "rbxassetid://10723343537",
-				["lucide-divide"] = "rbxassetid://10723343805",
-				["lucide-divide-circle"] = "rbxassetid://10723343636",
-				["lucide-divide-square"] = "rbxassetid://10723343737",
-				["lucide-dollar-sign"] = "rbxassetid://10723343958",
-				["lucide-download"] = "rbxassetid://10723344270",
-				["lucide-download-cloud"] = "rbxassetid://10723344088",
-				["lucide-droplet"] = "rbxassetid://10723344432",
-				["lucide-droplets"] = "rbxassetid://10734883356",
-				["lucide-drumstick"] = "rbxassetid://10723344737",
-				["lucide-edit"] = "rbxassetid://10734883598",
-				["lucide-edit-2"] = "rbxassetid://10723344885",
-				["lucide-edit-3"] = "rbxassetid://10723345088",
-				["lucide-egg"] = "rbxassetid://10723345518",
-				["lucide-egg-fried"] = "rbxassetid://10723345347",
-				["lucide-electricity"] = "rbxassetid://10723345749",
-				["lucide-electricity-off"] = "rbxassetid://10723345643",
-				["lucide-equal"] = "rbxassetid://10723345990",
-				["lucide-equal-not"] = "rbxassetid://10723345866",
-				["lucide-eraser"] = "rbxassetid://10723346158",
-				["lucide-euro"] = "rbxassetid://10723346372",
-				["lucide-expand"] = "rbxassetid://10723346553",
-				["lucide-external-link"] = "rbxassetid://10723346684",
-				["lucide-eye"] = "rbxassetid://10723346959",
-				["lucide-eye-off"] = "rbxassetid://10723346871",
-				["lucide-factory"] = "rbxassetid://10723347051",
-				["lucide-fan"] = "rbxassetid://10723354359",
-				["lucide-fast-forward"] = "rbxassetid://10723354521",
-				["lucide-feather"] = "rbxassetid://10723354671",
-				["lucide-figma"] = "rbxassetid://10723354801",
-				["lucide-file"] = "rbxassetid://10723374641",
-				["lucide-file-archive"] = "rbxassetid://10723354921",
-				["lucide-file-audio"] = "rbxassetid://10723355148",
-				["lucide-file-audio-2"] = "rbxassetid://10723355026",
-				["lucide-file-axis-3d"] = "rbxassetid://10723355272",
-				["lucide-file-badge"] = "rbxassetid://10723355622",
-				["lucide-file-badge-2"] = "rbxassetid://10723355451",
-				["lucide-file-bar-chart"] = "rbxassetid://10723355887",
-				["lucide-file-bar-chart-2"] = "rbxassetid://10723355746",
-				["lucide-file-box"] = "rbxassetid://10723355989",
-				["lucide-file-check"] = "rbxassetid://10723356210",
-				["lucide-file-check-2"] = "rbxassetid://10723356100",
-				["lucide-file-clock"] = "rbxassetid://10723356329",
-				["lucide-file-code"] = "rbxassetid://10723356507",
-				["lucide-file-cog"] = "rbxassetid://10723356830",
-				["lucide-file-cog-2"] = "rbxassetid://10723356676",
-				["lucide-file-diff"] = "rbxassetid://10723357039",
-				["lucide-file-digit"] = "rbxassetid://10723357151",
-				["lucide-file-down"] = "rbxassetid://10723357322",
-				["lucide-file-edit"] = "rbxassetid://10723357495",
-				["lucide-file-heart"] = "rbxassetid://10723357637",
-				["lucide-file-image"] = "rbxassetid://10723357790",
-				["lucide-file-input"] = "rbxassetid://10723357933",
-				["lucide-file-json"] = "rbxassetid://10723364435",
-				["lucide-file-json-2"] = "rbxassetid://10723364361",
-				["lucide-file-key"] = "rbxassetid://10723364605",
-				["lucide-file-key-2"] = "rbxassetid://10723364515",
-				["lucide-file-line-chart"] = "rbxassetid://10723364725",
-				["lucide-file-lock"] = "rbxassetid://10723364957",
-				["lucide-file-lock-2"] = "rbxassetid://10723364861",
-				["lucide-file-minus"] = "rbxassetid://10723365254",
-				["lucide-file-minus-2"] = "rbxassetid://10723365086",
-				["lucide-file-output"] = "rbxassetid://10723365457",
-				["lucide-file-pie-chart"] = "rbxassetid://10723365598",
-				["lucide-file-plus"] = "rbxassetid://10723365877",
-				["lucide-file-plus-2"] = "rbxassetid://10723365766",
-				["lucide-file-question"] = "rbxassetid://10723365987",
-				["lucide-file-scan"] = "rbxassetid://10723366167",
-				["lucide-file-search"] = "rbxassetid://10723366550",
-				["lucide-file-search-2"] = "rbxassetid://10723366340",
-				["lucide-file-signature"] = "rbxassetid://10723366741",
-				["lucide-file-spreadsheet"] = "rbxassetid://10723366962",
-				["lucide-file-symlink"] = "rbxassetid://10723367098",
-				["lucide-file-terminal"] = "rbxassetid://10723367244",
-				["lucide-file-text"] = "rbxassetid://10723367380",
-				["lucide-file-type"] = "rbxassetid://10723367606",
-				["lucide-file-type-2"] = "rbxassetid://10723367509",
-				["lucide-file-up"] = "rbxassetid://10723367734",
-				["lucide-file-video"] = "rbxassetid://10723373884",
-				["lucide-file-video-2"] = "rbxassetid://10723367834",
-				["lucide-file-volume"] = "rbxassetid://10723374172",
-				["lucide-file-volume-2"] = "rbxassetid://10723374030",
-				["lucide-file-warning"] = "rbxassetid://10723374276",
-				["lucide-file-x"] = "rbxassetid://10723374544",
-				["lucide-file-x-2"] = "rbxassetid://10723374378",
-				["lucide-files"] = "rbxassetid://10723374759",
-				["lucide-film"] = "rbxassetid://10723374981",
-				["lucide-filter"] = "rbxassetid://10723375128",
-				["lucide-fingerprint"] = "rbxassetid://10723375250",
-				["lucide-flag"] = "rbxassetid://10723375890",
-				["lucide-flag-off"] = "rbxassetid://10723375443",
-				["lucide-flag-triangle-left"] = "rbxassetid://10723375608",
-				["lucide-flag-triangle-right"] = "rbxassetid://10723375727",
-				["lucide-flame"] = "rbxassetid://10723376114",
-				["lucide-flashlight"] = "rbxassetid://10723376471",
-				["lucide-flashlight-off"] = "rbxassetid://10723376365",
-				["lucide-flask-conical"] = "rbxassetid://10734883986",
-				["lucide-flask-round"] = "rbxassetid://10723376614",
-				["lucide-flip-horizontal"] = "rbxassetid://10723376884",
-				["lucide-flip-horizontal-2"] = "rbxassetid://10723376745",
-				["lucide-flip-vertical"] = "rbxassetid://10723377138",
-				["lucide-flip-vertical-2"] = "rbxassetid://10723377026",
-				["lucide-flower"] = "rbxassetid://10747830374",
-				["lucide-flower-2"] = "rbxassetid://10723377305",
-				["lucide-focus"] = "rbxassetid://10723377537",
-				["lucide-folder"] = "rbxassetid://10723387563",
-				["lucide-folder-archive"] = "rbxassetid://10723384478",
-				["lucide-folder-check"] = "rbxassetid://10723384605",
-				["lucide-folder-clock"] = "rbxassetid://10723384731",
-				["lucide-folder-closed"] = "rbxassetid://10723384893",
-				["lucide-folder-cog"] = "rbxassetid://10723385213",
-				["lucide-folder-cog-2"] = "rbxassetid://10723385036",
-				["lucide-folder-down"] = "rbxassetid://10723385338",
-				["lucide-folder-edit"] = "rbxassetid://10723385445",
-				["lucide-folder-heart"] = "rbxassetid://10723385545",
-				["lucide-folder-input"] = "rbxassetid://10723385721",
-				["lucide-folder-key"] = "rbxassetid://10723385848",
-				["lucide-folder-lock"] = "rbxassetid://10723386005",
-				["lucide-folder-minus"] = "rbxassetid://10723386127",
-				["lucide-folder-open"] = "rbxassetid://10723386277",
-				["lucide-folder-output"] = "rbxassetid://10723386386",
-				["lucide-folder-plus"] = "rbxassetid://10723386531",
-				["lucide-folder-search"] = "rbxassetid://10723386787",
-				["lucide-folder-search-2"] = "rbxassetid://10723386674",
-				["lucide-folder-symlink"] = "rbxassetid://10723386930",
-				["lucide-folder-tree"] = "rbxassetid://10723387085",
-				["lucide-folder-up"] = "rbxassetid://10723387265",
-				["lucide-folder-x"] = "rbxassetid://10723387448",
-				["lucide-folders"] = "rbxassetid://10723387721",
-				["lucide-form-input"] = "rbxassetid://10723387841",
-				["lucide-forward"] = "rbxassetid://10723388016",
-				["lucide-frame"] = "rbxassetid://10723394389",
-				["lucide-framer"] = "rbxassetid://10723394565",
-				["lucide-frown"] = "rbxassetid://10723394681",
-				["lucide-fuel"] = "rbxassetid://10723394846",
-				["lucide-function-square"] = "rbxassetid://10723395041",
-				["lucide-gamepad"] = "rbxassetid://10723395457",
-				["lucide-gamepad-2"] = "rbxassetid://10723395215",
-				["lucide-gauge"] = "rbxassetid://10723395708",
-				["lucide-gavel"] = "rbxassetid://10723395896",
-				["lucide-gem"] = "rbxassetid://10723396000",
-				["lucide-ghost"] = "rbxassetid://10723396107",
-				["lucide-gift"] = "rbxassetid://10723396402",
-				["lucide-gift-card"] = "rbxassetid://10723396225",
-				["lucide-git-branch"] = "rbxassetid://10723396676",
-				["lucide-git-branch-plus"] = "rbxassetid://10723396542",
-				["lucide-git-commit"] = "rbxassetid://10723396812",
-				["lucide-git-compare"] = "rbxassetid://10723396954",
-				["lucide-git-fork"] = "rbxassetid://10723397049",
-				["lucide-git-merge"] = "rbxassetid://10723397165",
-				["lucide-git-pull-request"] = "rbxassetid://10723397431",
-				["lucide-git-pull-request-closed"] = "rbxassetid://10723397268",
-				["lucide-git-pull-request-draft"] = "rbxassetid://10734884302",
-				["lucide-glass"] = "rbxassetid://10723397788",
-				["lucide-glass-2"] = "rbxassetid://10723397529",
-				["lucide-glass-water"] = "rbxassetid://10723397678",
-				["lucide-glasses"] = "rbxassetid://10723397895",
-				["lucide-globe"] = "rbxassetid://10723404337",
-				["lucide-globe-2"] = "rbxassetid://10723398002",
-				["lucide-grab"] = "rbxassetid://10723404472",
-				["lucide-graduation-cap"] = "rbxassetid://10723404691",
-				["lucide-grape"] = "rbxassetid://10723404822",
-				["lucide-grid"] = "rbxassetid://10723404936",
-				["lucide-grip-horizontal"] = "rbxassetid://10723405089",
-				["lucide-grip-vertical"] = "rbxassetid://10723405236",
-				["lucide-hammer"] = "rbxassetid://10723405360",
-				["lucide-hand"] = "rbxassetid://10723405649",
-				["lucide-hand-metal"] = "rbxassetid://10723405508",
-				["lucide-hard-drive"] = "rbxassetid://10723405749",
-				["lucide-hard-hat"] = "rbxassetid://10723405859",
-				["lucide-hash"] = "rbxassetid://10723405975",
-				["lucide-haze"] = "rbxassetid://10723406078",
-				["lucide-headphones"] = "rbxassetid://10723406165",
-				["lucide-heart"] = "rbxassetid://10723406885",
-				["lucide-heart-crack"] = "rbxassetid://10723406299",
-				["lucide-heart-handshake"] = "rbxassetid://10723406480",
-				["lucide-heart-off"] = "rbxassetid://10723406662",
-				["lucide-heart-pulse"] = "rbxassetid://10723406795",
-				["lucide-help-circle"] = "rbxassetid://10723406988",
-				["lucide-hexagon"] = "rbxassetid://10723407092",
-				["lucide-highlighter"] = "rbxassetid://10723407192",
-				["lucide-history"] = "rbxassetid://10723407335",
-				["lucide-home"] = "rbxassetid://10723407389",
-				["lucide-hourglass"] = "rbxassetid://10723407498",
-				["lucide-ice-cream"] = "rbxassetid://10723414308",
-				["lucide-image"] = "rbxassetid://10723415040",
-				["lucide-image-minus"] = "rbxassetid://10723414487",
-				["lucide-image-off"] = "rbxassetid://10723414677",
-				["lucide-image-plus"] = "rbxassetid://10723414827",
-				["lucide-import"] = "rbxassetid://10723415205",
-				["lucide-inbox"] = "rbxassetid://10723415335",
-				["lucide-indent"] = "rbxassetid://10723415494",
-				["lucide-indian-rupee"] = "rbxassetid://10723415642",
-				["lucide-infinity"] = "rbxassetid://10723415766",
-				["lucide-info"] = "rbxassetid://10723415903",
-				["lucide-inspect"] = "rbxassetid://10723416057",
-				["lucide-italic"] = "rbxassetid://10723416195",
-				["lucide-japanese-yen"] = "rbxassetid://10723416363",
-				["lucide-joystick"] = "rbxassetid://10723416527",
-				["lucide-key"] = "rbxassetid://10723416652",
-				["lucide-keyboard"] = "rbxassetid://10723416765",
-				["lucide-lamp"] = "rbxassetid://10723417513",
-				["lucide-lamp-ceiling"] = "rbxassetid://10723416922",
-				["lucide-lamp-desk"] = "rbxassetid://10723417016",
-				["lucide-lamp-floor"] = "rbxassetid://10723417131",
-				["lucide-lamp-wall-down"] = "rbxassetid://10723417240",
-				["lucide-lamp-wall-up"] = "rbxassetid://10723417356",
-				["lucide-landmark"] = "rbxassetid://10723417608",
-				["lucide-languages"] = "rbxassetid://10723417703",
-				["lucide-laptop"] = "rbxassetid://10723423881",
-				["lucide-laptop-2"] = "rbxassetid://10723417797",
-				["lucide-lasso"] = "rbxassetid://10723424235",
-				["lucide-lasso-select"] = "rbxassetid://10723424058",
-				["lucide-laugh"] = "rbxassetid://10723424372",
-				["lucide-layers"] = "rbxassetid://10723424505",
-				["lucide-layout"] = "rbxassetid://10723425376",
-				["lucide-layout-dashboard"] = "rbxassetid://10723424646",
-				["lucide-layout-grid"] = "rbxassetid://10723424838",
-				["lucide-layout-list"] = "rbxassetid://10723424963",
-				["lucide-layout-template"] = "rbxassetid://10723425187",
-				["lucide-leaf"] = "rbxassetid://10723425539",
-				["lucide-library"] = "rbxassetid://10723425615",
-				["lucide-life-buoy"] = "rbxassetid://10723425685",
-				["lucide-lightbulb"] = "rbxassetid://10723425852",
-				["lucide-lightbulb-off"] = "rbxassetid://10723425762",
-				["lucide-line-chart"] = "rbxassetid://10723426393",
-				["lucide-link"] = "rbxassetid://10723426722",
-				["lucide-link-2"] = "rbxassetid://10723426595",
-				["lucide-link-2-off"] = "rbxassetid://10723426513",
-				["lucide-list"] = "rbxassetid://10723433811",
-				["lucide-list-checks"] = "rbxassetid://10734884548",
-				["lucide-list-end"] = "rbxassetid://10723426886",
-				["lucide-list-minus"] = "rbxassetid://10723426986",
-				["lucide-list-music"] = "rbxassetid://10723427081",
-				["lucide-list-ordered"] = "rbxassetid://10723427199",
-				["lucide-list-plus"] = "rbxassetid://10723427334",
-				["lucide-list-start"] = "rbxassetid://10723427494",
-				["lucide-list-video"] = "rbxassetid://10723427619",
-				["lucide-list-x"] = "rbxassetid://10723433655",
-				["lucide-loader"] = "rbxassetid://10723434070",
-				["lucide-loader-2"] = "rbxassetid://10723433935",
-				["lucide-locate"] = "rbxassetid://10723434557",
-				["lucide-locate-fixed"] = "rbxassetid://10723434236",
-				["lucide-locate-off"] = "rbxassetid://10723434379",
-				["lucide-lock"] = "rbxassetid://10723434711",
-				["lucide-log-in"] = "rbxassetid://10723434830",
-				["lucide-log-out"] = "rbxassetid://10723434906",
-				["lucide-luggage"] = "rbxassetid://10723434993",
-				["lucide-magnet"] = "rbxassetid://10723435069",
-				["lucide-mail"] = "rbxassetid://10734885430",
-				["lucide-mail-check"] = "rbxassetid://10723435182",
-				["lucide-mail-minus"] = "rbxassetid://10723435261",
-				["lucide-mail-open"] = "rbxassetid://10723435342",
-				["lucide-mail-plus"] = "rbxassetid://10723435443",
-				["lucide-mail-question"] = "rbxassetid://10723435515",
-				["lucide-mail-search"] = "rbxassetid://10734884739",
-				["lucide-mail-warning"] = "rbxassetid://10734885015",
-				["lucide-mail-x"] = "rbxassetid://10734885247",
-				["lucide-mails"] = "rbxassetid://10734885614",
-				["lucide-map"] = "rbxassetid://10734886202",
-				["lucide-map-pin"] = "rbxassetid://10734886004",
-				["lucide-map-pin-off"] = "rbxassetid://10734885803",
-				["lucide-maximize"] = "rbxassetid://10734886735",
-				["lucide-maximize-2"] = "rbxassetid://10734886496",
-				["lucide-medal"] = "rbxassetid://10734887072",
-				["lucide-megaphone"] = "rbxassetid://10734887454",
-				["lucide-megaphone-off"] = "rbxassetid://10734887311",
-				["lucide-meh"] = "rbxassetid://10734887603",
-				["lucide-menu"] = "rbxassetid://10734887784",
-				["lucide-message-circle"] = "rbxassetid://10734888000",
-				["lucide-message-square"] = "rbxassetid://10734888228",
-				["lucide-mic"] = "rbxassetid://10734888864",
-				["lucide-mic-2"] = "rbxassetid://10734888430",
-				["lucide-mic-off"] = "rbxassetid://10734888646",
-				["lucide-microscope"] = "rbxassetid://10734889106",
-				["lucide-microwave"] = "rbxassetid://10734895076",
-				["lucide-milestone"] = "rbxassetid://10734895310",
-				["lucide-minimize"] = "rbxassetid://10734895698",
-				["lucide-minimize-2"] = "rbxassetid://10734895530",
-				["lucide-minus"] = "rbxassetid://10734896206",
-				["lucide-minus-circle"] = "rbxassetid://10734895856",
-				["lucide-minus-square"] = "rbxassetid://10734896029",
-				["lucide-monitor"] = "rbxassetid://10734896881",
-				["lucide-monitor-off"] = "rbxassetid://10734896360",
-				["lucide-monitor-speaker"] = "rbxassetid://10734896512",
-				["lucide-moon"] = "rbxassetid://10734897102",
-				["lucide-more-horizontal"] = "rbxassetid://10734897250",
-				["lucide-more-vertical"] = "rbxassetid://10734897387",
-				["lucide-mountain"] = "rbxassetid://10734897956",
-				["lucide-mountain-snow"] = "rbxassetid://10734897665",
-				["lucide-mouse"] = "rbxassetid://10734898592",
-				["lucide-mouse-pointer"] = "rbxassetid://10734898476",
-				["lucide-mouse-pointer-2"] = "rbxassetid://10734898194",
-				["lucide-mouse-pointer-click"] = "rbxassetid://10734898355",
-				["lucide-move"] = "rbxassetid://10734900011",
-				["lucide-move-3d"] = "rbxassetid://10734898756",
-				["lucide-move-diagonal"] = "rbxassetid://10734899164",
-				["lucide-move-diagonal-2"] = "rbxassetid://10734898934",
-				["lucide-move-horizontal"] = "rbxassetid://10734899414",
-				["lucide-move-vertical"] = "rbxassetid://10734899821",
-				["lucide-music"] = "rbxassetid://10734905958",
-				["lucide-music-2"] = "rbxassetid://10734900215",
-				["lucide-music-3"] = "rbxassetid://10734905665",
-				["lucide-music-4"] = "rbxassetid://10734905823",
-				["lucide-navigation"] = "rbxassetid://10734906744",
-				["lucide-navigation-2"] = "rbxassetid://10734906332",
-				["lucide-navigation-2-off"] = "rbxassetid://10734906144",
-				["lucide-navigation-off"] = "rbxassetid://10734906580",
-				["lucide-network"] = "rbxassetid://10734906975",
-				["lucide-newspaper"] = "rbxassetid://10734907168",
-				["lucide-octagon"] = "rbxassetid://10734907361",
-				["lucide-option"] = "rbxassetid://10734907649",
-				["lucide-outdent"] = "rbxassetid://10734907933",
-				["lucide-package"] = "rbxassetid://10734909540",
-				["lucide-package-2"] = "rbxassetid://10734908151",
-				["lucide-package-check"] = "rbxassetid://10734908384",
-				["lucide-package-minus"] = "rbxassetid://10734908626",
-				["lucide-package-open"] = "rbxassetid://10734908793",
-				["lucide-package-plus"] = "rbxassetid://10734909016",
-				["lucide-package-search"] = "rbxassetid://10734909196",
-				["lucide-package-x"] = "rbxassetid://10734909375",
-				["lucide-paint-bucket"] = "rbxassetid://10734909847",
-				["lucide-paintbrush"] = "rbxassetid://10734910187",
-				["lucide-paintbrush-2"] = "rbxassetid://10734910030",
-				["lucide-palette"] = "rbxassetid://10734910430",
-				["lucide-palmtree"] = "rbxassetid://10734910680",
-				["lucide-paperclip"] = "rbxassetid://10734910927",
-				["lucide-party-popper"] = "rbxassetid://10734918735",
-				["lucide-pause"] = "rbxassetid://10734919336",
-				["lucide-pause-circle"] = "rbxassetid://10735024209",
-				["lucide-pause-octagon"] = "rbxassetid://10734919143",
-				["lucide-pen-tool"] = "rbxassetid://10734919503",
-				["lucide-pencil"] = "rbxassetid://10734919691",
-				["lucide-percent"] = "rbxassetid://10734919919",
-				["lucide-person-standing"] = "rbxassetid://10734920149",
-				["lucide-phone"] = "rbxassetid://10734921524",
-				["lucide-phone-call"] = "rbxassetid://10734920305",
-				["lucide-phone-forwarded"] = "rbxassetid://10734920508",
-				["lucide-phone-incoming"] = "rbxassetid://10734920694",
-				["lucide-phone-missed"] = "rbxassetid://10734920845",
-				["lucide-phone-off"] = "rbxassetid://10734921077",
-				["lucide-phone-outgoing"] = "rbxassetid://10734921288",
-				["lucide-pie-chart"] = "rbxassetid://10734921727",
-				["lucide-piggy-bank"] = "rbxassetid://10734921935",
-				["lucide-pin"] = "rbxassetid://10734922324",
-				["lucide-pin-off"] = "rbxassetid://10734922180",
-				["lucide-pipette"] = "rbxassetid://10734922497",
-				["lucide-pizza"] = "rbxassetid://10734922774",
-				["lucide-plane"] = "rbxassetid://10734922971",
-				["lucide-play"] = "rbxassetid://10734923549",
-				["lucide-play-circle"] = "rbxassetid://10734923214",
-				["lucide-plus"] = "rbxassetid://10734924532",
-				["lucide-plus-circle"] = "rbxassetid://10734923868",
-				["lucide-plus-square"] = "rbxassetid://10734924219",
-				["lucide-podcast"] = "rbxassetid://10734929553",
-				["lucide-pointer"] = "rbxassetid://10734929723",
-				["lucide-pound-sterling"] = "rbxassetid://10734929981",
-				["lucide-power"] = "rbxassetid://10734930466",
-				["lucide-power-off"] = "rbxassetid://10734930257",
-				["lucide-printer"] = "rbxassetid://10734930632",
-				["lucide-puzzle"] = "rbxassetid://10734930886",
-				["lucide-quote"] = "rbxassetid://10734931234",
-				["lucide-radio"] = "rbxassetid://10734931596",
-				["lucide-radio-receiver"] = "rbxassetid://10734931402",
-				["lucide-rectangle-horizontal"] = "rbxassetid://10734931777",
-				["lucide-rectangle-vertical"] = "rbxassetid://10734932081",
-				["lucide-recycle"] = "rbxassetid://10734932295",
-				["lucide-redo"] = "rbxassetid://10734932822",
-				["lucide-redo-2"] = "rbxassetid://10734932586",
-				["lucide-refresh-ccw"] = "rbxassetid://10734933056",
-				["lucide-refresh-cw"] = "rbxassetid://10734933222",
-				["lucide-refrigerator"] = "rbxassetid://10734933465",
-				["lucide-regex"] = "rbxassetid://10734933655",
-				["lucide-repeat"] = "rbxassetid://10734933966",
-				["lucide-repeat-1"] = "rbxassetid://10734933826",
-				["lucide-reply"] = "rbxassetid://10734934252",
-				["lucide-reply-all"] = "rbxassetid://10734934132",
-				["lucide-rewind"] = "rbxassetid://10734934347",
-				["lucide-rocket"] = "rbxassetid://10734934585",
-				["lucide-rocking-chair"] = "rbxassetid://10734939942",
-				["lucide-rotate-3d"] = "rbxassetid://10734940107",
-				["lucide-rotate-ccw"] = "rbxassetid://10734940376",
-				["lucide-rotate-cw"] = "rbxassetid://10734940654",
-				["lucide-rss"] = "rbxassetid://10734940825",
-				["lucide-ruler"] = "rbxassetid://10734941018",
-				["lucide-russian-ruble"] = "rbxassetid://10734941199",
-				["lucide-sailboat"] = "rbxassetid://10734941354",
-				["lucide-save"] = "rbxassetid://10734941499",
-				["lucide-scale"] = "rbxassetid://10734941912",
-				["lucide-scale-3d"] = "rbxassetid://10734941739",
-				["lucide-scaling"] = "rbxassetid://10734942072",
-				["lucide-scan"] = "rbxassetid://10734942565",
-				["lucide-scan-face"] = "rbxassetid://10734942198",
-				["lucide-scan-line"] = "rbxassetid://10734942351",
-				["lucide-scissors"] = "rbxassetid://10734942778",
-				["lucide-screen-share"] = "rbxassetid://10734943193",
-				["lucide-screen-share-off"] = "rbxassetid://10734942967",
-				["lucide-scroll"] = "rbxassetid://10734943448",
-				["lucide-search"] = "rbxassetid://10734943674",
-				["lucide-send"] = "rbxassetid://10734943902",
-				["lucide-separator-horizontal"] = "rbxassetid://10734944115",
-				["lucide-separator-vertical"] = "rbxassetid://10734944326",
-				["lucide-server"] = "rbxassetid://10734949856",
-				["lucide-server-cog"] = "rbxassetid://10734944444",
-				["lucide-server-crash"] = "rbxassetid://10734944554",
-				["lucide-server-off"] = "rbxassetid://10734944668",
-				["lucide-settings"] = "rbxassetid://10734950309",
-				["lucide-settings-2"] = "rbxassetid://10734950020",
-				["lucide-share"] = "rbxassetid://10734950813",
-				["lucide-share-2"] = "rbxassetid://10734950553",
-				["lucide-sheet"] = "rbxassetid://10734951038",
-				["lucide-shield"] = "rbxassetid://10734951847",
-				["lucide-shield-alert"] = "rbxassetid://10734951173",
-				["lucide-shield-check"] = "rbxassetid://10734951367",
-				["lucide-shield-close"] = "rbxassetid://10734951535",
-				["lucide-shield-off"] = "rbxassetid://10734951684",
-				["lucide-shirt"] = "rbxassetid://10734952036",
-				["lucide-shopping-bag"] = "rbxassetid://10734952273",
-				["lucide-shopping-cart"] = "rbxassetid://10734952479",
-				["lucide-shovel"] = "rbxassetid://10734952773",
-				["lucide-shower-head"] = "rbxassetid://10734952942",
-				["lucide-shrink"] = "rbxassetid://10734953073",
-				["lucide-shrub"] = "rbxassetid://10734953241",
-				["lucide-shuffle"] = "rbxassetid://10734953451",
-				["lucide-sidebar"] = "rbxassetid://10734954301",
-				["lucide-sidebar-close"] = "rbxassetid://10734953715",
-				["lucide-sidebar-open"] = "rbxassetid://10734954000",
-				["lucide-sigma"] = "rbxassetid://10734954538",
-				["lucide-signal"] = "rbxassetid://10734961133",
-				["lucide-signal-high"] = "rbxassetid://10734954807",
-				["lucide-signal-low"] = "rbxassetid://10734955080",
-				["lucide-signal-medium"] = "rbxassetid://10734955336",
-				["lucide-signal-zero"] = "rbxassetid://10734960878",
-				["lucide-siren"] = "rbxassetid://10734961284",
-				["lucide-skip-back"] = "rbxassetid://10734961526",
-				["lucide-skip-forward"] = "rbxassetid://10734961809",
-				["lucide-skull"] = "rbxassetid://10734962068",
-				["lucide-slack"] = "rbxassetid://10734962339",
-				["lucide-slash"] = "rbxassetid://10734962600",
-				["lucide-slice"] = "rbxassetid://10734963024",
-				["lucide-sliders"] = "rbxassetid://10734963400",
-				["lucide-sliders-horizontal"] = "rbxassetid://10734963191",
-				["lucide-smartphone"] = "rbxassetid://10734963940",
-				["lucide-smartphone-charging"] = "rbxassetid://10734963671",
-				["lucide-smile"] = "rbxassetid://10734964441",
-				["lucide-smile-plus"] = "rbxassetid://10734964188",
-				["lucide-snowflake"] = "rbxassetid://10734964600",
-				["lucide-sofa"] = "rbxassetid://10734964852",
-				["lucide-sort-asc"] = "rbxassetid://10734965115",
-				["lucide-sort-desc"] = "rbxassetid://10734965287",
-				["lucide-speaker"] = "rbxassetid://10734965419",
-				["lucide-sprout"] = "rbxassetid://10734965572",
-				["lucide-square"] = "rbxassetid://10734965702",
-				["lucide-star"] = "rbxassetid://10734966248",
-				["lucide-star-half"] = "rbxassetid://10734965897",
-				["lucide-star-off"] = "rbxassetid://10734966097",
-				["lucide-stethoscope"] = "rbxassetid://10734966384",
-				["lucide-sticker"] = "rbxassetid://10734972234",
-				["lucide-sticky-note"] = "rbxassetid://10734972463",
-				["lucide-stop-circle"] = "rbxassetid://10734972621",
-				["lucide-stretch-horizontal"] = "rbxassetid://10734972862",
-				["lucide-stretch-vertical"] = "rbxassetid://10734973130",
-				["lucide-strikethrough"] = "rbxassetid://10734973290",
-				["lucide-subscript"] = "rbxassetid://10734973457",
-				["lucide-sun"] = "rbxassetid://10734974297",
-				["lucide-sun-dim"] = "rbxassetid://10734973645",
-				["lucide-sun-medium"] = "rbxassetid://10734973778",
-				["lucide-sun-moon"] = "rbxassetid://10734973999",
-				["lucide-sun-snow"] = "rbxassetid://10734974130",
-				["lucide-sunrise"] = "rbxassetid://10734974522",
-				["lucide-sunset"] = "rbxassetid://10734974689",
-				["lucide-superscript"] = "rbxassetid://10734974850",
-				["lucide-swiss-franc"] = "rbxassetid://10734975024",
-				["lucide-switch-camera"] = "rbxassetid://10734975214",
-				["lucide-sword"] = "rbxassetid://10734975486",
-				["lucide-swords"] = "rbxassetid://10734975692",
-				["lucide-syringe"] = "rbxassetid://10734975932",
-				["lucide-table"] = "rbxassetid://10734976230",
-				["lucide-table-2"] = "rbxassetid://10734976097",
-				["lucide-tablet"] = "rbxassetid://10734976394",
-				["lucide-tag"] = "rbxassetid://10734976528",
-				["lucide-tags"] = "rbxassetid://10734976739",
-				["lucide-target"] = "rbxassetid://10734977012",
-				["lucide-tent"] = "rbxassetid://10734981750",
-				["lucide-terminal"] = "rbxassetid://10734982144",
-				["lucide-terminal-square"] = "rbxassetid://10734981995",
-				["lucide-text-cursor"] = "rbxassetid://10734982395",
-				["lucide-text-cursor-input"] = "rbxassetid://10734982297",
-				["lucide-thermometer"] = "rbxassetid://10734983134",
-				["lucide-thermometer-snowflake"] = "rbxassetid://10734982571",
-				["lucide-thermometer-sun"] = "rbxassetid://10734982771",
-				["lucide-thumbs-down"] = "rbxassetid://10734983359",
-				["lucide-thumbs-up"] = "rbxassetid://10734983629",
-				["lucide-ticket"] = "rbxassetid://10734983868",
-				["lucide-timer"] = "rbxassetid://10734984606",
-				["lucide-timer-off"] = "rbxassetid://10734984138",
-				["lucide-timer-reset"] = "rbxassetid://10734984355",
-				["lucide-toggle-left"] = "rbxassetid://10734984834",
-				["lucide-toggle-right"] = "rbxassetid://10734985040",
-				["lucide-tornado"] = "rbxassetid://10734985247",
-				["lucide-toy-brick"] = "rbxassetid://10747361919",
-				["lucide-train"] = "rbxassetid://10747362105",
-				["lucide-trash"] = "rbxassetid://10747362393",
-				["lucide-trash-2"] = "rbxassetid://10747362241",
-				["lucide-tree-deciduous"] = "rbxassetid://10747362534",
-				["lucide-tree-pine"] = "rbxassetid://10747362748",
-				["lucide-trees"] = "rbxassetid://10747363016",
-				["lucide-trending-down"] = "rbxassetid://10747363205",
-				["lucide-trending-up"] = "rbxassetid://10747363465",
-				["lucide-triangle"] = "rbxassetid://10747363621",
-				["lucide-trophy"] = "rbxassetid://10747363809",
-				["lucide-truck"] = "rbxassetid://10747364031",
-				["lucide-tv"] = "rbxassetid://10747364593",
-				["lucide-tv-2"] = "rbxassetid://10747364302",
-				["lucide-type"] = "rbxassetid://10747364761",
-				["lucide-umbrella"] = "rbxassetid://10747364971",
-				["lucide-underline"] = "rbxassetid://10747365191",
-				["lucide-undo"] = "rbxassetid://10747365484",
-				["lucide-undo-2"] = "rbxassetid://10747365359",
-				["lucide-unlink"] = "rbxassetid://10747365771",
-				["lucide-unlink-2"] = "rbxassetid://10747397871",
-				["lucide-unlock"] = "rbxassetid://10747366027",
-				["lucide-upload"] = "rbxassetid://10747366434",
-				["lucide-upload-cloud"] = "rbxassetid://10747366266",
-				["lucide-usb"] = "rbxassetid://10747366606",
-				["lucide-user"] = "rbxassetid://10747373176",
-				["lucide-user-check"] = "rbxassetid://10747371901",
-				["lucide-user-cog"] = "rbxassetid://10747372167",
-				["lucide-user-minus"] = "rbxassetid://10747372346",
-				["lucide-user-plus"] = "rbxassetid://10747372702",
-				["lucide-user-x"] = "rbxassetid://10747372992",
-				["lucide-users"] = "rbxassetid://10747373426",
-				["lucide-utensils"] = "rbxassetid://10747373821",
-				["lucide-utensils-crossed"] = "rbxassetid://10747373629",
-				["lucide-venetian-mask"] = "rbxassetid://10747374003",
-				["lucide-verified"] = "rbxassetid://10747374131",
-				["lucide-vibrate"] = "rbxassetid://10747374489",
-				["lucide-vibrate-off"] = "rbxassetid://10747374269",
-				["lucide-video"] = "rbxassetid://10747374938",
-				["lucide-video-off"] = "rbxassetid://10747374721",
-				["lucide-view"] = "rbxassetid://10747375132",
-				["lucide-voicemail"] = "rbxassetid://10747375281",
-				["lucide-volume"] = "rbxassetid://10747376008",
-				["lucide-volume-1"] = "rbxassetid://10747375450",
-				["lucide-volume-2"] = "rbxassetid://10747375679",
-				["lucide-volume-x"] = "rbxassetid://10747375880",
-				["lucide-wallet"] = "rbxassetid://10747376205",
-				["lucide-wand"] = "rbxassetid://10747376565",
-				["lucide-wand-2"] = "rbxassetid://10747376349",
-				["lucide-watch"] = "rbxassetid://10747376722",
-				["lucide-waves"] = "rbxassetid://10747376931",
-				["lucide-webcam"] = "rbxassetid://10747381992",
-				["lucide-wifi"] = "rbxassetid://10747382504",
-				["lucide-wifi-off"] = "rbxassetid://10747382268",
-				["lucide-wind"] = "rbxassetid://10747382750",
-				["lucide-wrap-text"] = "rbxassetid://10747383065",
-				["lucide-wrench"] = "rbxassetid://10747383470",
-				["lucide-x"] = "rbxassetid://10747384394",
-				["lucide-x-circle"] = "rbxassetid://10747383819",
-				["lucide-x-octagon"] = "rbxassetid://10747384037",
-				["lucide-x-square"] = "rbxassetid://10747384217",
-				["lucide-zoom-in"] = "rbxassetid://10747384552",
-				["lucide-zoom-out"] = "rbxassetid://10747384679",
-				["lucide-castle"] = "rbxassetid://89680811679779",
-				["lucide-dog"] = "rbxassetid://128027287498958",
-				["lucide-fish"] = "rbxassetid://131247469041952"
-			}
+			assets = assets,
+			rawAssets = rawAssets,
+			aliases = aliases,
+			legacyFallback = legacyFallback,
+			count = 1715,
+			Get = function(_, name)
+				return lookupIcon(name)
+			end
 		}
 	end,
 	[30] = function()
@@ -11968,6 +16855,7 @@ local moduleFunctions = {
 		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(47)
 		local Themes = {
 			Names = {
+				"Acryven",
 				"Dark",
 				"Darker",
 				"Dark V2",
@@ -12171,40 +17059,40 @@ local moduleFunctions = {
 		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(52)
 		return {
 			Name = "Light",
-			Accent = Color3.fromRGB(0, 103, 192),
-			AcrylicMain = Color3.fromRGB(245, 245, 245),
-			AcrylicBorder = Color3.fromRGB(80, 80, 80),
-			AcrylicGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(240, 240, 240)),
-			AcrylicNoise = 0.94,
-			TitleBarLine = Color3.fromRGB(100, 100, 100),
-			Tab = Color3.fromRGB(60, 60, 60),
+			Accent = Color3.fromRGB(37, 99, 235),
+			AcrylicMain = Color3.fromRGB(246, 248, 252),
+			AcrylicBorder = Color3.fromRGB(168, 178, 196),
+			AcrylicGradient = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(238, 242, 248)),
+			AcrylicNoise = 0.95,
+			TitleBarLine = Color3.fromRGB(170, 180, 198),
+			Tab = Color3.fromRGB(37, 99, 235),
 			Element = Color3.fromRGB(255, 255, 255),
-			ElementBorder = Color3.fromRGB(100, 100, 100),
-			InElementBorder = Color3.fromRGB(130, 130, 130),
-			ElementTransparency = 0.50,
-			ToggleSlider = Color3.fromRGB(60, 60, 60),
-			ToggleToggled = Color3.fromRGB(240, 240, 240),
-			SliderRail = Color3.fromRGB(60, 60, 60),
+			ElementBorder = Color3.fromRGB(158, 170, 192),
+			InElementBorder = Color3.fromRGB(142, 156, 180),
+			ElementTransparency = 0.22,
+			ToggleSlider = Color3.fromRGB(148, 163, 184),
+			ToggleToggled = Color3.fromRGB(255, 255, 255),
+			SliderRail = Color3.fromRGB(186, 196, 214),
 			DropdownFrame = Color3.fromRGB(255, 255, 255),
-			DropdownHolder = Color3.fromRGB(248, 248, 248),
-			DropdownBorder = Color3.fromRGB(100, 100, 100),
-			DropdownOption = Color3.fromRGB(60, 60, 60),
-			Keybind = Color3.fromRGB(60, 60, 60),
-			Input = Color3.fromRGB(60, 60, 60),
-			InputFocused = Color3.fromRGB(80, 80, 80),
-			InputIndicator = Color3.fromRGB(40, 40, 40),
-			Dialog = Color3.fromRGB(255, 255, 255),
-			DialogHolder = Color3.fromRGB(248, 248, 248),
-			DialogHolderLine = Color3.fromRGB(100, 100, 100),
+			DropdownHolder = Color3.fromRGB(250, 252, 255),
+			DropdownBorder = Color3.fromRGB(148, 162, 186),
+			DropdownOption = Color3.fromRGB(37, 99, 235),
+			Keybind = Color3.fromRGB(238, 242, 248),
+			Input = Color3.fromRGB(241, 245, 249),
+			InputFocused = Color3.fromRGB(255, 255, 255),
+			InputIndicator = Color3.fromRGB(37, 99, 235),
+			Dialog = Color3.fromRGB(252, 253, 255),
+			DialogHolder = Color3.fromRGB(241, 245, 249),
+			DialogHolderLine = Color3.fromRGB(203, 213, 225),
 			DialogButton = Color3.fromRGB(255, 255, 255),
-			DialogButtonBorder = Color3.fromRGB(100, 100, 100),
-			DialogBorder = Color3.fromRGB(80, 80, 80),
-			DialogInput = Color3.fromRGB(252, 252, 252),
-			DialogInputLine = Color3.fromRGB(100, 100, 100),
-			Text = Color3.fromRGB(10, 10, 10),
-			SubText = Color3.fromRGB(60, 60, 60),
-			Hover = Color3.fromRGB(40, 40, 40),
-			HoverChange = 0.18
+			DialogButtonBorder = Color3.fromRGB(148, 162, 186),
+			DialogBorder = Color3.fromRGB(142, 156, 180),
+			DialogInput = Color3.fromRGB(244, 247, 252),
+			DialogInputLine = Color3.fromRGB(37, 99, 235),
+			Text = Color3.fromRGB(15, 20, 32),
+			SubText = Color3.fromRGB(62, 74, 94),
+			Hover = Color3.fromRGB(15, 23, 42),
+			HoverChange = 0.08
 		}
 	end,
 	[53] = function()
@@ -12775,21 +17663,21 @@ local moduleFunctions = {
 			Name = "Dark",
 			Accent = Color3.fromRGB(96, 205, 255),
 			AcrylicMain = Color3.fromRGB(60, 60, 60),
-			AcrylicBorder = Color3.fromRGB(90, 90, 90),
+			AcrylicBorder = Color3.fromRGB(128, 134, 148),
 			AcrylicGradient = ColorSequence.new(Color3.fromRGB(40, 40, 40), Color3.fromRGB(40, 40, 40)),
 			AcrylicNoise = 0.9,
-			TitleBarLine = Color3.fromRGB(75, 75, 75),
+			TitleBarLine = Color3.fromRGB(96, 100, 114),
 			Tab = Color3.fromRGB(120, 120, 120),
-			Element = Color3.fromRGB(120, 120, 120),
-			ElementBorder = Color3.fromRGB(35, 35, 35),
-			InElementBorder = Color3.fromRGB(90, 90, 90),
-			ElementTransparency = 0.87,
+			Element = Color3.fromRGB(44, 46, 52),
+			ElementBorder = Color3.fromRGB(114, 118, 132),
+			InElementBorder = Color3.fromRGB(134, 140, 156),
+			ElementTransparency = 0.42,
 			ToggleSlider = Color3.fromRGB(120, 120, 120),
 			ToggleToggled = Color3.fromRGB(0, 0, 0),
 			SliderRail = Color3.fromRGB(120, 120, 120),
 			DropdownFrame = Color3.fromRGB(160, 160, 160),
 			DropdownHolder = Color3.fromRGB(45, 45, 45),
-			DropdownBorder = Color3.fromRGB(35, 35, 35),
+			DropdownBorder = Color3.fromRGB(118, 124, 138),
 			DropdownOption = Color3.fromRGB(120, 120, 120),
 			Keybind = Color3.fromRGB(120, 120, 120),
 			Input = Color3.fromRGB(160, 160, 160),
@@ -12799,12 +17687,12 @@ local moduleFunctions = {
 			DialogHolder = Color3.fromRGB(35, 35, 35),
 			DialogHolderLine = Color3.fromRGB(30, 30, 30),
 			DialogButton = Color3.fromRGB(45, 45, 45),
-			DialogButtonBorder = Color3.fromRGB(80, 80, 80),
-			DialogBorder = Color3.fromRGB(70, 70, 70),
+			DialogButtonBorder = Color3.fromRGB(116, 122, 136),
+			DialogBorder = Color3.fromRGB(118, 124, 138),
 			DialogInput = Color3.fromRGB(55, 55, 55),
 			DialogInputLine = Color3.fromRGB(160, 160, 160),
-			Text = Color3.fromRGB(240, 240, 240),
-			SubText = Color3.fromRGB(170, 170, 170),
+			Text = Color3.fromRGB(250, 251, 254),
+			SubText = Color3.fromRGB(198, 202, 214),
 			Hover = Color3.fromRGB(120, 120, 120),
 			HoverChange = 0.07
 		}
@@ -12815,27 +17703,9980 @@ local moduleFunctions = {
 			Name = "Darker",
 			Accent = Color3.fromRGB(72, 138, 182),
 			AcrylicMain = Color3.fromRGB(30, 30, 30),
-			AcrylicBorder = Color3.fromRGB(60, 60, 60),
+			AcrylicBorder = Color3.fromRGB(108, 114, 130),
 			AcrylicGradient = ColorSequence.new(Color3.fromRGB(25, 25, 25), Color3.fromRGB(15, 15, 15)),
 			AcrylicNoise = 0.94,
-			TitleBarLine = Color3.fromRGB(65, 65, 65),
+			TitleBarLine = Color3.fromRGB(82, 88, 102),
 			Tab = Color3.fromRGB(100, 100, 100),
-			Element = Color3.fromRGB(70, 70, 70),
-			ElementBorder = Color3.fromRGB(25, 25, 25),
-			InElementBorder = Color3.fromRGB(55, 55, 55),
-			ElementTransparency = 0.82,
+			Element = Color3.fromRGB(28, 30, 36),
+			ElementBorder = Color3.fromRGB(96, 102, 118),
+			InElementBorder = Color3.fromRGB(116, 124, 142),
+			ElementTransparency = 0.36,
+			ToggleSlider = Color3.fromRGB(108, 114, 130),
+			ToggleToggled = Color3.fromRGB(10, 12, 16),
+			SliderRail = Color3.fromRGB(76, 82, 98),
 			DropdownFrame = Color3.fromRGB(120, 120, 120),
 			DropdownHolder = Color3.fromRGB(35, 35, 35),
-			DropdownBorder = Color3.fromRGB(25, 25, 25),
+			DropdownBorder = Color3.fromRGB(102, 108, 124),
+			DropdownOption = Color3.fromRGB(110, 124, 150),
+			Keybind = Color3.fromRGB(32, 35, 42),
+			Input = Color3.fromRGB(32, 35, 42),
+			InputFocused = Color3.fromRGB(20, 22, 28),
+			InputIndicator = Color3.fromRGB(72, 138, 182),
 			Dialog = Color3.fromRGB(35, 35, 35),
 			DialogHolder = Color3.fromRGB(25, 25, 25),
 			DialogHolderLine = Color3.fromRGB(20, 20, 20),
 			DialogButton = Color3.fromRGB(35, 35, 35),
-			DialogButtonBorder = Color3.fromRGB(55, 55, 55),
-			DialogBorder = Color3.fromRGB(50, 50, 50),
+			DialogButtonBorder = Color3.fromRGB(98, 104, 120),
+			DialogBorder = Color3.fromRGB(102, 108, 124),
 			DialogInput = Color3.fromRGB(45, 45, 45),
-			DialogInputLine = Color3.fromRGB(120, 120, 120)
+			DialogInputLine = Color3.fromRGB(120, 120, 120),
+			Text = Color3.fromRGB(248, 250, 254),
+			SubText = Color3.fromRGB(194, 200, 214),
+			Hover = Color3.fromRGB(120, 132, 156),
+			HoverChange = 0.08
 		}
+	end,
+	[69] = function()
+		local _maui, _moduleScript, _requireModule, _getfenv, _setfenv = moduleContext(69)
+		return {
+			Name = "Acryven",
+			Accent = Color3.fromRGB(99, 179, 255),
+			AcrylicMain = Color3.fromRGB(11, 12, 16),
+			AcrylicBorder = Color3.fromRGB(160, 178, 214),
+			AcrylicGradient = ColorSequence.new(Color3.fromRGB(24, 27, 38), Color3.fromRGB(10, 11, 15)),
+			AcrylicNoise = 0.93,
+			TitleBarLine = Color3.fromRGB(88, 100, 128),
+			Tab = Color3.fromRGB(145, 162, 198),
+			Element = Color3.fromRGB(22, 26, 36),
+			ElementBorder = Color3.fromRGB(108, 124, 160),
+			InElementBorder = Color3.fromRGB(128, 146, 186),
+			ElementTransparency = 0.38,
+			ToggleSlider = Color3.fromRGB(110, 120, 146),
+			ToggleToggled = Color3.fromRGB(10, 12, 18),
+			SliderRail = Color3.fromRGB(72, 80, 102),
+			DropdownFrame = Color3.fromRGB(26, 29, 40),
+			DropdownHolder = Color3.fromRGB(15, 17, 24),
+			DropdownBorder = Color3.fromRGB(116, 132, 170),
+			DropdownOption = Color3.fromRGB(130, 148, 188),
+			Keybind = Color3.fromRGB(28, 32, 44),
+			Input = Color3.fromRGB(26, 29, 40),
+			InputFocused = Color3.fromRGB(16, 18, 26),
+			InputIndicator = Color3.fromRGB(99, 179, 255),
+			Dialog = Color3.fromRGB(16, 18, 25),
+			DialogHolder = Color3.fromRGB(12, 14, 20),
+			DialogHolderLine = Color3.fromRGB(48, 54, 72),
+			DialogButton = Color3.fromRGB(26, 30, 42),
+			DialogButtonBorder = Color3.fromRGB(112, 128, 166),
+			DialogBorder = Color3.fromRGB(120, 138, 176),
+			DialogInput = Color3.fromRGB(22, 25, 35),
+			DialogInputLine = Color3.fromRGB(99, 179, 255),
+			Text = Color3.fromRGB(252, 253, 255),
+			SubText = Color3.fromRGB(198, 208, 228),
+			Hover = Color3.fromRGB(145, 165, 208),
+			HoverChange = 0.08
+		}
+	end,
+	[70] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(70)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Element = Creator.New, {}
+		Element.__index = Element
+		Element.__type = "ActionRow"
+
+		local DANGER_BG = Color3.fromRGB(220, 38, 38)
+		local DANGER_BORDER = Color3.fromRGB(248, 113, 113)
+		local WARN_BG = Color3.fromRGB(217, 119, 6)
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			config = type(config) == "table" and config or {}
+			local buttons = type(config.Buttons) == "table" and config.Buttons or {}
+			local gap = tonumber(config.Gap) or 6
+			local height = tonumber(config.Height) or 34
+
+			local ActionRow = {
+				Type = "ActionRow",
+				Buttons = {}
+			}
+
+			ActionRow.Frame = New(
+				"Frame",
+				{
+					Name = "AcryvenActionRow",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, height),
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parent.Container
+				}
+			)
+			ActionRow.Root = ActionRow.Frame
+
+			local count = math.max(1, #buttons)
+			local wScale = 1 / count
+			local gapDeduction = gap * (count - 1) / count
+
+			for i, spec in ipairs(buttons) do
+				local variant = spec.Variant or "Secondary"
+				local needConfirm = spec.Confirm == true
+				local xOff = math.floor((i - 1) * (gap / count) + 0.5)
+
+				local stroke = New(
+					"UIStroke",
+					{
+						Transparency = 0.36,
+						Thickness = 1,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "ElementBorder"}
+					}
+				)
+
+				local iconAsset = nil
+				if type(spec.Icon) == "string" and spec.Icon ~= "" then
+					iconAsset = Library:GetIcon(spec.Icon) or (spec.Icon:match("^rbxassetid://") and spec.Icon) or nil
+				end
+
+				local innerChildren = {
+					New("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						HorizontalAlignment = Enum.HorizontalAlignment.Center,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						Padding = UDim.new(0, 6)
+					})
+				}
+				local iconImg = nil
+				if iconAsset then
+					iconImg = New("ImageLabel", {
+						Name = "Icon",
+						Image = iconAsset,
+						Size = UDim2.fromOffset(14, 14),
+						BackgroundTransparency = 1,
+						ThemeTag = {ImageColor3 = "Text"}
+					})
+					table.insert(innerChildren, iconImg)
+				end
+
+				local lbl = New("TextLabel", {
+					Name = "Label",
+					Text = tostring(spec.Title or ("Action " .. tostring(i))),
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 12,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1,
+					ThemeTag = {TextColor3 = "Text"}
+				})
+				table.insert(innerChildren, lbl)
+
+				local btn = New(
+					"TextButton",
+					{
+						Name = "ActionBtn_" .. tostring(i),
+						Text = "",
+						AutoButtonColor = false,
+						Position = UDim2.new((i - 1) * wScale, xOff, 0, 0),
+						Size = UDim2.new(wScale, -math.floor(gapDeduction + 0.5), 1, 0),
+						BackgroundTransparency = 0.45,
+						Parent = ActionRow.Frame,
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}),
+						stroke,
+						New("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1}, innerChildren)
+					}
+				)
+
+				local function applyStyle(mode)
+					if mode == "Primary" then
+						local acc = Creator.GetThemeProperty("Accent")
+						local c = Creator.AutoContrast(acc)
+						Creator.OverrideTag(btn, {BackgroundColor3 = "Accent"})
+						Creator.OverrideTag(stroke, {Color = "Accent"})
+						Creator.OverrideTag(lbl, {})
+						btn.BackgroundTransparency = 0.12
+						stroke.Transparency = 0.2
+						lbl.TextColor3 = c
+						if iconImg then
+							Creator.OverrideTag(iconImg, {})
+							iconImg.ImageColor3 = c
+						end
+					elseif mode == "Danger" then
+						Creator.OverrideTag(btn, {})
+						Creator.OverrideTag(stroke, {})
+						Creator.OverrideTag(lbl, {})
+						btn.BackgroundColor3 = DANGER_BG
+						btn.BackgroundTransparency = 0.2
+						stroke.Color = DANGER_BORDER
+						stroke.Transparency = 0.28
+						lbl.TextColor3 = Color3.fromRGB(255, 245, 245)
+						if iconImg then
+							Creator.OverrideTag(iconImg, {})
+							iconImg.ImageColor3 = Color3.fromRGB(255, 245, 245)
+						end
+					elseif mode == "Ghost" then
+						Creator.OverrideTag(btn, {BackgroundColor3 = "Element"})
+						Creator.OverrideTag(stroke, {Color = "ElementBorder"})
+						Creator.OverrideTag(lbl, {TextColor3 = "SubText"})
+						btn.BackgroundTransparency = 0.85
+						stroke.Transparency = 0.48
+						if iconImg then
+							Creator.OverrideTag(iconImg, {ImageColor3 = "SubText"})
+						end
+					elseif mode == "ConfirmPending" then
+						Creator.OverrideTag(btn, {})
+						Creator.OverrideTag(stroke, {})
+						Creator.OverrideTag(lbl, {})
+						btn.BackgroundColor3 = WARN_BG
+						btn.BackgroundTransparency = 0.12
+						stroke.Color = Color3.fromRGB(251, 191, 36)
+						stroke.Transparency = 0.15
+						lbl.TextColor3 = Color3.fromRGB(255, 251, 235)
+						if iconImg then
+							Creator.OverrideTag(iconImg, {})
+							iconImg.ImageColor3 = Color3.fromRGB(255, 251, 235)
+						end
+					else
+						Creator.OverrideTag(btn, {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"})
+						Creator.OverrideTag(stroke, {Color = "ElementBorder"})
+						Creator.OverrideTag(lbl, {TextColor3 = "Text"})
+						stroke.Transparency = 0.36
+						if iconImg then
+							Creator.OverrideTag(iconImg, {ImageColor3 = "Text"})
+						end
+					end
+				end
+
+				applyStyle(variant)
+				if variant == "Primary" then
+					Creator.AddSignal(btn:GetPropertyChangedSignal("BackgroundColor3"), function()
+						local c = Creator.AutoContrast(btn.BackgroundColor3)
+						lbl.TextColor3 = c
+						if iconImg then
+							iconImg.ImageColor3 = c
+						end
+					end)
+				end
+
+				local restAlpha = function()
+					if variant == "Primary" then return 0.12
+					elseif variant == "Danger" then return 0.2
+					elseif variant == "Ghost" then return 0.85
+					else return Creator.GetThemeProperty("ElementTransparency") or 0.38 end
+				end
+
+				local pending = false
+				local pendingGen = 0
+				local origTitle = tostring(spec.Title or ("Action " .. tostring(i)))
+
+				Creator.AddSignal(btn.MouseEnter, function()
+					if not pending then
+						Creator.SpringValue(btn, "BackgroundTransparency", math.max(0.02, restAlpha() - 0.1), 10, 1)
+						Creator.SpringValue(stroke, "Transparency", 0.16, 10, 1)
+					end
+				end)
+				Creator.AddSignal(btn.MouseLeave, function()
+					if not pending then
+						Creator.SpringValue(btn, "BackgroundTransparency", restAlpha(), 10, 1)
+						Creator.SpringValue(stroke, "Transparency", variant == "Primary" and 0.18 or 0.36, 10, 1)
+					end
+				end)
+				Creator.AddSignal(btn.MouseButton1Click, function()
+					if needConfirm and not pending then
+						pending = true
+						pendingGen += 1
+						local myGen = pendingGen
+						lbl.Text = spec.ConfirmText or "Confirm?"
+						applyStyle("ConfirmPending")
+						task.delay(3, function()
+							if myGen == pendingGen and pending and btn and btn.Parent then
+								pending = false
+								lbl.Text = origTitle
+								applyStyle(variant)
+							end
+						end)
+						return
+					end
+					if pending then
+						pending = false
+						pendingGen += 1
+						lbl.Text = origTitle
+						applyStyle(variant)
+					end
+					Library:SafeCallback(spec.Callback)
+				end)
+
+				table.insert(ActionRow.Buttons, {Frame = btn, Label = lbl})
+			end
+
+			function ActionRow.Destroy(_self)
+				ActionRow.Frame:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			if idx ~= nil then
+				Library.Options[idx] = ActionRow
+			end
+			return ActionRow
+		end
+		return Element
+	end,
+	[71] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(71)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Element = Creator.New, {}
+		Element.__index = Element
+		Element.__type = "Callout"
+
+		local VARIANTS = {
+			Info = {Color = Color3.fromRGB(99, 179, 255), Icon = "info"},
+			Success = {Color = Color3.fromRGB(52, 211, 153), Icon = "check-circle-2"},
+			Warning = {Color = Color3.fromRGB(251, 191, 36), Icon = "alert-triangle"},
+			Danger = {Color = Color3.fromRGB(248, 113, 113), Icon = "alert-circle"}
+		}
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			config = type(config) == "table" and config or {}
+			local variantName = config.Variant or config.Kind or "Info"
+			local spec = VARIANTS[variantName] or VARIANTS.Info
+			local accentColor = typeof(config.Color) == "Color3" and config.Color or spec.Color
+			local iconAsset = Library:GetIcon(config.Icon or spec.Icon) or Library:GetIcon("info") or ""
+			local dismissible = config.Dismissible == true
+
+			local Callout = {
+				Type = "Callout",
+				Variant = variantName
+			}
+
+			local titleLbl = New(
+				"TextLabel",
+				{
+					Name = "Title",
+					Text = tostring(config.Title or variantName),
+					RichText = true,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 13,
+					TextWrapped = true,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, 0, 0, 0),
+					LayoutOrder = 1,
+					LineHeight = 1.12,
+					BackgroundTransparency = 1,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
+
+			local contentText = tostring(config.Content or config.Description or "")
+			local descLbl = New(
+				"TextLabel",
+				{
+					Name = "Content",
+					Text = contentText,
+					RichText = true,
+					Visible = contentText ~= "",
+					FontFace = Creator.Font(Enum.FontWeight.Regular),
+					TextSize = 12,
+					TextWrapped = true,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, 0, 0, 0),
+					LayoutOrder = 2,
+					LineHeight = 1.15,
+					BackgroundTransparency = 1,
+					ThemeTag = {TextColor3 = "SubText"}
+				}
+			)
+
+			local rightPad = dismissible and 34 or 12
+			local textCol = New(
+				"Frame",
+				{
+					Name = "TextCol",
+					BackgroundTransparency = 1,
+					Position = UDim2.fromOffset(38, 0),
+					Size = UDim2.new(1, -(38 + rightPad), 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y
+				},
+				{
+					New("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder}),
+					New("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)}),
+					titleLbl,
+					descLbl
+				}
+			)
+
+			if type(config.Action) == "table" and config.Action.Title then
+				local actionBtn = New(
+					"TextButton",
+					{
+						Name = "ActionBtn",
+						Text = tostring(config.Action.Title),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 11,
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.fromOffset(0, 22),
+						BackgroundColor3 = accentColor,
+						BackgroundTransparency = 0.2,
+						TextColor3 = Creator.AutoContrast(accentColor),
+						LayoutOrder = 5,
+						Parent = textCol
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+					}
+				)
+				Creator.AddSignal(actionBtn.MouseButton1Click, function()
+					Library:SafeCallback(config.Action.Callback)
+				end)
+			end
+
+			local tintOverlay = New(
+				"Frame",
+				{
+					Name = "Tint",
+					Size = UDim2.fromScale(1, 1),
+					BackgroundColor3 = accentColor,
+					BackgroundTransparency = 0.88,
+					ZIndex = 1
+				},
+				{New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)})}
+			)
+
+			local accentBar = New(
+				"Frame",
+				{
+					Name = "AccentBar",
+					Size = UDim2.new(0, 3, 1, -14),
+					Position = UDim2.new(0, 5, 0.5, 0),
+					AnchorPoint = Vector2.new(0, 0.5),
+					BackgroundColor3 = accentColor,
+					ZIndex = 2
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
+
+			local iconImg = New(
+				"ImageLabel",
+				{
+					Name = "Icon",
+					Image = iconAsset,
+					Size = UDim2.fromOffset(16, 16),
+					Position = UDim2.fromOffset(15, 11),
+					BackgroundTransparency = 1,
+					ImageColor3 = accentColor,
+					ZIndex = 2
+				}
+			)
+
+			local children = {
+				New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}),
+				New("UIStroke", {Color = accentColor, Transparency = 0.34, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}),
+				tintOverlay,
+				accentBar,
+				iconImg,
+				textCol
+			}
+
+			if dismissible then
+				local closeBtn = New(
+					"TextButton",
+					{
+						Name = "Dismiss",
+						Text = "",
+						Size = UDim2.fromOffset(22, 22),
+						Position = UDim2.new(1, -8, 0, 8),
+						AnchorPoint = Vector2.new(1, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 3
+					},
+					{
+						New("ImageLabel", {
+							Image = Library:GetIcon("x") or "rbxassetid://10747384394",
+							Size = UDim2.fromOffset(12, 12),
+							Position = UDim2.fromScale(0.5, 0.5),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							BackgroundTransparency = 1,
+							ImageTransparency = 0.04,
+							ThemeTag = {ImageColor3 = "SubText"}
+						})
+					}
+				)
+				Creator.AddSignal(closeBtn.MouseButton1Click, function()
+					Callout:Dismiss()
+				end)
+				table.insert(children, closeBtn)
+			end
+
+			Callout.Frame = New(
+				"Frame",
+				{
+					Name = "AcryvenCallout",
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parent.Container,
+					ThemeTag = {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"}
+				},
+				children
+			)
+			Callout.Root = Callout.Frame
+
+			function Callout.SetTitle(_self, text)
+				titleLbl.Text = tostring(text or "")
+			end
+			function Callout.SetContent(_self, text)
+				local s = tostring(text or "")
+				descLbl.Text = s
+				descLbl.Visible = s ~= ""
+			end
+			function Callout.Dismiss(_self)
+				if Callout.Frame and Callout.Frame.Parent then
+					Callout.Frame.Visible = false
+				end
+				if type(config.OnDismiss) == "function" then
+					Library:SafeCallback(config.OnDismiss)
+				end
+			end
+			function Callout.Destroy(_self)
+				Callout.Frame:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			if idx ~= nil then
+				Library.Options[idx] = Callout
+			end
+			return Callout
+		end
+		return Element
+	end,
+	[72] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(72)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Element = Creator.New, {}
+		Element.__index = Element
+		Element.__type = "CodeBlock"
+
+		local LUAU_KEYWORDS = {
+			["local"] = true, ["function"] = true, ["return"] = true, ["if"] = true, ["then"] = true,
+			["else"] = true, ["elseif"] = true, ["end"] = true, ["for"] = true, ["in"] = true,
+			["do"] = true, ["while"] = true, ["repeat"] = true, ["until"] = true, ["and"] = true,
+			["or"] = true, ["not"] = true, ["true"] = true, ["false"] = true, ["nil"] = true,
+			["break"] = true, ["continue"] = true, ["type"] = true, ["export"] = true
+		}
+
+		local PALETTE_DARK = {
+			Comment = "#7a869e",
+			String = "#34d399",
+			Keyword = "#c084fc",
+			Call = "#60a5fa",
+			Number = "#fbbf24",
+			LineNo = "#64748b"
+		}
+		local PALETTE_LIGHT = {
+			Comment = "#64748b",
+			String = "#059669",
+			Keyword = "#7c3aed",
+			Call = "#2563eb",
+			Number = "#d97706",
+			LineNo = "#94a3b8"
+		}
+
+		local function escapeRich(s)
+			local escaped = tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+			return escaped
+		end
+
+		local function isLightSurface(color)
+			if typeof(color) ~= "Color3" then
+				return false
+			end
+			return (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) > 0.55
+		end
+
+		local function highlightLuauLine(raw, pal)
+			local out = {}
+			local i, n = 1, #raw
+			while i <= n do
+				local ch = raw:sub(i, i)
+				if ch == "-" and raw:sub(i, i + 1) == "--" then
+					table.insert(out, '<font color="' .. pal.Comment .. '">' .. escapeRich(raw:sub(i)) .. "</font>")
+					break
+				elseif ch == '"' or ch == "'" then
+					local q = ch
+					local j = i + 1
+					while j <= n do
+						local c = raw:sub(j, j)
+						if c == "\\" then
+							j += 2
+						elseif c == q then
+							j += 1
+							break
+						else
+							j += 1
+						end
+					end
+					table.insert(out, '<font color="' .. pal.String .. '">' .. escapeRich(raw:sub(i, j - 1)) .. "</font>")
+					i = j
+				elseif ch:match("[%a_]") then
+					local j = i + 1
+					while j <= n and raw:sub(j, j):match("[%w_]") do
+						j += 1
+					end
+					local word = raw:sub(i, j - 1)
+					if LUAU_KEYWORDS[word] then
+						table.insert(out, '<font color="' .. pal.Keyword .. '">' .. word .. "</font>")
+					elseif raw:sub(j, j) == "(" then
+						table.insert(out, '<font color="' .. pal.Call .. '">' .. word .. "</font>")
+					else
+						table.insert(out, escapeRich(word))
+					end
+					i = j
+				elseif ch:match("%d") then
+					local j = i + 1
+					while j <= n and raw:sub(j, j):match("[%d%.xXa-fA-F_]") do
+						j += 1
+					end
+					table.insert(out, '<font color="' .. pal.Number .. '">' .. escapeRich(raw:sub(i, j - 1)) .. "</font>")
+					i = j
+				else
+					table.insert(out, escapeRich(ch))
+					i += 1
+				end
+			end
+			return table.concat(out)
+		end
+
+		local function formatCode(source, highlight, showLineNumbers, lightBg)
+			local pal = lightBg and PALETTE_LIGHT or PALETTE_DARK
+			local lines = tostring(source or ""):gsub("\r\n", "\n"):split("\n")
+			local rendered = {}
+			for idx, line in ipairs(lines) do
+				local body = highlight and highlightLuauLine(line, pal) or escapeRich(line)
+				if showLineNumbers then
+					table.insert(rendered, string.format('<font color="%s">%2d</font>  %s', pal.LineNo, idx, body))
+				else
+					table.insert(rendered, body)
+				end
+			end
+			return table.concat(rendered, "\n"), #lines
+		end
+
+		local function copyClipboard(text)
+			local fn = setclipboard or toclipboard or (syn and syn.write_clipboard)
+			if type(fn) == "function" then
+				return pcall(fn, tostring(text))
+			end
+			return false
+		end
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			config = type(config) == "table" and config or {}
+			local rawCode = tostring(config.Code or config.Content or "")
+			local language = tostring(config.Language or "luau")
+			local highlight = config.Highlight ~= false and (language:lower() == "luau" or language:lower() == "lua")
+			local lineNumbers = config.LineNumbers ~= false
+			local maxHeight = tonumber(config.MaxHeight) or 190
+
+			local CodeBlock = {
+				Value = rawCode,
+				Type = "CodeBlock"
+			}
+
+			local copyAsset = Library:GetIcon("copy") or ""
+			local checkAsset = Library:GetIcon("check") or ""
+			local copyIcon = New("ImageLabel", {
+				Image = copyAsset,
+				Size = UDim2.fromOffset(12, 12),
+				BackgroundTransparency = 1,
+				ThemeTag = {ImageColor3 = "SubText"}
+			})
+			local copyLbl = New("TextLabel", {
+				Text = "Copy",
+				I18nSkip = true,
+				FontFace = Creator.Font(Enum.FontWeight.Medium),
+				TextSize = 10,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.new(0, 0, 1, 0),
+				BackgroundTransparency = 1,
+				ThemeTag = {TextColor3 = "SubText"}
+			})
+			local copyBtn = New(
+				"TextButton",
+				{
+					Name = "CopyBtn",
+					Text = "",
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -8, 0.5, 0),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 20),
+					BackgroundTransparency = 0.28,
+					AutoButtonColor = false,
+					ThemeTag = {BackgroundColor3 = "DialogButton"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+					New("UIStroke", {Transparency = 0.42, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}),
+					New("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						Padding = UDim.new(0, 4)
+					}),
+					copyIcon,
+					copyLbl
+				}
+			)
+
+			local header = New(
+				"Frame",
+				{
+					Name = "Header",
+					Size = UDim2.new(1, 0, 0, 28),
+					BackgroundTransparency = 0.14,
+					ThemeTag = {BackgroundColor3 = "Dialog"}
+				},
+				{
+					New("Frame", {
+						Name = "HeaderBorder",
+						Size = UDim2.new(1, 0, 0, 1),
+						Position = UDim2.new(0, 0, 1, -1),
+						BackgroundTransparency = 0.42,
+						ThemeTag = {BackgroundColor3 = "ElementBorder"}
+					}),
+					New("ImageLabel", {
+						Image = Library:GetIcon("code-2") or Library:GetIcon("code") or "",
+						Size = UDim2.fromOffset(13, 13),
+						Position = UDim2.new(0, 10, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ThemeTag = {ImageColor3 = "Accent"}
+					}),
+					New("TextLabel", {
+						Text = tostring(config.Title or language:upper()),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 11,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						Position = UDim2.fromOffset(28, 0),
+						Size = UDim2.new(1, -110, 1, 0),
+						BackgroundTransparency = 1,
+						ThemeTag = {TextColor3 = "Text"}
+					}),
+					copyBtn
+				}
+			)
+
+			local codeLabel = New(
+				"TextLabel",
+				{
+					Name = "CodeText",
+					RichText = true,
+					Text = "",
+					I18nSkip = true,
+					FontRole = "Mono",
+					FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal, "Mono"),
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextYAlignment = Enum.TextYAlignment.Top,
+					TextWrapped = false,
+					AutomaticSize = Enum.AutomaticSize.XY,
+					Size = UDim2.fromOffset(0, 0),
+					BackgroundTransparency = 1,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
+
+			local scroll = New(
+				"ScrollingFrame",
+				{
+					Name = "CodeScroll",
+					Position = UDim2.fromOffset(0, 28),
+					Size = UDim2.new(1, 0, 0, 80),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ScrollBarThickness = 3,
+					ScrollBarImageTransparency = 0.45,
+					AutomaticCanvasSize = Enum.AutomaticSize.XY,
+					CanvasSize = UDim2.fromOffset(0, 0),
+					ThemeTag = {ScrollBarImageColor3 = "Accent"}
+				},
+				{
+					New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10)}),
+					codeLabel
+				}
+			)
+
+			CodeBlock.Frame = New(
+				"Frame",
+				{
+					Name = "AcryvenCodeBlock",
+					Size = UDim2.new(1, 0, 0, 108),
+					BackgroundTransparency = 0.14,
+					ClipsDescendants = true,
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parent.Container,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}),
+					New("UIStroke", {Transparency = 0.34, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "ElementBorder"}}),
+					header,
+					scroll
+				}
+			)
+			CodeBlock.Root = CodeBlock.Frame
+
+			local lastLightMode = nil
+			local function renderSyntax(force)
+				local lightBg = isLightSurface(CodeBlock.Frame.BackgroundColor3)
+				if not force and lightBg == lastLightMode then
+					return
+				end
+				lastLightMode = lightBg
+				local rich, lineCount = formatCode(CodeBlock.Value, highlight, lineNumbers, lightBg)
+				codeLabel.Text = rich
+				local contentH = math.clamp(lineCount * 15 + 20, 44, maxHeight)
+				scroll.Size = UDim2.new(1, 0, 0, contentH)
+				CodeBlock.Frame.Size = UDim2.new(1, 0, 0, 28 + contentH)
+			end
+
+			function CodeBlock.SetCode(_self, code)
+				CodeBlock.Value = tostring(code or "")
+				renderSyntax(true)
+			end
+
+			Creator.AddSignal(CodeBlock.Frame:GetPropertyChangedSignal("BackgroundColor3"), function()
+				renderSyntax(false)
+			end)
+
+			Creator.AddSignal(copyBtn.MouseButton1Click, function()
+				copyClipboard(CodeBlock.Value)
+				copyIcon.Image = checkAsset
+				copyLbl.Text = "Copied"
+				Creator.OverrideTag(copyIcon, {ImageColor3 = "Accent"})
+				Creator.OverrideTag(copyLbl, {TextColor3 = "Accent"})
+				task.delay(1.1, function()
+					if copyBtn and copyBtn.Parent then
+						copyIcon.Image = copyAsset
+						copyLbl.Text = "Copy"
+						Creator.OverrideTag(copyIcon, {ImageColor3 = "SubText"})
+						Creator.OverrideTag(copyLbl, {TextColor3 = "SubText"})
+					end
+				end)
+			end)
+
+			function CodeBlock.Destroy(_self)
+				CodeBlock.Frame:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			CodeBlock:SetCode(rawCode)
+			if idx ~= nil then
+				Library.Options[idx] = CodeBlock
+			end
+			return CodeBlock
+		end
+		return Element
+	end,
+	[73] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(73)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Element = Creator.New, {}
+		Element.__index = Element
+		Element.__type = "Divider"
+
+		function Element.New(parent, idx, config)
+			local labelText = ""
+			local layoutOrder = 7
+			if type(idx) == "string" and config == nil then
+				labelText = idx
+				idx = nil
+			elseif type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+				labelText = tostring(config.Title or config.Text or "")
+				layoutOrder = config.LayoutOrder or 7
+			elseif type(config) == "table" then
+				labelText = tostring(config.Title or config.Text or "")
+				layoutOrder = config.LayoutOrder or 7
+			elseif type(config) == "string" then
+				labelText = config
+			end
+
+			local Divider = {Type = "Divider"}
+			local hasLabel = labelText ~= ""
+
+			if not hasLabel then
+				Divider.Frame = New(
+					"Frame",
+					{
+						Name = "AcryvenDivider",
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 12),
+						LayoutOrder = layoutOrder,
+						Parent = parent.Container
+					},
+					{
+						New("Frame", {
+							Name = "Line",
+							AnchorPoint = Vector2.new(0, 0.5),
+							Position = UDim2.new(0, 0, 0.5, 0),
+							Size = UDim2.new(1, 0, 0, 1),
+							BackgroundTransparency = 0.52,
+							ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+						})
+					}
+				)
+			else
+				local textLbl = New(
+					"TextLabel",
+					{
+						Name = "Label",
+						Text = labelText:upper(),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 10,
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.new(0, 0, 1, 0),
+						BackgroundTransparency = 1,
+						TextTransparency = 0.04,
+						LayoutOrder = 2,
+						ThemeTag = {TextColor3 = "SubText"}
+					}
+				)
+				local leftLine = New("Frame", {
+					Name = "LeftLine",
+					Size = UDim2.new(0, 14, 0, 1),
+					BackgroundTransparency = 0.5,
+					LayoutOrder = 1,
+					ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+				})
+				local rightLine = New("Frame", {
+					Name = "RightLine",
+					Size = UDim2.new(1, 0, 0, 1),
+					BackgroundTransparency = 0.5,
+					LayoutOrder = 3,
+					ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+				}, {New("UIFlexItem", {FlexMode = Enum.UIFlexMode.Fill})})
+
+				Divider.Frame = New(
+					"Frame",
+					{
+						Name = "AcryvenDivider",
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 18),
+						LayoutOrder = layoutOrder,
+						Parent = parent.Container
+					},
+					{
+						New("UIListLayout", {
+							FillDirection = Enum.FillDirection.Horizontal,
+							VerticalAlignment = Enum.VerticalAlignment.Center,
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							Padding = UDim.new(0, 8)
+						}),
+						leftLine,
+						textLbl,
+						rightLine
+					}
+				)
+			end
+
+			Divider.Root = Divider.Frame
+			function Divider.Destroy(_self)
+				Divider.Frame:Destroy()
+			end
+			return Divider
+		end
+		return Element
+	end,
+	[74] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(74)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Element = Creator.New, {}
+		Element.__index = Element
+		Element.__type = "LiveConsole"
+
+		local LEVEL_COLORS = {
+			INFO = Color3.fromRGB(99, 179, 255),
+			OK = Color3.fromRGB(52, 211, 153),
+			DROP = Color3.fromRGB(192, 132, 252),
+			WARN = Color3.fromRGB(251, 191, 36),
+			ERR = Color3.fromRGB(248, 113, 113)
+		}
+
+		local function copyClipboard(text)
+			local fn = setclipboard or toclipboard or (syn and syn.write_clipboard)
+			if type(fn) == "function" then
+				return pcall(fn, tostring(text))
+			end
+			return false
+		end
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			config = type(config) == "table" and config or {}
+			local height = math.clamp(tonumber(config.Height) or 160, 90, 340)
+			local maxLines = math.clamp(tonumber(config.MaxLines) or 80, 10, 250)
+
+			local Console = {
+				Type = "LiveConsole",
+				Paused = false,
+				Lines = {}
+			}
+
+			local function makeMiniBtn(iconName, order)
+				local img = New("ImageLabel", {
+					Name = "Icon",
+					Image = Library:GetIcon(iconName) or "",
+					Size = UDim2.fromOffset(12, 12),
+					Position = UDim2.fromScale(0.5, 0.5),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1,
+					ThemeTag = {ImageColor3 = "SubText"}
+				})
+				local btn = New("TextButton", {
+					Text = "",
+					Size = UDim2.fromOffset(22, 20),
+					BackgroundTransparency = 0.28,
+					AutoButtonColor = false,
+					LayoutOrder = order,
+					ThemeTag = {BackgroundColor3 = "DialogButton"}
+				}, {
+					New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+					New("UIStroke", {Transparency = 0.42, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+					img
+				})
+				return btn, img
+			end
+
+			local pauseBtn, pauseIcon = makeMiniBtn("pause", 1)
+			local copyBtn, copyIcon = makeMiniBtn("copy", 2)
+			local clearBtn = makeMiniBtn("trash-2", 3)
+
+			local controls = New(
+				"Frame",
+				{
+					Name = "Controls",
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -8, 0.5, 0),
+					Size = UDim2.fromOffset(76, 20),
+					BackgroundTransparency = 1
+				},
+				{
+					New("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						HorizontalAlignment = Enum.HorizontalAlignment.Right,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 4)
+					}),
+					pauseBtn,
+					copyBtn,
+					clearBtn
+				}
+			)
+
+			local header = New(
+				"Frame",
+				{
+					Name = "Header",
+					Size = UDim2.new(1, 0, 0, 28),
+					BackgroundTransparency = 0.14,
+					ThemeTag = {BackgroundColor3 = "Dialog"}
+				},
+				{
+					New("Frame", {
+						Name = "HeaderBorder",
+						Size = UDim2.new(1, 0, 0, 1),
+						Position = UDim2.new(0, 0, 1, -1),
+						BackgroundTransparency = 0.42,
+						ThemeTag = {BackgroundColor3 = "ElementBorder"}
+					}),
+					New("ImageLabel", {
+						Image = Library:GetIcon("terminal") or "",
+						Size = UDim2.fromOffset(13, 13),
+						Position = UDim2.new(0, 10, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ThemeTag = {ImageColor3 = "Accent"}
+					}),
+					New("TextLabel", {
+						Text = tostring(config.Title or "Live Console"),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 11,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						Position = UDim2.fromOffset(28, 0),
+						Size = UDim2.new(1, -112, 1, 0),
+						BackgroundTransparency = 1,
+						ThemeTag = {TextColor3 = "Text"}
+					}),
+					controls
+				}
+			)
+
+			local listLayout = New("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder})
+			local scroll = New(
+				"ScrollingFrame",
+				{
+					Name = "LogScroll",
+					Position = UDim2.fromOffset(0, 28),
+					Size = UDim2.new(1, 0, 1, -28),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ScrollBarThickness = 3,
+					ScrollBarImageTransparency = 0.45,
+					CanvasSize = UDim2.fromOffset(0, 0),
+					ScrollingDirection = Enum.ScrollingDirection.Y,
+					ThemeTag = {ScrollBarImageColor3 = "Accent"}
+				},
+				{
+					New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6)}),
+					listLayout
+				}
+			)
+
+			local function syncCanvas()
+				if not scroll or not scroll.Parent then
+					return
+				end
+				local scale = Creator.GetEffectiveScale(scroll)
+				local contentY = math.ceil(listLayout.AbsoluteContentSize.Y / scale) + 12
+				scroll.CanvasSize = UDim2.new(0, 0, 0, contentY)
+				if not Console.Paused then
+					local viewH = scroll.AbsoluteSize.Y / scale
+					scroll.CanvasPosition = Vector2.new(0, math.max(0, contentY - viewH))
+				end
+			end
+			Creator.AddSignal(listLayout:GetPropertyChangedSignal("AbsoluteContentSize"), syncCanvas)
+			Creator.RegisterDPIScale(scroll, function()
+				task.defer(syncCanvas)
+			end)
+
+			Console.Frame = New(
+				"Frame",
+				{
+					Name = "AcryvenLiveConsole",
+					Size = UDim2.new(1, 0, 0, height),
+					BackgroundTransparency = 0.14,
+					ClipsDescendants = true,
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parent.Container,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}),
+					New("UIStroke", {Transparency = 0.34, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "ElementBorder"}}),
+					header,
+					scroll
+				}
+			)
+			Console.Root = Console.Frame
+
+			local rowNodes = {}
+			local orderSeq = 0
+
+			function Console.Log(_self, message, level)
+				local lvl = tostring(level or "INFO"):upper()
+				local lvlColor = LEVEL_COLORS[lvl] or LEVEL_COLORS.INFO
+				local ts = os.date("%H:%M:%S")
+				local text = tostring(message or "")
+				orderSeq += 1
+
+				table.insert(Console.Lines, string.format("[%s] [%s] %s", ts, lvl, text))
+				local row = New(
+					"Frame",
+					{
+						Name = "LogRow",
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						LayoutOrder = orderSeq,
+						Parent = scroll
+					},
+					{
+						New("TextLabel", {
+							Name = "Time",
+							Text = ts,
+							I18nSkip = true,
+							FontRole = "Mono",
+							FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal, "Mono"),
+							TextSize = 11,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							Size = UDim2.fromOffset(54, 16),
+							BackgroundTransparency = 1,
+							TextTransparency = 0.3,
+							ThemeTag = {TextColor3 = "SubText"}
+						}),
+						New("Frame", {
+							Name = "LevelPill",
+							Position = UDim2.fromOffset(56, 1),
+							Size = UDim2.fromOffset(38, 14),
+							BackgroundColor3 = lvlColor,
+							BackgroundTransparency = 0.16
+						}, {
+							New("UICorner", {CornerRadius = UDim.new(0, 4)}),
+							New("TextLabel", {
+								Text = lvl:sub(1, 4),
+								I18nSkip = true,
+								FontFace = Creator.Font(Enum.FontWeight.Bold),
+								TextSize = 9,
+								Size = UDim2.fromScale(1, 1),
+								BackgroundTransparency = 1,
+								TextColor3 = Creator.AutoContrast(lvlColor)
+							})
+						}),
+						New("TextLabel", {
+							Name = "Msg",
+							Text = text,
+							I18nSkip = true,
+							FontRole = "Mono",
+							FontFace = Creator.Font(Enum.FontWeight.Regular, Enum.FontStyle.Normal, "Mono"),
+							TextSize = 11,
+							TextWrapped = true,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							TextYAlignment = Enum.TextYAlignment.Top,
+							AutomaticSize = Enum.AutomaticSize.Y,
+							Position = UDim2.fromOffset(100, 0),
+							Size = UDim2.new(1, -104, 0, 16),
+							BackgroundTransparency = 1,
+							ThemeTag = {TextColor3 = "Text"}
+						})
+					}
+				)
+				table.insert(rowNodes, row)
+				while #rowNodes > maxLines do
+					local old = table.remove(rowNodes, 1)
+					table.remove(Console.Lines, 1)
+					if old and old.Parent then
+						old:Destroy()
+					end
+				end
+			end
+
+			function Console.Clear(_self)
+				for _, r in ipairs(rowNodes) do
+					if r and r.Parent then
+						r:Destroy()
+					end
+				end
+				table.clear(rowNodes)
+				table.clear(Console.Lines)
+				syncCanvas()
+			end
+
+			Creator.AddSignal(pauseBtn.MouseButton1Click, function()
+				Console.Paused = not Console.Paused
+				pauseIcon.Image = Library:GetIcon(Console.Paused and "play" or "pause") or ""
+				Creator.OverrideTag(pauseIcon, {ImageColor3 = Console.Paused and "Accent" or "SubText"})
+			end)
+			Creator.AddSignal(clearBtn.MouseButton1Click, function()
+				Console:Clear()
+			end)
+			Creator.AddSignal(copyBtn.MouseButton1Click, function()
+				copyClipboard(table.concat(Console.Lines, "\n"))
+				copyIcon.Image = Library:GetIcon("check") or ""
+				Creator.OverrideTag(copyIcon, {ImageColor3 = "Accent"})
+				task.delay(1, function()
+					if copyIcon and copyIcon.Parent then
+						copyIcon.Image = Library:GetIcon("copy") or ""
+						Creator.OverrideTag(copyIcon, {ImageColor3 = "SubText"})
+					end
+				end)
+			end)
+
+			function Console.Destroy(_self)
+				Console.Frame:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			if type(config.InitialLines) == "table" then
+				for _, entry in ipairs(config.InitialLines) do
+					if type(entry) == "table" then
+						Console:Log(entry.Message or entry[1], entry.Level or entry[2])
+					else
+						Console:Log(entry, "INFO")
+					end
+				end
+			end
+			if idx ~= nil then
+				Library.Options[idx] = Console
+			end
+			return Console
+		end
+		return Element
+	end,
+	[75] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(75)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local Players = Creator.GetService("Players")
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "PlayerSelector"
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			config = type(config) == "table" and config or {}
+			local multi = config.Multi == true
+			local excludeLocal = config.ExcludeLocalPlayer == true
+			local maxHeight = math.clamp(tonumber(config.MaxHeight) or 148, 72, 260)
+
+			local Selector = {
+				Value = multi and {} or nil,
+				Multi = multi,
+				Callback = config.Callback or function() end,
+				Type = "PlayerSelector"
+			}
+
+			local card = requireModule(Components.Element)(config.Title or "Select Player", config.Description, parent.Container, false)
+			card.TitleLabel.Size = UDim2.new(1, -38, 0, 14)
+			card.DescLabel.Size = UDim2.new(1, -38, 0, 14)
+			card.LabelHolder.Size = UDim2.new(1, -24, 0, 0)
+			Selector.SetTitle = card.SetTitle
+			Selector.SetDesc = card.SetDesc
+			Selector.SetBadge = card.SetBadge
+			Selector.Frame = card.Frame
+
+			local refreshIcon = New("ImageLabel", {
+				Image = Library:GetIcon("refresh-cw") or "",
+				Size = UDim2.fromOffset(13, 13),
+				Position = UDim2.fromScale(0.5, 0.5),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundTransparency = 1,
+				ThemeTag = {ImageColor3 = "SubText"}
+			})
+			local refreshBtn = New(
+				"TextButton",
+				{
+					Name = "RefreshBtn",
+					Text = "",
+					Size = UDim2.fromOffset(24, 24),
+					Position = UDim2.new(1, -10, 0, 8),
+					AnchorPoint = Vector2.new(1, 0),
+					BackgroundTransparency = 0.28,
+					AutoButtonColor = false,
+					ZIndex = 4,
+					Parent = card.Frame,
+					ThemeTag = {BackgroundColor3 = "DialogButton"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+					New("UIStroke", {Transparency = 0.4, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+					refreshIcon
+				}
+			)
+
+			local listLayout = New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
+			local listFrame = New(
+				"ScrollingFrame",
+				{
+					Name = "PlayersList",
+					Size = UDim2.new(1, 0, 0, 48),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ScrollBarThickness = 3,
+					ScrollBarImageTransparency = 0.45,
+					CanvasSize = UDim2.fromOffset(0, 0),
+					ScrollingDirection = Enum.ScrollingDirection.Y,
+					LayoutOrder = 4,
+					Parent = card.LabelHolder,
+					ThemeTag = {ScrollBarImageColor3 = "Accent"}
+				},
+				{
+					listLayout,
+					New(
+						"UIPadding",
+						{
+							PaddingTop = UDim.new(0, 2),
+							PaddingBottom = UDim.new(0, 4),
+							PaddingLeft = UDim.new(0, 2),
+							PaddingRight = UDim.new(0, 6)
+						}
+					)
+				}
+			)
+			New("Frame", {Size = UDim2.new(1, 0, 0, 4), BackgroundTransparency = 1, LayoutOrder = 3, Parent = card.LabelHolder})
+
+			local function syncListSize()
+				if not listFrame or not listFrame.Parent then
+					return
+				end
+				local scale = Creator.GetEffectiveScale(listFrame)
+				local contentY = math.ceil(listLayout.AbsoluteContentSize.Y / scale) + 6
+				listFrame.CanvasSize = UDim2.new(0, 0, 0, contentY)
+				listFrame.Size = UDim2.new(1, 0, 0, math.clamp(contentY, 48, maxHeight))
+			end
+			Creator.AddSignal(listLayout:GetPropertyChangedSignal("AbsoluteContentSize"), syncListSize)
+
+			local rows = {}
+			local function isSelected(name)
+				if multi then
+					return Selector.Value[name] == true
+				end
+				return Selector.Value == name
+			end
+
+			local function fireChanged(silent)
+				if not silent then
+					Library:SafeCallback(Selector.Callback, Selector.Value)
+					Library:SafeCallback(Selector.Changed, Selector.Value)
+				end
+			end
+
+			local function refreshRowVisuals(instant)
+				local accentContrast = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+				local selectedCount = 0
+				local useInstant = instant == true or Creator.ReducedMotion
+				for name, info in next, rows do
+					if info.Stroke and info.CheckBadge then
+						local active = isSelected(name)
+						if active then
+							selectedCount += 1
+						end
+						Creator.OverrideTag(info.Row, {BackgroundColor3 = active and "Accent" or "DialogButton"})
+						Creator.OverrideTag(info.Stroke, {Color = active and "Accent" or "InElementBorder"})
+						if info.AvatarStroke then
+							Creator.OverrideTag(info.AvatarStroke, {Color = active and "Accent" or "InElementBorder"})
+						end
+						if useInstant then
+							Creator.CancelSpring(info.Row, "BackgroundTransparency")
+							Creator.CancelSpring(info.Stroke, "Transparency")
+							info.Row.BackgroundTransparency = active and 0.76 or 0.22
+							info.Stroke.Transparency = active and 0.14 or 0.34
+							if info.Bar then
+								Creator.CancelSpring(info.Bar, "BackgroundTransparency")
+								Creator.CancelSpring(info.Bar, "BarH")
+								info.Bar.BackgroundTransparency = active and 0 or 1
+								info.Bar.Size = UDim2.fromOffset(3, active and 22 or 4)
+							end
+							if info.AvatarStroke then
+								Creator.CancelSpring(info.AvatarStroke, "Transparency")
+								info.AvatarStroke.Transparency = active and 0.08 or 0.45
+							end
+							if info.CheckScale then
+								Creator.CancelSpring(info.CheckScale, "Scale")
+								info.CheckScale.Scale = active and 1 or 0.35
+							end
+							info.CheckBadge.BackgroundTransparency = active and 0.04 or 1
+							info.CheckBadge.Visible = active
+							if info.Check then
+								info.Check.ImageColor3 = accentContrast
+								info.Check.ImageTransparency = active and 0 or 1
+							end
+						else
+							Creator.SpringValue(info.Row, "BackgroundTransparency", active and 0.76 or 0.22, 5.2, 1)
+							Creator.SpringValue(info.Stroke, "Transparency", active and 0.14 or 0.34, 5.2, 1)
+							if info.AvatarStroke then
+								Creator.SpringValue(info.AvatarStroke, "Transparency", active and 0.08 or 0.45, 5.2, 1)
+							end
+							if info.Bar then
+								Creator.SpringValue(info.Bar, "BackgroundTransparency", active and 0 or 1, 5.2, 1)
+								Creator.SpringValue(info.Bar, "BarH", active and 22 or 4, 4.8, 0.80, function(h)
+									info.Bar.Size = UDim2.fromOffset(3, h)
+								end, info.Bar.Size.Y.Offset)
+							end
+							if active ~= info.WasSelected then
+								info.AnimGen = (info.AnimGen or 0) + 1
+								local myGen = info.AnimGen
+								if active then
+									info.CheckBadge.Visible = true
+									if info.CheckScale then
+										info.CheckScale.Scale = 0.35
+										Creator.SpringValue(info.CheckScale, "Scale", 1, 4.5, 0.62)
+									end
+									Creator.SpringValue(info.CheckBadge, "BackgroundTransparency", 0.04, 5.2, 1)
+									if info.Check then
+										info.Check.ImageColor3 = accentContrast
+										Creator.SpringValue(info.Check, "ImageTransparency", 0, 5.2, 1)
+									end
+								else
+									if info.CheckScale then
+										Creator.SpringValue(info.CheckScale, "Scale", 0.35, 5.8, 1)
+									end
+									Creator.SpringValue(info.CheckBadge, "BackgroundTransparency", 1, 5.8, 1)
+									if info.Check then
+										Creator.SpringValue(info.Check, "ImageTransparency", 1, 5.8, 1)
+									end
+									task.delay(0.18, function()
+										if myGen == info.AnimGen and not isSelected(name) and info.CheckBadge and info.CheckBadge.Parent then
+											info.CheckBadge.Visible = false
+										end
+									end)
+								end
+							elseif active and info.Check then
+								info.Check.ImageColor3 = accentContrast
+							end
+						end
+						info.WasSelected = active
+					end
+				end
+				card:SetBadge(selectedCount > 0 and (tostring(selectedCount) .. " selected") or nil)
+			end
+
+			function Selector.Refresh(_self)
+				for _, info in next, rows do
+					if info.Row and info.Row.Parent then
+						info.Row:Destroy()
+					end
+				end
+				table.clear(rows)
+				local localPlr = Players.LocalPlayer
+				local players = Players:GetPlayers()
+				local shown = 0
+				local accentContrast = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+				for i, plr in ipairs(players) do
+					if not (excludeLocal and plr == localPlr) then
+						shown += 1
+						local uname = plr.Name
+						local dname = plr.DisplayName
+						local uid = plr.UserId
+						local thumb = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(uid) .. "&w=100&h=100"
+
+						local stroke = New("UIStroke", {
+							Transparency = 0.34,
+							Thickness = 1.2,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "InElementBorder"}
+						})
+						local accentBar = New("Frame", {
+							Name = "SelBar",
+							Size = UDim2.fromOffset(3, 22),
+							Position = UDim2.new(0, 5, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							BackgroundTransparency = 1,
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						}, {New("UICorner", {CornerRadius = UDim.new(1, 0)})})
+						local avatarStroke = New("UIStroke", {
+							Transparency = 0.45,
+							Thickness = 1.4,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "InElementBorder"}
+						})
+						local checkIcon = New("ImageLabel", {
+							Name = "Check",
+							Image = Library:GetIcon("check") or "",
+							Size = UDim2.fromOffset(12, 12),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							Position = UDim2.fromScale(0.5, 0.5),
+							BackgroundTransparency = 1,
+							ImageColor3 = accentContrast
+						})
+						local checkScale = New("UIScale", {Scale = 0.35})
+						local checkBadge = New("Frame", {
+							Name = "CheckBadge",
+							Size = UDim2.fromOffset(20, 20),
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -10, 0.5, 0),
+							BackgroundTransparency = 1,
+							Visible = false,
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						}, {
+							checkScale,
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							checkIcon
+						})
+						local rowScale = New("UIScale", {Scale = 1})
+						local row = New(
+							"TextButton",
+							{
+								Name = "Plr_" .. uname,
+								Text = "",
+								AutoButtonColor = false,
+								Size = UDim2.new(1, -2, 0, 42),
+								BackgroundTransparency = 0.22,
+								LayoutOrder = i,
+								Parent = listFrame,
+								ThemeTag = {BackgroundColor3 = "DialogButton"}
+							},
+							{
+								rowScale,
+								New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+								stroke,
+								accentBar,
+								New("ImageLabel", {
+									Name = "Avatar",
+									Image = thumb,
+									Size = UDim2.fromOffset(28, 28),
+									Position = UDim2.new(0, 12, 0.5, 0),
+									AnchorPoint = Vector2.new(0, 0.5),
+									BackgroundTransparency = 0.8,
+									ThemeTag = {BackgroundColor3 = "DialogHolder"}
+								}, {
+									New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+									avatarStroke
+								}),
+								New("TextLabel", {
+									Name = "Display",
+									Text = dname .. (plr == localPlr and " (You)" or ""),
+									I18nSkip = true,
+									FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+									TextSize = 13,
+									TextXAlignment = Enum.TextXAlignment.Left,
+									TextTruncate = Enum.TextTruncate.AtEnd,
+									Position = UDim2.fromOffset(48, 5),
+									Size = UDim2.new(1, -82, 0, 16),
+									BackgroundTransparency = 1,
+									ThemeTag = {TextColor3 = "Text"}
+								}),
+								New("TextLabel", {
+									Name = "User",
+									Text = "@" .. uname,
+									I18nSkip = true,
+									FontFace = Creator.Font(Enum.FontWeight.Medium),
+									TextSize = 11,
+									TextTransparency = 0.04,
+									TextXAlignment = Enum.TextXAlignment.Left,
+									TextTruncate = Enum.TextTruncate.AtEnd,
+									Position = UDim2.fromOffset(48, 22),
+									Size = UDim2.new(1, -82, 0, 14),
+									BackgroundTransparency = 1,
+									ThemeTag = {TextColor3 = "SubText"}
+								}),
+								checkBadge
+							}
+						)
+						Creator.AddSignal(row.MouseEnter, function()
+							if not isSelected(uname) then
+								Creator.SpringValue(row, "BackgroundTransparency", 0.1, 5.2, 1)
+								Creator.SpringValue(stroke, "Transparency", 0.16, 5.2, 1)
+							end
+						end)
+						Creator.AddSignal(row.MouseLeave, function()
+							Creator.SpringValue(rowScale, "Scale", 1, 6.0, 0.85)
+							if not isSelected(uname) then
+								Creator.SpringValue(row, "BackgroundTransparency", 0.22, 5.2, 1)
+								Creator.SpringValue(stroke, "Transparency", 0.34, 5.2, 1)
+							end
+						end)
+						Creator.AddSignal(row.MouseButton1Down, function()
+							Creator.SpringValue(rowScale, "Scale", 0.98, 6.5, 0.9)
+						end)
+						Creator.AddSignal(row.MouseButton1Up, function()
+							Creator.SpringValue(rowScale, "Scale", 1, 5.5, 0.8)
+						end)
+						Creator.AddSignal(row.MouseButton1Click, function()
+							if multi then
+								Selector.Value[uname] = not Selector.Value[uname]
+								if not Selector.Value[uname] then
+									Selector.Value[uname] = nil
+								end
+							else
+								Selector.Value = (Selector.Value == uname) and nil or uname
+							end
+							refreshRowVisuals()
+							fireChanged(false)
+							Library._TouchElement(Selector)
+						end)
+						rows[uname] = {Row = row, Stroke = stroke, Bar = accentBar, AvatarStroke = avatarStroke, CheckBadge = checkBadge, CheckScale = checkScale, Check = checkIcon, WasSelected = false, AnimGen = 0}
+					end
+				end
+				if shown == 0 then
+					local empty = New("TextLabel", {
+						Text = "No other players in server.",
+						FontFace = Creator.Font(Enum.FontWeight.Regular),
+						TextSize = 11,
+						Size = UDim2.new(1, 0, 0, 32),
+						BackgroundTransparency = 1,
+						ThemeTag = {TextColor3 = "SubText"},
+						Parent = listFrame
+					})
+					rows.__empty = {Row = empty, Stroke = nil, Check = nil}
+				end
+				refreshRowVisuals(true)
+				syncListSize()
+			end
+
+			function Selector.SetValue(_self, val, silent)
+				if multi then
+					Selector.Value = type(val) == "table" and val or {}
+				else
+					Selector.Value = val
+				end
+				refreshRowVisuals()
+				fireChanged(silent)
+			end
+
+			function Selector.GetValue(_self)
+				return Selector.Value
+			end
+
+			function Selector.OnChanged(_self, cb)
+				Selector.Changed = cb
+				cb(Selector.Value)
+			end
+
+			local addedConn = Creator.AddSignal(Players.PlayerAdded, function()
+				if card.Frame and card.Frame.Parent then
+					Selector:Refresh()
+				end
+			end)
+			local removingConn = Creator.AddSignal(Players.PlayerRemoving, function()
+				task.defer(function()
+					if card.Frame and card.Frame.Parent then
+						Selector:Refresh()
+					end
+				end)
+			end)
+
+			Creator.AddSignal(refreshBtn.MouseButton1Click, function()
+				Selector:Refresh()
+			end)
+
+			function Selector.Destroy(_self)
+				pcall(function() addedConn:Disconnect() end)
+				pcall(function() removingConn:Disconnect() end)
+				card:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			Selector:Refresh()
+			if idx ~= nil then
+				Library.Options[idx] = Selector
+			end
+			return Selector
+		end
+		return Element
+	end,
+	[76] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(76)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "ProgressBar"
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			assert(config and config.Title, "ProgressBar - Missing Title.")
+			local maxVal = math.max(0.0001, tonumber(config.Max) or 100)
+			local initVal = math.clamp(tonumber(config.Value or config.Default) or 0, 0, maxVal)
+
+			local Bar = {
+				Value = initVal,
+				Max = maxVal,
+				ShowPercent = config.ShowPercent ~= false,
+				Suffix = type(config.Suffix) == "string" and config.Suffix or "",
+				Type = "ProgressBar"
+			}
+
+			local card = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			card.TitleLabel.Size = UDim2.new(1, -110, 0, 14)
+			card.DescLabel.Size = UDim2.new(1, -110, 0, 14)
+			Bar.SetTitle = card.SetTitle
+			Bar.SetDesc = card.SetDesc
+			Bar.SetBadge = card.SetBadge
+			Bar.Frame = card.Frame
+
+			local labelPad = card.LabelHolder:FindFirstChildOfClass("UIPadding")
+			if labelPad then
+				labelPad.PaddingBottom = UDim.new(0, 26)
+			end
+
+			local statusText = New(
+				"TextLabel",
+				{
+					Name = "StatusText",
+					Text = "",
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 11,
+					TextXAlignment = Enum.TextXAlignment.Right,
+					Size = UDim2.fromOffset(100, 18),
+					Position = UDim2.new(1, -12, 0, 10),
+					AnchorPoint = Vector2.new(1, 0),
+					BackgroundTransparency = 1,
+					Parent = card.Frame,
+					ThemeTag = {TextColor3 = "SubText"}
+				}
+			)
+
+			local fillBar = New(
+				"Frame",
+				{
+					Name = "Fill",
+					Size = UDim2.fromScale(0, 1),
+					BackgroundColor3 = typeof(config.Color) == "Color3" and config.Color or Color3.fromRGB(99, 179, 255),
+					ThemeTag = typeof(config.Color) ~= "Color3" and {BackgroundColor3 = "Accent"} or nil
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
+
+			New(
+				"Frame",
+				{
+					Name = "Track",
+					AnchorPoint = Vector2.new(0, 1),
+					Position = UDim2.new(0, 12, 1, -11),
+					Size = UDim2.new(1, -24, 0, 6),
+					BackgroundTransparency = 0.72,
+					ClipsDescendants = true,
+					Parent = card.Frame,
+					ThemeTag = {BackgroundColor3 = "SliderRail"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					New("UIStroke", {Transparency = 0.55, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+					fillBar
+				}
+			)
+
+			local curRatio = 0
+			local function applyRatio(r)
+				curRatio = math.clamp(r, 0, 1)
+				fillBar.Size = UDim2.fromScale(curRatio, 1)
+			end
+
+			function Bar.SetValue(_self, val, customLabel, instant)
+				val = math.clamp(tonumber(val) or 0, 0, Bar.Max)
+				Bar.Value = val
+				local ratio = Bar.Max > 0 and (val / Bar.Max) or 0
+				if customLabel ~= nil then
+					statusText.Text = tostring(customLabel)
+				elseif Bar.ShowPercent then
+					statusText.Text = string.format("%d%%", math.floor(ratio * 100 + 0.5))
+				else
+					statusText.Text = tostring(val) .. " / " .. tostring(Bar.Max) .. Bar.Suffix
+				end
+				if instant or Creator.ReducedMotion then
+					Creator.CancelSpring(fillBar, "FillRatio")
+					applyRatio(ratio)
+				else
+					Creator.SpringValue(fillBar, "FillRatio", ratio, 7.5, 0.92, applyRatio, curRatio)
+				end
+			end
+
+			function Bar.SetMax(_self, newMax)
+				Bar.Max = math.max(0.0001, tonumber(newMax) or 100)
+				Bar:SetValue(Bar.Value)
+			end
+
+			function Bar.SetColor(_self, color)
+				if typeof(color) == "Color3" then
+					Creator.OverrideTag(fillBar, {})
+					fillBar.BackgroundColor3 = color
+				else
+					Creator.OverrideTag(fillBar, {BackgroundColor3 = "Accent"})
+				end
+			end
+
+			function Bar.Destroy(_self)
+				Creator.CancelSpring(fillBar, "FillRatio")
+				card:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			Bar:SetValue(initVal, config.Label, true)
+			if idx ~= nil then
+				Library.Options[idx] = Bar
+			end
+			return Bar
+		end
+		return Element
+	end,
+	[77] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(77)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "RangeSlider"
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			assert(config and config.Title, "RangeSlider - Missing Title.")
+			local minVal = tonumber(config.Min) or 0
+			local maxVal = tonumber(config.Max) or 100
+			if maxVal <= minVal then
+				maxVal = minVal + 1
+			end
+			local rounding = tonumber(config.Rounding) or 0
+			local minGap = math.max(0, tonumber(config.MinGap) or 0)
+			local defLow, defHigh = minVal, maxVal
+			if type(config.Default) == "table" then
+				defLow = tonumber(config.Default.Min or config.Default[1]) or minVal
+				defHigh = tonumber(config.Default.Max or config.Default[2]) or maxVal
+			end
+			defLow = math.clamp(defLow, minVal, maxVal)
+			defHigh = math.clamp(math.max(defHigh, defLow + minGap), minVal, maxVal)
+
+			local RangeSlider = {
+				Value = {Min = defLow, Max = defHigh},
+				Default = {Min = defLow, Max = defHigh},
+				Min = minVal,
+				Max = maxVal,
+				MinGap = minGap,
+				Rounding = rounding,
+				Prefix = type(config.Prefix) == "string" and config.Prefix or "",
+				Suffix = type(config.Suffix) == "string" and config.Suffix or "",
+				Callback = config.Callback or function() end,
+				Type = "RangeSlider"
+			}
+
+			local sliderFrame = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			sliderFrame.TitleLabel.Size = UDim2.new(1, -130, 0, 14)
+			sliderFrame.DescLabel.Size = UDim2.new(1, -130, 0, 14)
+			RangeSlider.SetTitle = sliderFrame.SetTitle
+			RangeSlider.SetDesc = sliderFrame.SetDesc
+			RangeSlider.SetBadge = sliderFrame.SetBadge
+			RangeSlider.Frame = sliderFrame.Frame
+
+			-- Extra bottom padding inside LabelHolder so the full-width dual track sits cleanly below title/desc
+			local labelPad = sliderFrame.LabelHolder:FindFirstChildOfClass("UIPadding")
+			if labelPad then
+				labelPad.PaddingBottom = UDim.new(0, 34)
+			end
+
+			local valuePill = New(
+				"TextLabel",
+				{
+					Name = "RangeValue",
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					Text = "",
+					I18nSkip = true,
+					TextSize = 11,
+					TextXAlignment = Enum.TextXAlignment.Center,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 22),
+					Position = UDim2.new(1, -12, 0, 10),
+					AnchorPoint = Vector2.new(1, 0),
+					BackgroundTransparency = 0.24,
+					Parent = sliderFrame.Frame,
+					ThemeTag = {BackgroundColor3 = "DialogHolder", TextColor3 = "Text"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+					New("UIStroke", {Transparency = 0.38, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+				}
+			)
+
+			local function makeThumb(name)
+				return New(
+					"Frame",
+					{
+						Name = name,
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0, 0, 0.5, 0),
+						Size = UDim2.fromOffset(13, 13),
+						BackgroundTransparency = 0,
+						ZIndex = 4,
+						ThemeTag = {BackgroundColor3 = "Text"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New("UIStroke", {Thickness = 2, Transparency = 0.05, ThemeTag = {Color = "Accent"}})
+					}
+				)
+			end
+
+			local lowThumb = makeThumb("LowThumb")
+			local highThumb = makeThumb("HighThumb")
+
+			local rangeFill = New(
+				"Frame",
+				{
+					Name = "RangeFill",
+					Size = UDim2.fromScale(0, 1),
+					Position = UDim2.fromScale(0, 0),
+					ZIndex = 2,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
+
+			local railInner = New(
+				"Frame",
+				{
+					Name = "RailInner",
+					BackgroundTransparency = 1,
+					Position = UDim2.fromOffset(6, 0),
+					Size = UDim2.new(1, -12, 1, 0),
+					ZIndex = 3
+				},
+				{lowThumb, highThumb}
+			)
+
+			local track = New(
+				"Frame",
+				{
+					Name = "RangeTrack",
+					AnchorPoint = Vector2.new(0, 1),
+					Position = UDim2.new(0, 12, 1, -13),
+					Size = UDim2.new(1, -24, 0, 5),
+					BackgroundTransparency = 0.72,
+					Parent = sliderFrame.Frame,
+					ThemeTag = {BackgroundColor3 = "SliderRail"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					rangeFill,
+					railInner
+				}
+			)
+
+			local hitArea = New(
+				"Frame",
+				{
+					Name = "HitArea",
+					BackgroundTransparency = 1,
+					Active = true,
+					AnchorPoint = Vector2.new(0, 0.5),
+					Position = UDim2.new(0, -6, 0.5, 0),
+					Size = UDim2.new(1, 12, 0, 26),
+					ZIndex = 5,
+					Parent = railInner
+				}
+			)
+
+			local function formatNum(v)
+				return RangeSlider.Prefix .. tostring(v) .. RangeSlider.Suffix
+			end
+
+			local function setThumbSize(thumb, px)
+				Creator.SpringValue(thumb, "ThumbSize", px, 12, 0.8, function(s)
+					thumb.Size = UDim2.fromOffset(s, s)
+				end, thumb.Size.X.Offset)
+			end
+
+			function RangeSlider.OnChanged(_self, cb)
+				RangeSlider.Changed = cb
+				cb(RangeSlider.Value.Min, RangeSlider.Value.Max, RangeSlider.Value)
+			end
+
+			function RangeSlider.SetValue(self, a, b, silent)
+				local nextLow, nextHigh
+				if type(a) == "table" then
+					nextLow = tonumber(a.Min or a[1]) or self.Value.Min
+					nextHigh = tonumber(a.Max or a[2]) or self.Value.Max
+					silent = b == true
+				else
+					nextLow = tonumber(a) or self.Value.Min
+					nextHigh = tonumber(b) or self.Value.Max
+				end
+				nextLow = Library:Round(math.clamp(nextLow, self.Min, self.Max), self.Rounding)
+				nextHigh = Library:Round(math.clamp(nextHigh, self.Min, self.Max), self.Rounding)
+				if nextLow > nextHigh then
+					nextLow, nextHigh = nextHigh, nextLow
+				end
+				if (nextHigh - nextLow) < self.MinGap then
+					nextHigh = math.min(self.Max, Library:Round(nextLow + self.MinGap, self.Rounding))
+					if (nextHigh - nextLow) < self.MinGap then
+						nextLow = math.max(self.Min, Library:Round(nextHigh - self.MinGap, self.Rounding))
+					end
+				end
+				self.Value = {Min = nextLow, Max = nextHigh}
+				local span = self.Max - self.Min
+				local rLow = span ~= 0 and ((nextLow - self.Min) / span) or 0
+				local rHigh = span ~= 0 and ((nextHigh - self.Min) / span) or 1
+				lowThumb.Position = UDim2.new(rLow, 0, 0.5, 0)
+				highThumb.Position = UDim2.new(rHigh, 0, 0.5, 0)
+				rangeFill.Position = UDim2.fromScale(rLow, 0)
+				rangeFill.Size = UDim2.fromScale(math.max(0, rHigh - rLow), 1)
+				valuePill.Text = formatNum(nextLow) .. " - " .. formatNum(nextHigh)
+				if not silent then
+					Library:SafeCallback(self.Callback, nextLow, nextHigh, self.Value)
+					Library:SafeCallback(self.Changed, nextLow, nextHigh, self.Value)
+				end
+			end
+
+			local activeThumb = nil
+			local dragRailX, dragRailW = nil, nil
+			local function applyDragPos(posX)
+				local width = dragRailW or railInner.AbsoluteSize.X
+				local railX = dragRailX or railInner.AbsolutePosition.X
+				if width <= 0 then
+					return
+				end
+				local ratio = math.clamp((posX - railX) / width, 0, 1)
+				local rawVal = RangeSlider.Min + (RangeSlider.Max - RangeSlider.Min) * ratio
+				if activeThumb == "low" then
+					local maxLow = RangeSlider.Value.Max - RangeSlider.MinGap
+					RangeSlider:SetValue(math.min(rawVal, maxLow), RangeSlider.Value.Max)
+				else
+					local minHigh = RangeSlider.Value.Min + RangeSlider.MinGap
+					RangeSlider:SetValue(RangeSlider.Value.Min, math.max(rawVal, minHigh))
+				end
+			end
+
+			local function beginThumbDrag(which, inputPosX)
+				activeThumb = which
+				dragRailX = railInner.AbsolutePosition.X
+				dragRailW = railInner.AbsoluteSize.X
+				setThumbSize(which == "low" and lowThumb or highThumb, 16)
+				Library._TouchElement(RangeSlider)
+				if inputPosX then
+					applyDragPos(inputPosX)
+				end
+				Creator.BeginDrag(function(mv)
+					if activeThumb then
+						applyDragPos(mv.Position.X)
+					end
+				end, function()
+					if activeThumb == "low" then
+						setThumbSize(lowThumb, 13)
+					elseif activeThumb == "high" then
+						setThumbSize(highThumb, 13)
+					end
+					activeThumb = nil
+					dragRailX, dragRailW = nil, nil
+				end)
+			end
+
+			Creator.AddSignal(hitArea.InputBegan, function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					local lowDist = math.abs(input.Position.X - (lowThumb.AbsolutePosition.X + lowThumb.AbsoluteSize.X * 0.5))
+					local highDist = math.abs(input.Position.X - (highThumb.AbsolutePosition.X + highThumb.AbsoluteSize.X * 0.5))
+					local chosen = (lowDist <= highDist) and "low" or "high"
+					beginThumbDrag(chosen, input.Position.X)
+				end
+			end)
+
+			function RangeSlider.Destroy(_self)
+				if activeThumb then
+					activeThumb = nil
+					Creator.EndDrag()
+				end
+				sliderFrame:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			RangeSlider:SetValue(defLow, defHigh, true)
+			if idx ~= nil then
+				Library.Options[idx] = RangeSlider
+			end
+			return RangeSlider
+		end
+		return Element
+	end,
+	[78] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(78)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "SegmentedControl"
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			assert(config and config.Title, "SegmentedControl - Missing Title.")
+			local values = type(config.Values) == "table" and config.Values or {"Option 1", "Option 2"}
+			local defaultVal = config.Default
+			if type(defaultVal) == "number" then
+				defaultVal = values[defaultVal] or values[1]
+			elseif defaultVal == nil then
+				defaultVal = values[1]
+			end
+
+			local Segmented = {
+				Value = defaultVal,
+				Default = defaultVal,
+				Values = values,
+				Callback = config.Callback or function() end,
+				Type = "SegmentedControl"
+			}
+
+			local card = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			Segmented.SetTitle = card.SetTitle
+			Segmented.SetDesc = card.SetDesc
+			Segmented.SetBadge = card.SetBadge
+			Segmented.Frame = card.Frame
+			card.LabelHolder.Size = UDim2.new(1, -24, 0, 0)
+
+			local pad = 3
+			local pill = New(
+				"Frame",
+				{
+					Name = "ActivePill",
+					Size = UDim2.new(0, 0, 1, -pad * 2),
+					Position = UDim2.fromOffset(pad, pad),
+					BackgroundTransparency = 0.08,
+					ZIndex = 2,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+					New(
+						"UIGradient",
+						{
+							Rotation = 90,
+							Color = ColorSequence.new({
+								ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+								ColorSequenceKeypoint.new(1, Color3.fromRGB(218, 224, 236))
+							})
+						}
+					)
+				}
+			)
+
+			local segButtonsHolder = New(
+				"Frame",
+				{
+					Name = "Segments",
+					Size = UDim2.new(1, -pad * 2, 1, -pad * 2),
+					Position = UDim2.fromOffset(pad, pad),
+					BackgroundTransparency = 1,
+					ZIndex = 3
+				},
+				{
+					New("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder
+					})
+				}
+			)
+
+			local trackFrame = New(
+				"Frame",
+				{
+					Name = "SegmentTrack",
+					Size = UDim2.new(1, 0, 0, 30),
+					BackgroundTransparency = 0.24,
+					LayoutOrder = 4,
+					Parent = card.LabelHolder,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+					New("UIStroke", {Transparency = 0.36, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+					pill,
+					segButtonsHolder
+				}
+			)
+
+			-- Small top spacing between description and segmented track
+			local spacer = New("Frame", {Name = "Spacer", Size = UDim2.new(1, 0, 0, 4), BackgroundTransparency = 1, LayoutOrder = 3, Parent = card.LabelHolder})
+
+			local buttons = {}
+			local selectedIdx = 1
+			local curX, curW = pad, 0
+
+			local function setPillBounds(x, w)
+				curX, curW = x, w
+				pill.Position = UDim2.fromOffset(x, pad)
+				pill.Size = UDim2.new(0, math.max(0, w), 1, -pad * 2)
+			end
+
+			local function updatePill(instant)
+				local n = #buttons
+				if n == 0 then
+					return
+				end
+				local scale = Creator.GetEffectiveScale(trackFrame)
+				local innerW = math.max(0, trackFrame.AbsoluteSize.X / scale - pad * 2)
+				if innerW <= 0 then
+					return
+				end
+				local segW = innerW / n
+				local targetX = pad + (selectedIdx - 1) * segW
+				if instant or Creator.ReducedMotion or curW <= 0 then
+					Creator.CancelSpring(pill, "SegX")
+					Creator.CancelSpring(pill, "SegW")
+					setPillBounds(targetX, segW)
+				else
+					Creator.SpringValue(pill, "SegX", targetX, 10, 0.86, function(x)
+						setPillBounds(x, curW)
+					end, curX)
+					Creator.SpringValue(pill, "SegW", segW, 10, 0.86, function(w)
+						setPillBounds(curX, w)
+					end, curW)
+				end
+			end
+
+			local function refreshColors()
+				local contrast = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+				for i, btn in ipairs(buttons) do
+					if i == selectedIdx then
+						Creator.OverrideTag(btn, {})
+						btn.TextColor3 = contrast
+						btn.TextTransparency = 0
+					else
+						Creator.OverrideTag(btn, {TextColor3 = "SubText"})
+						btn.TextTransparency = 0.04
+					end
+				end
+			end
+
+			Creator.AddSignal(pill:GetPropertyChangedSignal("BackgroundColor3"), function()
+				local active = buttons[selectedIdx]
+				if active then
+					active.TextColor3 = Creator.AutoContrast(pill.BackgroundColor3)
+				end
+			end)
+
+			local function buildSegments()
+				for _, btn in ipairs(buttons) do
+					if btn and btn.Parent then
+						btn:Destroy()
+					end
+				end
+				table.clear(buttons)
+				local n = math.max(1, #Segmented.Values)
+				for i, val in ipairs(Segmented.Values) do
+					local btn = New(
+						"TextButton",
+						{
+							Name = "Seg_" .. tostring(i),
+							Text = tostring(val),
+							FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+							TextSize = 13,
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							Size = UDim2.new(1 / n, 0, 1, 0),
+							BackgroundTransparency = 1,
+							LayoutOrder = i,
+							ZIndex = 4,
+							Parent = segButtonsHolder,
+							ThemeTag = {TextColor3 = "SubText"}
+						}
+					)
+					Creator.AddSignal(btn.MouseEnter, function()
+						if i ~= selectedIdx then
+							Creator.OverrideTag(btn, {TextColor3 = "Text"})
+							btn.TextTransparency = 0
+						end
+					end)
+					Creator.AddSignal(btn.MouseLeave, function()
+						if i ~= selectedIdx then
+							Creator.OverrideTag(btn, {TextColor3 = "SubText"})
+							btn.TextTransparency = 0.04
+						end
+					end)
+					Creator.AddSignal(btn.MouseButton1Click, function()
+						Segmented:SetValue(val)
+						Library._TouchElement(Segmented)
+					end)
+					table.insert(buttons, btn)
+				end
+			end
+
+			function Segmented.SetValue(_self, val, silent)
+				local foundIdx = nil
+				for i, item in ipairs(Segmented.Values) do
+					if item == val then
+						foundIdx = i
+						break
+					end
+				end
+				if not foundIdx and type(val) == "number" and Segmented.Values[val] ~= nil then
+					foundIdx = val
+					val = Segmented.Values[val]
+				end
+				if not foundIdx then
+					return
+				end
+				selectedIdx = foundIdx
+				Segmented.Value = val
+				refreshColors()
+				updatePill(silent == true)
+				if not silent then
+					Library:SafeCallback(Segmented.Callback, val, foundIdx)
+					Library:SafeCallback(Segmented.Changed, val, foundIdx)
+				end
+			end
+
+			function Segmented.SetValues(_self, newValues)
+				Segmented.Values = type(newValues) == "table" and newValues or {}
+				buildSegments()
+				selectedIdx = 1
+				if Segmented.Values[1] ~= nil then
+					Segmented:SetValue(Segmented.Values[1], true)
+				end
+				task.defer(function()
+					updatePill(true)
+				end)
+			end
+
+			function Segmented.OnChanged(_self, cb)
+				Segmented.Changed = cb
+				cb(Segmented.Value, selectedIdx)
+			end
+
+			function Segmented.Destroy(_self)
+				card:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			Creator.AddSignal(trackFrame:GetPropertyChangedSignal("AbsoluteSize"), function()
+				updatePill(true)
+			end)
+			Creator.RegisterDPIScale(trackFrame, function()
+				task.defer(function()
+					updatePill(true)
+				end)
+			end)
+
+			buildSegments()
+			Segmented:SetValue(defaultVal, true)
+			task.defer(function()
+				updatePill(true)
+			end)
+			if idx ~= nil then
+				Library.Options[idx] = Segmented
+			end
+			return Segmented
+		end
+		return Element
+	end,
+	[79] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(79)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Element = Creator.New, {}
+		Element.__index = Element
+		Element.__type = "StatGrid"
+
+		local POS_GREEN = Color3.fromRGB(52, 211, 153)
+		local NEG_RED = Color3.fromRGB(248, 113, 113)
+		local MAX_SPARK_BARS = 14
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			config = type(config) == "table" and config or {}
+			local stats = type(config.Stats) == "table" and config.Stats or {}
+			local cols = math.clamp(tonumber(config.Columns) or math.min(math.max(#stats, 2), 4), 1, 4)
+			local gap = tonumber(config.Gap) or 6
+			local cardHeight = tonumber(config.CardHeight) or 78
+
+			local StatGrid = {
+				Type = "StatGrid",
+				Cards = {}
+			}
+
+			local rows = math.max(1, math.ceil(#stats / cols))
+			local totalH = rows * cardHeight + math.max(0, rows - 1) * gap
+
+			StatGrid.Frame = New(
+				"Frame",
+				{
+					Name = "AcryvenStatGrid",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, totalH),
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parent.Container
+				}
+			)
+			StatGrid.Root = StatGrid.Frame
+
+			local function renderSparkline(cardData)
+				local hist = cardData.History
+				local bars = cardData.SparkBars
+				if not bars or #bars == 0 then
+					return
+				end
+				local count = #hist
+				if count == 0 then
+					for _, bar in ipairs(bars) do
+						bar.Visible = false
+					end
+					return
+				end
+				local minV, maxV = math.huge, -math.huge
+				for _, v in ipairs(hist) do
+					if v < minV then minV = v end
+					if v > maxV then maxV = v end
+				end
+				local span = maxV - minV
+				local visibleBars = math.min(count, #bars)
+				local offset = count - visibleBars
+				for i = 1, #bars do
+					local bar = bars[i]
+					if i <= visibleBars then
+						local val = hist[offset + i]
+						local norm = span > 0.0001 and ((val - minV) / span) or 0.55
+						local hScale = math.clamp(0.18 + norm * 0.82, 0.18, 1)
+						bar.Visible = true
+						bar.Size = UDim2.new(1 / visibleBars, -2, hScale, 0)
+						bar.Position = UDim2.new((i - 1) / visibleBars, 1, 1 - hScale, 0)
+						bar.BackgroundTransparency = (i == visibleBars) and 0.06 or (0.58 - (i / visibleBars) * 0.34)
+					else
+						bar.Visible = false
+					end
+				end
+			end
+
+			local function applyDelta(deltaLabel, delta)
+				if delta == nil or delta == "" then
+					deltaLabel.Visible = false
+					return
+				end
+				local str = tostring(delta)
+				deltaLabel.Text = str
+				if str:sub(1, 1) == "+" then
+					deltaLabel.TextColor3 = POS_GREEN
+				elseif str:sub(1, 1) == "-" then
+					deltaLabel.TextColor3 = NEG_RED
+				else
+					deltaLabel.TextColor3 = Creator.GetThemeProperty("SubText")
+				end
+				deltaLabel.Visible = true
+			end
+
+			for i, stat in ipairs(stats) do
+				local rowIdx = math.floor((i - 1) / cols)
+				local colIdx = (i - 1) % cols
+				local wScale = 1 / cols
+				local gapDeduction = gap * (cols - 1) / cols
+				local xOff = math.floor(colIdx * (gap / cols) + 0.5)
+				local yOff = rowIdx * (cardHeight + gap)
+				local key = stat.Key or stat.Id or stat.Label or ("Stat" .. tostring(i))
+				local customColor = typeof(stat.Color) == "Color3" and stat.Color or nil
+
+				local iconAsset = nil
+				if type(stat.Icon) == "string" and stat.Icon ~= "" then
+					iconAsset = Library:GetIcon(stat.Icon) or (stat.Icon:match("^rbxassetid://") and stat.Icon) or nil
+				end
+
+				local labelLbl = New(
+					"TextLabel",
+					{
+						Name = "StatLabel",
+						Text = tostring(stat.Label or key),
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 11,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						Size = UDim2.new(1, iconAsset and -28 or -10, 0, 14),
+						Position = UDim2.fromOffset(10, 9),
+						BackgroundTransparency = 1,
+						ThemeTag = {TextColor3 = "SubText"}
+					}
+				)
+
+				local hasDelta = stat.Delta ~= nil and stat.Delta ~= ""
+				local valueLbl = New(
+					"TextLabel",
+					{
+						Name = "StatValue",
+						Text = tostring(stat.Value or "0"),
+						I18nSkip = true,
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold, Enum.FontStyle.Normal, "Display"),
+						TextSize = 18,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						Size = UDim2.new(1, hasDelta and -68 or -20, 0, 22),
+						Position = UDim2.fromOffset(10, 26),
+						BackgroundTransparency = 1,
+						ThemeTag = {TextColor3 = "Text"}
+					}
+				)
+
+				local deltaLbl = New(
+					"TextLabel",
+					{
+						Name = "Delta",
+						Text = "",
+						I18nSkip = true,
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 10,
+						TextXAlignment = Enum.TextXAlignment.Right,
+						Size = UDim2.fromOffset(56, 14),
+						Position = UDim2.new(1, -10, 0, 31),
+						AnchorPoint = Vector2.new(1, 0),
+						BackgroundTransparency = 1,
+						Visible = false
+					}
+				)
+				applyDelta(deltaLbl, stat.Delta)
+
+				local sparkFrame = New(
+					"Frame",
+					{
+						Name = "Sparkline",
+						Size = UDim2.new(1, -20, 0, 18),
+						Position = UDim2.new(0, 10, 1, -25),
+						BackgroundTransparency = 1
+					}
+				)
+				local sparkBars = {}
+				for b = 1, MAX_SPARK_BARS do
+					local bar = New(
+						"Frame",
+						{
+							Name = "B" .. tostring(b),
+							Size = UDim2.fromScale(0, 0),
+							BackgroundColor3 = customColor or Color3.fromRGB(99, 179, 255),
+							Visible = false,
+							Parent = sparkFrame,
+							ThemeTag = (not customColor) and {BackgroundColor3 = "Accent"} or nil
+						},
+						{New("UICorner", {CornerRadius = UDim.new(0, 2)})}
+					)
+					table.insert(sparkBars, bar)
+				end
+
+				local cardChildren = {
+					New("UICorner", {CornerRadius = UDim.new(0, Creator.Radius.Card)}),
+					New("UIStroke", {Transparency = 0.36, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "ElementBorder"}}),
+					labelLbl,
+					valueLbl,
+					deltaLbl,
+					sparkFrame
+				}
+				if iconAsset then
+					table.insert(
+						cardChildren,
+						New("ImageLabel", {
+							Name = "Icon",
+							Image = iconAsset,
+							Size = UDim2.fromOffset(15, 15),
+							Position = UDim2.new(1, -10, 0, 9),
+							AnchorPoint = Vector2.new(1, 0),
+							BackgroundTransparency = 1,
+							ImageTransparency = 0.02,
+							ImageColor3 = customColor or Color3.fromRGB(99, 179, 255),
+							ThemeTag = (not customColor) and {ImageColor3 = "Accent"} or nil
+						})
+					)
+				end
+
+				local cardFrame = New(
+					"Frame",
+					{
+						Name = "StatCard_" .. tostring(key),
+						Position = UDim2.new(colIdx * wScale, xOff, 0, yOff),
+						Size = UDim2.new(wScale, -math.floor(gapDeduction + 0.5), 0, cardHeight),
+						Parent = StatGrid.Frame,
+						ThemeTag = {BackgroundColor3 = "Element", BackgroundTransparency = "ElementTransparency"}
+					},
+					cardChildren
+				)
+
+				local history = {}
+				if type(stat.History) == "table" then
+					for _, v in ipairs(stat.History) do
+						local n = tonumber(v)
+						if n then
+							table.insert(history, n)
+						end
+					end
+				end
+
+				local cardData = {
+					Key = key,
+					Frame = cardFrame,
+					Label = labelLbl,
+					ValueLabel = valueLbl,
+					DeltaLabel = deltaLbl,
+					SparkBars = sparkBars,
+					History = history
+				}
+				renderSparkline(cardData)
+				StatGrid.Cards[key] = cardData
+			end
+
+			function StatGrid.SetStat(_self, key, value, delta, pushSparkValue)
+				local cardData = StatGrid.Cards[key]
+				if not cardData then
+					return
+				end
+				if value ~= nil then
+					cardData.ValueLabel.Text = tostring(value)
+				end
+				if delta ~= nil then
+					applyDelta(cardData.DeltaLabel, delta)
+				end
+				if type(pushSparkValue) == "number" then
+					table.insert(cardData.History, pushSparkValue)
+					while #cardData.History > MAX_SPARK_BARS do
+						table.remove(cardData.History, 1)
+					end
+					renderSparkline(cardData)
+				end
+			end
+
+			function StatGrid.Destroy(_self)
+				StatGrid.Frame:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			if idx ~= nil then
+				Library.Options[idx] = StatGrid
+			end
+			return StatGrid
+		end
+		return Element
+	end,
+	[80] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(80)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "Stepper"
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			assert(config and config.Title, "Stepper - Missing Title.")
+			local minVal = tonumber(config.Min) or 0
+			local maxVal = tonumber(config.Max) or 100
+			local step = tonumber(config.Step) or 1
+			local rounding = tonumber(config.Rounding) or 0
+			local defaultVal = tonumber(config.Default) or minVal
+
+			local Stepper = {
+				Value = defaultVal,
+				Default = defaultVal,
+				Min = minVal,
+				Max = maxVal,
+				Step = step,
+				Rounding = rounding,
+				Prefix = type(config.Prefix) == "string" and config.Prefix or "",
+				Suffix = type(config.Suffix) == "string" and config.Suffix or "",
+				Callback = config.Callback or function() end,
+				Type = "Stepper"
+			}
+
+			local card = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			card.TitleLabel.Size = UDim2.new(1, -120, 0, 14)
+			card.DescLabel.Size = UDim2.new(1, -120, 0, 14)
+			Stepper.SetTitle = card.SetTitle
+			Stepper.SetDesc = card.SetDesc
+			Stepper.SetBadge = card.SetBadge
+			Stepper.Frame = card.Frame
+
+			local function makeStepBtn(name, iconName, order)
+				local img = New(
+					"ImageLabel",
+					{
+						Name = "Icon",
+						Image = Library:GetIcon(iconName) or "",
+						Size = UDim2.fromOffset(13, 13),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ThemeTag = {ImageColor3 = "Text"}
+					}
+				)
+				local btn = New(
+					"TextButton",
+					{
+						Name = name,
+						Text = "",
+						Size = UDim2.fromOffset(26, 26),
+						BackgroundTransparency = 0.24,
+						AutoButtonColor = false,
+						LayoutOrder = order,
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+						New("UIStroke", {Transparency = 0.38, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+						img
+					}
+				)
+				Creator.AddSignal(btn.MouseEnter, function()
+					Creator.SpringValue(btn, "BackgroundTransparency", 0.08, 10, 1)
+				end)
+				Creator.AddSignal(btn.MouseLeave, function()
+					Creator.SpringValue(btn, "BackgroundTransparency", 0.24, 10, 1)
+				end)
+				return btn, img
+			end
+
+			local minusBtn, minusIcon = makeStepBtn("Minus", "minus", 1)
+			local plusBtn, plusIcon = makeStepBtn("Plus", "plus", 3)
+
+			local valueBox = New(
+				"TextBox",
+				{
+					Name = "Value",
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					Text = tostring(defaultVal),
+					I18nSkip = true,
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Center,
+					ClearTextOnFocus = false,
+					Size = UDim2.fromOffset(42, 26),
+					BackgroundTransparency = 0.24,
+					LayoutOrder = 2,
+					ThemeTag = {BackgroundColor3 = "DialogHolder", TextColor3 = "Text"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+					New("UIStroke", {Transparency = 0.38, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+				}
+			)
+
+			New(
+				"Frame",
+				{
+					Name = "StepperControl",
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -12, 0.5, 0),
+					Size = UDim2.fromOffset(102, 26),
+					BackgroundTransparency = 1,
+					Parent = card.Frame
+				},
+				{
+					New("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						HorizontalAlignment = Enum.HorizontalAlignment.Right,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 4)
+					}),
+					minusBtn,
+					valueBox,
+					plusBtn
+				}
+			)
+
+			local function formatVal(v)
+				return Stepper.Prefix .. tostring(v) .. Stepper.Suffix
+			end
+
+			function Stepper.SetValue(_self, val, silent)
+				local num = tonumber(val)
+				if not num then
+					valueBox.Text = formatVal(Stepper.Value)
+					return
+				end
+				num = Library:Round(math.clamp(num, Stepper.Min, Stepper.Max), Stepper.Rounding)
+				Stepper.Value = num
+				valueBox.Text = formatVal(num)
+				minusIcon.ImageTransparency = (num <= Stepper.Min) and 0.68 or 0.05
+				plusIcon.ImageTransparency = (num >= Stepper.Max) and 0.68 or 0.05
+				if not silent then
+					Library:SafeCallback(Stepper.Callback, num)
+					Library:SafeCallback(Stepper.Changed, num)
+				end
+			end
+
+			function Stepper.OnChanged(_self, cb)
+				Stepper.Changed = cb
+				cb(Stepper.Value)
+			end
+
+			function Stepper.Destroy(_self)
+				card:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			Creator.AddSignal(minusBtn.MouseButton1Click, function()
+				Stepper:SetValue(Stepper.Value - Stepper.Step)
+				Library._TouchElement(Stepper)
+			end)
+			Creator.AddSignal(plusBtn.MouseButton1Click, function()
+				Stepper:SetValue(Stepper.Value + Stepper.Step)
+				Library._TouchElement(Stepper)
+			end)
+			Creator.AddSignal(valueBox.Focused, function()
+				valueBox.Text = tostring(Stepper.Value)
+			end)
+			Creator.AddSignal(valueBox.FocusLost, function()
+				local parsed = tonumber(tostring(valueBox.Text):gsub(",", "."):match("[-+]?%d*%.?%d+"))
+				if parsed then
+					Stepper:SetValue(parsed)
+					Library._TouchElement(Stepper)
+				else
+					valueBox.Text = formatVal(Stepper.Value)
+				end
+			end)
+
+			Stepper:SetValue(defaultVal, true)
+			if idx ~= nil then
+				Library.Options[idx] = Stepper
+			end
+			return Stepper
+		end
+		return Element
+	end,
+	[81] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(81)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New, Components, Element = Creator.New, Root.Components, {}
+		Element.__index = Element
+		Element.__type = "TagInput"
+
+		local function trim(s)
+			return tostring(s or ""):match("^%s*(.-)%s*$") or ""
+		end
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			local Library = parent.Library
+			assert(config and config.Title, "TagInput - Missing Title.")
+
+			local TagInput = {
+				Value = {},
+				Default = {},
+				MaxTags = tonumber(config.MaxTags) or 24,
+				AllowDuplicates = config.AllowDuplicates == true,
+				Callback = config.Callback or function() end,
+				Type = "TagInput"
+			}
+
+			local card = requireModule(Components.Element)(config.Title, config.Description, parent.Container, false)
+			TagInput.SetTitle = card.SetTitle
+			TagInput.SetDesc = card.SetDesc
+			TagInput.SetBadge = card.SetBadge
+			TagInput.Frame = card.Frame
+
+			-- Convert LabelHolder's vertical stack to also hold the TagInput body cleanly so AutomaticSize.Y flows naturally
+			local bodyHolder = New(
+				"Frame",
+				{
+					Name = "TagBody",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					LayoutOrder = 4,
+					Parent = card.LabelHolder
+				},
+				{
+					New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}),
+					New("UIPadding", {PaddingTop = UDim.new(0, 6)})
+				}
+			)
+			card.LabelHolder.Size = UDim2.new(1, -24, 0, 0)
+
+			-- Chips container with wrapping UIListLayout
+			local chipsLayout = New("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 5)
+			})
+			pcall(function()
+				chipsLayout.Wraps = true
+			end)
+
+			local chipsWrap = New(
+				"Frame",
+				{
+					Name = "Chips",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					LayoutOrder = 1,
+					Visible = false,
+					Parent = bodyHolder
+				},
+				{
+					chipsLayout,
+					New(
+						"UIPadding",
+						{
+							PaddingTop = UDim.new(0, 2),
+							PaddingBottom = UDim.new(0, 2),
+							PaddingLeft = UDim.new(0, 2),
+							PaddingRight = UDim.new(0, 2)
+						}
+					)
+				}
+			)
+
+			-- Input row (TextBox + Add button)
+			local inputStroke = New(
+				"UIStroke",
+				{
+					Transparency = 0.38,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				}
+			)
+			local textBox = New(
+				"TextBox",
+				{
+					Name = "TagTextBox",
+					Size = UDim2.new(1, -34, 0, 28),
+					BackgroundTransparency = 0.24,
+					Text = "",
+					PlaceholderText = config.Placeholder or "Type tag & press Enter...",
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.Regular),
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					ClearTextOnFocus = false,
+					ThemeTag = {BackgroundColor3 = "DialogHolder", TextColor3 = "Text", PlaceholderColor3 = "SubText"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+					New("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)}),
+					inputStroke
+				}
+			)
+			local addBtnScale = New("UIScale", {Scale = 1})
+			local addBtn = New(
+				"TextButton",
+				{
+					Name = "AddTagBtn",
+					Text = "",
+					Size = UDim2.fromOffset(28, 28),
+					Position = UDim2.new(1, -28, 0, 0),
+					BackgroundTransparency = 0.14,
+					AutoButtonColor = false,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{
+					addBtnScale,
+					New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+					New("ImageLabel", {
+						Name = "PlusIcon",
+						Image = Library:GetIcon("plus") or "rbxassetid://10734924532",
+						Size = UDim2.fromOffset(14, 14),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ImageColor3 = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+					})
+				}
+			)
+			local plusIcon = addBtn:FindFirstChild("PlusIcon")
+			Creator.AddSignal(addBtn:GetPropertyChangedSignal("BackgroundColor3"), function()
+				if plusIcon then
+					plusIcon.ImageColor3 = Creator.AutoContrast(addBtn.BackgroundColor3)
+				end
+			end)
+
+			local inputRow = New(
+				"Frame",
+				{
+					Name = "InputRow",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 28),
+					LayoutOrder = 2,
+					Parent = bodyHolder
+				},
+				{textBox, addBtn}
+			)
+
+			Creator.AddSignal(textBox.Focused, function()
+				Creator.OverrideTag(inputStroke, {Color = "Accent"})
+				Creator.SpringValue(inputStroke, "Transparency", 0.14, 10, 1)
+			end)
+			Creator.AddSignal(textBox.FocusLost, function(enterPressed)
+				Creator.OverrideTag(inputStroke, {Color = "InElementBorder"})
+				Creator.SpringValue(inputStroke, "Transparency", 0.38, 10, 1)
+				if enterPressed then
+					local candidate = trim(textBox.Text)
+					if candidate ~= "" then
+						TagInput:AddTag(candidate)
+						textBox.Text = ""
+						Library._TouchElement(TagInput)
+					end
+				end
+			end)
+
+			Creator.AddSignal(addBtn.MouseEnter, function()
+				Creator.SpringValue(addBtn, "BackgroundTransparency", 0.02, 5.2, 1)
+			end)
+			Creator.AddSignal(addBtn.MouseLeave, function()
+				Creator.SpringValue(addBtn, "BackgroundTransparency", 0.14, 5.2, 1)
+				Creator.SpringValue(addBtnScale, "Scale", 1, 5.5, 0.85)
+			end)
+			Creator.AddSignal(addBtn.MouseButton1Down, function()
+				Creator.SpringValue(addBtnScale, "Scale", 0.92, 6.5, 0.9)
+			end)
+			Creator.AddSignal(addBtn.MouseButton1Up, function()
+				Creator.SpringValue(addBtnScale, "Scale", 1, 5.0, 0.72)
+			end)
+
+			local chipEntries = {}
+			local function fireChanged(silent)
+				if not silent then
+					local copy = {}
+					for i, v in ipairs(TagInput.Value) do
+						copy[i] = v
+					end
+					Library:SafeCallback(TagInput.Callback, copy)
+					Library:SafeCallback(TagInput.Changed, copy)
+				end
+			end
+
+			local function syncChipsWrapVisibility()
+				chipsWrap.Visible = (#TagInput.Value > 0 or #chipEntries > 0)
+			end
+
+			local function createChip(tag, order, animate)
+				local removeIcon = New(
+					"ImageLabel",
+					{
+						Image = Library:GetIcon("x") or "rbxassetid://10747384394",
+						Size = UDim2.fromOffset(10, 10),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ImageTransparency = 0.08,
+						ThemeTag = {ImageColor3 = "SubText"}
+					}
+				)
+				local removeBtn = New(
+					"TextButton",
+					{
+						Name = "Remove",
+						Text = "",
+						Size = UDim2.fromOffset(16, 16),
+						BackgroundTransparency = 1,
+						LayoutOrder = 2,
+						AutoButtonColor = false
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						removeIcon
+					}
+				)
+				local chipScale = New("UIScale", {Scale = (animate and not Creator.ReducedMotion) and 0.55 or 1})
+				local chipStroke = New("UIStroke", {
+					Transparency = (animate and not Creator.ReducedMotion) and 1 or 0.32,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "Accent"}
+				})
+				local chipText = New("TextLabel", {
+					Name = "Text",
+					Text = tag,
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 11,
+					TextTransparency = (animate and not Creator.ReducedMotion) and 1 or 0,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1,
+					LayoutOrder = 1,
+					ThemeTag = {TextColor3 = "Text"}
+				})
+				local chip = New(
+					"Frame",
+					{
+						Name = "TagChip",
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.fromOffset(0, 22),
+						BackgroundTransparency = (animate and not Creator.ReducedMotion) and 1 or 0.72,
+						LayoutOrder = order,
+						Parent = chipsWrap,
+						ThemeTag = {BackgroundColor3 = "Accent"}
+					},
+					{
+						chipScale,
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						chipStroke,
+						New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 5)}),
+						New("UIListLayout", {
+							FillDirection = Enum.FillDirection.Horizontal,
+							VerticalAlignment = Enum.VerticalAlignment.Center,
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							Padding = UDim.new(0, 3)
+						}),
+						chipText,
+						removeBtn
+					}
+				)
+				Creator.AddSignal(removeBtn.MouseEnter, function()
+					Creator.SpringValue(removeIcon, "ImageTransparency", 0, 5.5, 1)
+					Creator.OverrideTag(removeIcon, {ImageColor3 = "Text"})
+					Creator.SpringValue(chipStroke, "Transparency", 0.14, 5.5, 1)
+				end)
+				Creator.AddSignal(removeBtn.MouseLeave, function()
+					Creator.SpringValue(removeIcon, "ImageTransparency", 0.08, 5.5, 1)
+					Creator.OverrideTag(removeIcon, {ImageColor3 = "SubText"})
+					Creator.SpringValue(chipStroke, "Transparency", 0.32, 5.5, 1)
+				end)
+				Creator.AddSignal(removeBtn.MouseButton1Down, function()
+					Creator.SpringValue(chipScale, "Scale", 0.92, 6.5, 0.85)
+				end)
+				Creator.AddSignal(removeBtn.MouseButton1Click, function()
+					TagInput:RemoveTag(tag)
+					Library._TouchElement(TagInput)
+				end)
+				if animate and not Creator.ReducedMotion then
+					-- Luaward silky spring (~240ms visible pop-in)
+					Creator.SpringValue(chipScale, "Scale", 1, 4.2, 0.66)
+					Creator.SpringValue(chip, "BackgroundTransparency", 0.72, 4.8, 1)
+					Creator.SpringValue(chipStroke, "Transparency", 0.32, 4.8, 1)
+					Creator.SpringValue(chipText, "TextTransparency", 0, 4.8, 1)
+				end
+				return {Tag = tag, Frame = chip, Scale = chipScale, Stroke = chipStroke, Text = chipText, RemoveIcon = removeIcon}
+			end
+
+			local function rebuildChips(animate)
+				for _, ch in ipairs(chipEntries) do
+					if ch.Frame and ch.Frame.Parent then
+						ch.Frame:Destroy()
+					end
+				end
+				table.clear(chipEntries)
+				for order, tag in ipairs(TagInput.Value) do
+					table.insert(chipEntries, createChip(tag, order, animate))
+				end
+				syncChipsWrapVisibility()
+			end
+
+			-- Optional quick-add Suggestions row
+			if type(config.Suggestions) == "table" and #config.Suggestions > 0 then
+				local sugLayout = New("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 4)
+				})
+				pcall(function()
+					sugLayout.Wraps = true
+				end)
+				local sugRow = New(
+					"Frame",
+					{
+						Name = "Suggestions",
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						LayoutOrder = 3,
+						Parent = bodyHolder
+					},
+					{
+						sugLayout,
+						New(
+							"UIPadding",
+							{
+								PaddingTop = UDim.new(0, 2),
+								PaddingBottom = UDim.new(0, 2),
+								PaddingLeft = UDim.new(0, 2),
+								PaddingRight = UDim.new(0, 2)
+							}
+						)
+					}
+				)
+				for i, sug in ipairs(config.Suggestions) do
+					local sugStr = trim(sug)
+					if sugStr ~= "" then
+						local sugStroke = New("UIStroke", {Transparency = 0.38, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+						local btn = New(
+							"TextButton",
+							{
+								Name = "Sug_" .. tostring(i),
+								Text = "+ " .. sugStr,
+								I18nSkip = true,
+								FontFace = Creator.Font(Enum.FontWeight.Medium),
+								TextSize = 11,
+								AutomaticSize = Enum.AutomaticSize.X,
+								Size = UDim2.fromOffset(0, 22),
+								BackgroundTransparency = 0.24,
+								LayoutOrder = i,
+								Parent = sugRow,
+								ThemeTag = {BackgroundColor3 = "DialogButton", TextColor3 = "SubText"}
+							},
+							{
+								New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+								New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+								sugStroke
+							}
+						)
+						Creator.AddSignal(btn.MouseEnter, function()
+							Creator.SpringValue(btn, "BackgroundTransparency", 0.08, 12, 1)
+							Creator.OverrideTag(sugStroke, {Color = "Accent"})
+							Creator.OverrideTag(btn, {BackgroundColor3 = "DialogButton", TextColor3 = "Text"})
+						end)
+						Creator.AddSignal(btn.MouseLeave, function()
+							Creator.SpringValue(btn, "BackgroundTransparency", 0.24, 12, 1)
+							Creator.OverrideTag(sugStroke, {Color = "InElementBorder"})
+							Creator.OverrideTag(btn, {BackgroundColor3 = "DialogButton", TextColor3 = "SubText"})
+						end)
+						Creator.AddSignal(btn.MouseButton1Click, function()
+							TagInput:AddTag(sugStr)
+							Library._TouchElement(TagInput)
+						end)
+					end
+				end
+			end
+
+			function TagInput.AddTag(_self, tag, silent)
+				tag = trim(tag)
+				if tag == "" or #TagInput.Value >= TagInput.MaxTags then
+					return false
+				end
+				if not TagInput.AllowDuplicates then
+					for _, existing in ipairs(TagInput.Value) do
+						if existing:lower() == tag:lower() then
+							return false
+						end
+					end
+				end
+				table.insert(TagInput.Value, tag)
+				chipsWrap.Visible = true
+				table.insert(chipEntries, createChip(tag, #TagInput.Value, not silent))
+				fireChanged(silent)
+				return true
+			end
+
+			function TagInput.RemoveTag(_self, tag, silent)
+				for i, existing in ipairs(TagInput.Value) do
+					if existing == tag then
+						table.remove(TagInput.Value, i)
+						local targetIdx = nil
+						for ci, entry in ipairs(chipEntries) do
+							if entry.Tag == tag then
+								targetIdx = ci
+								break
+							end
+						end
+						if targetIdx then
+							local entry = table.remove(chipEntries, targetIdx)
+							if silent or Creator.ReducedMotion then
+								if entry.Frame and entry.Frame.Parent then
+									entry.Frame:Destroy()
+								end
+								syncChipsWrapVisibility()
+							else
+								Creator.SpringValue(entry.Scale, "Scale", 0.42, 5.2, 1)
+								Creator.SpringValue(entry.Frame, "BackgroundTransparency", 1, 5.2, 1)
+								Creator.SpringValue(entry.Stroke, "Transparency", 1, 5.2, 1)
+								Creator.SpringValue(entry.Text, "TextTransparency", 1, 5.2, 1)
+								Creator.SpringValue(entry.RemoveIcon, "ImageTransparency", 1, 5.2, 1)
+								task.delay(0.20, function()
+									if entry.Frame and entry.Frame.Parent then
+										entry.Frame:Destroy()
+									end
+									syncChipsWrapVisibility()
+								end)
+							end
+						else
+							rebuildChips(false)
+						end
+						for idxOrder, rem in ipairs(chipEntries) do
+							if rem.Frame then
+								rem.Frame.LayoutOrder = idxOrder
+							end
+						end
+						fireChanged(silent)
+						return true
+					end
+				end
+				return false
+			end
+
+			function TagInput.GetTags(_self)
+				local copy = {}
+				for i, v in ipairs(TagInput.Value) do
+					copy[i] = v
+				end
+				return copy
+			end
+
+			function TagInput.SetValue(_self, list, silent)
+				table.clear(TagInput.Value)
+				if type(list) == "table" then
+					for _, v in ipairs(list) do
+						local s = trim(v)
+						if s ~= "" and #TagInput.Value < TagInput.MaxTags then
+							table.insert(TagInput.Value, s)
+						end
+					end
+				end
+				rebuildChips(not silent)
+				fireChanged(silent)
+			end
+
+			function TagInput.OnChanged(_self, cb)
+				TagInput.Changed = cb
+				cb(TagInput:GetTags())
+			end
+
+			function TagInput.Destroy(_self)
+				card:Destroy()
+				if idx ~= nil then
+					Library.Options[idx] = nil
+				end
+			end
+
+			Creator.AddSignal(addBtn.MouseButton1Click, function()
+				local candidate = trim(textBox.Text)
+				if candidate ~= "" then
+					TagInput:AddTag(candidate)
+					textBox.Text = ""
+					Library._TouchElement(TagInput)
+				end
+			end)
+
+			if type(config.Default) == "table" then
+				for _, v in ipairs(config.Default) do
+					table.insert(TagInput.Default, trim(v))
+				end
+				TagInput:SetValue(TagInput.Default, true)
+			end
+			if idx ~= nil then
+				Library.Options[idx] = TagInput
+			end
+			return TagInput
+		end
+		return Element
+	end,
+	[82] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(82)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local UserInputService = Creator.GetService("UserInputService")
+		local Lighting = Creator.GetService("Lighting")
+		local New = Creator.New
+
+		local protectGui = protectgui or (syn and syn.protect_gui) or function()
+		end
+
+		return function(Library)
+			local Palette = {
+				Opened = false,
+				CustomCommands = {}
+			}
+
+			local built = false
+			local spotlightGui, spotlightBlur, rootOverlay, backdrop, noiseScrim
+			local modalHost, modalCanvas, modalScale, modalShadow, modalStroke
+			local searchBox, resultsScroll, resultsRows, resultsLayout, emptyLabel
+			local selectionPill
+			local openConnections = {}
+			local transitionId = 0
+			local animScale = 1
+			local selY = 0
+			local currentItems = {}
+			local rowFrames = {}
+			local selectedIdx = 1
+
+			local function disconnectOpen()
+				for i = #openConnections, 1, -1 do
+					pcall(function()
+						openConnections[i]:Disconnect()
+					end)
+					openConnections[i] = nil
+				end
+			end
+
+			local function syncScale()
+				if modalScale then
+					modalScale.Scale = Creator.DPIScale * animScale
+				end
+			end
+
+			local function fadeStrokes(toHidden, instant)
+				if not modalCanvas then
+					return
+				end
+				for _, desc in ipairs(modalCanvas:GetDescendants()) do
+					if desc:IsA("UIStroke") then
+						local rest = desc:GetAttribute("AcryvenPalStroke")
+						if rest == nil then
+							rest = (desc == modalStroke) and 0.26 or desc.Transparency
+							desc:SetAttribute("AcryvenPalStroke", rest)
+						end
+						local target = toHidden and 1 or rest
+						if instant then
+							Creator.CancelSpring(desc, "Transparency")
+							desc.Transparency = target
+						else
+							Creator.SpringValue(desc, "Transparency", target, toHidden and 13 or 10, 1)
+						end
+					end
+				end
+			end
+
+			local function collectItems(query)
+				query = tostring(query or ""):gsub("^%s+", ""):gsub("%s+$", ""):lower()
+				local items = {}
+
+				local function matches(title, subtitle, category)
+					if query == "" then
+						return true
+					end
+					local hay = (tostring(title or "") .. " " .. tostring(subtitle or "") .. " " .. tostring(category or "")):lower()
+					return hay:find(query, 1, true) ~= nil
+				end
+
+				for _, cmd in ipairs(Palette.CustomCommands) do
+					if matches(cmd.Title, cmd.Subtitle, cmd.Category or "Command") then
+						table.insert(items, {
+							Title = tostring(cmd.Title or "Command"),
+							Subtitle = tostring(cmd.Subtitle or ""),
+							Category = tostring(cmd.Category or "Command"),
+							Icon = cmd.Icon or "command",
+							Run = function()
+								Library:SafeCallback(cmd.Callback)
+							end
+						})
+					end
+				end
+
+				if Library.Workspace and type(Library.Workspace.Tabs) == "table" then
+					for _, tab in ipairs(Library.Workspace.Tabs) do
+						local title = tostring(tab.Name or "Tab")
+						if matches(title, "Jump to tab", "Tab") then
+							table.insert(items, {
+								Title = title,
+								Subtitle = "Switch tab",
+								Category = "Tab",
+								Icon = "layers",
+								Run = function()
+									if type(tab.Select) == "function" then
+										tab:Select()
+									end
+								end
+							})
+						end
+					end
+				end
+
+				if Library.Workspace and type(Library.Workspace.Entries) == "table" then
+					for _, entry in ipairs(Library.Workspace.Entries) do
+						if type(entry) == "table" then
+							local obj = entry.Object
+							local title = tostring(entry.Title or "Control")
+							local tabName = tostring(entry.TabTitle or "")
+							local kind = tostring(entry.Type or "Control")
+							local subtitle = tabName ~= "" and (tabName .. " / " .. kind) or kind
+							if obj and obj.Type == "Toggle" then
+								subtitle = (tabName ~= "" and (tabName .. " / ") or "") .. (obj.Value and "ON - Press Enter to turn off" or "OFF - Press Enter to turn on")
+							end
+							if matches(title, subtitle, kind) then
+								table.insert(items, {
+									Title = title,
+									Subtitle = subtitle,
+									Category = kind,
+									Icon = (kind == "Toggle" and "sliders-horizontal") or (kind == "Button" and "arrow-right") or "sliders",
+									Run = function()
+										if obj and obj.Type == "Toggle" and type(obj.SetValue) == "function" then
+											obj:SetValue(not obj.Value)
+											Library._TouchElement(obj)
+										end
+										if Library.Workspace and type(Library.Workspace.Navigate) == "function" then
+											Library.Workspace:Navigate(entry)
+										end
+									end
+								})
+							end
+						end
+					end
+				end
+
+				local builtins = {
+					{
+						Title = "Toggle Sidebar",
+						Subtitle = "Collapse or expand navigation rail (Ctrl+B)",
+						Category = "Action",
+						Icon = "sidebar-close",
+						Run = function()
+							if Library.Window and type(Library.Window.ToggleSidebar) == "function" then
+								Library.Window:ToggleSidebar()
+							end
+						end
+					},
+					{
+						Title = "Toggle Acrylic Glass",
+						Subtitle = Library.Acrylic and "Currently Enabled" or "Currently Disabled",
+						Category = "Action",
+						Icon = "wand-2",
+						Run = function()
+							Library:ToggleAcrylic(not Library.Acrylic)
+						end
+					},
+					{
+						Title = "Minimize Window",
+						Subtitle = "Hide window smoothly",
+						Category = "Action",
+						Icon = "minimize-2",
+						Run = function()
+							if Library.Window and type(Library.Window.Minimize) == "function" then
+								Library.Window:Minimize()
+							end
+						end
+					}
+				}
+				for _, b in ipairs(builtins) do
+					if matches(b.Title, b.Subtitle, b.Category) then
+						table.insert(items, b)
+					end
+				end
+
+				for _, themeName in ipairs(Library.Themes or {}) do
+					local tTitle = "Theme: " .. tostring(themeName)
+					local sub = (Library.Theme == themeName) and "Current active theme" or "Switch UI theme with Oklab transition"
+					if matches(tTitle, sub, "Theme") then
+						table.insert(items, {
+							Title = tTitle,
+							Subtitle = sub,
+							Category = "Theme",
+							Icon = "palette",
+							Run = function()
+								Library:SetTheme(themeName)
+							end
+						})
+					end
+				end
+
+				if #items > 28 then
+					local trimmed = {}
+					for i = 1, 28 do
+						trimmed[i] = items[i]
+					end
+					return trimmed
+				end
+				return items
+			end
+
+			local function updateSelectionVisual(instant)
+				if #currentItems == 0 or not selectionPill then
+					if selectionPill then
+						selectionPill.Visible = false
+					end
+					return
+				end
+				selectionPill.Visible = true
+				local targetY = (selectedIdx - 1) * 44
+				if instant or Creator.ReducedMotion then
+					Creator.CancelSpring(selectionPill, "SelY")
+					selY = targetY
+					selectionPill.Position = UDim2.fromOffset(0, targetY)
+				else
+					Creator.SpringValue(selectionPill, "SelY", targetY, 12, 0.86, function(y)
+						selY = y
+						selectionPill.Position = UDim2.fromOffset(0, y)
+					end, selY)
+				end
+
+				for i, info in ipairs(rowFrames) do
+					local active = (i == selectedIdx)
+					if info.Icon then
+						info.Icon.ImageTransparency = active and 0 or 0.04
+					end
+					if info.Title then
+						info.Title.TextTransparency = active and 0 or 0.02
+					end
+				end
+
+				if resultsScroll and rowFrames[selectedIdx] then
+					local itemTop = (selectedIdx - 1) * 44
+					local itemBot = itemTop + 40
+					local scale = Creator.GetEffectiveScale(resultsScroll)
+					local viewH = resultsScroll.AbsoluteSize.Y / scale
+					local curY = resultsScroll.CanvasPosition.Y
+					if itemTop < curY then
+						resultsScroll.CanvasPosition = Vector2.new(0, itemTop)
+					elseif itemBot > curY + viewH then
+						resultsScroll.CanvasPosition = Vector2.new(0, math.max(0, itemBot - viewH))
+					end
+				end
+			end
+
+			local function executeSelected()
+				local chosen = currentItems[selectedIdx]
+				Palette:Close()
+				if chosen and type(chosen.Run) == "function" then
+					task.defer(chosen.Run)
+				end
+			end
+
+			local function renderResults(query)
+				for _, info in ipairs(rowFrames) do
+					if info.Row and info.Row.Parent then
+						info.Row:Destroy()
+					end
+				end
+				table.clear(rowFrames)
+				currentItems = collectItems(query)
+				selectedIdx = 1
+				emptyLabel.Visible = (#currentItems == 0)
+
+				for i, item in ipairs(currentItems) do
+					local iconAsset = Library:GetIcon(item.Icon or "command") or Library:GetIcon("search") or ""
+					local iconImg = New("ImageLabel", {
+						Name = "Icon",
+						Image = iconAsset,
+						Size = UDim2.fromOffset(14, 14),
+						Position = UDim2.new(0, 12, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ImageTransparency = 0.04,
+						ZIndex = 125,
+						ThemeTag = {ImageColor3 = "Accent"}
+					})
+					local titleLbl = New("TextLabel", {
+						Name = "Title",
+						Text = item.Title,
+						I18nSkip = true,
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 13,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						Position = UDim2.fromOffset(34, 4),
+						Size = UDim2.new(1, -112, 0, 16),
+						BackgroundTransparency = 1,
+						TextTransparency = 0.02,
+						ZIndex = 125,
+						ThemeTag = {TextColor3 = "Text"}
+					})
+					local row = New(
+						"TextButton",
+						{
+							Name = "CmdRow_" .. tostring(i),
+							Text = "",
+							AutoButtonColor = false,
+							Size = UDim2.new(1, -6, 0, 40),
+							BackgroundTransparency = 1,
+							LayoutOrder = i,
+							ZIndex = 124,
+							Parent = resultsRows
+						},
+						{
+							iconImg,
+							titleLbl,
+							New("TextLabel", {
+								Name = "Subtitle",
+								Text = item.Subtitle,
+								I18nSkip = true,
+								FontFace = Creator.Font(Enum.FontWeight.Regular),
+								TextSize = 10,
+								TextXAlignment = Enum.TextXAlignment.Left,
+								TextTruncate = Enum.TextTruncate.AtEnd,
+								Position = UDim2.fromOffset(34, 20),
+								Size = UDim2.new(1, -112, 0, 14),
+								BackgroundTransparency = 1,
+								ZIndex = 125,
+								ThemeTag = {TextColor3 = "SubText"}
+							}),
+							New("Frame", {
+								Name = "CatPill",
+								AnchorPoint = Vector2.new(1, 0.5),
+								Position = UDim2.new(1, -10, 0.5, 0),
+								AutomaticSize = Enum.AutomaticSize.X,
+								Size = UDim2.fromOffset(0, 18),
+								BackgroundTransparency = 0.45,
+								ZIndex = 125,
+								ThemeTag = {BackgroundColor3 = "DialogButton"}
+							}, {
+								New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+								New("UIStroke", {Transparency = 0.48, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+								New("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}),
+								New("TextLabel", {
+									Text = item.Category,
+									I18nSkip = true,
+									FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+									TextSize = 9,
+									AutomaticSize = Enum.AutomaticSize.X,
+									Size = UDim2.new(0, 0, 1, 0),
+									BackgroundTransparency = 1,
+									ZIndex = 126,
+									ThemeTag = {TextColor3 = "SubText"}
+								})
+							})
+						}
+					)
+					Creator.AddSignal(row.MouseEnter, function()
+						selectedIdx = i
+						updateSelectionVisual(false)
+					end)
+					Creator.AddSignal(row.MouseButton1Click, function()
+						selectedIdx = i
+						executeSelected()
+					end)
+					table.insert(rowFrames, {Row = row, Icon = iconImg, Title = titleLbl})
+				end
+
+				local totalH = #currentItems * 44 + 6
+				resultsScroll.CanvasSize = UDim2.new(0, 0, 0, totalH)
+				resultsScroll.CanvasPosition = Vector2.new(0, 0)
+				updateSelectionVisual(true)
+			end
+
+			local function ensureBuilt()
+				if built then
+					return
+				end
+				built = true
+
+				-- Purge any orphaned Spotlight blur/ScreenGui from an earlier session
+				for _, child in ipairs(Lighting:GetChildren()) do
+					if child.Name == "AcryvenSpotlightBlur" then
+						pcall(function() child:Destroy() end)
+					end
+				end
+				local guiParent = (Library.GUI and Library.GUI.Parent) or Creator.GetService("CoreGui")
+				for _, child in ipairs(guiParent:GetChildren()) do
+					if child.Name == "AcryvenSpotlightGui" then
+						pcall(function() child:Destroy() end)
+					end
+				end
+
+				spotlightBlur = Instance.new("BlurEffect")
+				spotlightBlur.Name = "AcryvenSpotlightBlur"
+				spotlightBlur.Size = 0
+				spotlightBlur.Enabled = false
+				spotlightBlur.Parent = Lighting
+
+				spotlightGui = New("ScreenGui", {
+					Name = "AcryvenSpotlightGui",
+					IgnoreGuiInset = true,
+					ResetOnSpawn = false,
+					DisplayOrder = 50,
+					Enabled = false,
+					ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+					Parent = guiParent
+				})
+				pcall(function()
+					spotlightGui.ScreenInsets = Enum.ScreenInsets.None
+				end)
+				protectGui(spotlightGui)
+
+				noiseScrim = New("ImageLabel", {
+					Name = "FrostedNoise",
+					Image = "rbxassetid://9968344105",
+					ImageTransparency = 1,
+					ScaleType = Enum.ScaleType.Tile,
+					TileSize = UDim2.fromOffset(128, 128),
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					ZIndex = 120
+				})
+
+				backdrop = New(
+					"TextButton",
+					{
+						Name = "Backdrop",
+						Text = "",
+						AutoButtonColor = false,
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						ZIndex = 120,
+						ThemeTag = {BackgroundColor3 = "AcrylicMain"}
+					},
+					{noiseScrim}
+				)
+				Creator.AddSignal(backdrop.MouseButton1Click, function()
+					Palette:Close()
+				end)
+
+				searchBox = New(
+					"TextBox",
+					{
+						Name = "SearchInput",
+						Position = UDim2.fromOffset(36, 0),
+						Size = UDim2.new(1, -92, 1, 0),
+						BackgroundTransparency = 1,
+						Text = "",
+						PlaceholderText = "Search tabs, toggles, themes, or commands...",
+						I18nSkip = true,
+						ClearTextOnFocus = false,
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 13,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						ZIndex = 124,
+						ThemeTag = {TextColor3 = "Text", PlaceholderColor3 = "SubText"}
+					}
+				)
+
+				local headerBar = New(
+					"Frame",
+					{
+						Name = "SearchHeader",
+						Size = UDim2.new(1, 0, 0, 44),
+						BackgroundTransparency = 1,
+						ZIndex = 123
+					},
+					{
+						New("ImageLabel", {
+							Image = Library:GetIcon("search") or "",
+							Size = UDim2.fromOffset(15, 15),
+							Position = UDim2.new(0, 14, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							BackgroundTransparency = 1,
+							ZIndex = 124,
+							ThemeTag = {ImageColor3 = "Accent"}
+						}),
+						searchBox,
+						New("Frame", {
+							Name = "EscHint",
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -12, 0.5, 0),
+							Size = UDim2.fromOffset(36, 20),
+							BackgroundTransparency = 0.36,
+							ZIndex = 124,
+							ThemeTag = {BackgroundColor3 = "DialogButton"}
+						}, {
+							New("UICorner", {CornerRadius = UDim.new(0, 5)}),
+							New("UIStroke", {Transparency = 0.42, Thickness = 1, ThemeTag = {Color = "InElementBorder"}}),
+							New("TextLabel", {
+								Text = "ESC",
+								I18nSkip = true,
+								FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+								TextSize = 9,
+								Size = UDim2.fromScale(1, 1),
+								BackgroundTransparency = 1,
+								ZIndex = 125,
+								ThemeTag = {TextColor3 = "SubText"}
+							})
+						}),
+						New("Frame", {
+							Name = "HeaderLine",
+							Size = UDim2.new(1, 0, 0, 1),
+							Position = UDim2.new(0, 0, 1, -1),
+							BackgroundTransparency = 0.42,
+							ZIndex = 124,
+							ThemeTag = {BackgroundColor3 = "ElementBorder"}
+						})
+					}
+				)
+
+				selectionPill = New(
+					"Frame",
+					{
+						Name = "SelectionHighlight",
+						Size = UDim2.new(1, -6, 0, 40),
+						Position = UDim2.fromOffset(0, 0),
+						BackgroundTransparency = 0.8,
+						Visible = false,
+						ZIndex = 123,
+						ThemeTag = {BackgroundColor3 = "Accent"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+						New("UIStroke", {Transparency = 0.3, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "Accent"}}),
+						New("Frame", {
+							Name = "AccentBar",
+							Size = UDim2.fromOffset(3, 18),
+							Position = UDim2.new(0, 2, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							ZIndex = 124,
+							ThemeTag = {BackgroundColor3 = "Accent"}
+						}, {New("UICorner", {CornerRadius = UDim.new(1, 0)})})
+					}
+				)
+
+				resultsLayout = New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
+				resultsRows = New(
+					"Frame",
+					{
+						Name = "Rows",
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						ZIndex = 124
+					},
+					{resultsLayout}
+				)
+
+				resultsScroll = New(
+					"ScrollingFrame",
+					{
+						Name = "Results",
+						Position = UDim2.fromOffset(8, 50),
+						Size = UDim2.new(1, -16, 1, -78),
+						BackgroundTransparency = 1,
+						BorderSizePixel = 0,
+						ScrollBarThickness = 3,
+						ScrollBarImageTransparency = 0.45,
+						CanvasSize = UDim2.fromOffset(0, 0),
+						ScrollingDirection = Enum.ScrollingDirection.Y,
+						ZIndex = 123,
+						ThemeTag = {ScrollBarImageColor3 = "Accent"}
+					},
+					{
+						New(
+							"UIPadding",
+							{
+								PaddingTop = UDim.new(0, 2),
+								PaddingBottom = UDim.new(0, 4),
+								PaddingLeft = UDim.new(0, 2),
+								PaddingRight = UDim.new(0, 2)
+							}
+						),
+						selectionPill,
+						resultsRows
+					}
+				)
+
+				emptyLabel = New(
+					"TextLabel",
+					{
+						Name = "Empty",
+						Text = "No matching tabs, controls, or commands.",
+						FontFace = Creator.Font(Enum.FontWeight.Regular),
+						TextSize = 12,
+						Position = UDim2.fromOffset(0, 74),
+						Size = UDim2.new(1, 0, 0, 26),
+						BackgroundTransparency = 1,
+						Visible = false,
+						ZIndex = 124,
+						ThemeTag = {TextColor3 = "SubText"}
+					}
+				)
+
+				local footer = New(
+					"Frame",
+					{
+						Name = "Footer",
+						Size = UDim2.new(1, 0, 0, 24),
+						Position = UDim2.new(0, 0, 1, -24),
+						BackgroundTransparency = 0.35,
+						ZIndex = 123,
+						ThemeTag = {BackgroundColor3 = "Dialog"}
+					},
+					{
+						New("TextLabel", {
+							Text = "Up/Down Navigate   |   Enter Run   |   Esc Close",
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 10,
+							Position = UDim2.fromOffset(12, 0),
+							Size = UDim2.new(1, -24, 1, 0),
+							TextXAlignment = Enum.TextXAlignment.Left,
+							BackgroundTransparency = 1,
+							TextTransparency = 0.15,
+							ZIndex = 124,
+							ThemeTag = {TextColor3 = "SubText"}
+						})
+					}
+				)
+
+				local topRimSheen = New(
+					"Frame",
+					{
+						Name = "TopRimSheen",
+						Size = UDim2.new(1, -24, 0, 1),
+						Position = UDim2.fromOffset(12, 0),
+						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+						BackgroundTransparency = 0.72,
+						BorderSizePixel = 0,
+						ZIndex = 128
+					},
+					{
+						New("UIGradient", {
+							Transparency = NumberSequence.new({
+								NumberSequenceKeypoint.new(0, 1),
+								NumberSequenceKeypoint.new(0.25, 0.2),
+								NumberSequenceKeypoint.new(0.5, 0),
+								NumberSequenceKeypoint.new(0.75, 0.2),
+								NumberSequenceKeypoint.new(1, 1)
+							})
+						})
+					}
+				)
+
+				modalStroke = New("UIStroke", {
+					Thickness = 1.2,
+					Transparency = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "DropdownBorder"}
+				})
+				local borderFrame = New(
+					"Frame",
+					{Name = "Border", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 128},
+					{New("UICorner", {CornerRadius = UDim.new(0, 12)}), modalStroke}
+				)
+
+				modalCanvas = New(
+					"CanvasGroup",
+					{
+						Name = "PaletteCard",
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 0.14,
+						GroupTransparency = 1,
+						Active = true,
+						ZIndex = 122,
+						ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 12)}),
+						borderFrame,
+						topRimSheen,
+						headerBar,
+						resultsScroll,
+						emptyLabel,
+						footer
+					}
+				)
+
+				modalShadow = New(
+					"ImageLabel",
+					{
+						Name = "Shadow",
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://5554236805",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(23, 23, 277, 277),
+						Size = UDim2.new(1, 36, 1, 36),
+						Position = UDim2.fromOffset(-18, -14),
+						ImageColor3 = Color3.fromRGB(0, 0, 0),
+						ImageTransparency = 1,
+						ZIndex = 121
+					}
+				)
+
+				modalScale = New("UIScale", {Scale = Creator.DPIScale})
+				Creator.RegisterDPIScale(modalScale, syncScale)
+
+				modalHost = New(
+					"Frame",
+					{
+						Name = "PaletteHost",
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.45, 0),
+						Size = UDim2.fromOffset(456, 352),
+						BackgroundTransparency = 1,
+						ZIndex = 121
+					},
+					{modalScale, modalShadow, modalCanvas}
+				)
+
+				rootOverlay = New(
+					"Frame",
+					{
+						Name = "AcryvenCommandPalette",
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						Visible = true,
+						ZIndex = 120,
+						Parent = spotlightGui
+					},
+					{backdrop, modalHost}
+				)
+
+				Creator.AddSignal(searchBox:GetPropertyChangedSignal("Text"), function()
+					if Palette.Opened then
+						renderResults(searchBox.Text)
+					end
+				end)
+				Creator.AddSignal(searchBox.FocusLost, function(enterPressed)
+					if Palette.Opened and enterPressed and #currentItems > 0 then
+						executeSelected()
+					end
+				end)
+			end
+
+			function Palette.RegisterCommand(_self, cmd)
+				if type(cmd) ~= "table" or not cmd.Title then
+					return nil
+				end
+				table.insert(Palette.CustomCommands, cmd)
+				return cmd
+			end
+
+			function Palette.Open(_self)
+				if Palette.Opened then
+					return
+				end
+				if type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
+				ensureBuilt()
+				transitionId += 1
+				Palette.Opened = true
+				Library._OpenDropdowns[Palette] = true
+				searchBox.Text = ""
+				renderResults("")
+				spotlightGui.Enabled = true
+				spotlightBlur.Enabled = true
+
+				if Creator.ReducedMotion then
+					spotlightBlur.Size = 22
+					backdrop.BackgroundTransparency = 0.44
+					noiseScrim.ImageTransparency = 0.965
+					modalCanvas.GroupTransparency = 0
+					modalShadow.ImageTransparency = 0.48
+					animScale = 1
+					syncScale()
+					fadeStrokes(false, true)
+				else
+					spotlightBlur.Size = 0
+					backdrop.BackgroundTransparency = 1
+					noiseScrim.ImageTransparency = 1
+					modalCanvas.GroupTransparency = 1
+					modalShadow.ImageTransparency = 1
+					animScale = 0.94
+					syncScale()
+					fadeStrokes(true, true)
+					Creator.SpringValue(spotlightBlur, "Size", 22, 8.5, 1)
+					Creator.SpringValue(backdrop, "BackgroundTransparency", 0.44, 9.5, 1)
+					Creator.SpringValue(noiseScrim, "ImageTransparency", 0.965, 9.5, 1)
+					Creator.SpringValue(modalCanvas, "GroupTransparency", 0, 9.5, 1)
+					Creator.SpringValue(modalShadow, "ImageTransparency", 0.48, 9.5, 1)
+					Creator.SpringValue(modalScale, "PalScale", 1, 9, 0.86, function(v)
+						animScale = v
+						syncScale()
+					end, animScale)
+					fadeStrokes(false, false)
+				end
+
+				task.defer(function()
+					if Palette.Opened and searchBox and searchBox.Parent then
+						searchBox:CaptureFocus()
+					end
+				end)
+
+				table.insert(openConnections, Creator.AddSignal(UserInputService.InputBegan, function(input)
+					if not Palette.Opened or input.UserInputType ~= Enum.UserInputType.Keyboard then
+						return
+					end
+					if input.KeyCode == Enum.KeyCode.Escape then
+						Palette:Close()
+					elseif input.KeyCode == Enum.KeyCode.Down then
+						if #currentItems > 0 then
+							selectedIdx = (selectedIdx % #currentItems) + 1
+							updateSelectionVisual(false)
+						end
+					elseif input.KeyCode == Enum.KeyCode.Up then
+						if #currentItems > 0 then
+							selectedIdx = ((selectedIdx - 2) % #currentItems) + 1
+							updateSelectionVisual(false)
+						end
+					elseif input.KeyCode == Enum.KeyCode.Return and not searchBox:IsFocused() then
+						if #currentItems > 0 then
+							executeSelected()
+						end
+					end
+				end))
+			end
+
+			function Palette.Close(_self)
+				if not Palette.Opened then
+					return
+				end
+				transitionId += 1
+				local myId = transitionId
+				Palette.Opened = false
+				Library._OpenDropdowns[Palette] = nil
+				disconnectOpen()
+				if searchBox and searchBox:IsFocused() then
+					searchBox:ReleaseFocus()
+				end
+				if not built or not spotlightGui then
+					return
+				end
+				if Creator.ReducedMotion then
+					Creator.CancelSpring(spotlightBlur, "Size")
+					spotlightBlur.Size = 0
+					spotlightBlur.Enabled = false
+					spotlightGui.Enabled = false
+					return
+				end
+				Creator.SpringValue(spotlightBlur, "Size", 0, 12, 1)
+				Creator.SpringValue(backdrop, "BackgroundTransparency", 1, 12, 1)
+				Creator.SpringValue(noiseScrim, "ImageTransparency", 1, 12, 1)
+				Creator.SpringValue(modalCanvas, "GroupTransparency", 1, 12, 1)
+				Creator.SpringValue(modalShadow, "ImageTransparency", 1, 12, 1)
+				Creator.SpringValue(modalScale, "PalScale", 0.94, 11, 1, function(v)
+					animScale = v
+					syncScale()
+				end, animScale)
+				fadeStrokes(true, false)
+				task.delay(0.18, function()
+					if myId == transitionId and not Palette.Opened then
+						if spotlightBlur and spotlightBlur.Parent then
+							spotlightBlur.Enabled = false
+						end
+						if spotlightGui and spotlightGui.Parent then
+							spotlightGui.Enabled = false
+						end
+					end
+				end)
+			end
+
+			function Palette.Toggle(_self)
+				if Palette.Opened then
+					Palette:Close()
+				else
+					Palette:Open()
+				end
+			end
+
+			function Palette.Destroy(_self)
+				Palette:Close()
+				disconnectOpen()
+				if spotlightBlur then
+					Creator.CancelSpring(spotlightBlur, "Size")
+					pcall(function() spotlightBlur:Destroy() end)
+					spotlightBlur = nil
+				end
+				if spotlightGui then
+					pcall(function() spotlightGui:Destroy() end)
+					spotlightGui = nil
+				end
+				rootOverlay = nil
+				built = false
+			end
+
+			return Palette
+		end
+	end,
+	[83] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(83)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local UserInputService = Creator.GetService("UserInputService")
+		local Workspace = Creator.GetService("Workspace")
+		local New = Creator.New
+
+		local DANGER_RED = Color3.fromRGB(248, 113, 113)
+
+		return function(Library)
+			local Menu = {
+				Opened = false
+			}
+
+			local built = false
+			local host, canvas, shadow, borderStroke, listFrame, listLayout, uiScale, hoverPill
+			local openConns = {}
+			local transitionId = 0
+			local animScale = 1
+			local hoverY = 5
+			local hoverVisible = false
+
+			local function disconnectOpen()
+				for i = #openConns, 1, -1 do
+					pcall(function() openConns[i]:Disconnect() end)
+					openConns[i] = nil
+				end
+			end
+
+			local function syncScale()
+				if uiScale then
+					uiScale.Scale = Creator.DPIScale * animScale
+				end
+			end
+
+			local function setHoverY(y)
+				hoverY = y
+				if hoverPill then
+					hoverPill.Position = UDim2.fromOffset(5, y)
+				end
+			end
+
+			local function ensureBuilt()
+				if built then
+					return
+				end
+				built = true
+
+				listLayout = New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder})
+				listFrame = New(
+					"Frame",
+					{
+						Name = "Items",
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						ZIndex = 924
+					},
+					{
+						New("UIPadding", {PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5)}),
+						listLayout
+					}
+				)
+
+				hoverPill = New(
+					"Frame",
+					{
+						Name = "MenuHoverPill",
+						Size = UDim2.new(1, -10, 0, 28),
+						Position = UDim2.fromOffset(5, 5),
+						BackgroundTransparency = 1,
+						ZIndex = 923,
+						ThemeTag = {BackgroundColor3 = "DropdownOption"}
+					},
+					{New("UICorner", {CornerRadius = UDim.new(0, 6)})}
+				)
+
+				Creator.AddSignal(listFrame.MouseLeave, function()
+					hoverVisible = false
+					Creator.SpringValue(hoverPill, "BackgroundTransparency", 1, 11, 1)
+				end)
+
+				borderStroke = New(
+					"UIStroke",
+					{
+						Thickness = 1.1,
+						Transparency = 1,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "DropdownBorder"}
+					}
+				)
+				local borderFrame = New(
+					"Frame",
+					{Name = "Border", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 925},
+					{New("UICorner", {CornerRadius = UDim.new(0, 9)}), borderStroke}
+				)
+
+				canvas = New(
+					"CanvasGroup",
+					{
+						Name = "ContextCard",
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						GroupTransparency = 1,
+						BackgroundTransparency = 0.04,
+						Active = true,
+						ZIndex = 922,
+						ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 9)}),
+						borderFrame,
+						hoverPill,
+						listFrame
+					}
+				)
+
+				shadow = New(
+					"ImageLabel",
+					{
+						Name = "Shadow",
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://5554236805",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(23, 23, 277, 277),
+						Size = UDim2.new(1, 24, 1, 24),
+						Position = UDim2.fromOffset(-12, -10),
+						ImageColor3 = Color3.fromRGB(0, 0, 0),
+						ImageTransparency = 1,
+						ZIndex = 921
+					}
+				)
+
+				uiScale = New("UIScale", {Scale = Creator.DPIScale})
+				Creator.RegisterDPIScale(uiScale, syncScale)
+
+				host = New(
+					"Frame",
+					{
+						Name = "AcryvenContextMenu",
+						Size = UDim2.fromOffset(186, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						Visible = false,
+						ZIndex = 920,
+						Parent = Library.OverlayGUI or Library.GUI
+					},
+					{uiScale, shadow, canvas}
+				)
+			end
+
+			function Menu.Open(_self, items, screenPos)
+				if type(items) ~= "table" or #items == 0 then
+					return
+				end
+				if type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
+				ensureBuilt()
+				disconnectOpen()
+
+				hoverVisible = false
+				hoverPill.BackgroundTransparency = 1
+
+				for _, child in ipairs(listFrame:GetChildren()) do
+					if child:IsA("GuiObject") then
+						child:Destroy()
+					end
+				end
+
+				for i, item in ipairs(items) do
+					if item.Divider == true then
+						New("Frame", {
+							Name = "Div_" .. tostring(i),
+							Size = UDim2.new(1, -8, 0, 1),
+							BackgroundTransparency = 0.55,
+							LayoutOrder = i,
+							ZIndex = 924,
+							Parent = listFrame,
+							ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+						})
+					else
+						local iconAsset = item.Icon and (Library:GetIcon(item.Icon) or (item.Icon:match("^rbxassetid://") and item.Icon)) or nil
+						local isDanger = item.Danger == true
+						local children = {
+							New("UICorner", {CornerRadius = UDim.new(0, 6)})
+						}
+						if iconAsset then
+							table.insert(children, New("ImageLabel", {
+								Image = iconAsset,
+								Size = UDim2.fromOffset(13, 13),
+								Position = UDim2.new(0, 8, 0.5, 0),
+								AnchorPoint = Vector2.new(0, 0.5),
+								BackgroundTransparency = 1,
+								ImageColor3 = isDanger and DANGER_RED or Color3.fromRGB(220, 224, 234),
+								ZIndex = 925,
+								ThemeTag = (not isDanger) and {ImageColor3 = "SubText"} or nil
+							}))
+						end
+						table.insert(children, New("TextLabel", {
+							Text = tostring(item.Title or "Item"),
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 12,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							Position = UDim2.fromOffset(iconAsset and 28 or 10, 0),
+							Size = UDim2.new(1, iconAsset and -34 or -16, 1, 0),
+							BackgroundTransparency = 1,
+							TextColor3 = isDanger and DANGER_RED or Color3.fromRGB(240, 240, 240),
+							ZIndex = 925,
+							ThemeTag = (not isDanger) and {TextColor3 = "Text"} or nil
+						}))
+						local btn = New(
+							"TextButton",
+							{
+								Name = "Item_" .. tostring(i),
+								Text = "",
+								AutoButtonColor = false,
+								Size = UDim2.new(1, 0, 0, 28),
+								BackgroundTransparency = 1,
+								LayoutOrder = i,
+								ZIndex = 924,
+								Parent = listFrame
+							},
+							children
+						)
+						Creator.AddSignal(btn.MouseEnter, function()
+							local scale = Creator.GetEffectiveScale(canvas)
+							local targetY = (btn.AbsolutePosition.Y - canvas.AbsolutePosition.Y) / scale
+							if not hoverVisible then
+								hoverVisible = true
+								Creator.CancelSpring(hoverPill, "HoverY")
+								setHoverY(targetY)
+							else
+								Creator.SpringValue(hoverPill, "HoverY", targetY, 13, 0.86, setHoverY, hoverY)
+							end
+							Creator.SpringValue(hoverPill, "BackgroundTransparency", 0.8, 12, 1)
+						end)
+						Creator.AddSignal(btn.MouseButton1Click, function()
+							Menu:Close()
+							Library:SafeCallback(item.Callback)
+						end)
+					end
+				end
+
+				transitionId += 1
+				Menu.Opened = true
+				Library._OpenDropdowns[Menu] = true
+
+				local pos = screenPos or UserInputService:GetMouseLocation()
+				local insetY = Creator.GetGuiInsetY()
+				local cam = Workspace.CurrentCamera
+				local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+				local usableH = math.max(160, vp.Y - insetY)
+				local estH = (#items * 30 + 12) * Creator.DPIScale
+				local scaledW = 186 * Creator.DPIScale
+				local x = math.clamp(pos.X, 8, math.max(8, vp.X - scaledW - 8))
+				local y = math.clamp(pos.Y - insetY, 8, math.max(8, usableH - estH - 8))
+				host.Position = UDim2.fromOffset(x, y)
+				host.Visible = true
+
+				if Creator.ReducedMotion then
+					canvas.GroupTransparency = 0
+					borderStroke.Transparency = 0.34
+					shadow.ImageTransparency = 0.56
+					animScale = 1
+					syncScale()
+				else
+					canvas.GroupTransparency = 1
+					borderStroke.Transparency = 1
+					shadow.ImageTransparency = 1
+					animScale = 0.94
+					syncScale()
+					Creator.SpringValue(canvas, "GroupTransparency", 0, 11, 1)
+					Creator.SpringValue(borderStroke, "Transparency", 0.34, 11, 1)
+					Creator.SpringValue(shadow, "ImageTransparency", 0.56, 11, 1)
+					Creator.SpringValue(uiScale, "CtxScale", 1, 11, 0.86, function(v)
+						animScale = v
+						syncScale()
+					end, animScale)
+				end
+
+				table.insert(openConns, Creator.AddSignal(UserInputService.InputBegan, function(input)
+					if not Menu.Opened then
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
+						Menu:Close()
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.Touch then
+						local ix, iy = input.Position.X, input.Position.Y
+						local p, s = canvas.AbsolutePosition, canvas.AbsoluteSize
+						if ix < p.X or ix > p.X + s.X or iy < p.Y or iy > p.Y + s.Y then
+							Menu:Close()
+						end
+					end
+				end))
+			end
+
+			function Menu.Close(_self)
+				if not Menu.Opened then
+					return
+				end
+				transitionId += 1
+				local myId = transitionId
+				Menu.Opened = false
+				hoverVisible = false
+				Library._OpenDropdowns[Menu] = nil
+				disconnectOpen()
+				if not built or not host then
+					return
+				end
+				if Creator.ReducedMotion then
+					hoverPill.BackgroundTransparency = 1
+					host.Visible = false
+					return
+				end
+				Creator.SpringValue(hoverPill, "BackgroundTransparency", 1, 13, 1)
+				Creator.SpringValue(canvas, "GroupTransparency", 1, 13, 1)
+				Creator.SpringValue(borderStroke, "Transparency", 1, 14, 1)
+				Creator.SpringValue(shadow, "ImageTransparency", 1, 13, 1)
+				task.delay(0.15, function()
+					if myId == transitionId and not Menu.Opened and host and host.Parent then
+						host.Visible = false
+					end
+				end)
+			end
+
+			function Menu.Attach(_self, guiObject, itemsOrBuilder)
+				if not guiObject then
+					return
+				end
+				Creator.AddSignal(guiObject.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton2 then
+						local items = type(itemsOrBuilder) == "function" and itemsOrBuilder() or itemsOrBuilder
+						if type(items) == "table" and #items > 0 then
+							Menu:Open(items, UserInputService:GetMouseLocation())
+						end
+					end
+				end)
+			end
+
+			function Menu.Destroy(_self)
+				Menu:Close()
+				disconnectOpen()
+				if host and host.Parent then
+					host:Destroy()
+				end
+				host = nil
+				built = false
+			end
+
+			return Menu
+		end
+	end,
+	[84] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(84)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New = Creator.New
+
+		local function hookOption(opt, listener)
+			if type(opt) ~= "table" then
+				return
+			end
+			if not opt._AcryvenListeners then
+				opt._AcryvenListeners = {}
+				local origSet = opt.SetValue
+				if type(origSet) == "function" then
+					opt.SetValue = function(self, ...)
+						local res = origSet(self, ...)
+						for _, fn in ipairs(opt._AcryvenListeners) do
+							pcall(fn, opt.Value)
+						end
+						return res
+					end
+				end
+				local origSetRGB = opt.SetValueRGB
+				if type(origSetRGB) == "function" then
+					opt.SetValueRGB = function(self, ...)
+						local res = origSetRGB(self, ...)
+						for _, fn in ipairs(opt._AcryvenListeners) do
+							pcall(fn, opt.Value)
+						end
+						return res
+					end
+				end
+			end
+			table.insert(opt._AcryvenListeners, listener)
+		end
+
+		local function evalRule(rule)
+			if type(rule) == "function" then
+				local ok, res = pcall(rule)
+				return ok and (res == true)
+			end
+			if type(rule) ~= "table" then
+				return rule == true
+			end
+			-- Direct option object (Toggle, Dropdown, etc.)
+			if rule.Type ~= nil and rule.Value ~= nil then
+				return rule.Value == true
+			end
+			-- { option, expectedOrPredicate }
+			if type(rule[1]) == "table" and rule[1].Type ~= nil then
+				local opt, matcher = rule[1], rule[2]
+				if type(matcher) == "function" then
+					local ok, res = pcall(matcher, opt.Value)
+					return ok and (res == true)
+				elseif matcher == nil then
+					return opt.Value == true
+				else
+					return opt.Value == matcher
+				end
+			end
+			-- Array of rules (logical AND)
+			for _, sub in ipairs(rule) do
+				if not evalRule(sub) then
+					return false
+				end
+			end
+			return true
+		end
+
+		local function attachRuleHooks(rule, refresh)
+			if type(rule) ~= "table" then
+				return
+			end
+			if rule.Type ~= nil then
+				hookOption(rule, refresh)
+				return
+			end
+			if type(rule[1]) == "table" and rule[1].Type ~= nil then
+				hookOption(rule[1], refresh)
+				return
+			end
+			for _, sub in ipairs(rule) do
+				attachRuleHooks(sub, refresh)
+			end
+		end
+
+		return function(parentObj, config)
+			config = type(config) == "table" and config or {}
+			local Library = requireModule(Root)
+			local Box = {
+				Type = "DependencyBox",
+				Visible = config.Default ~= false,
+				ScrollFrame = parentObj.ScrollFrame,
+				Tab = parentObj.Tab,
+				TabId = parentObj.TabId,
+				TabTitle = parentObj.TabTitle
+			}
+
+			local layout = New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+			Box.Container = New(
+				"Frame",
+				{
+					Name = "Content",
+					Size = UDim2.new(1, 0, 0, 0),
+					BackgroundTransparency = 1
+				},
+				{
+					layout,
+					New(
+						"UIPadding",
+						{
+							PaddingTop = UDim.new(0, 2),
+							PaddingBottom = UDim.new(0, 2),
+							PaddingLeft = UDim.new(0, 2),
+							PaddingRight = UDim.new(0, 2)
+						}
+					)
+				}
+			)
+			Box.Root = New(
+				"Frame",
+				{
+					Name = "DependencyBox",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 0),
+					ClipsDescendants = not Box.Visible,
+					Visible = Box.Visible,
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parentObj.Container
+				},
+				{Box.Container}
+			)
+			Box.Frame = Box.Root
+
+			local currentH = 0
+			local currentTargetH = 0
+			local function applyH(h)
+				currentH = h
+				Box.Root.Size = UDim2.new(1, 0, 0, math.max(0, h))
+				Box.Root.ClipsDescendants = (not Box.Visible) or math.abs(h - currentTargetH) > 0.8
+				if not Box.Visible and h <= 0.6 then
+					Box.Root.Visible = false
+				elseif h > 0.6 then
+					Box.Root.Visible = true
+				end
+			end
+
+			local function getContentHeight()
+				if not Box.Root or not Box.Root.Parent then
+					return 0
+				end
+				local scale = Creator.GetEffectiveScale(Box.Container)
+				return math.ceil(layout.AbsoluteContentSize.Y / scale) + 4
+			end
+
+			local function syncHeight(animate)
+				if not Box.Root or not Box.Root.Parent then
+					return
+				end
+				local contentY = getContentHeight()
+				Box.Container.Size = UDim2.new(1, 0, 0, contentY)
+				local targetH = Box.Visible and contentY or 0
+				currentTargetH = targetH
+				if Box.Visible then
+					Box.Root.Visible = true
+				end
+				if animate and not Creator.ReducedMotion then
+					Box.Root.ClipsDescendants = true
+					Creator.SpringValue(Box.Root, "DepHeight", targetH, 8.5, 0.94, applyH, currentH)
+				else
+					Creator.CancelSpring(Box.Root, "DepHeight")
+					applyH(targetH)
+					Box.Root.Visible = Box.Visible
+				end
+			end
+
+			Creator.AddSignal(layout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+				syncHeight(false)
+			end)
+			Creator.RegisterDPIScale(Box.Root, function()
+				task.defer(function()
+					syncHeight(false)
+				end)
+			end)
+
+			function Box.SetVisible(_self, visible, instant)
+				local nextVis = visible == true
+				if nextVis == Box.Visible and not instant then
+					return
+				end
+				Box.Visible = nextVis
+				syncHeight(not instant)
+			end
+
+			local dependsOn = config.DependsOn
+			local condition = config.Condition
+			function Box.Refresh(_self, instant)
+				local show = true
+				if dependsOn ~= nil then
+					show = evalRule(dependsOn)
+				end
+				if show and type(condition) == "function" then
+					local ok, res = pcall(condition)
+					show = ok and (res == true)
+				end
+				Box:SetVisible(show, instant)
+			end
+
+			function Box.SetupDependencies(_self, deps)
+				dependsOn = deps
+				attachRuleHooks(dependsOn, function()
+					Box:Refresh(false)
+				end)
+				Box:Refresh(true)
+			end
+
+			function Box.Destroy(_self)
+				Creator.CancelSpring(Box.Root, "DepHeight")
+				Box.Root:Destroy()
+			end
+
+			if dependsOn ~= nil then
+				attachRuleHooks(dependsOn, function()
+					Box:Refresh(false)
+				end)
+			end
+
+			setmetatable(Box, Library.Elements)
+			task.defer(function()
+				if dependsOn ~= nil or type(condition) == "function" then
+					Box:Refresh(true)
+				else
+					syncHeight(false)
+				end
+			end)
+			return Box
+		end
+	end,
+	[85] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(85)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local Workspace = Creator.GetService("Workspace")
+		local New = Creator.New
+
+		return function(Library, window, opts)
+			opts = type(opts) == "table" and opts or {}
+			local Pill = {
+				Visible = false,
+				AlwaysVisible = opts.AlwaysVisible == true,
+				StatusText = tostring(opts.Status or "Active"),
+				StatusColor = typeof(opts.Color) == "Color3" and opts.Color or Color3.fromRGB(52, 211, 153),
+				Destroyed = false
+			}
+
+			local statusDot = New(
+				"Frame",
+				{
+					Name = "StatusDot",
+					Size = UDim2.fromOffset(8, 8),
+					BackgroundColor3 = Pill.StatusColor,
+					LayoutOrder = 1
+				},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+			)
+
+			local titleLbl = New(
+				"TextLabel",
+				{
+					Name = "Title",
+					Text = tostring(opts.Title or (window and window.TitleBar and window.TitleBar.TitleText) or "Acryven"),
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+					TextSize = 12,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1,
+					LayoutOrder = 2,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
+
+			local sep = New(
+				"Frame",
+				{
+					Name = "Sep",
+					Size = UDim2.fromOffset(1, 14),
+					BackgroundTransparency = 0.5,
+					LayoutOrder = 3,
+					ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+				}
+			)
+
+			local statusLbl = New(
+				"TextLabel",
+				{
+					Name = "Status",
+					Text = Pill.StatusText,
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 11,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1,
+					LayoutOrder = 4,
+					ThemeTag = {TextColor3 = "SubText"}
+				}
+			)
+
+			local openIcon = New(
+				"ImageLabel",
+				{
+					Name = "OpenIcon",
+					Image = Library:GetIcon("maximize-2") or "",
+					Size = UDim2.fromOffset(12, 12),
+					BackgroundTransparency = 1,
+					ImageTransparency = 0.15,
+					LayoutOrder = 5,
+					ThemeTag = {ImageColor3 = "Accent"}
+				}
+			)
+
+			local pillStroke = New(
+				"UIStroke",
+				{
+					Thickness = 1.1,
+					Transparency = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "DropdownBorder"}
+				}
+			)
+			local borderFrame = New(
+				"Frame",
+				{Name = "Border", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 114},
+				{New("UICorner", {CornerRadius = UDim.new(1, 0)}), pillStroke}
+			)
+
+			local contentBtn = New(
+				"TextButton",
+				{
+					Name = "ContentBtn",
+					Text = "",
+					AutoButtonColor = false,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 34),
+					BackgroundTransparency = 1,
+					ZIndex = 113
+				},
+				{
+					New("UIPadding", {PaddingLeft = UDim.new(0, 13), PaddingRight = UDim.new(0, 13)}),
+					New("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 8)
+					}),
+					statusDot,
+					titleLbl,
+					sep,
+					statusLbl,
+					openIcon
+				}
+			)
+
+			local pillCanvas = New(
+				"CanvasGroup",
+				{
+					Name = "PillCanvas",
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 34),
+					GroupTransparency = 1,
+					BackgroundTransparency = 0.08,
+					ZIndex = 112,
+					ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+					borderFrame,
+					contentBtn
+				}
+			)
+
+			local pillShadow = New(
+				"ImageLabel",
+				{
+					Name = "Shadow",
+					BackgroundTransparency = 1,
+					Image = "rbxassetid://5554236805",
+					ScaleType = Enum.ScaleType.Slice,
+					SliceCenter = Rect.new(23, 23, 277, 277),
+					Size = UDim2.new(1, 22, 1, 22),
+					Position = UDim2.fromOffset(-11, -9),
+					ImageColor3 = Color3.fromRGB(0, 0, 0),
+					ImageTransparency = 1,
+					ZIndex = 111
+				}
+			)
+
+			local animScale = 1
+			local pillScale = New("UIScale", {Scale = Creator.DPIScale})
+			local function syncScale()
+				pillScale.Scale = Creator.DPIScale * animScale
+			end
+			Creator.RegisterDPIScale(pillScale, syncScale)
+
+			local host = New(
+				"Frame",
+				{
+					Name = "AcryvenFloatingPill",
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = UDim2.new(0.5, 0, 0, 12),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 34),
+					BackgroundTransparency = 1,
+					Visible = false,
+					ZIndex = 110,
+					Parent = Library.GUI
+				},
+				{pillScale, pillShadow, pillCanvas}
+			)
+			Pill.Root = host
+
+			-- Drag vs Click handling
+			local dragged = false
+			Creator.AddSignal(contentBtn.InputBegan, function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragged = false
+					local startMouse = input.Position
+					local startAbsX = host.AbsolutePosition.X
+					local startAbsY = host.AbsolutePosition.Y
+					Creator.BeginDrag(function(mv)
+						local delta = mv.Position - startMouse
+						if delta.Magnitude > 6 then
+							dragged = true
+							local cam = Workspace.CurrentCamera
+							local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+							local insetY = Creator.GetGuiInsetY()
+							local w = host.AbsoluteSize.X
+							local h = host.AbsoluteSize.Y
+							local nx = math.clamp(startAbsX + delta.X, 8, math.max(8, vp.X - w - 8))
+							local ny = math.clamp(startAbsY + delta.Y, 8, math.max(8, vp.Y - insetY - h - 8))
+							host.AnchorPoint = Vector2.new(0, 0)
+							host.Position = UDim2.fromOffset(nx, ny)
+						end
+					end, function()
+						-- End drag
+					end)
+				end
+			end)
+
+			Creator.AddSignal(contentBtn.MouseButton1Click, function()
+				if dragged then
+					dragged = false
+					return
+				end
+				if window and type(window.Minimize) == "function" then
+					window:Minimize()
+				end
+			end)
+
+			Creator.AddSignal(contentBtn.MouseEnter, function()
+				if Pill.Visible then
+					Creator.SpringValue(pillStroke, "Transparency", 0.16, 10, 1)
+				end
+			end)
+			Creator.AddSignal(contentBtn.MouseLeave, function()
+				if Pill.Visible then
+					Creator.SpringValue(pillStroke, "Transparency", 0.36, 10, 1)
+				end
+			end)
+
+			local transitionId = 0
+			function Pill.SetVisible(_self, show, instant)
+				if Pill.Destroyed then
+					return
+				end
+				show = show == true
+				if show == Pill.Visible and not instant then
+					return
+				end
+				Pill.Visible = show
+				transitionId += 1
+				local myId = transitionId
+
+				if show then
+					host.Visible = true
+					if instant or Creator.ReducedMotion then
+						pillCanvas.GroupTransparency = 0
+						pillStroke.Transparency = 0.36
+						pillShadow.ImageTransparency = 0.58
+						animScale = 1
+						syncScale()
+					else
+						pillCanvas.GroupTransparency = 1
+						pillStroke.Transparency = 1
+						pillShadow.ImageTransparency = 1
+						animScale = 0.88
+						syncScale()
+						Creator.SpringValue(pillCanvas, "GroupTransparency", 0, 8.5, 1)
+						Creator.SpringValue(pillStroke, "Transparency", 0.36, 8.5, 1)
+						Creator.SpringValue(pillShadow, "ImageTransparency", 0.58, 8.5, 1)
+						Creator.SpringValue(pillScale, "PillScale", 1, 7.5, 0.82, function(v)
+							animScale = v
+							syncScale()
+						end, animScale)
+					end
+				else
+					if instant or Creator.ReducedMotion then
+						host.Visible = false
+					else
+						Creator.SpringValue(pillCanvas, "GroupTransparency", 1, 11, 1)
+						Creator.SpringValue(pillStroke, "Transparency", 1, 12, 1)
+						Creator.SpringValue(pillShadow, "ImageTransparency", 1, 11, 1)
+						Creator.SpringValue(pillScale, "PillScale", 0.88, 10, 1, function(v)
+							animScale = v
+							syncScale()
+						end, animScale)
+						task.delay(0.18, function()
+							if myId == transitionId and not Pill.Visible and host and host.Parent then
+								host.Visible = false
+							end
+						end)
+					end
+				end
+			end
+
+			function Pill.SetStatus(_self, text, color)
+				if text ~= nil then
+					Pill.StatusText = tostring(text)
+					statusLbl.Text = Pill.StatusText
+					sep.Visible = Pill.StatusText ~= ""
+					statusLbl.Visible = Pill.StatusText ~= ""
+				end
+				if typeof(color) == "Color3" then
+					Pill.StatusColor = color
+					statusDot.BackgroundColor3 = color
+				end
+			end
+
+			function Pill.SetTitle(_self, text)
+				titleLbl.Text = tostring(text or "")
+			end
+
+			function Pill.Destroy(_self)
+				if Pill.Destroyed then
+					return
+				end
+				Pill.Destroyed = true
+				if host and host.Parent then
+					host:Destroy()
+				end
+				if Library.FloatingPill == Pill then
+					Library.FloatingPill = nil
+				end
+			end
+
+			if Pill.AlwaysVisible or (window and window.Minimized) then
+				Pill:SetVisible(true, true)
+			end
+
+			return Pill
+		end
+	end,
+	[86] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(86)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local RunService = Creator.GetService("RunService")
+		local Stats = Creator.GetService("Stats")
+		local Workspace = Creator.GetService("Workspace")
+		local New = Creator.New
+
+		local HUD = {}
+
+		local function makeDraggable(handle, target)
+			Creator.AddSignal(handle.InputBegan, function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					local startPos = input.Position
+					local startAbsX = target.AbsolutePosition.X
+					local startAbsY = target.AbsolutePosition.Y
+					Creator.BeginDrag(function(mv)
+						local delta = mv.Position - startPos
+						local cam = Workspace.CurrentCamera
+						local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+						local insetY = Creator.GetGuiInsetY()
+						local w, h = target.AbsoluteSize.X, target.AbsoluteSize.Y
+						local nx = math.clamp(startAbsX + delta.X, 6, math.max(6, vp.X - w - 6))
+						local ny = math.clamp(startAbsY + delta.Y, 6, math.max(6, vp.Y - insetY - h - 6))
+						target.AnchorPoint = Vector2.new(0, 0)
+						target.Position = UDim2.fromOffset(nx, ny)
+					end, function() end)
+				end
+			end)
+		end
+
+		function HUD.CreateWatermark(Library, opts)
+			opts = type(opts) == "table" and opts or {}
+			local Watermark = {
+				Visible = opts.Visible ~= false,
+				ShowFPS = opts.ShowFPS ~= false,
+				ShowPing = opts.ShowPing ~= false,
+				Title = tostring(opts.Title or "Acryven"),
+				CustomText = opts.Text and tostring(opts.Text) or nil,
+				Destroyed = false
+			}
+
+			local accentBar = New(
+				"Frame",
+				{
+					Name = "AccentBar",
+					Size = UDim2.new(1, 0, 0, 2),
+					Position = UDim2.fromOffset(0, 0),
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				}
+			)
+
+			local textLbl = New(
+				"TextLabel",
+				{
+					Name = "WatermarkText",
+					RichText = true,
+					Text = Watermark.Title,
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 11,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 1, 0),
+					BackgroundTransparency = 1,
+					ThemeTag = {TextColor3 = "Text"}
+				}
+			)
+
+			local wmScale = New("UIScale", {Scale = Creator.DPIScale})
+			Creator.RegisterDPIScale(wmScale)
+
+			local card = New(
+				"Frame",
+				{
+					Name = "AcryvenWatermark",
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, 28),
+					Position = opts.Position or UDim2.fromOffset(14, 14),
+					BackgroundTransparency = 0.14,
+					ClipsDescendants = true,
+					Visible = Watermark.Visible,
+					Active = true,
+					ZIndex = 105,
+					Parent = Library.GUI,
+					ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+				},
+				{
+					wmScale,
+					New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+					New("UIStroke", {Transparency = 0.32, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}),
+					accentBar,
+					New("Frame", {
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.fromOffset(0, 28),
+						BackgroundTransparency = 1
+					}, {
+						New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 2)}),
+						textLbl
+					})
+				}
+			)
+			Watermark.Root = card
+			makeDraggable(card, card)
+
+			local frameCount = 0
+			local elapsed = 0
+			local fps = 60
+
+			local function getPingMs()
+				local ok, ms = pcall(function()
+					local net = Stats and Stats:FindFirstChild("Network")
+					local item = net and net:FindFirstChild("ServerStatsItem")
+					local dataPing = item and item:FindFirstChild("Data Ping")
+					return dataPing and math.floor(dataPing:GetValue() + 0.5) or nil
+				end)
+				return ok and ms or nil
+			end
+
+			local function updateLabel()
+				if Watermark.CustomText then
+					textLbl.Text = Watermark.CustomText
+					return
+				end
+				local parts = {"<b>" .. Watermark.Title .. "</b>"}
+				if Watermark.ShowFPS then
+					table.insert(parts, tostring(fps) .. " fps")
+				end
+				if Watermark.ShowPing then
+					local ping = getPingMs()
+					if ping then
+						table.insert(parts, tostring(ping) .. " ms")
+					end
+				end
+				textLbl.Text = table.concat(parts, "  |  ")
+			end
+
+			local conn = RunService.RenderStepped:Connect(function(dt)
+				if Watermark.Destroyed or not Watermark.Visible then
+					return
+				end
+				frameCount += 1
+				elapsed += dt
+				if elapsed >= 0.75 then
+					fps = math.max(1, math.floor((frameCount / elapsed) + 0.5))
+					frameCount = 0
+					elapsed = 0
+					updateLabel()
+				end
+			end)
+			table.insert(Creator.Signals, conn)
+
+			function Watermark.SetText(_self, text)
+				Watermark.CustomText = text and tostring(text) or nil
+				updateLabel()
+			end
+			function Watermark.SetVisible(_self, vis)
+				Watermark.Visible = vis == true
+				card.Visible = Watermark.Visible
+				if Watermark.Visible then
+					updateLabel()
+				end
+			end
+			function Watermark.Destroy(_self)
+				if Watermark.Destroyed then
+					return
+				end
+				Watermark.Destroyed = true
+				pcall(function() conn:Disconnect() end)
+				if card and card.Parent then
+					card:Destroy()
+				end
+			end
+
+			updateLabel()
+			return Watermark
+		end
+
+		function HUD.CreateKeybindList(Library, opts)
+			opts = type(opts) == "table" and opts or {}
+			local KbList = {
+				Visible = opts.Visible ~= false,
+				HideWhenEmpty = opts.HideWhenEmpty == true,
+				Destroyed = false
+			}
+
+			local header = New(
+				"Frame",
+				{
+					Name = "Header",
+					Size = UDim2.new(1, 0, 0, 26),
+					BackgroundTransparency = 0.55,
+					ZIndex = 106,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				},
+				{
+					New("Frame", {
+						Size = UDim2.new(1, 0, 0, 2),
+						ThemeTag = {BackgroundColor3 = "Accent"}
+					}),
+					New("ImageLabel", {
+						Image = Library:GetIcon("keyboard") or "",
+						Size = UDim2.fromOffset(12, 12),
+						Position = UDim2.new(0, 9, 0.5, 1),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ZIndex = 107,
+						ThemeTag = {ImageColor3 = "Accent"}
+					}),
+					New("TextLabel", {
+						Text = tostring(opts.Title or "Keybinds"),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 11,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						Position = UDim2.fromOffset(26, 1),
+						Size = UDim2.new(1, -34, 1, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 107,
+						ThemeTag = {TextColor3 = "Text"}
+					})
+				}
+			)
+
+			local bodyLayout = New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
+			local body = New(
+				"Frame",
+				{
+					Name = "Rows",
+					Position = UDim2.fromOffset(0, 26),
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					ZIndex = 106
+				},
+				{
+					New("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 7)}),
+					bodyLayout
+				}
+			)
+
+			local kbScale = New("UIScale", {Scale = Creator.DPIScale})
+			Creator.RegisterDPIScale(kbScale)
+
+			local card = New(
+				"Frame",
+				{
+					Name = "AcryvenKeybindList",
+					Size = UDim2.fromOffset(204, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Position = opts.Position or UDim2.fromOffset(14, 52),
+					BackgroundTransparency = 0.14,
+					ClipsDescendants = true,
+					Visible = KbList.Visible,
+					Active = true,
+					ZIndex = 105,
+					Parent = Library.GUI,
+					ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+				},
+				{
+					kbScale,
+					New("UICorner", {CornerRadius = UDim.new(0, 9)}),
+					New("UIStroke", {Transparency = 0.32, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}),
+					header,
+					body
+				}
+			)
+			KbList.Root = card
+			makeDraggable(header, card)
+
+			function KbList.Refresh(_self)
+				if KbList.Destroyed or not card or not card.Parent then
+					return
+				end
+				for _, child in ipairs(body:GetChildren()) do
+					if child:IsA("GuiObject") then
+						child:Destroy()
+					end
+				end
+				local list = Library._TrackedKeybinds or {}
+				local shown = 0
+				for i, kb in ipairs(list) do
+					if type(kb) == "table" and kb.Value and kb.Value ~= "None" then
+						shown += 1
+						local active = false
+						if type(kb.GetState) == "function" then
+							local ok, st = pcall(kb.GetState, kb)
+							active = ok and (st == true)
+						end
+						New(
+							"Frame",
+							{
+								Name = "KbRow_" .. tostring(i),
+								Size = UDim2.new(1, 0, 0, 20),
+								BackgroundTransparency = 1,
+								LayoutOrder = i,
+								ZIndex = 107,
+								Parent = body
+							},
+							{
+								New("Frame", {
+									Size = UDim2.fromOffset(6, 6),
+									Position = UDim2.new(0, 0, 0.5, 0),
+									AnchorPoint = Vector2.new(0, 0.5),
+									BackgroundColor3 = active and Color3.fromRGB(52, 211, 153) or Color3.fromRGB(120, 128, 146),
+									ZIndex = 108
+								}, {New("UICorner", {CornerRadius = UDim.new(1, 0)})}),
+								New("TextLabel", {
+									Text = tostring(kb.Title or "Keybind"),
+									I18nSkip = true,
+									FontFace = Creator.Font(Enum.FontWeight.Medium),
+									TextSize = 11,
+									TextXAlignment = Enum.TextXAlignment.Left,
+									TextTruncate = Enum.TextTruncate.AtEnd,
+									Position = UDim2.fromOffset(12, 0),
+									Size = UDim2.new(1, -76, 1, 0),
+									BackgroundTransparency = 1,
+									ZIndex = 108,
+									ThemeTag = {TextColor3 = active and "Text" or "SubText"}
+								}),
+								New("TextLabel", {
+									Text = "[" .. tostring(kb.Value) .. "]",
+									I18nSkip = true,
+									FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+									TextSize = 10,
+									TextXAlignment = Enum.TextXAlignment.Right,
+									Position = UDim2.new(1, -60, 0, 0),
+									Size = UDim2.fromOffset(60, 20),
+									BackgroundTransparency = 1,
+									ZIndex = 108,
+									ThemeTag = {TextColor3 = active and "Accent" or "SubText"}
+								})
+							}
+						)
+					end
+				end
+				if shown == 0 then
+					if KbList.HideWhenEmpty then
+						card.Visible = false
+						return
+					end
+					New("TextLabel", {
+						Text = "No active keybinds",
+						FontFace = Creator.Font(Enum.FontWeight.Regular),
+						TextSize = 11,
+						Size = UDim2.new(1, 0, 0, 18),
+						BackgroundTransparency = 1,
+						ZIndex = 107,
+						Parent = body,
+						ThemeTag = {TextColor3 = "SubText"}
+					})
+				end
+				card.Visible = KbList.Visible
+			end
+
+			function KbList.SetVisible(_self, vis)
+				KbList.Visible = vis == true
+				if KbList.Visible then
+					KbList:Refresh()
+				else
+					card.Visible = false
+				end
+			end
+
+			function KbList.Destroy(_self)
+				if KbList.Destroyed then
+					return
+				end
+				KbList.Destroyed = true
+				if Library._KeybindLists then
+					local idx = table.find(Library._KeybindLists, KbList)
+					if idx then
+						table.remove(Library._KeybindLists, idx)
+					end
+				end
+				if card and card.Parent then
+					card:Destroy()
+				end
+			end
+
+			Library._KeybindLists = Library._KeybindLists or {}
+			table.insert(Library._KeybindLists, KbList)
+			KbList:Refresh()
+			return KbList
+		end
+
+		return HUD
+	end,
+	[87] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(87)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New = Creator.New
+
+		return function(parentObj, config)
+			if type(config) == "number" then
+				config = {Columns = config}
+			else
+				config = type(config) == "table" and config or {}
+			end
+			local Library = requireModule(Root)
+			local gap = tonumber(config.Gap) or 6
+			local colCount = tonumber(config.Columns)
+
+			local Row = {
+				Type = "Row",
+				ScrollFrame = parentObj.ScrollFrame,
+				Tab = parentObj.Tab,
+				TabId = parentObj.TabId,
+				TabTitle = parentObj.TabTitle
+			}
+
+			Row.Root = New(
+				"Frame",
+				{
+					Name = "AcryvenRow",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 0),
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parentObj.Container
+				}
+			)
+			Row.Frame = Row.Root
+
+			if colCount and colCount >= 2 then
+				-- Multi-column vertical grid mode (2-Column / 3-Column Tab Layout)
+				colCount = math.clamp(math.floor(colCount), 2, 4)
+				local weights = type(config.Weights) == "table" and config.Weights or nil
+				local totalWeight = 0
+				for i = 1, colCount do
+					totalWeight += (weights and tonumber(weights[i]) or 1)
+				end
+				if totalWeight <= 0 then
+					totalWeight = colCount
+				end
+
+				Row.Columns = {}
+				local colLayouts = {}
+				local function syncColumnHeights()
+					if not Row.Root or not Row.Root.Parent then
+						return
+					end
+					local scale = Creator.GetEffectiveScale(Row.Root)
+					local maxH = 0
+					for idx, lay in ipairs(colLayouts) do
+						local h = math.ceil(lay.AbsoluteContentSize.Y / scale)
+						Row.Columns[idx].Container.Size = UDim2.new(Row.Columns[idx]._WidthScale, Row.Columns[idx]._WidthOffset, 0, h)
+						if h > maxH then
+							maxH = h
+						end
+					end
+					Row.Root.Size = UDim2.new(1, 0, 0, maxH)
+				end
+
+				local accumScale = 0
+				for i = 1, colCount do
+					local w = (weights and tonumber(weights[i]) or 1) / totalWeight
+					local gapShare = gap * (colCount - 1) / colCount
+					local xOff = math.floor((i - 1) * (gap / colCount) + 0.5)
+					local colLayout = New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+					local colFrame = New(
+						"Frame",
+						{
+							Name = "Column_" .. tostring(i),
+							BackgroundTransparency = 1,
+							Position = UDim2.new(accumScale, xOff, 0, 0),
+							Size = UDim2.new(w, -math.floor(gapShare + 0.5), 0, 0),
+							Parent = Row.Root
+						},
+						{colLayout}
+					)
+					accumScale += w
+					table.insert(colLayouts, colLayout)
+
+					local colObj = {
+						Type = "Column",
+						Index = i,
+						Container = colFrame,
+						Root = colFrame,
+						ScrollFrame = parentObj.ScrollFrame,
+						Tab = parentObj.Tab,
+						TabId = parentObj.TabId,
+						TabTitle = parentObj.TabTitle,
+						_WidthScale = w,
+						_WidthOffset = -math.floor(gapShare + 0.5)
+					}
+					function colObj.AddSection(_self, sectionTitle, sectionOpts)
+						local Section, sectionComponent =
+							{Type = "Section"},
+							requireModule(Root.Components.Section)(sectionTitle, colFrame, sectionOpts)
+						Section.Container = sectionComponent.Container
+						Section.Root = sectionComponent.Root
+						Section.SetVisible = function(selfOrVisible, visible)
+							return sectionComponent.SetVisible(type(selfOrVisible) == "boolean" and selfOrVisible or visible)
+						end
+						Section.SetCollapsed = function(selfOrVal, val, instant)
+							if type(selfOrVal) == "boolean" then
+								return sectionComponent.SetCollapsed(selfOrVal, val)
+							end
+							return sectionComponent.SetCollapsed(val, instant)
+						end
+						Section.Toggle = function(_s, instant)
+							return sectionComponent.Toggle(instant)
+						end
+						Section.SetBadge = function(_s, text, color)
+							return sectionComponent.SetBadge(text, color)
+						end
+						Section.ScrollFrame = parentObj.ScrollFrame
+						Section.Tab = parentObj.Tab
+						Section.TabId = parentObj.TabId
+						Section.TabTitle = parentObj.TabTitle
+						setmetatable(Section, Library.Elements)
+						return Section
+					end
+					setmetatable(colObj, Library.Elements)
+					Row.Columns[i] = colObj
+
+					Creator.AddSignal(colLayout:GetPropertyChangedSignal("AbsoluteContentSize"), syncColumnHeights)
+				end
+
+				Row.Left = Row.Columns[1]
+				Row.Right = Row.Columns[2]
+				Row.Container = Row.Columns[1].Container
+				Creator.RegisterDPIScale(Row.Root, function()
+					task.defer(syncColumnHeights)
+				end)
+				task.defer(syncColumnHeights)
+			else
+				-- Direct HStack mode: children added directly to Row lay out evenly side-by-side
+				Row.Container = Row.Root
+				local function reflowChildren()
+					if not Row.Root or not Row.Root.Parent then
+						return
+					end
+					local items = {}
+					for _, child in ipairs(Row.Root:GetChildren()) do
+						if child:IsA("GuiObject") and child.Visible then
+							table.insert(items, child)
+						end
+					end
+					table.sort(items, function(a, b)
+						return a.LayoutOrder < b.LayoutOrder
+					end)
+					local count = #items
+					if count == 0 then
+						Row.Root.Size = UDim2.new(1, 0, 0, 0)
+						return
+					end
+					local scale = Creator.GetEffectiveScale(Row.Root)
+					local wScale = 1 / count
+					local gapDeduction = gap * (count - 1) / count
+					local maxH = 0
+					for idx, item in ipairs(items) do
+						item.Position = UDim2.new((idx - 1) * wScale, math.floor((idx - 1) * (gap / count) + 0.5), 0, 0)
+						item.Size = UDim2.new(wScale, -math.floor(gapDeduction + 0.5), item.Size.Y.Scale, item.Size.Y.Offset)
+						local h = math.ceil(item.AbsoluteSize.Y / scale)
+						if h > maxH then
+							maxH = h
+						end
+					end
+					Row.Root.Size = UDim2.new(1, 0, 0, math.max(36, maxH))
+				end
+
+				local orderSeq = 0
+				Creator.AddSignal(Row.Root.ChildAdded, function(child)
+					if child:IsA("GuiObject") then
+						orderSeq += 1
+						child.LayoutOrder = orderSeq
+						Creator.AddSignal(child:GetPropertyChangedSignal("AbsoluteSize"), function()
+							task.defer(reflowChildren)
+						end)
+						Creator.AddSignal(child:GetPropertyChangedSignal("Visible"), function()
+							task.defer(reflowChildren)
+						end)
+						task.defer(reflowChildren)
+					end
+				end)
+				Creator.AddSignal(Row.Root.ChildRemoved, function()
+					task.defer(reflowChildren)
+				end)
+				Creator.RegisterDPIScale(Row.Root, function()
+					task.defer(reflowChildren)
+				end)
+			end
+
+			function Row.Destroy(_self)
+				Row.Root:Destroy()
+			end
+
+			setmetatable(Row, Library.Elements)
+			return Row
+		end
+	end,
+	[88] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(88)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local New = Creator.New
+
+		return function(parentObj, config)
+			config = type(config) == "table" and config or {}
+			local Library = requireModule(Root)
+
+			local SubTabs = {
+				Type = "SubTabs",
+				Tabs = {},
+				SelectedIndex = 0,
+				Selected = nil,
+				Callback = config.Callback
+			}
+
+			local barHeight = 34
+			local barPadding = 3
+
+			local indicatorPill = New(
+				"Frame",
+				{
+					Name = "Indicator",
+					Size = UDim2.new(0, 0, 1, -barPadding * 2),
+					Position = UDim2.fromOffset(barPadding, barPadding),
+					BackgroundTransparency = 0.08,
+					ZIndex = 2,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				},
+				{New("UICorner", {CornerRadius = UDim.new(0, 7)})}
+			)
+
+			local buttonsRow = New(
+				"Frame",
+				{
+					Name = "Buttons",
+					Size = UDim2.new(1, -barPadding * 2, 1, -barPadding * 2),
+					Position = UDim2.fromOffset(barPadding, barPadding),
+					BackgroundTransparency = 1,
+					ZIndex = 3
+				},
+				{
+					New(
+						"UIListLayout",
+						{
+							FillDirection = Enum.FillDirection.Horizontal,
+							HorizontalAlignment = Enum.HorizontalAlignment.Left,
+							VerticalAlignment = Enum.VerticalAlignment.Center,
+							SortOrder = Enum.SortOrder.LayoutOrder
+						}
+					)
+				}
+			)
+
+			local barFrame = New(
+				"Frame",
+				{
+					Name = "SubTabBar",
+					Size = UDim2.new(1, 0, 0, barHeight),
+					BackgroundTransparency = 0.22,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 9)}),
+					New(
+						"UIStroke",
+						{
+							Transparency = 0.34,
+							Thickness = 1,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "ElementBorder"}
+						}
+					),
+					indicatorPill,
+					buttonsRow
+				}
+			)
+
+			local pagesHolder = New(
+				"Frame",
+				{
+					Name = "PagesHolder",
+					Position = UDim2.fromOffset(0, barHeight + 8),
+					Size = UDim2.new(1, 0, 0, 0),
+					BackgroundTransparency = 1,
+					ClipsDescendants = false
+				}
+			)
+
+			SubTabs.Root = New(
+				"Frame",
+				{
+					Name = "AcryvenSubTabs",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, barHeight + 8),
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parentObj.Container
+				},
+				{barFrame, pagesHolder}
+			)
+			SubTabs.Frame = SubTabs.Root
+
+			local pillX, pillW = barPadding, 0
+			local function setIndicatorBounds(x, w)
+				pillX, pillW = x, w
+				indicatorPill.Position = UDim2.fromOffset(x, barPadding)
+				indicatorPill.Size = UDim2.new(0, math.max(0, w), 1, -barPadding * 2)
+			end
+
+			local function syncActiveHeight()
+				if not SubTabs.Root or not SubTabs.Root.Parent then
+					return
+				end
+				local active = SubTabs.Tabs[SubTabs.SelectedIndex]
+				if not active or not active._Layout then
+					pagesHolder.Size = UDim2.new(1, 0, 0, 0)
+					SubTabs.Root.Size = UDim2.new(1, 0, 0, barHeight + 4)
+					return
+				end
+				local scale = Creator.GetEffectiveScale(active.Container)
+				local h = math.ceil(active._Layout.AbsoluteContentSize.Y / scale) + 6
+				active.Container.Size = UDim2.new(1, 0, 0, h)
+				pagesHolder.Size = UDim2.new(1, 0, 0, h)
+				SubTabs.Root.Size = UDim2.new(1, 0, 0, barHeight + 8 + h)
+			end
+
+			local function updateIndicator(instant)
+				local count = #SubTabs.Tabs
+				if count == 0 or SubTabs.SelectedIndex < 1 then
+					return
+				end
+				local scale = Creator.GetEffectiveScale(barFrame)
+				local innerW = math.max(0, barFrame.AbsoluteSize.X / scale - barPadding * 2)
+				if innerW <= 0 then
+					return
+				end
+				local segW = innerW / count
+				local targetX = barPadding + (SubTabs.SelectedIndex - 1) * segW
+				if instant or Creator.ReducedMotion or pillW <= 0 then
+					Creator.CancelSpring(indicatorPill, "PillX")
+					Creator.CancelSpring(indicatorPill, "PillW")
+					setIndicatorBounds(targetX, segW)
+				else
+					Creator.SpringValue(indicatorPill, "PillX", targetX, 9.5, 0.86, function(x)
+						setIndicatorBounds(x, pillW)
+					end, pillX)
+					Creator.SpringValue(indicatorPill, "PillW", segW, 9.5, 0.86, function(w)
+						setIndicatorBounds(pillX, w)
+					end, pillW)
+				end
+			end
+
+			local function refreshTabButtonStyles()
+				local count = #SubTabs.Tabs
+				if count == 0 then
+					return
+				end
+				local accentContrast = Creator.AutoContrast(Creator.GetThemeProperty("Accent"))
+				for idx, item in ipairs(SubTabs.Tabs) do
+					item._Button.Size = UDim2.new(1 / count, 0, 1, 0)
+					local isActive = (idx == SubTabs.SelectedIndex)
+					if isActive then
+						Creator.OverrideTag(item._Label, {})
+						item._Label.TextColor3 = accentContrast
+						Creator.SpringValue(item._Label, "TextTransparency", 0, 10, 1)
+						if item._Icon then
+							Creator.OverrideTag(item._Icon, {})
+							item._Icon.ImageColor3 = accentContrast
+							Creator.SpringValue(item._Icon, "ImageTransparency", 0, 10, 1)
+						end
+					else
+						Creator.OverrideTag(item._Label, {TextColor3 = "SubText"})
+						Creator.SpringValue(item._Label, "TextTransparency", 0, 10, 1)
+						if item._Icon then
+							Creator.OverrideTag(item._Icon, {ImageColor3 = "SubText"})
+							Creator.SpringValue(item._Icon, "ImageTransparency", 0.02, 10, 1)
+						end
+					end
+				end
+			end
+
+			-- Re-compute active contrast color when theme changes
+			Creator.AddSignal(indicatorPill:GetPropertyChangedSignal("BackgroundColor3"), function()
+				if SubTabs.SelectedIndex >= 1 then
+					local active = SubTabs.Tabs[SubTabs.SelectedIndex]
+					if active then
+						local c = Creator.AutoContrast(indicatorPill.BackgroundColor3)
+						active._Label.TextColor3 = c
+						if active._Icon then
+							active._Icon.ImageColor3 = c
+						end
+					end
+				end
+			end)
+
+			Creator.AddSignal(barFrame:GetPropertyChangedSignal("AbsoluteSize"), function()
+				updateIndicator(true)
+			end)
+			Creator.RegisterDPIScale(SubTabs.Root, function()
+				task.defer(function()
+					updateIndicator(true)
+					syncActiveHeight()
+				end)
+			end)
+
+			function SubTabs.Select(_self, target, instant)
+				local targetIndex = nil
+				if type(target) == "number" then
+					targetIndex = target
+				elseif type(target) == "string" then
+					for idx, item in ipairs(SubTabs.Tabs) do
+						if item.Title == target then
+							targetIndex = idx
+							break
+						end
+					end
+				elseif type(target) == "table" and type(target.Index) == "number" then
+					targetIndex = target.Index
+				end
+				if not targetIndex or not SubTabs.Tabs[targetIndex] then
+					return
+				end
+				if targetIndex == SubTabs.SelectedIndex and not instant then
+					return
+				end
+				SubTabs.SelectedIndex = targetIndex
+				SubTabs.Selected = SubTabs.Tabs[targetIndex]
+
+				for idx, item in ipairs(SubTabs.Tabs) do
+					local active = (idx == targetIndex)
+					item.Selected = active
+					item.Container.Visible = active
+					if active then
+						if instant or Creator.ReducedMotion then
+							Creator.CancelSpring(item.Container, "GlideY")
+							item.Container.Position = UDim2.fromOffset(0, 0)
+						else
+							item.Container.Position = UDim2.fromOffset(0, 7)
+							Creator.SpringValue(item.Container, "GlideY", 0, 9, 0.9, function(y)
+								item.Container.Position = UDim2.fromOffset(0, y)
+							end, 7)
+						end
+					end
+				end
+
+				refreshTabButtonStyles()
+				updateIndicator(instant)
+				syncActiveHeight()
+				if type(SubTabs.Callback) == "function" and not instant then
+					Library:SafeCallback(SubTabs.Callback, SubTabs.Selected.Title, targetIndex)
+				end
+			end
+
+			function SubTabs.AddTab(_self, tabSpec, iconArg)
+				local spec = type(tabSpec) == "table" and tabSpec or {Title = tostring(tabSpec or "Tab"), Icon = iconArg}
+				local index = #SubTabs.Tabs + 1
+				local iconAsset = nil
+				if type(spec.Icon) == "string" and spec.Icon ~= "" then
+					local resolved = Library:GetIcon(spec.Icon)
+					if resolved then
+						iconAsset = resolved
+					elseif spec.Icon:match("^rbxassetid://") or spec.Icon:match("^rbxasset://") then
+						iconAsset = spec.Icon
+					end
+				end
+
+				local innerChildren = {
+					New(
+						"UIListLayout",
+						{
+							FillDirection = Enum.FillDirection.Horizontal,
+							HorizontalAlignment = Enum.HorizontalAlignment.Center,
+							VerticalAlignment = Enum.VerticalAlignment.Center,
+							Padding = UDim.new(0, 5)
+						}
+					)
+				}
+				local iconImg = nil
+				if iconAsset then
+					iconImg = New(
+						"ImageLabel",
+						{
+							Name = "Icon",
+							Image = iconAsset,
+							Size = UDim2.fromOffset(15, 15),
+							BackgroundTransparency = 1,
+							ImageTransparency = 0.02,
+							ZIndex = 4,
+							ThemeTag = {ImageColor3 = "SubText"}
+						}
+					)
+					table.insert(innerChildren, iconImg)
+				end
+				local label = New(
+					"TextLabel",
+					{
+						Name = "Label",
+						Text = tostring(spec.Title or ("Tab " .. tostring(index))),
+						FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+						TextSize = 13,
+						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.new(0, 0, 1, 0),
+						BackgroundTransparency = 1,
+						TextTransparency = 0,
+						ZIndex = 4,
+						ThemeTag = {TextColor3 = "SubText"}
+					}
+				)
+				table.insert(innerChildren, label)
+
+				local btn = New(
+					"TextButton",
+					{
+						Name = "SubTab_" .. tostring(index),
+						Text = "",
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 1, 0),
+						LayoutOrder = index,
+						ZIndex = 4,
+						Parent = buttonsRow
+					},
+					innerChildren
+				)
+
+				local pageLayout = New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+				local pageFrame = New(
+					"Frame",
+					{
+						Name = "SubTabPage_" .. tostring(index),
+						Size = UDim2.new(1, 0, 0, 0),
+						BackgroundTransparency = 1,
+						Visible = false,
+						Parent = pagesHolder
+					},
+					{
+						pageLayout,
+						New(
+							"UIPadding",
+							{
+								PaddingTop = UDim.new(0, 2),
+								PaddingBottom = UDim.new(0, 4),
+								PaddingLeft = UDim.new(0, 2),
+								PaddingRight = UDim.new(0, 2)
+							}
+						)
+					}
+				)
+
+				local pageObj = {
+					Type = "SubTabPage",
+					Title = tostring(spec.Title or ("Tab " .. tostring(index))),
+					Index = index,
+					Selected = false,
+					Container = pageFrame,
+					Root = pageFrame,
+					ScrollFrame = parentObj.ScrollFrame,
+					Tab = parentObj.Tab,
+					TabId = parentObj.TabId,
+					TabTitle = parentObj.TabTitle,
+					_Button = btn,
+					_Label = label,
+					_Icon = iconImg,
+					_Layout = pageLayout
+				}
+
+				function pageObj.AddSection(_s, sectionTitle, sectionOpts)
+					local Section, sectionComponent =
+						{Type = "Section"},
+						requireModule(Root.Components.Section)(sectionTitle, pageFrame, sectionOpts)
+					Section.Container = sectionComponent.Container
+					Section.Root = sectionComponent.Root
+					Section.SetVisible = function(selfOrVisible, visible)
+						return sectionComponent.SetVisible(type(selfOrVisible) == "boolean" and selfOrVisible or visible)
+					end
+					Section.SetCollapsed = function(selfOrVal, val, instant)
+						if type(selfOrVal) == "boolean" then
+							return sectionComponent.SetCollapsed(selfOrVal, val)
+						end
+						return sectionComponent.SetCollapsed(val, instant)
+					end
+					Section.Toggle = function(_sec, instant)
+						return sectionComponent.Toggle(instant)
+					end
+					Section.SetBadge = function(_sec, text, color)
+						return sectionComponent.SetBadge(text, color)
+					end
+					Section.ScrollFrame = parentObj.ScrollFrame
+					Section.Tab = parentObj.Tab
+					Section.TabId = parentObj.TabId
+					Section.TabTitle = parentObj.TabTitle
+					setmetatable(Section, Library.Elements)
+					return Section
+				end
+
+				function pageObj.Select(_s, instant)
+					SubTabs:Select(index, instant)
+				end
+
+				setmetatable(pageObj, Library.Elements)
+				table.insert(SubTabs.Tabs, pageObj)
+
+				Creator.AddSignal(pageLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+					if SubTabs.SelectedIndex == index then
+						syncActiveHeight()
+					end
+				end)
+				Creator.AddSignal(btn.MouseButton1Click, function()
+					SubTabs:Select(index, false)
+				end)
+
+				refreshTabButtonStyles()
+				if #SubTabs.Tabs == 1 then
+					SubTabs:Select(1, true)
+				else
+					updateIndicator(true)
+				end
+				return pageObj
+			end
+
+			function SubTabs.GetTab(_self, key)
+				if type(key) == "number" then
+					return SubTabs.Tabs[key]
+				end
+				for _, item in ipairs(SubTabs.Tabs) do
+					if item.Title == key then
+						return item
+					end
+				end
+				return nil
+			end
+
+			function SubTabs.Destroy(_self)
+				SubTabs.Root:Destroy()
+			end
+
+			if type(config.Tabs) == "table" then
+				for _, spec in ipairs(config.Tabs) do
+					SubTabs:AddTab(spec)
+				end
+			end
+			if config.Default ~= nil then
+				SubTabs:Select(config.Default, true)
+			end
+
+			task.defer(function()
+				updateIndicator(true)
+				syncActiveHeight()
+			end)
+
+			return SubTabs
+		end
+	end,
+	[89] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(89)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local Workspace = Creator.GetService("Workspace")
+		local New = Creator.New
+
+		return function(Library)
+			local Tooltip = {}
+			local built = false
+			local host, canvas, borderStroke, label, uiScale
+			local activeTarget = nil
+			local hoverGen = 0
+
+			local function ensureBuilt()
+				if built then
+					return
+				end
+				built = true
+
+				label = New(
+					"TextLabel",
+					{
+						Name = "Text",
+						Text = "",
+						I18nSkip = true,
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 11,
+						TextWrapped = true,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						AutomaticSize = Enum.AutomaticSize.XY,
+						Size = UDim2.fromOffset(0, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 903,
+						ThemeTag = {TextColor3 = "Text"}
+					},
+					{New("UISizeConstraint", {MaxSize = Vector2.new(240, 120)})}
+				)
+
+				borderStroke = New(
+					"UIStroke",
+					{
+						Thickness = 1,
+						Transparency = 1,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						ThemeTag = {Color = "DropdownBorder"}
+					}
+				)
+				local borderFrame = New(
+					"Frame",
+					{Name = "Border", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 904},
+					{New("UICorner", {CornerRadius = UDim.new(0, 7)}), borderStroke}
+				)
+
+				canvas = New(
+					"CanvasGroup",
+					{
+						Name = "TooltipCard",
+						AutomaticSize = Enum.AutomaticSize.XY,
+						Size = UDim2.fromOffset(0, 0),
+						GroupTransparency = 1,
+						BackgroundTransparency = 0.06,
+						ZIndex = 902,
+						ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+						borderFrame,
+						New("Frame", {
+							Name = "Pad",
+							AutomaticSize = Enum.AutomaticSize.XY,
+							Size = UDim2.fromOffset(0, 0),
+							BackgroundTransparency = 1,
+							ZIndex = 902
+						}, {
+							New("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6)}),
+							label
+						})
+					}
+				)
+
+				uiScale = New("UIScale", {Scale = Creator.DPIScale})
+				Creator.RegisterDPIScale(uiScale)
+
+				host = New(
+					"Frame",
+					{
+						Name = "AcryvenTooltip",
+						AutomaticSize = Enum.AutomaticSize.XY,
+						Size = UDim2.fromOffset(0, 0),
+						BackgroundTransparency = 1,
+						Visible = false,
+						ZIndex = 900,
+						Parent = Library.OverlayGUI or Library.GUI
+					},
+					{uiScale, canvas}
+				)
+			end
+
+			local function positionNear(target)
+				if not host or not target or not target.Parent then
+					return
+				end
+				local cam = Workspace.CurrentCamera
+				local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+				local insetY = Creator.GetGuiInsetY()
+				local usableH = math.max(160, vp.Y - insetY)
+				local tPos = target.AbsolutePosition
+				local tSz = target.AbsoluteSize
+				local tipW = math.max(60, host.AbsoluteSize.X)
+				local tipH = math.max(24, host.AbsoluteSize.Y)
+
+				local x = tPos.X + (tSz.X - tipW) * 0.5
+				x = math.clamp(x, 8, math.max(8, vp.X - tipW - 8))
+				local y = tPos.Y - tipH - 8
+				if y < 8 then
+					y = tPos.Y + tSz.Y + 8
+				end
+				y = math.clamp(y, 8, math.max(8, usableH - tipH - 8))
+				host.Position = UDim2.fromOffset(x, y)
+			end
+
+			function Tooltip.Hide(_self)
+				hoverGen += 1
+				local myGen = hoverGen
+				activeTarget = nil
+				if not built or not host or not host.Visible then
+					return
+				end
+				if Creator.ReducedMotion then
+					host.Visible = false
+					return
+				end
+				Creator.SpringValue(canvas, "GroupTransparency", 1, 14, 1)
+				Creator.SpringValue(borderStroke, "Transparency", 1, 15, 1)
+				task.delay(0.14, function()
+					if myGen == hoverGen and activeTarget == nil and host and host.Parent then
+						host.Visible = false
+					end
+				end)
+			end
+
+			function Tooltip.Show(_self, target, text)
+				if not target or not target.Parent or text == nil or tostring(text) == "" then
+					return
+				end
+				ensureBuilt()
+				activeTarget = target
+				label.Text = tostring(text)
+				host.Visible = true
+				task.defer(function()
+					if activeTarget ~= target or not host or not host.Parent then
+						return
+					end
+					positionNear(target)
+					if Creator.ReducedMotion then
+						canvas.GroupTransparency = 0
+						borderStroke.Transparency = 0.4
+					else
+						canvas.GroupTransparency = 1
+						borderStroke.Transparency = 1
+						Creator.SpringValue(canvas, "GroupTransparency", 0, 11, 1)
+						Creator.SpringValue(borderStroke, "Transparency", 0.4, 11, 1)
+					end
+				end)
+			end
+
+			function Tooltip.Attach(_self, guiObject, textOrGetter, delaySeconds)
+				if not guiObject then
+					return
+				end
+				local delaySec = tonumber(delaySeconds) or 0.34
+				Creator.AddSignal(guiObject.MouseEnter, function()
+					hoverGen += 1
+					local myGen = hoverGen
+					task.delay(delaySec, function()
+						if myGen ~= hoverGen or not guiObject or not guiObject.Parent then
+							return
+						end
+						local msg = type(textOrGetter) == "function" and textOrGetter() or textOrGetter
+						if msg and tostring(msg) ~= "" then
+							Tooltip:Show(guiObject, msg)
+						end
+					end)
+				end)
+				Creator.AddSignal(guiObject.MouseLeave, function()
+					if activeTarget == guiObject then
+						Tooltip:Hide()
+					else
+						hoverGen += 1
+					end
+				end)
+				Creator.AddSignal(guiObject.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
+						Tooltip:Hide()
+					end
+				end)
+			end
+
+			function Tooltip.Destroy(_self)
+				activeTarget = nil
+				if host and host.Parent then
+					host:Destroy()
+				end
+				host = nil
+				built = false
+			end
+
+			return Tooltip
+		end
+	end,
+	[90] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(90)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+
+		local RunService = Creator.GetService("RunService")
+		local New = Creator.New
+
+		local Element = {}
+		Element.__index = Element
+		Element.__type = "Skeleton"
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			config = type(config) == "table" and config or {}
+			local preset = config.Preset or "Card"
+			local lines = math.clamp(tonumber(config.Lines) or 3, 1, 8)
+			local animated = config.Animated ~= false
+			local isLoading = config.Loading ~= false
+			local destroyed = false
+			local shimmerPhase = 0
+			local renderConn = nil
+			local boneGradients = {}
+
+			local contentLayout = New("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder})
+			local contentFrame = New(
+				"Frame",
+				{
+					Name = "SkeletonContent",
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1
+				},
+				{contentLayout}
+			)
+
+			local rootFrame = New(
+				"Frame",
+				{
+					Name = "SkeletonCard",
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 0.08,
+					Visible = isLoading,
+					LayoutOrder = config.LayoutOrder or 7,
+					Parent = parent.Container,
+					ThemeTag = {BackgroundColor3 = "Element"}
+				},
+				{
+					New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+					New(
+						"UIStroke",
+						{
+							Thickness = 1,
+							Transparency = 0.25,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "ElementBorder"}
+						}
+					),
+					New(
+						"UIPadding",
+						{
+							PaddingTop = UDim.new(0, 12),
+							PaddingBottom = UDim.new(0, 12),
+							PaddingLeft = UDim.new(0, 12),
+							PaddingRight = UDim.new(0, 12)
+						}
+					),
+					contentFrame
+				}
+			)
+
+			local function addBone(targetParent, sizeUDim2, radius, layoutOrder)
+				local grad = New(
+					"UIGradient",
+					{
+						Rotation = 12,
+						Offset = Vector2.new(-1, 0),
+						Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(0, Color3.fromRGB(215, 220, 232)),
+							ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+							ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 220, 232))
+						}),
+						Transparency = NumberSequence.new({
+							NumberSequenceKeypoint.new(0, 0.35),
+							NumberSequenceKeypoint.new(0.5, 0.05),
+							NumberSequenceKeypoint.new(1, 0.35)
+						})
+					}
+				)
+				local bone = New(
+					"Frame",
+					{
+						Name = "Bone",
+						Size = sizeUDim2,
+						BackgroundTransparency = 0.14,
+						BorderSizePixel = 0,
+						LayoutOrder = layoutOrder or 1,
+						Parent = targetParent,
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(0, radius or 6)}),
+						grad
+					}
+				)
+				table.insert(boneGradients, grad)
+				return bone
+			end
+
+			if preset == "Profile" then
+				local topRow = New(
+					"Frame",
+					{
+						Name = "ProfileRow",
+						Size = UDim2.new(1, 0, 0, 44),
+						BackgroundTransparency = 1,
+						LayoutOrder = 1,
+						Parent = contentFrame
+					}
+				)
+				addBone(topRow, UDim2.fromOffset(42, 42), 999, 1)
+				local infoCol = New(
+					"Frame",
+					{
+						Name = "ProfileInfo",
+						Position = UDim2.fromOffset(54, 2),
+						Size = UDim2.new(1, -54, 0, 40),
+						BackgroundTransparency = 1,
+						Parent = topRow
+					},
+					{New("UIListLayout", {Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder})}
+				)
+				addBone(infoCol, UDim2.new(0.48, 0, 0, 14), 6, 1)
+				addBone(infoCol, UDim2.new(0.72, 0, 0, 11), 5, 2)
+				addBone(contentFrame, UDim2.new(0.92, 0, 0, 10), 5, 2)
+			elseif preset == "Stats" then
+				local gridRow = New(
+					"Frame",
+					{
+						Name = "StatsRow",
+						Size = UDim2.new(1, 0, 0, 56),
+						BackgroundTransparency = 1,
+						LayoutOrder = 1,
+						Parent = contentFrame
+					}
+				)
+				for i = 1, 3 do
+					local statBox = New(
+						"Frame",
+						{
+							Name = "StatCell" .. tostring(i),
+							Position = UDim2.new((i - 1) / 3, (i - 1) * 3, 0, 0),
+							Size = UDim2.new(1 / 3, -6, 1, 0),
+							BackgroundTransparency = 0.45,
+							Parent = gridRow,
+							ThemeTag = {BackgroundColor3 = "Dialog"}
+						},
+						{
+							New("UICorner", {CornerRadius = UDim.new(0, 7)}),
+							New("UIPadding", {PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}),
+							New("UIListLayout", {Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder})
+						}
+					)
+					addBone(statBox, UDim2.new(0.56, 0, 0, 10), 5, 1)
+					addBone(statBox, UDim2.new(0.84, 0, 0, 18), 6, 2)
+				end
+			elseif preset == "List" then
+				for i = 1, lines do
+					local row = New(
+						"Frame",
+						{
+							Name = "ListRow" .. tostring(i),
+							Size = UDim2.new(1, 0, 0, 26),
+							BackgroundTransparency = 1,
+							LayoutOrder = i,
+							Parent = contentFrame
+						}
+					)
+					addBone(row, UDim2.fromOffset(24, 24), 6, 1)
+					local bar = addBone(row, UDim2.new(i % 2 == 0 and 0.56 or 0.72, -34, 0, 12), 5, 2)
+					bar.Position = UDim2.fromOffset(34, 6)
+					local badge = addBone(row, UDim2.fromOffset(48, 18), 999, 3)
+					badge.AnchorPoint = Vector2.new(1, 0.5)
+					badge.Position = UDim2.new(1, 0, 0.5, 0)
+				end
+			elseif preset == "Text" then
+				local widths = {0.96, 0.84, 0.66, 0.9, 0.74, 0.58, 0.88, 0.62}
+				for i = 1, lines do
+					addBone(contentFrame, UDim2.new(widths[((i - 1) % #widths) + 1], 0, 0, 11), 5, i)
+				end
+			elseif preset == "Custom" and type(config.BuildContent) == "function" then
+				pcall(config.BuildContent, contentFrame, addBone)
+			else
+				-- Card preset
+				addBone(contentFrame, UDim2.new(0.46, 0, 0, 15), 6, 1)
+				addBone(contentFrame, UDim2.new(0.88, 0, 0, 11), 5, 2)
+				addBone(contentFrame, UDim2.new(0.7, 0, 0, 11), 5, 3)
+				local actionStrip = New(
+					"Frame",
+					{
+						Name = "ActionStrip",
+						Size = UDim2.new(1, 0, 0, 24),
+						BackgroundTransparency = 1,
+						LayoutOrder = 4,
+						Parent = contentFrame
+					},
+					{
+						New("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder})
+					}
+				)
+				addBone(actionStrip, UDim2.fromOffset(72, 22), 999, 1)
+				addBone(actionStrip, UDim2.fromOffset(58, 22), 999, 2)
+			end
+
+			local function stopLoop()
+				if renderConn then
+					renderConn:Disconnect()
+					renderConn = nil
+				end
+			end
+
+			local function startLoop()
+				if renderConn or destroyed or not isLoading or not animated then
+					return
+				end
+				renderConn = RunService.RenderStepped:Connect(function(dt)
+					if destroyed or not isLoading or not rootFrame.Parent then
+						stopLoop()
+						return
+					end
+					if not rootFrame.Visible then
+						return
+					end
+					if Creator.ReducedMotion then
+						for _, grad in ipairs(boneGradients) do
+							grad.Offset = Vector2.new(0, 0)
+						end
+						return
+					end
+					shimmerPhase = (shimmerPhase + math.min(dt, 0.05) * 0.95) % 1
+					local offsetX = -1.1 + shimmerPhase * 2.2
+					for _, grad in ipairs(boneGradients) do
+						grad.Offset = Vector2.new(offsetX, 0)
+					end
+				end)
+			end
+
+			if isLoading and animated then
+				startLoop()
+			end
+
+			local SkeletonObj = {
+				Type = "Skeleton",
+				Loading = isLoading,
+				Frame = rootFrame,
+				Content = contentFrame
+			}
+
+			function SkeletonObj:SetLoading(state)
+				if destroyed then
+					return
+				end
+				isLoading = state ~= false
+				SkeletonObj.Loading = isLoading
+				rootFrame.Visible = isLoading
+				if isLoading and animated then
+					startLoop()
+				else
+					stopLoop()
+				end
+			end
+
+			function SkeletonObj:Finish(callback)
+				SkeletonObj:SetLoading(false)
+				if type(callback) == "function" then
+					pcall(callback)
+				end
+				return SkeletonObj
+			end
+
+			function SkeletonObj:Destroy()
+				destroyed = true
+				stopLoop()
+				if rootFrame then
+					rootFrame:Destroy()
+				end
+			end
+
+			Creator.AddSignal(rootFrame.Destroying, function()
+				destroyed = true
+				stopLoop()
+			end)
+
+			return SkeletonObj
+		end
+
+		return Element
+	end,
+	[91] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(91)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local Icons = requireModule(Root.Icons)
+		local Components = Root.Components
+
+		local RunService = Creator.GetService("RunService")
+		local New = Creator.New
+
+		local Element = {}
+		Element.__index = Element
+		Element.__type = "Spinner"
+
+		local SIZE_MAP = {
+			Small = 14,
+			Medium = 18,
+			Large = 26
+		}
+
+		local function resolveSize(sz)
+			if type(sz) == "number" then
+				return math.clamp(math.floor(sz), 10, 64)
+			end
+			return SIZE_MAP[sz] or 18
+		end
+
+		local function resolveIcon(library, name, fallbackKey)
+			if library and type(library.GetIcon) == "function" then
+				local got = library:GetIcon(name)
+				if got then
+					return got
+				end
+			end
+			return Icons.assets[fallbackKey] or ""
+		end
+
+		local function createIndicator(parentGui, opts)
+			opts = type(opts) == "table" and opts or {}
+			local variant = opts.Variant or "Ring"
+			local size = resolveSize(opts.Size)
+			local speed = tonumber(opts.Speed) or 1
+			local active = opts.Active ~= false
+			local customColor = opts.Color
+			local destroyed = false
+			local elapsed = 0
+			local renderConn = nil
+
+			local width = size
+			local height = size
+			if variant == "Dots" then
+				width = math.max(30, math.floor(size * 2.15))
+				height = math.max(12, size)
+			elseif variant == "Bar" then
+				width = math.max(76, math.floor(size * 4.2))
+				height = math.max(7, math.floor(size * 0.38))
+			end
+
+			local rootProps = {
+				Name = "AcryvenSpinner",
+				Size = UDim2.fromOffset(width, height),
+				BackgroundTransparency = variant == "Bar" and 0.14 or 1,
+				Visible = active,
+				ClipsDescendants = variant == "Bar",
+				Parent = parentGui
+			}
+			if opts.AnchorPoint then
+				rootProps.AnchorPoint = opts.AnchorPoint
+			end
+			if opts.Position then
+				rootProps.Position = opts.Position
+			end
+			if opts.LayoutOrder then
+				rootProps.LayoutOrder = opts.LayoutOrder
+			end
+			if opts.ZIndex then
+				rootProps.ZIndex = opts.ZIndex
+			end
+			if variant == "Bar" then
+				rootProps.ThemeTag = {BackgroundColor3 = "DialogHolder"}
+			end
+
+			local rootChildren = {}
+			if variant == "Bar" then
+				table.insert(rootChildren, New("UICorner", {CornerRadius = UDim.new(1, 0)}))
+				table.insert(
+					rootChildren,
+					New(
+						"UIStroke",
+						{
+							Thickness = 1,
+							Transparency = 0.35,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+							ThemeTag = {Color = "InElementBorder"}
+						}
+					)
+				)
+			end
+
+			local ringRotator = nil
+			local ringStroke = nil
+			local dots = {}
+			local barFill = nil
+
+			if variant == "Ring" then
+				local trackThickness = math.max(2.2, size * 0.15)
+				local track = New(
+					"Frame",
+					{
+						Name = "Track",
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						ZIndex = opts.ZIndex
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						New(
+							"UIStroke",
+							{
+								Thickness = trackThickness,
+								Transparency = 0.52,
+								ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+								ThemeTag = {Color = "ElementBorder"}
+							}
+						)
+					}
+				)
+
+				ringStroke = New(
+					"UIStroke",
+					{
+						Thickness = trackThickness,
+						Transparency = 0,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						Color = customColor or Color3.fromRGB(96, 165, 250),
+						ThemeTag = not customColor and {Color = "Accent"} or nil
+					},
+					{
+						New(
+							"UIGradient",
+							{
+								Transparency = NumberSequence.new({
+									NumberSequenceKeypoint.new(0, 0),
+									NumberSequenceKeypoint.new(0.42, 0.15),
+									NumberSequenceKeypoint.new(0.72, 0.88),
+									NumberSequenceKeypoint.new(1, 1)
+								})
+							}
+						)
+					}
+				)
+
+				ringRotator = New(
+					"Frame",
+					{
+						Name = "Arc",
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						ZIndex = (opts.ZIndex or 1) + 1
+					},
+					{
+						New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+						ringStroke
+					}
+				)
+
+				table.insert(rootChildren, track)
+				table.insert(rootChildren, ringRotator)
+			elseif variant == "Dots" then
+				local dotDiam = math.max(4, math.floor(size * 0.28))
+				local positions = {0.2, 0.5, 0.8}
+				for i = 1, 3 do
+					local dot = New(
+						"Frame",
+						{
+							Name = "Dot" .. tostring(i),
+							Size = UDim2.fromOffset(dotDiam, dotDiam),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							Position = UDim2.new(positions[i], 0, 0.5, 0),
+							BackgroundTransparency = 0.15,
+							ZIndex = opts.ZIndex,
+							BackgroundColor3 = customColor or Color3.fromRGB(96, 165, 250),
+							ThemeTag = not customColor and {BackgroundColor3 = "Accent"} or nil
+						},
+						{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+					)
+					table.insert(dots, dot)
+					table.insert(rootChildren, dot)
+				end
+			elseif variant == "Bar" then
+				barFill = New(
+					"Frame",
+					{
+						Name = "BarFill",
+						Size = UDim2.fromScale(0.46, 1),
+						Position = UDim2.fromScale(0.04, 0),
+						BackgroundTransparency = 0,
+						ZIndex = (opts.ZIndex or 1) + 1,
+						BackgroundColor3 = customColor or Color3.fromRGB(96, 165, 250),
+						ThemeTag = not customColor and {BackgroundColor3 = "Accent"} or nil
+					},
+					{New("UICorner", {CornerRadius = UDim.new(1, 0)})}
+				)
+				table.insert(rootChildren, barFill)
+			end
+
+			local rootFrame = New("Frame", rootProps, rootChildren)
+
+			local function stopLoop()
+				if renderConn then
+					renderConn:Disconnect()
+					renderConn = nil
+				end
+			end
+
+			local function startLoop()
+				if renderConn or destroyed or not active then
+					return
+				end
+				renderConn = RunService.RenderStepped:Connect(function(dt)
+					if destroyed or not active or not rootFrame.Parent then
+						stopLoop()
+						return
+					end
+					if not rootFrame.Visible then
+						return
+					end
+					local stepDt = math.min(dt, 0.05) * speed
+					elapsed = elapsed + stepDt
+
+					if Creator.ReducedMotion then
+						if variant == "Ring" and ringRotator then
+							ringRotator.Rotation = (elapsed * 90) % 360
+						elseif variant == "Bar" and barFill then
+							barFill.Position = UDim2.fromScale(0.29, 0)
+						end
+						return
+					end
+
+					if variant == "Ring" and ringRotator then
+						ringRotator.Rotation = (ringRotator.Rotation + stepDt * 340) % 360
+					elseif variant == "Dots" then
+						local basePositions = {0.2, 0.5, 0.8}
+						for i, dot in ipairs(dots) do
+							local phase = elapsed * 5.2 - (i - 1) * 1.15
+							local wave = math.sin(phase)
+							local lift = math.max(0, wave) * math.max(2, size * 0.22)
+							dot.Position = UDim2.new(basePositions[i], 0, 0.5, -lift)
+							dot.BackgroundTransparency = 0.12 + (1 - (wave * 0.5 + 0.5)) * 0.52
+						end
+					elseif variant == "Bar" and barFill then
+						local wave = 0.5 - 0.5 * math.cos(elapsed * 3.8)
+						barFill.Position = UDim2.fromScale(0.04 + wave * 0.50, 0)
+					end
+				end)
+			end
+
+			if active then
+				startLoop()
+			end
+
+			local Indicator = {
+				Root = rootFrame,
+				Variant = variant
+			}
+
+			function Indicator:SetActive(state)
+				if destroyed then
+					return
+				end
+				active = state ~= false
+				rootFrame.Visible = active
+				if active then
+					startLoop()
+				else
+					stopLoop()
+				end
+			end
+
+			function Indicator:SetColor(color)
+				customColor = color
+				if ringStroke then
+					if color then
+						Creator.OverrideTag(ringStroke, {})
+						ringStroke.Color = color
+					else
+						Creator.OverrideTag(ringStroke, {Color = "Accent"})
+					end
+				end
+				for _, dot in ipairs(dots) do
+					if color then
+						Creator.OverrideTag(dot, {})
+						dot.BackgroundColor3 = color
+					else
+						Creator.OverrideTag(dot, {BackgroundColor3 = "Accent"})
+					end
+				end
+				if barFill then
+					if color then
+						Creator.OverrideTag(barFill, {})
+						barFill.BackgroundColor3 = color
+					else
+						Creator.OverrideTag(barFill, {BackgroundColor3 = "Accent"})
+					end
+				end
+			end
+
+			function Indicator:Destroy()
+				destroyed = true
+				stopLoop()
+				if rootFrame then
+					rootFrame:Destroy()
+				end
+			end
+
+			return Indicator
+		end
+
+		Element.CreateIndicator = createIndicator
+
+		function Element.New(parent, idx, config)
+			if type(idx) == "table" and config == nil then
+				config = idx
+				idx = nil
+			end
+			config = type(config) == "table" and config or {}
+			local variant = config.Variant or "Ring"
+			local active = config.Active ~= false
+
+			local card = requireModule(Components.Element)(config.Title or "Loading", config.Description, parent.Container, false)
+			local indicator = createIndicator(card.Frame, {
+				Variant = variant,
+				Size = config.Size or 18,
+				Speed = config.Speed or 1,
+				Color = config.Color,
+				Active = active,
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -14, 0.5, 0)
+			})
+
+			local rightPad = variant == "Bar" and math.max(76, indicator.Root.Size.X.Offset + 24) or math.max(48, indicator.Root.Size.X.Offset + 26)
+			card.TitleLabel.Size = UDim2.new(1, -rightPad, 0, 14)
+			card.DescLabel.Size = UDim2.new(1, -rightPad, 0, 14)
+
+			local stateIcon = New(
+				"ImageLabel",
+				{
+					Name = "StateIcon",
+					Size = UDim2.fromOffset(18, 18),
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -14, 0.5, 0),
+					BackgroundTransparency = 1,
+					Visible = false,
+					Parent = card.Frame
+				}
+			)
+
+			local SpinnerObj = {
+				Type = "Spinner",
+				Value = active,
+				State = active and "Loading" or "Idle",
+				Frame = card.Frame,
+				Indicator = indicator
+			}
+
+			function SpinnerObj:SetTitle(title)
+				card:SetTitle(title)
+			end
+
+			function SpinnerObj:SetDesc(desc)
+				card:SetDesc(desc)
+			end
+
+			function SpinnerObj:SetBadge(...)
+				return card:SetBadge(...)
+			end
+
+			function SpinnerObj:SetActive(state)
+				local on = state ~= false
+				SpinnerObj.Value = on
+				SpinnerObj.State = on and "Loading" or "Idle"
+				stateIcon.Visible = false
+				indicator:SetActive(on)
+			end
+
+			function SpinnerObj:SetLabel(title, desc)
+				if title ~= nil then
+					card:SetTitle(tostring(title))
+				end
+				if desc ~= nil then
+					card:SetDesc(tostring(desc))
+				end
+			end
+
+			function SpinnerObj:SetState(state, title, desc)
+				if title ~= nil then
+					card:SetTitle(tostring(title))
+				end
+				if desc ~= nil then
+					card:SetDesc(tostring(desc))
+				end
+				SpinnerObj.State = state or "Loading"
+				if SpinnerObj.State == "Loading" then
+					stateIcon.Visible = false
+					SpinnerObj.Value = true
+					indicator:SetActive(true)
+				elseif SpinnerObj.State == "Success" then
+					SpinnerObj.Value = false
+					indicator:SetActive(false)
+					stateIcon.Image = resolveIcon(parent.Library, "check-circle-2", "lucide-check-circle-2")
+					stateIcon.ImageColor3 = Color3.fromRGB(52, 211, 153)
+					stateIcon.Visible = true
+				elseif SpinnerObj.State == "Error" then
+					SpinnerObj.Value = false
+					indicator:SetActive(false)
+					stateIcon.Image = resolveIcon(parent.Library, "alert-circle", "lucide-alert-circle")
+					stateIcon.ImageColor3 = Color3.fromRGB(248, 113, 113)
+					stateIcon.Visible = true
+				else
+					SpinnerObj.Value = false
+					indicator:SetActive(false)
+					stateIcon.Visible = false
+				end
+			end
+
+			function SpinnerObj:Destroy()
+				indicator:Destroy()
+				if card.Destroy then
+					card:Destroy()
+				end
+			end
+
+			Creator.AddSignal(card.Frame.Destroying, function()
+				indicator:Destroy()
+			end)
+
+			return SpinnerObj
+		end
+
+		return Element
+	end,
+	[92] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(92)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+		local Themes = requireModule(Root.Themes)
+
+		local UserInputService = Creator.GetService("UserInputService")
+		local Players = Creator.GetService("Players")
+		local Workspace = Creator.GetService("Workspace")
+		local New = Creator.New
+
+		local DANGER_RED = Color3.fromRGB(248, 113, 113)
+		local DANGER_BG = Color3.fromRGB(220, 38, 38)
+
+		local LANGUAGES = {
+			{Code = "en", Label = "English", Short = "EN"},
+			{Code = "th", Label = "Thai", Short = "TH"},
+			{Code = "vi", Label = "Vietnamese", Short = "VI"},
+			{Code = "es", Label = "Spanish", Short = "ES"}
+		}
+
+		local FONT_PRESETS = {
+			{Id = "default", Label = "Inter", Short = "UI"},
+			{Id = "builder-sans", Label = "Builder Sans", Short = "BS"},
+			{Id = "gotham", Label = "Gotham", Short = "GT"}
+		}
+
+		return function(Library)
+			local Menu = {
+				Opened = false,
+				Destroyed = false
+			}
+
+			local built = false
+			local popupWrapper, popupCard, popupShadow, popupScale, popupDpiScale
+			local headerNameLbl, eyeIconBtn, eyeIconImg
+			local hoverLayer, hoverPill, hoverPillStroke, rowsInner, rowsList
+			local dynamicItems = {}
+			local openConns = {}
+			local animGen = 0
+			local cardYOffset = 0
+			local hoverY, hoverVisible, hoverLeaveGen = 0, false, 0
+
+			-- Submenu state (Luaward ProfileMenu Dropdown.SubmenuTrigger equivalent)
+			local submenuWrapper, submenuCard, submenuShadow, submenuScale, submenuDpiScale
+			local submenuScroll, submenuLayout, submenuHoverLayer, submenuHoverPill, submenuHoverStroke
+			local submenuOpened = false
+			local submenuKind = nil
+			local submenuAnimGen = 0
+			local submenuCloseGen = 0
+			local submenuXOffset = 0
+			local submenuOpenedLeft = false
+			local submenuHoverY, submenuHoverVisible, submenuHoverLeaveGen = 0, false, 0
+			local submenuRows = {}
+
+			local MENU_WIDTH = 246
+			local SUBMENU_WIDTH = 200
+			local ROW_H = 30
+			local DIV_H = 9
+			local ROW_GAP = 2
+			local HEADER_H = 36
+
+			local function disconnectInputConns()
+				for _, c in ipairs(openConns) do
+					pcall(function()
+						c:Disconnect()
+					end)
+				end
+				table.clear(openConns)
+			end
+
+			local function notifyWindowOpenState(isOpen)
+				if Library.Window and type(Library.Window.SetProfileMenuOpen) == "function" then
+					pcall(Library.Window.SetProfileMenuOpen, isOpen)
+				end
+			end
+
+			local function getFontShortName()
+				local id = Library.Fonts and Library.Fonts.CurrentProfile or "default"
+				if id == "builder-sans" then return "Builder" end
+				if id == "gotham" then return "Gotham" end
+				return "Inter"
+			end
+
+			local function getLangShortName()
+				local code = tostring(Library.CurrentLanguage or "en"):lower()
+				for _, lang in ipairs(LANGUAGES) do
+					if lang.Code == code then
+						return lang.Short
+					end
+				end
+				return code:upper()
+			end
+
+			local function syncHeaderAndBadges()
+				if not built then
+					return
+				end
+				local plr = Players.LocalPlayer
+				local priv = type(Library.GetPrivacyMode) == "function" and Library:GetPrivacyMode() or {Hidden = false}
+				if headerNameLbl then
+					if priv.Hidden then
+						headerNameLbl.Text = "Privacy Mode Active"
+					else
+						headerNameLbl.Text = "@" .. (plr and plr.Name or "player")
+					end
+				end
+				if eyeIconImg then
+					eyeIconImg.Image = Library:GetIcon(priv.Hidden and "eye" or "eye-off") or ""
+					Creator.OverrideTag(eyeIconImg, {ImageColor3 = priv.Hidden and "Accent" or "SubText"})
+				end
+				if dynamicItems.PrivacyBadge then
+					dynamicItems.PrivacyBadge.Text = priv.Hidden and "ON" or "OFF"
+					Creator.OverrideTag(dynamicItems.PrivacyBadgePill, {BackgroundColor3 = priv.Hidden and "Accent" or "DialogButton"})
+					dynamicItems.PrivacyBadge.TextColor3 = priv.Hidden and Creator.AutoContrast(Creator.GetThemeProperty("Accent")) or Creator.GetThemeProperty("SubText")
+				end
+				if dynamicItems.ThemeRight then
+					dynamicItems.ThemeRight.Text = tostring(Library.Theme or "Acryven")
+				end
+				if dynamicItems.FontRight then
+					dynamicItems.FontRight.Text = getFontShortName()
+				end
+				if dynamicItems.LangRight then
+					dynamicItems.LangRight.Text = getLangShortName()
+				end
+				if dynamicItems.SidebarIcon then
+					local collapsed = Library.Window and Library.Window.SidebarCollapsed == true
+					dynamicItems.SidebarIcon.Image = Library:GetIcon(collapsed and "panel-left-open" or "panel-left-close") or ""
+				end
+			end
+
+			local function setCardYOffset(y)
+				cardYOffset = y
+				if popupCard then
+					popupCard.Position = UDim2.new(0, 0, 1, y)
+				end
+			end
+
+			local function setSubmenuXOffset(x)
+				submenuXOffset = x
+				if submenuCard then
+					submenuCard.Position = UDim2.new(submenuOpenedLeft and 1 or 0, x, 0, 0)
+				end
+			end
+
+			local function closeSubmenu(instant)
+				if not submenuOpened or not submenuWrapper then
+					return
+				end
+				submenuAnimGen += 1
+				local myGen = submenuAnimGen
+				submenuOpened = false
+				submenuKind = nil
+				submenuHoverVisible = false
+				if submenuHoverPill then
+					Creator.SpringValue(submenuHoverPill, "BackgroundTransparency", 1, 6.2, 1)
+				end
+				if submenuHoverStroke then
+					Creator.SpringValue(submenuHoverStroke, "Transparency", 1, 6.2, 1)
+				end
+				if instant or Creator.ReducedMotion then
+					submenuWrapper.Visible = false
+					return
+				end
+				Creator.SpringValue(submenuScale, "Scale", 0.95, 6.4, 1)
+				Creator.SpringValue(submenuShadow, "ImageTransparency", 1, 6.8, 1)
+				Creator.SpringValue(submenuCard, "SubX", submenuOpenedLeft and 5 or -5, 6.4, 1, setSubmenuXOffset, submenuXOffset)
+				task.delay(0.13, function()
+					if myGen == submenuAnimGen and not submenuOpened and submenuWrapper and submenuWrapper.Parent then
+						submenuWrapper.Visible = false
+					end
+				end)
+			end
+
+			local function scheduleSubmenuClose()
+				submenuCloseGen += 1
+				local myGen = submenuCloseGen
+				task.delay(0.18, function()
+					if myGen == submenuCloseGen then
+						closeSubmenu(false)
+					end
+				end)
+			end
+
+			local function cancelSubmenuClose()
+				submenuCloseGen += 1
+			end
+
+			local function ensureSubmenuBuilt()
+				if submenuWrapper then
+					return
+				end
+				submenuDpiScale = New("UIScale", {Scale = Creator.DPIScale})
+				submenuScale = New("UIScale", {Scale = 1})
+				submenuShadow = New("ImageLabel", {
+					Name = "SubShadow",
+					BackgroundTransparency = 1,
+					Image = "rbxassetid://5554236805",
+					ScaleType = Enum.ScaleType.Slice,
+					SliceCenter = Rect.new(23, 23, 277, 277),
+					Size = UDim2.new(1, 24, 1, 24),
+					Position = UDim2.fromOffset(-12, -10),
+					ImageColor3 = Color3.fromRGB(0, 0, 0),
+					ImageTransparency = 1,
+					ZIndex = 121
+				})
+				submenuHoverStroke = New("UIStroke", {
+					Transparency = 1,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				})
+				submenuHoverPill = New("Frame", {
+					Name = "SubHoverPill",
+					Size = UDim2.new(1, -12, 0, 28),
+					Position = UDim2.fromOffset(6, 0),
+					BackgroundTransparency = 1,
+					ZIndex = 123,
+					ThemeTag = {BackgroundColor3 = "DropdownOption"}
+				}, {New("UICorner", {CornerRadius = UDim.new(0, 7)}), submenuHoverStroke})
+
+				submenuHoverLayer = New("Frame", {
+					Name = "SubHoverLayer",
+					Size = UDim2.new(1, 0, 1, -10),
+					Position = UDim2.fromOffset(0, 5),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+					ZIndex = 123
+				}, {submenuHoverPill})
+
+				submenuLayout = New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder})
+				submenuScroll = New("ScrollingFrame", {
+					Name = "SubScroll",
+					Position = UDim2.fromOffset(0, 5),
+					Size = UDim2.new(1, 0, 1, -10),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ScrollBarThickness = 3,
+					ScrollBarImageTransparency = 0.45,
+					CanvasSize = UDim2.fromOffset(0, 0),
+					ScrollingDirection = Enum.ScrollingDirection.Y,
+					ZIndex = 124,
+					ThemeTag = {ScrollBarImageColor3 = "Accent"}
+				}, {
+					submenuLayout,
+					New("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 1), PaddingBottom = UDim.new(0, 1)})
+				})
+
+				submenuCard = New("Frame", {
+					Name = "SubmenuCard",
+					AnchorPoint = Vector2.new(0, 0),
+					Position = UDim2.fromScale(0, 0),
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 0.02,
+					Active = true,
+					ClipsDescendants = true,
+					ZIndex = 122,
+					ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+				}, {
+					submenuScale,
+					New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+					New("UIStroke", {Thickness = 1.1, Transparency = 0.18, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}),
+					submenuHoverLayer,
+					submenuScroll
+				})
+
+				submenuWrapper = New("Frame", {
+					Name = "AcryvenProfileSubmenu",
+					Size = UDim2.fromOffset(SUBMENU_WIDTH, 120),
+					BackgroundTransparency = 1,
+					Visible = false,
+					ZIndex = 121,
+					Parent = Library.OverlayGUI or Library.GUI
+				}, {submenuDpiScale, submenuShadow, submenuCard})
+
+				Creator.AddSignal(submenuCard.MouseEnter, function()
+					cancelSubmenuClose()
+				end)
+				Creator.AddSignal(submenuCard.MouseLeave, function()
+					submenuHoverLeaveGen += 1
+					local myGen = submenuHoverLeaveGen
+					task.delay(0.03, function()
+						if myGen == submenuHoverLeaveGen then
+							submenuHoverVisible = false
+							Creator.SpringValue(submenuHoverPill, "BackgroundTransparency", 1, 5.5, 1)
+							Creator.SpringValue(submenuHoverStroke, "Transparency", 1, 5.5, 1)
+						end
+					end)
+					scheduleSubmenuClose()
+				end)
+				Creator.RegisterDPIScale(submenuDpiScale, function(s)
+					submenuDpiScale.Scale = s
+					if submenuOpened then
+						closeSubmenu(true)
+					end
+				end)
+			end
+
+			local function openSubmenu(kind, triggerBtn)
+				if Menu.Destroyed or not Menu.Opened then
+					return
+				end
+				ensureSubmenuBuilt()
+				cancelSubmenuClose()
+				if submenuOpened and submenuKind == kind then
+					return
+				end
+				submenuKind = kind
+
+				for _, child in ipairs(submenuScroll:GetChildren()) do
+					if child:IsA("GuiObject") then
+						child:Destroy()
+					end
+				end
+				table.clear(submenuRows)
+
+				local items = {}
+				if kind == "theme" then
+					for _, themeName in ipairs(Library.Themes or {}) do
+						local tData = Themes[themeName]
+						local accentCol = (type(tData) == "table" and typeof(tData.Accent) == "Color3") and tData.Accent or nil
+						table.insert(items, {
+							Id = themeName,
+							Label = tostring(themeName),
+							Swatch = accentCol,
+							Selected = (Library.Theme == themeName),
+							OnPick = function()
+								Library:SetTheme(themeName)
+								syncHeaderAndBadges()
+								if Library.SettingsModal and Library.SettingsModal.Opened then
+									Library.SettingsModal:SyncValues()
+								end
+							end
+						})
+					end
+				elseif kind == "font" then
+					local curFont = Library.Fonts and Library.Fonts.CurrentProfile or "default"
+					for _, f in ipairs(FONT_PRESETS) do
+						table.insert(items, {
+							Id = f.Id,
+							Label = f.Label,
+							Hint = f.Short,
+							Selected = (curFont == f.Id),
+							OnPick = function()
+								if type(Library.SetFont) == "function" then
+									Library:SetFont(f.Id)
+								end
+								syncHeaderAndBadges()
+								if Library.SettingsModal and Library.SettingsModal.Opened then
+									Library.SettingsModal:SyncValues()
+								end
+							end
+						})
+					end
+				elseif kind == "language" then
+					local curLang = tostring(Library.CurrentLanguage or "en"):lower()
+					for _, lang in ipairs(LANGUAGES) do
+						table.insert(items, {
+							Id = lang.Code,
+							Label = lang.Label,
+							Hint = lang.Short,
+							Selected = (curLang == lang.Code),
+							OnPick = function()
+								Library.CurrentLanguage = lang.Code
+								if Library.I18n and type(Library.I18n.SetLanguage) == "function" then
+									Library.I18n:SetLanguage(lang.Code)
+								end
+								syncHeaderAndBadges()
+								if Library.SettingsModal and Library.SettingsModal.Opened then
+									Library.SettingsModal:SyncValues()
+								end
+							end
+						})
+					end
+				end
+
+				local checkIconAsset = Library:GetIcon("check") or ""
+				local function refreshSubSelection(pickedId)
+					for _, r in ipairs(submenuRows) do
+						local sel = (r.Id == pickedId)
+						if sel ~= r.Selected then
+							r.Selected = sel
+							r.Label.FontFace = Creator.Font(sel and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium)
+							if sel then
+								r.Check.Visible = true
+								r.CheckScale.Scale = 0.4
+								Creator.SpringValue(r.CheckScale, "Scale", 1, 4.6, 0.62)
+								Creator.SpringValue(r.Check, "ImageTransparency", 0, 5.2, 1)
+							else
+								Creator.SpringValue(r.CheckScale, "Scale", 0.4, 5.8, 1)
+								Creator.SpringValue(r.Check, "ImageTransparency", 1, 5.8, 1)
+								local chk = r.Check
+								task.delay(0.16, function()
+									if not r.Selected and chk and chk.Parent then
+										chk.Visible = false
+									end
+								end)
+							end
+						end
+					end
+				end
+
+				for i, item in ipairs(items) do
+					local checkScale = New("UIScale", {Scale = item.Selected and 1 or 0.4})
+					local checkImg = New("ImageLabel", {
+						Name = "Check",
+						Image = checkIconAsset,
+						Size = UDim2.fromOffset(13, 13),
+						Position = UDim2.new(0, 7, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ImageTransparency = item.Selected and 0 or 1,
+						Visible = item.Selected,
+						ZIndex = 126,
+						ThemeTag = {ImageColor3 = "Accent"}
+					}, {checkScale})
+
+					local textLeft = 26
+					local rowKids = {New("UICorner", {CornerRadius = UDim.new(0, 7)}), checkImg}
+					if item.Swatch then
+						table.insert(rowKids, New("Frame", {
+							Name = "Swatch",
+							Size = UDim2.fromOffset(9, 9),
+							Position = UDim2.new(0, 26, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							BackgroundColor3 = item.Swatch,
+							ZIndex = 126
+						}, {New("UICorner", {CornerRadius = UDim.new(1, 0)})}))
+						textLeft = 41
+					end
+
+					local lbl = New("TextLabel", {
+						Name = "Label",
+						Text = item.Label,
+						I18nSkip = true,
+						FontFace = Creator.Font(item.Selected and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium),
+						TextSize = 12,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						Position = UDim2.new(0, textLeft, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						Size = UDim2.new(1, -(textLeft + (item.Hint and 34 or 10)), 0, 18),
+						BackgroundTransparency = 1,
+						ZIndex = 126,
+						ThemeTag = {TextColor3 = "Text"}
+					})
+					table.insert(rowKids, lbl)
+
+					if item.Hint then
+						table.insert(rowKids, New("TextLabel", {
+							Name = "Hint",
+							Text = item.Hint,
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 10,
+							TextXAlignment = Enum.TextXAlignment.Right,
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -8, 0.5, 0),
+							Size = UDim2.fromOffset(26, 16),
+							BackgroundTransparency = 1,
+							ZIndex = 126,
+							ThemeTag = {TextColor3 = "SubText"}
+						}))
+					end
+
+					local rScale = New("UIScale", {Scale = 1})
+					table.insert(rowKids, rScale)
+
+					local btn = New("TextButton", {
+						Name = "Sub_" .. tostring(i),
+						Text = "",
+						AutoButtonColor = false,
+						Size = UDim2.new(1, 0, 0, 28),
+						BackgroundTransparency = 1,
+						LayoutOrder = i,
+						ZIndex = 125,
+						Parent = submenuScroll
+					}, rowKids)
+
+					Creator.AddSignal(btn.MouseEnter, function()
+						cancelSubmenuClose()
+						submenuHoverLeaveGen += 1
+						local scale = Creator.GetEffectiveScale(submenuScroll)
+						local targetY = (btn.AbsolutePosition.Y - submenuScroll.AbsolutePosition.Y) / scale
+						if not submenuHoverVisible then
+							submenuHoverVisible = true
+							Creator.CancelSpring(submenuHoverPill, "SubHoverY")
+							submenuHoverY = targetY
+							submenuHoverPill.Position = UDim2.fromOffset(6, targetY)
+						else
+							Creator.SpringValue(submenuHoverPill, "SubHoverY", targetY, 5.2, 0.88, function(y)
+								submenuHoverY = y
+								submenuHoverPill.Position = UDim2.fromOffset(6, y)
+							end, submenuHoverY)
+						end
+						Creator.SpringValue(submenuHoverPill, "BackgroundTransparency", 0.74, 5.5, 1)
+						Creator.SpringValue(submenuHoverStroke, "Transparency", 0.52, 5.5, 1)
+					end)
+					Creator.AddSignal(btn.MouseLeave, function()
+						Creator.SpringValue(rScale, "Scale", 1, 6.0, 0.85)
+					end)
+					Creator.AddSignal(btn.MouseButton1Down, function()
+						Creator.SpringValue(rScale, "Scale", 0.98, 6.5, 0.9)
+					end)
+					Creator.AddSignal(btn.MouseButton1Up, function()
+						Creator.SpringValue(rScale, "Scale", 1, 5.5, 0.8)
+					end)
+					Creator.AddSignal(btn.MouseButton1Click, function()
+						refreshSubSelection(item.Id)
+						if type(item.OnPick) == "function" then
+							item.OnPick()
+						end
+					end)
+
+					table.insert(submenuRows, {Id = item.Id, Selected = item.Selected, Check = checkImg, CheckScale = checkScale, Label = lbl})
+				end
+
+				-- Deterministic submenu height & positioning beside trigger row
+				local contentH = (#items * 28) + (math.max(0, #items - 1) * 2) + 4
+				local panelH = math.clamp(contentH + 10, 46, 268)
+				submenuScroll.CanvasSize = UDim2.fromOffset(0, contentH)
+				submenuScroll.CanvasPosition = Vector2.new(0, 0)
+				submenuWrapper.Size = UDim2.fromOffset(SUBMENU_WIDTH, panelH)
+
+				local cam = Workspace.CurrentCamera
+				local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+				local insetY = Creator.GetGuiInsetY()
+				local usableW = vp.X
+				local usableH = math.max(200, vp.Y - insetY)
+				local dpi = math.max(0.01, Creator.DPIScale or 1)
+				local scaledSubW = SUBMENU_WIDTH * dpi
+				local scaledSubH = panelH * dpi
+
+				local cardPos = popupCard.AbsolutePosition
+				local cardSz = popupCard.AbsoluteSize
+				local rowY = (triggerBtn and triggerBtn.Parent) and triggerBtn.AbsolutePosition.Y or cardPos.Y
+
+				local rightX = cardPos.X + cardSz.X + 6
+				local leftX = cardPos.X - scaledSubW - 6
+				local targetX
+				if rightX + scaledSubW <= usableW - 10 or leftX < 10 then
+					submenuOpenedLeft = false
+					targetX = math.clamp(rightX, 10, math.max(10, usableW - scaledSubW - 10))
+				else
+					submenuOpenedLeft = true
+					targetX = math.clamp(leftX, 10, math.max(10, usableW - scaledSubW - 10))
+				end
+				local targetY = math.clamp(rowY - 6, 10, math.max(10, usableH - scaledSubH - 10))
+				submenuWrapper.Position = UDim2.fromOffset(targetX, targetY)
+				submenuCard.AnchorPoint = Vector2.new(submenuOpenedLeft and 1 or 0, 0)
+
+				submenuAnimGen += 1
+				submenuOpened = true
+				submenuWrapper.Visible = true
+				submenuHoverVisible = false
+				submenuHoverPill.BackgroundTransparency = 1
+				submenuHoverStroke.Transparency = 1
+
+				if Creator.ReducedMotion then
+					submenuScale.Scale = 1
+					submenuShadow.ImageTransparency = 0.52
+					setSubmenuXOffset(0)
+				else
+					local startX = submenuOpenedLeft and 6 or -6
+					submenuScale.Scale = 0.94
+					submenuShadow.ImageTransparency = 1
+					setSubmenuXOffset(startX)
+					Creator.SpringValue(submenuScale, "Scale", 1, 5.2, 0.86)
+					Creator.SpringValue(submenuShadow, "ImageTransparency", 0.52, 5.5, 1)
+					Creator.SpringValue(submenuCard, "SubX", 0, 5.2, 0.88, setSubmenuXOffset, startX)
+				end
+			end
+
+			local function positionAboveAnchor(anchorGui)
+				if not popupWrapper then
+					return
+				end
+				local cam = Workspace.CurrentCamera
+				local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+				local insetY = Creator.GetGuiInsetY()
+				local scale = math.max(0.01, Creator.DPIScale or 1)
+				local usableW = vp.X
+				local usableH = math.max(200, vp.Y - insetY)
+
+				local menuW = MENU_WIDTH * scale
+				local menuH = popupWrapper.Size.Y.Offset * scale
+				local targetX = 16
+				local targetBotY = usableH - 16
+
+				if anchorGui and typeof(anchorGui) == "Instance" and anchorGui.Parent then
+					local aPos = anchorGui.AbsolutePosition
+					local aSz = anchorGui.AbsoluteSize
+					targetX = aPos.X
+					targetBotY = aPos.Y - 8
+					if targetBotY - menuH < 10 then
+						targetX = aPos.X + aSz.X + 8
+						targetBotY = math.min(usableH - 10, aPos.Y + aSz.Y)
+					end
+				end
+
+				local clampedX = math.clamp(targetX, 10, math.max(10, usableW - menuW - 10))
+				local clampedBotY = math.clamp(targetBotY, menuH + 10, math.max(menuH + 10, usableH - 10))
+				popupWrapper.Position = UDim2.fromOffset(clampedX, clampedBotY)
+			end
+
+			local function ensureBuilt()
+				if built or Menu.Destroyed then
+					return
+				end
+				built = true
+
+				popupDpiScale = New("UIScale", {Scale = Creator.DPIScale})
+				popupScale = New("UIScale", {Scale = 1})
+
+				popupShadow = New(
+					"ImageLabel",
+					{
+						Name = "Shadow",
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://5554236805",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(23, 23, 277, 277),
+						Size = UDim2.new(1, 28, 1, 28),
+						Position = UDim2.fromOffset(-14, -10),
+						ImageColor3 = Color3.fromRGB(0, 0, 0),
+						ImageTransparency = 1,
+						ZIndex = 114
+					}
+				)
+
+				headerNameLbl = New("TextLabel", {
+					Name = "AccountName",
+					Text = "@player",
+					I18nSkip = true,
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					Position = UDim2.fromOffset(12, 0),
+					Size = UDim2.new(1, -46, 1, 0),
+					BackgroundTransparency = 1,
+					ZIndex = 116,
+					ThemeTag = {TextColor3 = "SubText"}
+				})
+
+				eyeIconImg = New("ImageLabel", {
+					Name = "EyeIcon",
+					Image = Library:GetIcon("eye-off") or "",
+					Size = UDim2.fromOffset(14, 14),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					BackgroundTransparency = 1,
+					ZIndex = 117,
+					ThemeTag = {ImageColor3 = "SubText"}
+				})
+				eyeIconBtn = New(
+					"TextButton",
+					{
+						Name = "QuickPrivacyToggle",
+						Text = "",
+						AutoButtonColor = false,
+						Size = UDim2.fromOffset(26, 26),
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, -8, 0.5, 0),
+						BackgroundTransparency = 0.72,
+						ZIndex = 116,
+						ThemeTag = {BackgroundColor3 = "DialogButton"}
+					},
+					{New("UICorner", {CornerRadius = UDim.new(0, 7)}), eyeIconImg}
+				)
+				Creator.AddSignal(eyeIconBtn.MouseEnter, function()
+					Creator.SpringValue(eyeIconBtn, "BackgroundTransparency", 0.32, 5.2, 1)
+				end)
+				Creator.AddSignal(eyeIconBtn.MouseLeave, function()
+					Creator.SpringValue(eyeIconBtn, "BackgroundTransparency", 0.72, 5.2, 1)
+				end)
+				Creator.AddSignal(eyeIconBtn.MouseButton1Click, function()
+					if type(Library.SetPrivacyMode) == "function" then
+						local cur = Library:GetPrivacyMode()
+						Library:SetPrivacyMode(not cur.Hidden, cur.Alias, cur.HideAvatar)
+						syncHeaderAndBadges()
+					end
+				end)
+
+				local headerBar = New(
+					"Frame",
+					{Name = "Header", Size = UDim2.new(1, 0, 0, HEADER_H), BackgroundTransparency = 1, ZIndex = 116},
+					{
+						headerNameLbl,
+						eyeIconBtn,
+						New("Frame", {
+							Name = "Sep",
+							Size = UDim2.new(1, -12, 0, 1),
+							Position = UDim2.new(0, 6, 1, -1),
+							BackgroundTransparency = 0.55,
+							ZIndex = 116,
+							ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+						})
+					}
+				)
+
+				-- Keep hoverPill in its OWN layer (separate from rowsInner's UIListLayout!)
+				-- so UIListLayout never hijacks hoverPill's Position or shifts rows downward.
+				hoverPillStroke = New("UIStroke", {Transparency = 1, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+				hoverPill = New(
+					"Frame",
+					{
+						Name = "MenuHoverPill",
+						Size = UDim2.new(1, 0, 0, ROW_H),
+						Position = UDim2.fromOffset(0, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 116,
+						ThemeTag = {BackgroundColor3 = "DropdownOption"}
+					},
+					{New("UICorner", {CornerRadius = UDim.new(0, 7)}), hoverPillStroke}
+				)
+				hoverLayer = New("Frame", {
+					Name = "HoverLayer",
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+					ZIndex = 116
+				}, {hoverPill})
+
+				rowsList = New("UIListLayout", {Padding = UDim.new(0, ROW_GAP), SortOrder = Enum.SortOrder.LayoutOrder})
+				rowsInner = New("Frame", {
+					Name = "RowsInner",
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					ZIndex = 117
+				}, {rowsList})
+
+				local rowsViewport = New(
+					"Frame",
+					{
+						Name = "RowsViewport",
+						Position = UDim2.fromOffset(6, HEADER_H + 5),
+						Size = UDim2.new(1, -12, 1, -(HEADER_H + 11)),
+						BackgroundTransparency = 1,
+						ZIndex = 116
+					},
+					{hoverLayer, rowsInner}
+				)
+
+				local rowOrder = 0
+				local itemCount = 0
+				local divCount = 0
+
+				local function addDivider()
+					rowOrder += 1
+					divCount += 1
+					New(
+						"Frame",
+						{
+							Name = "Div_" .. tostring(rowOrder),
+							Size = UDim2.new(1, 0, 0, DIV_H),
+							BackgroundTransparency = 1,
+							LayoutOrder = rowOrder,
+							ZIndex = 117,
+							Parent = rowsInner
+						},
+						{
+							New("Frame", {
+								Size = UDim2.new(1, -8, 0, 1),
+								Position = UDim2.new(0, 4, 0.5, 0),
+								BackgroundTransparency = 0.55,
+								ZIndex = 117,
+								ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+							})
+						}
+					)
+				end
+
+				local function addMenuItem(spec)
+					rowOrder += 1
+					itemCount += 1
+					local isDanger = spec.Danger == true
+					local iconImg = New("ImageLabel", {
+						Name = "Icon",
+						Image = Library:GetIcon(spec.Icon) or "",
+						Size = UDim2.fromOffset(15, 15),
+						Position = UDim2.new(0, 8, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ImageColor3 = isDanger and DANGER_RED or Color3.new(1, 1, 1),
+						ZIndex = 118,
+						ThemeTag = (not isDanger) and {ImageColor3 = "SubText"} or nil
+					})
+					local label = New("TextLabel", {
+						Name = "Title",
+						Text = spec.Title,
+						FontFace = Creator.Font(Enum.FontWeight.Medium),
+						TextSize = 12,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						Position = UDim2.new(0, 30, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						Size = UDim2.new(1, -94, 0, 18),
+						BackgroundTransparency = 1,
+						TextColor3 = isDanger and DANGER_RED or Color3.new(1, 1, 1),
+						ZIndex = 118,
+						ThemeTag = (not isDanger) and {TextColor3 = "Text"} or nil
+					})
+
+					local rowScale = New("UIScale", {Scale = 1})
+					local rowChildren = {rowScale, New("UICorner", {CornerRadius = UDim.new(0, 7)}), iconImg, label}
+					if spec.Hint then
+						table.insert(rowChildren, New("TextLabel", {
+							Name = "Hint",
+							Text = spec.Hint,
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 10,
+							TextXAlignment = Enum.TextXAlignment.Right,
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -8, 0.5, 0),
+							Size = UDim2.fromOffset(48, 16),
+							BackgroundTransparency = 1,
+							ZIndex = 118,
+							ThemeTag = {TextColor3 = "SubText"}
+						}))
+					elseif spec.RightTag then
+						local chev = New("ImageLabel", {
+							Image = Library:GetIcon("chevron-right") or "",
+							Size = UDim2.fromOffset(13, 13),
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -6, 0.5, 0),
+							BackgroundTransparency = 1,
+							ZIndex = 118,
+							ThemeTag = {ImageColor3 = "SubText"}
+						})
+						local valLbl = New("TextLabel", {
+							Name = "RightVal",
+							Text = "",
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 11,
+							TextXAlignment = Enum.TextXAlignment.Right,
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -21, 0.5, 0),
+							Size = UDim2.fromOffset(72, 16),
+							BackgroundTransparency = 1,
+							ZIndex = 118,
+							ThemeTag = {TextColor3 = "SubText"}
+						})
+						dynamicItems[spec.RightTag] = valLbl
+						table.insert(rowChildren, valLbl)
+						table.insert(rowChildren, chev)
+					elseif spec.BadgeTag then
+						local bLbl = New("TextLabel", {
+							Text = "OFF",
+							I18nSkip = true,
+							FontFace = Creator.Font(Enum.FontWeight.Bold),
+							TextSize = 9,
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.new(0, 0, 1, 0),
+							BackgroundTransparency = 1,
+							ZIndex = 119
+						})
+						local bPill = New("Frame", {
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.fromOffset(0, 17),
+							AnchorPoint = Vector2.new(1, 0.5),
+							Position = UDim2.new(1, -8, 0.5, 0),
+							BackgroundTransparency = 0.14,
+							ZIndex = 118,
+							ThemeTag = {BackgroundColor3 = "DialogButton"}
+						}, {
+							New("UICorner", {CornerRadius = UDim.new(1, 0)}),
+							New("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}),
+							bLbl
+						})
+						dynamicItems[spec.BadgeTag] = bLbl
+						dynamicItems[spec.BadgeTag .. "Pill"] = bPill
+						table.insert(rowChildren, bPill)
+					end
+
+					local btn = New(
+						"TextButton",
+						{
+							Name = "MenuItem_" .. tostring(rowOrder),
+							Text = "",
+							AutoButtonColor = false,
+							Size = UDim2.new(1, 0, 0, ROW_H),
+							BackgroundTransparency = 1,
+							LayoutOrder = rowOrder,
+							ZIndex = 117,
+							Parent = rowsInner
+						},
+						rowChildren
+					)
+					if spec.IconTag then
+						dynamicItems[spec.IconTag] = iconImg
+					end
+
+					Creator.AddSignal(btn.MouseEnter, function()
+						hoverLeaveGen += 1
+						local scale = Creator.GetEffectiveScale(rowsInner)
+						local targetY = (btn.AbsolutePosition.Y - rowsInner.AbsolutePosition.Y) / scale
+						if isDanger then
+							Creator.OverrideTag(hoverPill, {})
+							hoverPill.BackgroundColor3 = DANGER_BG
+							Creator.OverrideTag(hoverPillStroke, {})
+							hoverPillStroke.Color = DANGER_RED
+						else
+							Creator.OverrideTag(hoverPill, {BackgroundColor3 = "DropdownOption"})
+							Creator.OverrideTag(hoverPillStroke, {Color = "InElementBorder"})
+						end
+						if not hoverVisible then
+							hoverVisible = true
+							Creator.CancelSpring(hoverPill, "HoverY")
+							hoverY = targetY
+							hoverPill.Position = UDim2.fromOffset(0, targetY)
+						else
+							Creator.SpringValue(hoverPill, "HoverY", targetY, 5.2, 0.88, function(y)
+								hoverY = y
+								hoverPill.Position = UDim2.fromOffset(0, y)
+							end, hoverY)
+						end
+						Creator.SpringValue(hoverPill, "BackgroundTransparency", isDanger and 0.78 or 0.74, 5.5, 1)
+						Creator.SpringValue(hoverPillStroke, "Transparency", 0.50, 5.5, 1)
+						if spec.Submenu then
+							openSubmenu(spec.Submenu, btn)
+						else
+							scheduleSubmenuClose()
+						end
+					end)
+					Creator.AddSignal(btn.MouseLeave, function()
+						Creator.SpringValue(rowScale, "Scale", 1, 6.0, 0.85)
+						hoverLeaveGen += 1
+						local myGen = hoverLeaveGen
+						task.delay(0.03, function()
+							if myGen == hoverLeaveGen then
+								hoverVisible = false
+								Creator.SpringValue(hoverPill, "BackgroundTransparency", 1, 5.5, 1)
+								Creator.SpringValue(hoverPillStroke, "Transparency", 1, 5.5, 1)
+							end
+						end)
+					end)
+					Creator.AddSignal(btn.MouseButton1Down, function()
+						Creator.SpringValue(rowScale, "Scale", 0.98, 6.5, 0.9)
+					end)
+					Creator.AddSignal(btn.MouseButton1Up, function()
+						Creator.SpringValue(rowScale, "Scale", 1, 5.5, 0.8)
+					end)
+					Creator.AddSignal(btn.MouseButton1Click, function()
+						if spec.Submenu then
+							openSubmenu(spec.Submenu, btn)
+							return
+						end
+						if spec.KeepOpen then
+							if type(spec.Callback) == "function" then
+								spec.Callback()
+							end
+							syncHeaderAndBadges()
+						else
+							Menu:Close()
+							if type(spec.Callback) == "function" then
+								task.defer(spec.Callback)
+							end
+						end
+					end)
+				end
+
+				addMenuItem({Title = "Settings", Icon = "settings", Hint = "Ctrl+,", Callback = function()
+					if type(Library.OpenSettings) == "function" then Library:OpenSettings("General") end
+				end})
+				addMenuItem({Title = "Hide Name", Icon = "eye-off", BadgeTag = "PrivacyBadge", KeepOpen = true, Callback = function()
+					if type(Library.SetPrivacyMode) == "function" then
+						local cur = Library:GetPrivacyMode()
+						Library:SetPrivacyMode(not cur.Hidden, cur.Alias, cur.HideAvatar)
+					end
+				end})
+				addMenuItem({Title = "Language", Icon = "globe", RightTag = "LangRight", Submenu = "language"})
+				addMenuItem({Title = "Theme", Icon = "palette", RightTag = "ThemeRight", Submenu = "theme"})
+				addMenuItem({Title = "Font", Icon = "type", RightTag = "FontRight", Submenu = "font"})
+				addDivider()
+				addMenuItem({Title = "Command Palette", Icon = "search", Hint = "Ctrl+K", Callback = function()
+					Library:OpenCommandPalette()
+				end})
+				addMenuItem({Title = "Toggle Sidebar", Icon = "panel-left-close", IconTag = "SidebarIcon", Hint = "Ctrl+B", Callback = function()
+					if Library.Window then Library.Window:ToggleSidebar() end
+				end})
+				addMenuItem({Title = "Minimize Window", Icon = "minimize-2", Callback = function()
+					if Library.Window then Library.Window:Minimize() end
+				end})
+				addDivider()
+				addMenuItem({Title = "Unload Interface", Icon = "log-out", Danger = true, Callback = function()
+					if Library.Window then
+						Library.Window:Dialog({
+							Title = "Unload Interface",
+							Content = "Are you sure you want to unload Acryven?",
+							Buttons = {
+								{Title = "Yes", Callback = function() Library:Destroy() end},
+								{Title = "No"}
+							}
+						})
+					else
+						Library:Destroy()
+					end
+				end})
+
+				-- Deterministic exact height (never reads 0 from unparented UIListLayout!)
+				local totalRows = itemCount + divCount
+				local exactRowsH = (itemCount * ROW_H) + (divCount * DIV_H) + (math.max(0, totalRows - 1) * ROW_GAP)
+				local totalH = HEADER_H + 5 + exactRowsH + 7
+
+				popupCard = New(
+					"Frame",
+					{
+						Name = "MenuCard",
+						AnchorPoint = Vector2.new(0, 1),
+						Position = UDim2.fromScale(0, 1),
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 0.02,
+						Active = true,
+						ClipsDescendants = true,
+						ZIndex = 115,
+						ThemeTag = {BackgroundColor3 = "DropdownHolder"}
+					},
+					{
+						popupScale,
+						New("UICorner", {CornerRadius = UDim.new(0, 11)}),
+						New("UIStroke", {Thickness = 1.1, Transparency = 0.18, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DropdownBorder"}}),
+						headerBar,
+						rowsViewport
+					}
+				)
+
+				popupWrapper = New(
+					"Frame",
+					{
+						Name = "AcryvenProfileMenu",
+						AnchorPoint = Vector2.new(0, 1),
+						Size = UDim2.fromOffset(MENU_WIDTH, totalH),
+						BackgroundTransparency = 1,
+						Visible = false,
+						ZIndex = 114,
+						Parent = Library.OverlayGUI or Library.GUI
+					},
+					{popupDpiScale, popupShadow, popupCard}
+				)
+
+				Creator.RegisterDPIScale(popupDpiScale, function(s)
+					popupDpiScale.Scale = s
+					if Menu.Opened then
+						positionAboveAnchor(Menu._LastAnchor)
+						closeSubmenu(true)
+					end
+				end)
+			end
+
+			function Menu:Open(anchorGui)
+				if Menu.Destroyed or Library.Unloaded then
+					return
+				end
+				ensureBuilt()
+				Menu._LastAnchor = anchorGui
+				if type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
+				syncHeaderAndBadges()
+				positionAboveAnchor(anchorGui)
+				animGen += 1
+				Menu.Opened = true
+				popupWrapper.Visible = true
+				notifyWindowOpenState(true)
+				hoverVisible = false
+				hoverPill.BackgroundTransparency = 1
+				hoverPillStroke.Transparency = 1
+				closeSubmenu(true)
+
+				if Creator.ReducedMotion then
+					popupScale.Scale = 1
+					popupShadow.ImageTransparency = 0.52
+					setCardYOffset(0)
+				else
+					-- Luaward HeroUI Popover top-start entrance: scale 0.93->1 + slide-in-from-bottom (+6->0)
+					popupScale.Scale = 0.93
+					popupShadow.ImageTransparency = 1
+					setCardYOffset(6)
+					Creator.SpringValue(popupScale, "Scale", 1, 5.0, 0.86)
+					Creator.SpringValue(popupShadow, "ImageTransparency", 0.52, 5.4, 1)
+					Creator.SpringValue(popupCard, "CardY", 0, 5.0, 0.88, setCardYOffset, 6)
+				end
+
+				disconnectInputConns()
+				table.insert(openConns, UserInputService.InputBegan:Connect(function(input)
+					if not Menu.Opened then
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
+						Menu:Close()
+						return
+					end
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						local p = input.Position
+						local cardPos, cardSz = popupCard.AbsolutePosition, popupCard.AbsoluteSize
+						local inMenu = p.X >= cardPos.X and p.X <= cardPos.X + cardSz.X and p.Y >= cardPos.Y and p.Y <= cardPos.Y + cardSz.Y
+						local inSub = false
+						if submenuOpened and submenuCard and submenuCard.Parent then
+							local sPos, sSz = submenuCard.AbsolutePosition, submenuCard.AbsoluteSize
+							inSub = p.X >= sPos.X and p.X <= sPos.X + sSz.X and p.Y >= sPos.Y and p.Y <= sPos.Y + sSz.Y
+						end
+						local inAnchor = false
+						if anchorGui and typeof(anchorGui) == "Instance" and anchorGui.Parent then
+							local aPos, aSz = anchorGui.AbsolutePosition, anchorGui.AbsoluteSize
+							inAnchor = p.X >= aPos.X and p.X <= aPos.X + aSz.X and p.Y >= aPos.Y and p.Y <= aPos.Y + aSz.Y
+						end
+						if not inMenu and not inSub and not inAnchor then
+							Menu:Close()
+						end
+					end
+				end))
+			end
+
+			function Menu:Close()
+				if not Menu.Opened or not built then
+					return
+				end
+				animGen += 1
+				local myGen = animGen
+				Menu.Opened = false
+				notifyWindowOpenState(false)
+				disconnectInputConns()
+				closeSubmenu(false)
+				if Creator.ReducedMotion then
+					popupWrapper.Visible = false
+				else
+					Creator.SpringValue(popupScale, "Scale", 0.95, 6.4, 1)
+					Creator.SpringValue(popupShadow, "ImageTransparency", 1, 6.8, 1)
+					Creator.SpringValue(popupCard, "CardY", 4, 6.4, 1, setCardYOffset, cardYOffset)
+					task.delay(0.14, function()
+						if myGen == animGen and not Menu.Opened and popupWrapper and popupWrapper.Parent then
+							popupWrapper.Visible = false
+						end
+					end)
+				end
+			end
+
+			function Menu:Toggle(anchorGui)
+				if Menu.Opened then
+					Menu:Close()
+				else
+					Menu:Open(anchorGui)
+				end
+			end
+
+			function Menu:Refresh()
+				syncHeaderAndBadges()
+			end
+
+			function Menu:Destroy()
+				Menu.Destroyed = true
+				Menu.Opened = false
+				notifyWindowOpenState(false)
+				disconnectInputConns()
+				if submenuWrapper then
+					pcall(function()
+						submenuWrapper:Destroy()
+					end)
+					submenuWrapper = nil
+				end
+				if popupWrapper then
+					pcall(function()
+						popupWrapper:Destroy()
+					end)
+					popupWrapper = nil
+				end
+			end
+
+			return Menu
+		end
+	end,
+	[93] = function()
+		local _maui, moduleScript, requireModule, _getfenv, _setfenv = moduleContext(93)
+		local Root = moduleScript.Parent.Parent
+		local Creator = requireModule(Root.Creator)
+
+		local UserInputService = Creator.GetService("UserInputService")
+		local Lighting = Creator.GetService("Lighting")
+		local Workspace = Creator.GetService("Workspace")
+		local New = Creator.New
+
+		local protectGui = protectgui or (syn and syn.protect_gui) or function() end
+
+		local DANGER_RED = Color3.fromRGB(248, 113, 113)
+		local DANGER_BG = Color3.fromRGB(220, 38, 38)
+
+		local NAV_GROUPS = {
+			{
+				Label = "PREFERENCES",
+				Items = {
+					{
+						Id = "General",
+						Title = "General",
+						Subtitle = "Language, typography, motion, and UI scaling",
+						Icon = "settings",
+						Keywords = "general language font typography inter gotham builder scale dpi motion reduced"
+					},
+					{
+						Id = "Appearance",
+						Title = "Appearance",
+						Subtitle = "Themes, glass surface, and 3D acrylic blur",
+						Icon = "palette",
+						Keywords = "appearance theme color acrylic blur glass transparency dark light oklab"
+					},
+					{
+						Id = "Layout & HUD",
+						Title = "Layout & HUD",
+						Subtitle = "Sidebar rail, notifications, floating pill, and overlays",
+						Icon = "sliders-horizontal",
+						Keywords = "layout hud sidebar rail notification toast corner pill watermark keybind"
+					},
+					{
+						Id = "Privacy",
+						Title = "Privacy",
+						Subtitle = "Streamer mode, username masking, and avatar protection",
+						Icon = "shield",
+						Keywords = "privacy streamer hide name username avatar alias anonymous mask"
+					}
+				}
+			},
+			{
+				Label = "SYSTEM",
+				Items = {
+					{
+						Id = "Controls",
+						Title = "Controls",
+						Subtitle = "Window toggle keybind and keyboard shortcuts",
+						Icon = "keyboard",
+						Keywords = "controls keybind toggle minimize shortcut hotkey ctrl"
+					},
+					{
+						Id = "Config",
+						Title = "Config",
+						Subtitle = "Interface settings storage and default reset",
+						Icon = "folder",
+						Keywords = "config interface manager save load profile export reset defaults"
+					},
+					{
+						Id = "Unload",
+						Title = "Unload",
+						Subtitle = "Cleanly close and remove Acryven from this session",
+						Icon = "log-out",
+						Keywords = "unload destroy exit close quit remove danger",
+						Danger = true
+					}
+				}
+			}
+		}
+
+		local TAB_ALIASES = {
+			["General"] = "General",
+			["Appearance"] = "Appearance",
+			["Layout & HUD"] = "Layout & HUD",
+			["Privacy"] = "Privacy",
+			["Privacy & Controls"] = "Privacy",
+			["Controls"] = "Controls",
+			["Config"] = "Config",
+			["Language & Config"] = "Config",
+			["Unload"] = "Unload"
+		}
+
+		return function(Library)
+			local Modal = {
+				Opened = false,
+				Destroyed = false,
+				ActiveTab = "General",
+				RootGui = nil,
+				ModalCard = nil,
+				ConfigContainer = nil
+			}
+
+			local built = false
+			local building = false
+			local backdrop, modalWrapper, modalCard, modalShadow, modalScale, modalDpiScale
+			local settingsBlur = nil
+			local navScroll, navInner, navListLayout, navEmptyLabel
+			local activePill, activeBar, hoverPill, hoverPillStroke
+			local searchBox, searchClearBtn, searchStroke
+			local pagesParent
+			local navItems = {}
+			local navGroupHeaders = {}
+			local pageHolders = {}
+			local controlRefs = {}
+			local animGen = 0
+			local cardYOffset = 0
+			local activeIndicatorY = 0
+			local activeIndicatorInit = false
+			local hoverY, hoverVisible, hoverLeaveGen = 0, false, 0
+
+			local function resolveTabId(name)
+				if type(name) ~= "string" then
+					return nil
+				end
+				return TAB_ALIASES[name] or (pageHolders[name] and name) or nil
+			end
+
+			local function getFontLabel(profileId)
+				if profileId == "builder-sans" then
+					return "Builder Sans"
+				elseif profileId == "gotham" then
+					return "Gotham"
+				end
+				return "Inter"
+			end
+
+			local function getLanguageDisplay(code)
+				local map = {en = "English", th = "Thai", vi = "Vietnamese", es = "Spanish"}
+				return map[tostring(code or "en"):lower()] or "English"
+			end
+
+			local function ensureBlurEffect()
+				if Modal.Destroyed then
+					return nil
+				end
+				if settingsBlur and settingsBlur.Parent then
+					return settingsBlur
+				end
+				local existing = Lighting:FindFirstChild("AcryvenSettingsBlur")
+				if existing and existing:IsA("BlurEffect") then
+					settingsBlur = existing
+					return settingsBlur
+				end
+				settingsBlur = New(
+					"BlurEffect",
+					{
+						Name = "AcryvenSettingsBlur",
+						Size = 0,
+						Enabled = false,
+						Parent = Lighting
+					}
+				)
+				return settingsBlur
+			end
+
+			local function setCardYOffset(y)
+				cardYOffset = y
+				if modalCard then
+					modalCard.Position = UDim2.new(0.5, 0, 0.5, y)
+				end
+			end
+
+			local function setActiveIndicatorY(y)
+				activeIndicatorY = y
+				if activePill then
+					activePill.Position = UDim2.fromOffset(0, y)
+				end
+				if activeBar then
+					activeBar.Position = UDim2.fromOffset(0, y + 9)
+				end
+			end
+
+			local function positionActiveIndicator(instant)
+				local nav = navItems[Modal.ActiveTab]
+				if not nav or not nav.Button or not nav.Button.Visible or not navInner then
+					if activePill then activePill.Visible = false end
+					if activeBar then activeBar.Visible = false end
+					return
+				end
+				local scale = Creator.GetEffectiveScale(navInner)
+				local targetY = (nav.Button.AbsolutePosition.Y - navInner.AbsolutePosition.Y) / scale
+				-- Fallback if AbsolutePosition has not laid out yet (e.g., while hidden)
+				if nav.Button.AbsoluteSize.Y <= 0 and nav.FallbackY then
+					targetY = nav.FallbackY
+				end
+				activePill.Visible = true
+				activeBar.Visible = true
+				if nav.Danger then
+					Creator.OverrideTag(activeBar, {})
+					activeBar.BackgroundColor3 = DANGER_RED
+				else
+					Creator.OverrideTag(activeBar, {BackgroundColor3 = "Accent"})
+				end
+				if instant or not activeIndicatorInit or Creator.ReducedMotion then
+					activeIndicatorInit = true
+					Creator.CancelSpring(activePill, "ActiveY")
+					setActiveIndicatorY(targetY)
+				else
+					-- Luaward exact sidebar/split-modal traveling indicator spring (stiffness 380, damping 30, mass 0.8 => f=3.5, d=0.86)
+					Creator.SpringValue(activePill, "ActiveY", targetY, 3.8, 0.86, setActiveIndicatorY, activeIndicatorY)
+				end
+			end
+
+			local function syncTabVisuals(instant)
+				for id, nav in pairs(navItems) do
+					local active = (id == Modal.ActiveTab)
+					if nav.Danger then
+						Creator.OverrideTag(nav.Label, {})
+						Creator.OverrideTag(nav.Icon, {})
+						nav.Label.TextColor3 = DANGER_RED
+						nav.Icon.ImageColor3 = DANGER_RED
+						nav.Label.FontFace = Creator.Font(active and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium)
+					elseif active then
+						Creator.OverrideTag(nav.Label, {TextColor3 = "Text"})
+						Creator.OverrideTag(nav.Icon, {ImageColor3 = "Accent"})
+						nav.Label.FontFace = Creator.Font(Enum.FontWeight.SemiBold)
+					else
+						Creator.OverrideTag(nav.Label, {TextColor3 = "SubText"})
+						Creator.OverrideTag(nav.Icon, {ImageColor3 = "SubText"})
+						nav.Label.FontFace = Creator.Font(Enum.FontWeight.Medium)
+					end
+				end
+
+				for id, page in pairs(pageHolders) do
+					local isTarget = (id == Modal.ActiveTab)
+					local wasVisible = page.Scroll.Visible
+					page.Scroll.Visible = isTarget
+					if isTarget then
+						if type(page.SyncCanvas) == "function" then
+							task.defer(page.SyncCanvas)
+						end
+						if not instant and not wasVisible and not Creator.ReducedMotion and page.Holder then
+							-- Luaward content rise transition (--lw-dur-rise: 320ms, subtle +10px -> 0)
+							page.Holder.Position = UDim2.fromOffset(0, 10)
+							Creator.SpringValue(page.Holder, "RiseY", 0, 4.2, 0.90, function(y)
+								page.Holder.Position = UDim2.fromOffset(0, y)
+							end, 10)
+						elseif page.Holder then
+							Creator.CancelSpring(page.Holder, "RiseY")
+							page.Holder.Position = UDim2.fromOffset(0, 0)
+						end
+					end
+				end
+
+				positionActiveIndicator(instant)
+			end
+
+			local function applyNavSearch(query)
+				query = tostring(query or ""):gsub("^%s+", ""):gsub("%s+$", ""):lower()
+				if searchClearBtn then
+					searchClearBtn.Visible = query ~= ""
+				end
+				local totalShown = 0
+				for _, gInfo in ipairs(navGroupHeaders) do
+					local groupShown = 0
+					for _, itemId in ipairs(gInfo.ItemIds) do
+						local nav = navItems[itemId]
+						if nav then
+							local match = (query == "") or (nav.SearchHaystack:find(query, 1, true) ~= nil)
+							nav.Button.Visible = match
+							if match then
+								groupShown += 1
+								totalShown += 1
+							end
+						end
+					end
+					gInfo.Header.Visible = (groupShown > 0)
+				end
+				if navEmptyLabel then
+					navEmptyLabel.Visible = (totalShown == 0)
+				end
+				task.defer(function()
+					positionActiveIndicator(true)
+					if navScroll and navListLayout then
+						local scale = Creator.GetEffectiveScale(navScroll)
+						navScroll.CanvasSize = UDim2.new(0, 0, 0, math.ceil(navListLayout.AbsoluteContentSize.Y / scale) + 12)
+					end
+				end)
+			end
+
+			local function makePageContainer(scrollFrame, title, subtitle, isInternal)
+				local layout = New("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder})
+				local holder = New(
+					"Frame",
+					{
+						Name = "PageContent",
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1
+					},
+					{layout}
+				)
+				holder.Parent = scrollFrame
+
+				-- Luaward-style page heading inside the right pane (crisp 17px title + muted subtitle + hairline)
+				local pageHeader = New(
+					"Frame",
+					{
+						Name = "PageHeader",
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						LayoutOrder = 1,
+						Parent = holder
+					},
+					{
+						New("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder}),
+						New("UIPadding", {PaddingBottom = UDim.new(0, 10)}),
+						New("TextLabel", {
+							Name = "Title",
+							Text = title,
+							FontFace = Creator.Font(Enum.FontWeight.Bold, Enum.FontStyle.Normal, "Display"),
+							TextSize = 17,
+							LineHeight = 1.15,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							AutomaticSize = Enum.AutomaticSize.Y,
+							Size = UDim2.new(1, 0, 0, 0),
+							LayoutOrder = 1,
+							BackgroundTransparency = 1,
+							ThemeTag = {TextColor3 = "Text"}
+						}),
+						New("TextLabel", {
+							Name = "Subtitle",
+							Text = subtitle or "",
+							Visible = (subtitle ~= nil and subtitle ~= ""),
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 12,
+							LineHeight = 1.15,
+							TextWrapped = true,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							AutomaticSize = Enum.AutomaticSize.Y,
+							Size = UDim2.new(1, 0, 0, 0),
+							LayoutOrder = 2,
+							BackgroundTransparency = 1,
+							ThemeTag = {TextColor3 = "SubText"}
+						}),
+						New("Frame", {
+							Name = "Divider",
+							Size = UDim2.new(1, 0, 0, 1),
+							BackgroundTransparency = 0.58,
+							LayoutOrder = 3,
+							ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+						})
+					}
+				)
+				local _ = pageHeader
+
+				local function syncCanvas()
+					if not scrollFrame or not scrollFrame.Parent then
+						return
+					end
+					local scale = Creator.GetEffectiveScale(scrollFrame)
+					scrollFrame.CanvasSize = UDim2.new(0, 0, 0, math.ceil(layout.AbsoluteContentSize.Y / scale) + 24)
+				end
+				Creator.AddSignal(layout:GetPropertyChangedSignal("AbsoluteContentSize"), syncCanvas)
+				Creator.RegisterDPIScale(scrollFrame, function()
+					task.defer(syncCanvas)
+				end)
+
+				local nextSectionOrder = 10
+				local pageObj = {
+					Container = holder,
+					ScrollFrame = scrollFrame,
+					Type = "ScrollingFrame",
+					Library = Library,
+					_Internal = isInternal == true
+				}
+				function pageObj.AddSection(_s, sectionTitle, sectionOpts)
+					nextSectionOrder += 1
+					local opts
+					if type(sectionTitle) == "table" then
+						opts = {}
+						for k, v in next, sectionTitle do opts[k] = v end
+					else
+						opts = type(sectionOpts) == "table" and {} or {}
+						if type(sectionOpts) == "table" then
+							for k, v in next, sectionOpts do opts[k] = v end
+						end
+						opts.Title = tostring(sectionTitle or "")
+					end
+					opts.LayoutOrder = opts.LayoutOrder or nextSectionOrder
+					local Section, sectionComponent =
+						{Type = "Section", _Internal = pageObj._Internal},
+						requireModule(Root.Components.Section)(opts, holder)
+					Section.Container = sectionComponent.Container
+					Section.Root = sectionComponent.Root
+					Section.SetVisible = function(selfOrVisible, visible)
+						return sectionComponent.SetVisible(type(selfOrVisible) == "boolean" and selfOrVisible or visible)
+					end
+					Section.SetCollapsed = function(selfOrVal, val, instant)
+						if type(selfOrVal) == "boolean" then
+							return sectionComponent.SetCollapsed(selfOrVal, val)
+						end
+						return sectionComponent.SetCollapsed(val, instant)
+					end
+					Section.Toggle = function(_sec, instant)
+						return sectionComponent.Toggle(instant)
+					end
+					Section.SetBadge = function(_sec, text, color)
+						return sectionComponent.SetBadge(text, color)
+					end
+					Section.SetTitle = function(_sec, newTitle)
+						return sectionComponent.SetTitle(newTitle)
+					end
+					Section.ScrollFrame = scrollFrame
+					if Library.Elements then
+						setmetatable(Section, Library.Elements)
+					end
+					return Section
+				end
+				if Library.Elements then
+					setmetatable(pageObj, Library.Elements)
+				end
+				return pageObj, holder, syncCanvas
+			end
+
+			local function populateControls()
+				-- 1) General (Language, Font, DPI Scale, Reduced Motion)
+				local pGen = pageHolders["General"].Api
+				local secGenLang = pGen:AddSection({Title = "Language & Typography", Icon = "globe"})
+				controlRefs.LangDropdown = secGenLang:AddDropdown("SettingsModalLanguage", {
+					Title = "Interface Language",
+					Description = "Translate Acryven labels and prompts",
+					Values = {"English", "Thai", "Vietnamese", "Spanish"},
+					Default = getLanguageDisplay(Library.CurrentLanguage),
+					Callback = function(choice)
+						local codeMap = {English = "en", Thai = "th", Vietnamese = "vi", Spanish = "es"}
+						local code = codeMap[choice] or "en"
+						Library.CurrentLanguage = code
+						if Library.I18n and type(Library.I18n.SetLanguage) == "function" then
+							Library.I18n:SetLanguage(code)
+						end
+						if Library.ProfileMenu then
+							Library.ProfileMenu:Refresh()
+						end
+					end
+				})
+				local currentProfileId = Library.Fonts and Library.Fonts.CurrentProfile or "default"
+				controlRefs.FontPreset = secGenLang:AddSegmentedControl("SettingsModalFont", {
+					Title = "UI Font Preset",
+					Description = "Live UI typography switch (Code & Console stay RobotoMono)",
+					Values = {"Inter", "Builder Sans", "Gotham"},
+					Default = getFontLabel(currentProfileId),
+					Callback = function(label)
+						local map = {["Inter"] = "default", ["Builder Sans"] = "builder-sans", ["Gotham"] = "gotham"}
+						if type(Library.SetFont) == "function" then
+							Library:SetFont(map[label] or "default")
+						end
+						if Library.ProfileMenu then
+							Library.ProfileMenu:Refresh()
+						end
+					end
+				})
+
+				local secGenMotion = pGen:AddSection({Title = "Display & Motion", Icon = "sparkles"})
+				controlRefs.DpiSlider = secGenMotion:AddSlider("SettingsModalDPI", {
+					Title = "UI DPI Scale",
+					Description = "Adjusts Window, Popovers, Modals, and HUD sizing",
+					Min = 0.8,
+					Max = 1.35,
+					Default = Library.DPIScale or 1.0,
+					Rounding = 2,
+					Suffix = "x",
+					Callback = function(v)
+						Library:SetDPIScale(v)
+					end
+				})
+				controlRefs.ReducedMotion = secGenMotion:AddToggle("SettingsModalMotion", {
+					Title = "Reduced Motion",
+					Description = "Use instant transitions instead of spring animations",
+					Default = Library.ReducedMotion == true,
+					Callback = function(v)
+						Library:SetReducedMotion(v)
+					end
+				})
+
+				-- 2) Appearance (Theme, Acrylic, Transparency)
+				local pApp = pageHolders["Appearance"].Api
+				local secTheme = pApp:AddSection({Title = "Color Theme", Icon = "palette"})
+				controlRefs.ThemeDropdown = secTheme:AddDropdown("SettingsModalTheme", {
+					Title = "Active Theme",
+					Description = "Smooth Oklab perceptual interpolation across 22 themes",
+					Values = Library.Themes,
+					Default = Library.Theme,
+					Callback = function(th)
+						if th and th ~= Library.Theme then
+							Library:SetTheme(th)
+							if Library.ProfileMenu then
+								Library.ProfileMenu:Refresh()
+							end
+						end
+					end
+				})
+
+				local secSurface = pApp:AddSection({Title = "Glass & Surface", Icon = "layers"})
+				controlRefs.AcrylicToggle = secSurface:AddToggle("SettingsModalAcrylic", {
+					Title = "3D Acrylic Blur",
+					Description = "Depth-of-field backdrop frosted glass effect",
+					Default = Library.Acrylic == true,
+					Callback = function(v)
+						if Library.UseAcrylic then
+							Library:ToggleAcrylic(v)
+						end
+					end
+				})
+				controlRefs.TransparencyToggle = secSurface:AddToggle("SettingsModalTransparency", {
+					Title = "Surface Transparency",
+					Description = "Semi-translucent window surface",
+					Default = Library.Transparency ~= false,
+					Callback = function(v)
+						Library.Transparency = v == true
+						Library:ToggleTransparency(v)
+					end
+				})
+
+				-- 3) Layout & HUD
+				local pLayout = pageHolders["Layout & HUD"].Api
+				local secLayout = pLayout:AddSection({Title = "Sidebar & Alerts", Icon = "panel-left"})
+				controlRefs.SidebarCollapsed = secLayout:AddToggle("SettingsModalSidebar", {
+					Title = "Collapse Sidebar (Icon Rail)",
+					Description = "Compact icon-only navigation rail (Ctrl+B)",
+					Default = Library.Window and Library.Window.SidebarCollapsed == true or false,
+					Callback = function(v)
+						if Library.Window and Library.Window.SidebarCollapsed ~= (v == true) then
+							Library.Window:SetSidebarCollapsed(v == true)
+						end
+					end
+				})
+				controlRefs.NotifySide = secLayout:AddDropdown("SettingsModalNotifySide", {
+					Title = "Notification Corner",
+					Description = "Where toast alerts appear on screen",
+					Values = {"BottomRight", "BottomLeft", "TopRight", "TopLeft"},
+					Default = Library.NotifySide or "BottomRight",
+					Callback = function(corner)
+						if corner then
+							Library:SetNotifySide(corner)
+						end
+					end
+				})
+
+				local secHud = pLayout:AddSection({Title = "HUD Overlays", Icon = "activity"})
+				controlRefs.AlwaysPill = secHud:AddToggle("SettingsModalAlwaysPill", {
+					Title = "Pin Floating Pill Always",
+					Description = "Keep floating pill visible even while window is open",
+					Default = Library.FloatingPill and Library.FloatingPill.AlwaysVisible == true or false,
+					Callback = function(v)
+						if Library.FloatingPill then
+							Library.FloatingPill.AlwaysVisible = v == true
+							Library.FloatingPill:SetVisible((v == true) or (Library.Window and Library.Window.Minimized))
+						end
+					end
+				})
+				controlRefs.ShowHuds = secHud:AddToggle("SettingsModalShowHUDs", {
+					Title = "Show Active HUD Widgets",
+					Description = "Toggle Watermark and Active Keybinds overlay",
+					Default = true,
+					Callback = function(v)
+						for _, hud in ipairs(Library._ActiveHUDs or {}) do
+							if hud and type(hud.SetVisible) == "function" then
+								hud:SetVisible(v == true)
+							end
+						end
+					end
+				})
+
+				-- 4) Privacy
+				local pPriv = pageHolders["Privacy"].Api
+				local secPrivacy = pPriv:AddSection({Title = "Streamer Mode", Icon = "eye-off"})
+				local privState = type(Library.GetPrivacyMode) == "function" and Library:GetPrivacyMode() or {Hidden = false, Alias = "Anonymous", HideAvatar = false}
+				controlRefs.HideName = secPrivacy:AddToggle("SettingsModalHideName", {
+					Title = "Hide Player Name",
+					Description = "Mask your Roblox name and username on the sidebar profile card",
+					Default = privState.Hidden == true,
+					Callback = function(v)
+						if type(Library.SetPrivacyMode) == "function" then
+							local cur = Library:GetPrivacyMode()
+							Library:SetPrivacyMode(v == true, cur.Alias, cur.HideAvatar)
+						end
+					end
+				})
+				controlRefs.HideAvatar = secPrivacy:AddToggle("SettingsModalHideAvatar", {
+					Title = "Hide Player Avatar",
+					Description = "Replace avatar picture with a privacy shield icon",
+					Default = privState.HideAvatar == true,
+					Callback = function(v)
+						if type(Library.SetPrivacyMode) == "function" then
+							local cur = Library:GetPrivacyMode()
+							Library:SetPrivacyMode(cur.Hidden, cur.Alias, v == true)
+						end
+					end
+				})
+				controlRefs.PrivacyAlias = secPrivacy:AddInput("SettingsModalAlias", {
+					Title = "Display Alias",
+					Description = "Shown on the sidebar profile card while Hide Player Name is active",
+					Default = privState.Alias or "Anonymous",
+					Placeholder = "Anonymous",
+					Finished = true,
+					Callback = function(txt)
+						if type(Library.SetPrivacyMode) == "function" then
+							local cur = Library:GetPrivacyMode()
+							local clean = tostring(txt or ""):gsub("^%s+", ""):gsub("%s+$", "")
+							Library:SetPrivacyMode(cur.Hidden, clean ~= "" and clean or "Anonymous", cur.HideAvatar)
+						end
+					end
+				})
+
+				-- 5) Controls
+				local pCtrl = pageHolders["Controls"].Api
+				local secControls = pCtrl:AddSection({Title = "Window Controls", Icon = "keyboard"})
+				local minKeyName = typeof(Library.MinimizeKey) == "EnumItem" and Library.MinimizeKey.Name or tostring(Library.MinimizeKey or "LeftControl")
+				controlRefs.MinKeybind = secControls:AddKeybind("SettingsModalMinKey", {
+					Title = "Toggle Window Keybind",
+					Description = "Shortcut to minimize or restore the main window",
+					Default = minKeyName,
+					Mode = "Toggle"
+				})
+				controlRefs.MinKeybind:OnChanged(function(val)
+					local chosen = val or (controlRefs.MinKeybind and controlRefs.MinKeybind.Value)
+					if chosen ~= nil and chosen ~= "" then
+						Library.MinimizeKey = chosen
+					end
+				end)
+				secControls:AddParagraph({
+					Title = "Built-in Shortcuts",
+					Content = "Ctrl+, : Open or close Settings\nCtrl+K : Open Command Palette (Spotlight)\nCtrl+B : Collapse or expand Sidebar rail\nEsc : Close active Modal or Popover"
+				})
+
+				-- 6) Config (InterfaceManager attaches here via Modal:GetConfigContainer())
+				local pCfg = pageHolders["Config"].Api
+				local secReset = pCfg:AddSection({Title = "Quick Actions", Icon = "refresh-cw"})
+				secReset:AddButton({
+					Title = "Reset UI Defaults",
+					Description = "Restore Acryven theme, Inter font, 1.0x DPI, and default HUD settings",
+					Callback = function()
+						Library:SetTheme("Acryven")
+						if type(Library.SetFont) == "function" then Library:SetFont("default") end
+						Library:SetDPIScale(1.0)
+						Library:SetReducedMotion(false)
+						Library:SetNotifySide("BottomRight")
+						if type(Library.SetPrivacyMode) == "function" then Library:SetPrivacyMode(false, "Anonymous", false) end
+						Modal:SyncValues()
+						Library:Notify({Title = "Settings", Content = "Restored default UI settings.", Duration = 3})
+					end
+				})
+				-- Public container so InterfaceManager:AttachToSettingsModal() adds sections cleanly
+				Modal.ConfigContainer = pageHolders["Config"].PublicApi
+
+				-- 7) Unload (Danger section matching Luaward Settings delete section)
+				local pUnload = pageHolders["Unload"].Api
+				local secDanger = pUnload:AddSection({Title = "Session Cleanup", Icon = "alert-triangle"})
+				secDanger:AddCallout({
+					Title = "Unload Acryven Interface",
+					Description = "Removes all windows, HUDs, overlays, blur effects, and active input connections for this session.",
+					Variant = "Danger",
+					Dismissible = false
+				})
+				secDanger:AddActionRow("SettingsModalUnloadRow", {
+					Buttons = {
+						{
+							Title = "Unload Interface Now",
+							Icon = "log-out",
+							Variant = "Danger",
+							Confirm = true,
+							ConfirmText = "Click again to confirm Unload",
+							Callback = function()
+								Modal:Close()
+								Library:Destroy()
+							end
+						}
+					}
+				})
+			end
+
+			local function updateModalBounds()
+				if not modalWrapper then
+					return
+				end
+				local cam = Workspace.CurrentCamera
+				local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+				local s = math.max(0.5, Creator.DPIScale or 1)
+				local maxW = math.max(420, math.floor((vp.X - 36) / s))
+				local maxH = math.max(320, math.floor((vp.Y - 56) / s))
+				modalWrapper.Size = UDim2.fromOffset(math.min(720, maxW), math.min(470, maxH))
+			end
+
+			local function ensureBuilt()
+				if built or building or Modal.Destroyed then
+					return
+				end
+				building = true
+
+				local guiParent = (Library.GUI and Library.GUI.Parent) or Creator.GetService("CoreGui")
+				local settingsGui = New(
+					"ScreenGui",
+					{
+						Name = "AcryvenSettingsGui",
+						IgnoreGuiInset = true,
+						DisplayOrder = 160,
+						ResetOnSpawn = false,
+						Enabled = false,
+						ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+						Parent = guiParent
+					}
+				)
+				pcall(function()
+					settingsGui.ScreenInsets = Enum.ScreenInsets.None
+				end)
+				protectGui(settingsGui)
+				Modal.RootGui = settingsGui
+
+				backdrop = New(
+					"TextButton",
+					{
+						Name = "Backdrop",
+						Size = UDim2.fromScale(1, 1),
+						BackgroundColor3 = Color3.fromRGB(4, 6, 12),
+						BackgroundTransparency = 1,
+						AutoButtonColor = false,
+						Text = "",
+						ZIndex = 1,
+						Parent = settingsGui
+					}
+				)
+
+				modalDpiScale = New("UIScale", {Scale = Creator.DPIScale})
+				modalScale = New("UIScale", {Scale = 1})
+
+				modalShadow = New(
+					"ImageLabel",
+					{
+						Name = "Shadow",
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://5554236805",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(23, 23, 277, 277),
+						Size = UDim2.new(1, 44, 1, 44),
+						Position = UDim2.fromOffset(-22, -18),
+						ImageColor3 = Color3.fromRGB(0, 0, 0),
+						ImageTransparency = 1,
+						ZIndex = 2
+					}
+				)
+
+				-- ============================================================
+				-- Full-width Top Header Bar (Luaward SplitModal pattern)
+				-- ============================================================
+				local closeIcon = New("ImageLabel", {
+					Image = Library:GetIcon("x") or "",
+					Size = UDim2.fromOffset(15, 15),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					BackgroundTransparency = 1,
+					ThemeTag = {ImageColor3 = "SubText"}
+				})
+				local closeScale = New("UIScale", {Scale = 1})
+				local closeBtn = New(
+					"TextButton",
+					{
+						Name = "CloseModalBtn",
+						Text = "",
+						AutoButtonColor = false,
+						Size = UDim2.fromOffset(30, 30),
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, -12, 0.5, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 6,
+						ThemeTag = {BackgroundColor3 = "Tab"}
+					},
+					{
+						closeScale,
+						New("UICorner", {CornerRadius = UDim.new(0, 8)}),
+						closeIcon
+					}
+				)
+				Creator.AddSignal(closeBtn.MouseEnter, function()
+					Creator.SpringValue(closeBtn, "BackgroundTransparency", 0.80, 5.2, 1)
+					Creator.OverrideTag(closeIcon, {ImageColor3 = "Text"})
+				end)
+				Creator.AddSignal(closeBtn.MouseLeave, function()
+					Creator.SpringValue(closeBtn, "BackgroundTransparency", 1, 5.2, 1)
+					Creator.SpringValue(closeScale, "Scale", 1, 6.0, 0.85)
+					Creator.OverrideTag(closeIcon, {ImageColor3 = "SubText"})
+				end)
+				Creator.AddSignal(closeBtn.MouseButton1Down, function()
+					Creator.SpringValue(closeScale, "Scale", 0.93, 6.5, 0.9)
+				end)
+				Creator.AddSignal(closeBtn.MouseButton1Up, function()
+					Creator.SpringValue(closeScale, "Scale", 1, 5.5, 0.8)
+				end)
+				Creator.AddSignal(closeBtn.MouseButton1Click, function()
+					Modal:Close()
+				end)
+
+				local topHeaderBar = New(
+					"Frame",
+					{
+						Name = "TopHeaderBar",
+						Size = UDim2.new(1, 0, 0, 48),
+						BackgroundTransparency = 1,
+						ZIndex = 5
+					},
+					{
+						New("Frame", {
+							Name = "LeftTitleGroup",
+							Position = UDim2.fromOffset(18, 0),
+							Size = UDim2.new(1, -66, 1, 0),
+							BackgroundTransparency = 1
+						}, {
+							New("UIListLayout", {
+								FillDirection = Enum.FillDirection.Horizontal,
+								VerticalAlignment = Enum.VerticalAlignment.Center,
+								SortOrder = Enum.SortOrder.LayoutOrder,
+								Padding = UDim.new(0, 8)
+							}),
+							New("ImageLabel", {
+								Name = "SettingsIcon",
+								Image = Library:GetIcon("settings") or "",
+								Size = UDim2.fromOffset(16, 16),
+								LayoutOrder = 1,
+								BackgroundTransparency = 1,
+								ThemeTag = {ImageColor3 = "Accent"}
+							}),
+							New("TextLabel", {
+								Name = "ModalTitle",
+								Text = "Settings",
+								FontFace = Creator.Font(Enum.FontWeight.Bold, Enum.FontStyle.Normal, "Display"),
+								TextSize = 15,
+								TextXAlignment = Enum.TextXAlignment.Left,
+								AutomaticSize = Enum.AutomaticSize.X,
+								Size = UDim2.new(0, 0, 0, 20),
+								LayoutOrder = 2,
+								BackgroundTransparency = 1,
+								ThemeTag = {TextColor3 = "Text"}
+							}),
+							New("Frame", {
+								Name = "KbdBadge",
+								AutomaticSize = Enum.AutomaticSize.X,
+								Size = UDim2.fromOffset(0, 20),
+								LayoutOrder = 3,
+								BackgroundTransparency = 0.52,
+								ThemeTag = {BackgroundColor3 = "DialogButton"}
+							}, {
+								New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+								New("UIStroke", {Transparency = 0.48, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}}),
+								New("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}),
+								New("TextLabel", {
+									Text = "Ctrl+,",
+									I18nSkip = true,
+									FontFace = Creator.Font(Enum.FontWeight.Medium),
+									TextSize = 10,
+									AutomaticSize = Enum.AutomaticSize.X,
+									Size = UDim2.new(0, 0, 1, 0),
+									BackgroundTransparency = 1,
+									ThemeTag = {TextColor3 = "SubText"}
+								})
+							})
+						}),
+						closeBtn,
+						New("Frame", {
+							Name = "BottomHairline",
+							Size = UDim2.new(1, 0, 0, 1),
+							Position = UDim2.new(0, 0, 1, -1),
+							BackgroundTransparency = 0.55,
+							ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+						})
+					}
+				)
+
+				-- ============================================================
+				-- Left Navigation Rail (204px: SearchField + Grouped Tabs + Traveling Indicator)
+				-- ============================================================
+				searchStroke = New("UIStroke", {
+					Transparency = 0.42,
+					Thickness = 1,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					ThemeTag = {Color = "InElementBorder"}
+				})
+				searchClearBtn = New("TextButton", {
+					Name = "ClearSearch",
+					Text = "",
+					AutoButtonColor = false,
+					Size = UDim2.fromOffset(20, 20),
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -6, 0.5, 0),
+					BackgroundTransparency = 1,
+					Visible = false,
+					ZIndex = 6
+				}, {
+					New("ImageLabel", {
+						Image = Library:GetIcon("x") or "",
+						Size = UDim2.fromOffset(12, 12),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						BackgroundTransparency = 1,
+						ThemeTag = {ImageColor3 = "SubText"}
+					})
+				})
+				searchBox = New("TextBox", {
+					Name = "SettingsSearch",
+					Text = "",
+					PlaceholderText = "Search settings...",
+					I18nSkip = true,
+					ClearTextOnFocus = false,
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Position = UDim2.fromOffset(28, 0),
+					Size = UDim2.new(1, -54, 1, 0),
+					BackgroundTransparency = 1,
+					ZIndex = 6,
+					ThemeTag = {TextColor3 = "Text", PlaceholderColor3 = "SubText"}
+				})
+				local searchWrap = New("Frame", {
+					Name = "SearchField",
+					Position = UDim2.fromOffset(12, 12),
+					Size = UDim2.new(1, -24, 0, 32),
+					BackgroundTransparency = 0.28,
+					ZIndex = 5,
+					ThemeTag = {BackgroundColor3 = "DialogHolder"}
+				}, {
+					New("UICorner", {CornerRadius = UDim.new(0, 9)}),
+					searchStroke,
+					New("ImageLabel", {
+						Image = Library:GetIcon("search") or "",
+						Size = UDim2.fromOffset(14, 14),
+						Position = UDim2.new(0, 9, 0.5, 0),
+						AnchorPoint = Vector2.new(0, 0.5),
+						BackgroundTransparency = 1,
+						ZIndex = 6,
+						ThemeTag = {ImageColor3 = "SubText"}
+					}),
+					searchBox,
+					searchClearBtn
+				})
+				Creator.AddSignal(searchBox.Focused, function()
+					Creator.OverrideTag(searchStroke, {Color = "Accent"})
+					Creator.SpringValue(searchStroke, "Transparency", 0.14, 5.2, 1)
+				end)
+				Creator.AddSignal(searchBox.FocusLost, function()
+					Creator.OverrideTag(searchStroke, {Color = "InElementBorder"})
+					Creator.SpringValue(searchStroke, "Transparency", 0.42, 5.2, 1)
+				end)
+				Creator.AddSignal(searchBox:GetPropertyChangedSignal("Text"), function()
+					applyNavSearch(searchBox.Text)
+				end)
+				Creator.AddSignal(searchClearBtn.MouseButton1Click, function()
+					searchBox.Text = ""
+					applyNavSearch("")
+				end)
+
+				-- Active + Hover Indicators in their own non-layout layer (exact Luaward SplitModal pattern!)
+				hoverPillStroke = New("UIStroke", {Transparency = 1, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+				hoverPill = New("Frame", {
+					Name = "NavHoverPill",
+					Size = UDim2.new(1, 0, 0, 34),
+					Position = UDim2.fromOffset(0, 0),
+					BackgroundTransparency = 1,
+					ZIndex = 5,
+					ThemeTag = {BackgroundColor3 = "Tab"}
+				}, {New("UICorner", {CornerRadius = UDim.new(0, 9)}), hoverPillStroke})
+
+				activePill = New("Frame", {
+					Name = "NavActivePill",
+					Size = UDim2.new(1, 0, 0, 34),
+					Position = UDim2.fromOffset(0, 0),
+					BackgroundTransparency = 0.80,
+					Visible = false,
+					ZIndex = 5,
+					ThemeTag = {BackgroundColor3 = "Tab"}
+				}, {
+					New("UICorner", {CornerRadius = UDim.new(0, 9)}),
+					New("UIStroke", {Transparency = 0.56, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "InElementBorder"}})
+				})
+				activeBar = New("Frame", {
+					Name = "NavActiveBar",
+					Size = UDim2.fromOffset(3, 16),
+					Position = UDim2.fromOffset(0, 9),
+					BackgroundTransparency = 0,
+					Visible = false,
+					ZIndex = 7,
+					ThemeTag = {BackgroundColor3 = "Accent"}
+				}, {New("UICorner", {CornerRadius = UDim.new(1, 0)})})
+
+				navListLayout = New("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder})
+				navInner = New("Frame", {
+					Name = "NavItems",
+					Size = UDim2.new(1, 0, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					ZIndex = 6
+				}, {navListLayout})
+
+				navEmptyLabel = New("TextLabel", {
+					Name = "NavEmpty",
+					Text = "No matching settings",
+					FontFace = Creator.Font(Enum.FontWeight.Medium),
+					TextSize = 12,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Position = UDim2.fromOffset(8, 10),
+					Size = UDim2.new(1, -16, 0, 22),
+					BackgroundTransparency = 1,
+					Visible = false,
+					ZIndex = 6,
+					ThemeTag = {TextColor3 = "SubText"}
+				})
+
+				navScroll = New("ScrollingFrame", {
+					Name = "NavScroll",
+					Position = UDim2.fromOffset(12, 52),
+					Size = UDim2.new(1, -24, 1, -64),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ScrollBarThickness = 3,
+					ScrollBarImageTransparency = 0.55,
+					CanvasSize = UDim2.fromScale(0, 0),
+					ScrollingDirection = Enum.ScrollingDirection.Y,
+					ZIndex = 5,
+					ThemeTag = {ScrollBarImageColor3 = "Accent"}
+				}, {
+					hoverPill,
+					activePill,
+					activeBar,
+					navInner,
+					navEmptyLabel
+				})
+
+				Creator.AddSignal(navScroll.MouseLeave, function()
+					hoverLeaveGen += 1
+					hoverVisible = false
+					Creator.SpringValue(hoverPill, "BackgroundTransparency", 1, 5.5, 1)
+					Creator.SpringValue(hoverPillStroke, "Transparency", 1, 5.5, 1)
+				end)
+
+				local leftRail = New(
+					"Frame",
+					{
+						Name = "LeftRail",
+						Size = UDim2.new(0, 204, 1, 0),
+						BackgroundTransparency = 1,
+						ZIndex = 4
+					},
+					{
+						New("Frame", {
+							Name = "RightHairline",
+							Size = UDim2.new(0, 1, 1, 0),
+							Position = UDim2.new(1, -1, 0, 0),
+							BackgroundTransparency = 0.55,
+							ZIndex = 5,
+							ThemeTag = {BackgroundColor3 = "TitleBarLine"}
+						}),
+						searchWrap,
+						navScroll
+					}
+				)
+
+				-- ============================================================
+				-- Right Content Area & Pages
+				-- ============================================================
+				pagesParent = New(
+					"Frame",
+					{
+						Name = "PagesArea",
+						Position = UDim2.fromOffset(204, 0),
+						Size = UDim2.new(1, -204, 1, 0),
+						BackgroundTransparency = 1,
+						ClipsDescendants = true,
+						ZIndex = 4
+					}
+				)
+
+				local layoutOrd = 0
+				local runningFallbackY = 0
+				for gIdx, grp in ipairs(NAV_GROUPS) do
+					layoutOrd += 1
+					local topGap = gIdx > 1 and 12 or 4
+					local hdrH = 22 + topGap
+					local hdr = New("Frame", {
+						Name = "Grp_" .. grp.Label,
+						Size = UDim2.new(1, 0, 0, hdrH),
+						BackgroundTransparency = 1,
+						LayoutOrder = layoutOrd,
+						ZIndex = 6,
+						Parent = navInner
+					}, {
+						New("TextLabel", {
+							Text = grp.Label,
+							FontFace = Creator.Font(Enum.FontWeight.SemiBold),
+							TextSize = 10,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							Position = UDim2.fromOffset(10, topGap),
+							Size = UDim2.new(1, -14, 0, 18),
+							BackgroundTransparency = 1,
+							TextTransparency = 0.22,
+							ZIndex = 6,
+							ThemeTag = {TextColor3 = "SubText"}
+						})
+					})
+					runningFallbackY += hdrH + 3
+					local groupItemIds = {}
+
+					for _, spec in ipairs(grp.Items) do
+						layoutOrd += 1
+						table.insert(groupItemIds, spec.Id)
+						local isDanger = spec.Danger == true
+						local icon = New("ImageLabel", {
+							Name = "Icon",
+							Image = Library:GetIcon(spec.Icon) or "",
+							Size = UDim2.fromOffset(16, 16),
+							Position = UDim2.new(0, 12, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							BackgroundTransparency = 1,
+							ImageColor3 = isDanger and DANGER_RED or Color3.new(1, 1, 1),
+							ZIndex = 7,
+							ThemeTag = (not isDanger) and {ImageColor3 = "SubText"} or nil
+						})
+						local label = New("TextLabel", {
+							Name = "Label",
+							Text = spec.Title,
+							FontFace = Creator.Font(Enum.FontWeight.Medium),
+							TextSize = 13,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							Position = UDim2.new(0, 36, 0.5, 0),
+							AnchorPoint = Vector2.new(0, 0.5),
+							Size = UDim2.new(1, -44, 0, 18),
+							BackgroundTransparency = 1,
+							TextColor3 = isDanger and DANGER_RED or Color3.new(1, 1, 1),
+							ZIndex = 7,
+							ThemeTag = (not isDanger) and {TextColor3 = "SubText"} or nil
+						})
+						local btn = New("TextButton", {
+							Name = "Nav_" .. spec.Id,
+							Text = "",
+							AutoButtonColor = false,
+							Size = UDim2.new(1, 0, 0, 34),
+							BackgroundTransparency = 1,
+							LayoutOrder = layoutOrd,
+							ZIndex = 6,
+							Parent = navInner
+						}, {New("UICorner", {CornerRadius = UDim.new(0, 9)}), icon, label})
+
+						Creator.AddSignal(btn.MouseEnter, function()
+							hoverLeaveGen += 1
+							if Modal.ActiveTab == spec.Id then
+								hoverVisible = false
+								Creator.SpringValue(hoverPill, "BackgroundTransparency", 1, 5.5, 1)
+								Creator.SpringValue(hoverPillStroke, "Transparency", 1, 5.5, 1)
+								return
+							end
+							local scale = Creator.GetEffectiveScale(navInner)
+							local targetY = (btn.AbsolutePosition.Y - navInner.AbsolutePosition.Y) / scale
+							if isDanger then
+								Creator.OverrideTag(hoverPill, {})
+								hoverPill.BackgroundColor3 = DANGER_BG
+								Creator.OverrideTag(hoverPillStroke, {})
+								hoverPillStroke.Color = DANGER_RED
+							else
+								Creator.OverrideTag(hoverPill, {BackgroundColor3 = "Tab"})
+								Creator.OverrideTag(hoverPillStroke, {Color = "InElementBorder"})
+							end
+							if not hoverVisible then
+								hoverVisible = true
+								Creator.CancelSpring(hoverPill, "NavHoverY")
+								hoverY = targetY
+								hoverPill.Position = UDim2.fromOffset(0, targetY)
+							else
+								Creator.SpringValue(hoverPill, "NavHoverY", targetY, 5.2, 0.88, function(y)
+									hoverY = y
+									hoverPill.Position = UDim2.fromOffset(0, y)
+								end, hoverY)
+							end
+							Creator.SpringValue(hoverPill, "BackgroundTransparency", isDanger and 0.82 or 0.88, 5.2, 1)
+							Creator.SpringValue(hoverPillStroke, "Transparency", 0.64, 5.2, 1)
+						end)
+						Creator.AddSignal(btn.MouseLeave, function()
+							hoverLeaveGen += 1
+							local myGen = hoverLeaveGen
+							task.delay(0.03, function()
+								if myGen == hoverLeaveGen then
+									hoverVisible = false
+									Creator.SpringValue(hoverPill, "BackgroundTransparency", 1, 5.5, 1)
+									Creator.SpringValue(hoverPillStroke, "Transparency", 1, 5.5, 1)
+								end
+							end)
+						end)
+						Creator.AddSignal(btn.MouseButton1Click, function()
+							Modal:SelectTab(spec.Id)
+						end)
+
+						navItems[spec.Id] = {
+							Button = btn,
+							Icon = icon,
+							Label = label,
+							Danger = isDanger,
+							FallbackY = runningFallbackY,
+							SearchHaystack = (spec.Title .. " " .. (spec.Subtitle or "") .. " " .. (spec.Keywords or "")):lower()
+						}
+						runningFallbackY += 34 + 3
+
+						-- Create corresponding scrollable right page
+						local scroll = New(
+							"ScrollingFrame",
+							{
+								Name = "Page_" .. spec.Id,
+								Size = UDim2.fromScale(1, 1),
+								BackgroundTransparency = 1,
+								BorderSizePixel = 0,
+								ScrollBarThickness = 4,
+								ScrollBarImageTransparency = 0.42,
+								CanvasSize = UDim2.fromScale(0, 0),
+								ScrollingDirection = Enum.ScrollingDirection.Y,
+								Visible = (spec.Id == Modal.ActiveTab),
+								Parent = pagesParent,
+								ThemeTag = {ScrollBarImageColor3 = "Accent"}
+							},
+							{
+								New("UIPadding", {PaddingTop = UDim.new(0, 18), PaddingBottom = UDim.new(0, 22), PaddingLeft = UDim.new(0, 22), PaddingRight = UDim.new(0, 22)})
+							}
+						)
+						local pageApi, pageHolder, syncCanvas = makePageContainer(scroll, spec.Title, spec.Subtitle, true)
+						local publicApi = nil
+						if spec.Id == "Config" then
+							-- Non-internal facade for InterfaceManager:AttachToSettingsModal()
+							publicApi = {
+								Container = pageHolder,
+								ScrollFrame = scroll,
+								Type = "ScrollingFrame",
+								Library = Library,
+								_Internal = false,
+								AddSection = function(_s, sTitle, sOpts)
+									local sec = pageApi:AddSection(sTitle, sOpts)
+									sec._Internal = false
+									return sec
+								end
+							}
+							if Library.Elements then
+								setmetatable(publicApi, Library.Elements)
+							end
+						end
+						pageHolders[spec.Id] = {Scroll = scroll, Api = pageApi, PublicApi = publicApi, Holder = pageHolder, SyncCanvas = syncCanvas}
+					end
+
+					table.insert(navGroupHeaders, {Header = hdr, ItemIds = groupItemIds})
+				end
+
+				local bodyArea = New(
+					"Frame",
+					{
+						Name = "BodyArea",
+						Position = UDim2.fromOffset(0, 48),
+						Size = UDim2.new(1, 0, 1, -48),
+						BackgroundTransparency = 1,
+						ZIndex = 4
+					},
+					{leftRail, pagesParent}
+				)
+
+				modalCard = New(
+					"Frame",
+					{
+						Name = "SettingsModalCard",
+						Size = UDim2.fromScale(1, 1),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						BackgroundTransparency = 0.02,
+						Active = true,
+						ClipsDescendants = true,
+						ZIndex = 3,
+						ThemeTag = {BackgroundColor3 = "Dialog"}
+					},
+					{
+						modalScale,
+						New("UICorner", {CornerRadius = UDim.new(0, 14)}),
+						New("UIStroke", {Thickness = 1.1, Transparency = 0.20, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, ThemeTag = {Color = "DialogBorder"}}),
+						topHeaderBar,
+						bodyArea
+					}
+				)
+				Modal.ModalCard = modalCard
+
+				modalWrapper = New(
+					"Frame",
+					{
+						Name = "SettingsWrapper",
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						Size = UDim2.fromOffset(720, 470),
+						BackgroundTransparency = 1,
+						ZIndex = 2,
+						Parent = settingsGui
+					},
+					{modalDpiScale, modalShadow, modalCard}
+				)
+
+				Creator.AddSignal(backdrop.MouseButton1Click, function()
+					Modal:Close()
+				end)
+				Creator.RegisterDPIScale(modalDpiScale, function(s)
+					modalDpiScale.Scale = s
+					updateModalBounds()
+					if Modal.Opened then
+						task.defer(function()
+							positionActiveIndicator(true)
+						end)
+					end
+				end)
+
+				populateControls()
+				syncTabVisuals(true)
+				updateModalBounds()
+				built = true
+				building = false
+			end
+
+			function Modal:GetConfigContainer()
+				if Modal.Destroyed then
+					return nil
+				end
+				ensureBuilt()
+				return Modal.ConfigContainer
+			end
+
+			function Modal:SyncValues()
+				if not built or Modal.Destroyed then
+					return
+				end
+				pcall(function()
+					if controlRefs.ThemeDropdown then controlRefs.ThemeDropdown:SetValue(Library.Theme, true) end
+					if controlRefs.FontPreset and Library.Fonts then
+						controlRefs.FontPreset:SetValue(getFontLabel(Library.Fonts.CurrentProfile), true)
+					end
+					if controlRefs.AcrylicToggle then controlRefs.AcrylicToggle:SetValue(Library.Acrylic == true, true) end
+					if controlRefs.TransparencyToggle then controlRefs.TransparencyToggle:SetValue(Library.Transparency ~= false, true) end
+					if controlRefs.DpiSlider then controlRefs.DpiSlider:SetValue(Library.DPIScale or 1.0, true) end
+					if controlRefs.ReducedMotion then controlRefs.ReducedMotion:SetValue(Library.ReducedMotion == true, true) end
+					if controlRefs.SidebarCollapsed and Library.Window then
+						controlRefs.SidebarCollapsed:SetValue(Library.Window.SidebarCollapsed == true, true)
+					end
+					if controlRefs.NotifySide then controlRefs.NotifySide:SetValue(Library.NotifySide or "BottomRight", true) end
+					if controlRefs.AlwaysPill and Library.FloatingPill then
+						controlRefs.AlwaysPill:SetValue(Library.FloatingPill.AlwaysVisible == true, true)
+					end
+					if type(Library.GetPrivacyMode) == "function" then
+						local p = Library:GetPrivacyMode()
+						if controlRefs.HideName then controlRefs.HideName:SetValue(p.Hidden == true, true) end
+						if controlRefs.HideAvatar then controlRefs.HideAvatar:SetValue(p.HideAvatar == true, true) end
+						if controlRefs.PrivacyAlias then controlRefs.PrivacyAlias:SetValue(p.Alias or "Anonymous", true) end
+					end
+					if controlRefs.LangDropdown then
+						controlRefs.LangDropdown:SetValue(getLanguageDisplay(Library.CurrentLanguage), true)
+					end
+				end)
+			end
+
+			function Modal:SelectTab(tabName)
+				if Modal.Destroyed then
+					return
+				end
+				ensureBuilt()
+				local resolved = resolveTabId(tabName)
+				if resolved and pageHolders[resolved] then
+					if type(Library._CloseDropdowns) == "function" then
+						Library._CloseDropdowns()
+					end
+					Modal.ActiveTab = resolved
+					syncTabVisuals(false)
+				end
+			end
+
+			function Modal:Open(tabName)
+				if Modal.Destroyed or Library.Unloaded then
+					return
+				end
+				ensureBuilt()
+				if type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
+				if searchBox and searchBox.Text ~= "" then
+					searchBox.Text = ""
+					applyNavSearch("")
+				end
+				local resolved = resolveTabId(tabName)
+				if resolved and pageHolders[resolved] then
+					Modal.ActiveTab = resolved
+				end
+				Modal:SyncValues()
+				updateModalBounds()
+
+				animGen += 1
+				Modal.Opened = true
+				Modal.RootGui.Enabled = true
+				syncTabVisuals(true)
+				task.defer(function()
+					if Modal.Opened then
+						positionActiveIndicator(true)
+					end
+				end)
+				local blur = ensureBlurEffect()
+
+				if Creator.ReducedMotion then
+					backdrop.BackgroundTransparency = 0.46
+					modalShadow.ImageTransparency = 0.44
+					modalScale.Scale = 1
+					setCardYOffset(0)
+					if blur then
+						blur.Enabled = true
+						blur.Size = 10
+					end
+				else
+					-- Luaward SplitModal / HeroUI Modal entrance (--lw-dur-dialog-in: 280ms)
+					modalScale.Scale = 0.95
+					backdrop.BackgroundTransparency = 1
+					modalShadow.ImageTransparency = 1
+					setCardYOffset(12)
+					Creator.SpringValue(modalScale, "Scale", 1, 3.8, 0.88)
+					Creator.SpringValue(modalCard, "CardY", 0, 3.8, 0.90, setCardYOffset, 12)
+					Creator.SpringValue(backdrop, "BackgroundTransparency", 0.46, 4.4, 1)
+					Creator.SpringValue(modalShadow, "ImageTransparency", 0.44, 4.4, 1)
+					if blur then
+						blur.Enabled = true
+						Creator.SpringValue(blur, "Size", 10, 4.4, 1)
+					end
+				end
+			end
+
+			function Modal:Close()
+				if not Modal.Opened or not built then
+					return
+				end
+				if type(Library._CloseDropdowns) == "function" then
+					Library._CloseDropdowns()
+				end
+				animGen += 1
+				local myGen = animGen
+				Modal.Opened = false
+				local blur = settingsBlur
+				if Creator.ReducedMotion then
+					Modal.RootGui.Enabled = false
+					if blur then
+						blur.Size = 0
+						blur.Enabled = false
+					end
+				else
+					-- Faster exit per Luaward tokens.css (--lw-dur-dialog-out: 200ms)
+					Creator.SpringValue(modalScale, "Scale", 0.96, 5.4, 1)
+					Creator.SpringValue(modalCard, "CardY", 8, 5.4, 1, setCardYOffset, cardYOffset)
+					Creator.SpringValue(backdrop, "BackgroundTransparency", 1, 5.8, 1)
+					Creator.SpringValue(modalShadow, "ImageTransparency", 1, 5.8, 1)
+					if blur then
+						Creator.SpringValue(blur, "Size", 0, 5.8, 1)
+					end
+					task.delay(0.18, function()
+						if myGen == animGen and not Modal.Opened then
+							if Modal.RootGui then
+								Modal.RootGui.Enabled = false
+							end
+							if blur and blur.Parent then
+								blur.Size = 0
+								blur.Enabled = false
+							end
+						end
+					end)
+				end
+			end
+
+			function Modal:Toggle(tabName)
+				if Modal.Opened then
+					Modal:Close()
+				else
+					Modal:Open(tabName)
+				end
+			end
+
+			Creator.AddSignal(UserInputService.InputBegan, function(input, gameProcessed)
+				if Modal.Destroyed or Library.Unloaded then
+					return
+				end
+				if input.UserInputType ~= Enum.UserInputType.Keyboard then
+					return
+				end
+				if Modal.Opened and input.KeyCode == Enum.KeyCode.Escape then
+					Modal:Close()
+					return
+				end
+				if gameProcessed or UserInputService:GetFocusedTextBox() then
+					return
+				end
+				if input.KeyCode == Enum.KeyCode.Comma and (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
+					Modal:Toggle()
+				end
+			end)
+
+			function Modal:Destroy()
+				Modal.Destroyed = true
+				Modal.Opened = false
+				if settingsBlur then
+					pcall(function()
+						settingsBlur:Destroy()
+					end)
+					settingsBlur = nil
+				end
+				if Modal.RootGui then
+					pcall(function()
+						Modal.RootGui:Destroy()
+					end)
+					Modal.RootGui = nil
+				end
+			end
+
+			return Modal
+		end
 	end
 }
 do
