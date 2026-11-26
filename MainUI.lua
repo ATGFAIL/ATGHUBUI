@@ -3332,6 +3332,11 @@ local moduleFunctions = {
 				ProfileMenuService:Toggle(anchorGui)
 			end
 		end
+		function Library._NotifyInterfaceSetting(_, key, value)
+			if type(Library._InterfaceSettingListener) == "function" then
+				pcall(Library._InterfaceSettingListener, key, value)
+			end
+		end
 		local settingPrivacyMode = false
 		function Library.SetPrivacyMode(_, hidden, alias, hideAvatar)
 			if settingPrivacyMode then
@@ -5120,11 +5125,13 @@ local moduleFunctions = {
 		end
 		function Library.SetFloatingToggleConfig(_, config)
 			if config == false then
+				Library._FloatingToggleDisabled = true
 				if Library.FloatingToggle then
 					Library.FloatingToggle:Destroy()
 				end
 				return nil
 			end
+			Library._FloatingToggleDisabled = false
 			return Library:CreateFloatingToggle(config)
 		end
 		-- Button titles that ask for confirmation with CreateWindow{SmartConfirm = true}.
@@ -5416,7 +5423,7 @@ local moduleFunctions = {
 				-- one scheduler turn to register it before we add our own button.
 				task.defer(function()
 					task.wait(0.25)
-					if not Library.Unloaded and Library.Window == window and not Library.FloatingToggle then
+					if not Library.Unloaded and Library.Window == window and not Library.FloatingToggle and not Library._FloatingToggleDisabled then
 						Library:CreateFloatingToggle(floatingConfig)
 					end
 				end)
@@ -25348,6 +25355,9 @@ local moduleFunctions = {
 							Selected = (Library.Theme == themeName),
 							OnPick = function()
 								Library:SetTheme(themeName)
+								if type(Library._NotifyInterfaceSetting) == "function" then
+									Library:_NotifyInterfaceSetting("Theme", themeName)
+								end
 								syncHeaderAndBadges()
 								if Library.SettingsModal and Library.SettingsModal.Opened then
 									Library.SettingsModal:SyncValues()
@@ -25366,6 +25376,9 @@ local moduleFunctions = {
 							OnPick = function()
 								if type(Library.SetFont) == "function" then
 									Library:SetFont(f.Id)
+								end
+								if type(Library._NotifyInterfaceSetting) == "function" then
+									Library:_NotifyInterfaceSetting("FontProfile", f.Id)
 								end
 								syncHeaderAndBadges()
 								if Library.SettingsModal and Library.SettingsModal.Opened then
@@ -25386,6 +25399,9 @@ local moduleFunctions = {
 								Library.CurrentLanguage = lang.Code
 								if Library.I18n and type(Library.I18n.SetLanguage) == "function" then
 									Library.I18n:SetLanguage(lang.Code)
+								end
+								if type(Library._NotifyInterfaceSetting) == "function" then
+									Library:_NotifyInterfaceSetting("Language", lang.Code)
 								end
 								syncHeaderAndBadges()
 								if Library.SettingsModal and Library.SettingsModal.Opened then
@@ -26219,7 +26235,7 @@ local moduleFunctions = {
 						Title = "General",
 						Subtitle = "Language, typography, motion, and UI scaling",
 						Icon = "settings",
-						Keywords = "general language font typography inter gotham builder scale dpi motion reduced"
+						Keywords = "general language font typography inter gotham builder scale dpi motion reduced translation pack json outline spacing weight"
 					},
 					{
 						Id = "Appearance",
@@ -26259,7 +26275,7 @@ local moduleFunctions = {
 						Title = "Config",
 						Subtitle = "Interface settings storage and default reset",
 						Icon = "folder",
-						Keywords = "config interface manager save load profile export reset defaults"
+						Keywords = "config interface manager save load reload storage folder scope profile export reset defaults"
 					},
 					{
 						Id = "Unload",
@@ -26332,9 +26348,45 @@ local moduleFunctions = {
 				return "Inter"
 			end
 
+			local FALLBACK_LANGUAGES = {"English", "Thai", "Vietnamese", "Spanish"}
+			local FALLBACK_LANG_TO_CODE = {English = "en", Thai = "th", Vietnamese = "vi", Spanish = "es"}
+			local FALLBACK_CODE_TO_LANG = {en = "English", th = "Thai", vi = "Vietnamese", es = "Spanish"}
+
+			local function getLanguageOptions()
+				if Library.I18n and type(Library.I18n.GetLanguageOptions) == "function" then
+					local ok, opts = pcall(Library.I18n.GetLanguageOptions, Library.I18n)
+					if ok and type(opts) == "table" and #opts > 0 then
+						return opts
+					end
+				end
+				return FALLBACK_LANGUAGES
+			end
+
+			local function getLanguageCode(choice)
+				if Library.I18n and type(Library.I18n.GetLanguageCode) == "function" then
+					local ok, code = pcall(Library.I18n.GetLanguageCode, Library.I18n, choice)
+					if ok and type(code) == "string" and code ~= "" then
+						return code
+					end
+				end
+				return FALLBACK_LANG_TO_CODE[choice] or tostring(choice or "en"):lower()
+			end
+
 			local function getLanguageDisplay(code)
-				local map = {en = "English", th = "Thai", vi = "Vietnamese", es = "Spanish"}
-				return map[tostring(code or "en"):lower()] or "English"
+				local targetCode = tostring(code or "en"):lower()
+				if Library.I18n and type(Library.I18n.GetLanguageOptions) == "function" and type(Library.I18n.GetLanguageCode) == "function" then
+					local ok, opts = pcall(Library.I18n.GetLanguageOptions, Library.I18n)
+					if ok and type(opts) == "table" and #opts > 0 then
+						local normalized = Library.I18n:GetLanguageCode(targetCode)
+						for _, opt in ipairs(opts) do
+							if Library.I18n:GetLanguageCode(opt) == normalized then
+								return opt
+							end
+						end
+						return opts[1]
+					end
+				end
+				return FALLBACK_CODE_TO_LANG[targetCode] or "English"
 			end
 
 			local function ensureBlurEffect()
@@ -26631,15 +26683,17 @@ local moduleFunctions = {
 				controlRefs.LangDropdown = secGenLang:AddDropdown("SettingsModalLanguage", {
 					Title = "Interface Language",
 					Description = "Translate Acryven labels and prompts",
-					Values = {"English", "Thai", "Vietnamese", "Spanish"},
+					Values = getLanguageOptions(),
 					Default = getLanguageDisplay(Library.CurrentLanguage),
 					Callback = function(choice)
 						if syncing then return end
-						local codeMap = {English = "en", Thai = "th", Vietnamese = "vi", Spanish = "es"}
-						local code = codeMap[choice] or "en"
+						local code = getLanguageCode(choice)
 						Library.CurrentLanguage = code
 						if Library.I18n and type(Library.I18n.SetLanguage) == "function" then
 							Library.I18n:SetLanguage(code)
+						end
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("Language", code)
 						end
 						if Library.ProfileMenu then
 							Library.ProfileMenu:Refresh()
@@ -26655,8 +26709,12 @@ local moduleFunctions = {
 					Callback = function(label)
 						if syncing then return end
 						local map = {["Inter"] = "default", ["Builder Sans"] = "builder-sans", ["Gotham"] = "gotham"}
+						local profileId = map[label] or "default"
 						if type(Library.SetFont) == "function" then
-							Library:SetFont(map[label] or "default")
+							Library:SetFont(profileId)
+						end
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("FontProfile", profileId)
 						end
 						if Library.ProfileMenu then
 							Library.ProfileMenu:Refresh()
@@ -26700,6 +26758,9 @@ local moduleFunctions = {
 						if syncing then return end
 						if th and th ~= Library.Theme then
 							Library:SetTheme(th)
+							if type(Library._NotifyInterfaceSetting) == "function" then
+								Library:_NotifyInterfaceSetting("Theme", th)
+							end
 							if Library.ProfileMenu then
 								Library.ProfileMenu:Refresh()
 							end
@@ -26717,6 +26778,9 @@ local moduleFunctions = {
 						if Library.UseAcrylic then
 							Library:ToggleAcrylic(v)
 						end
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("Acrylic", v == true)
+						end
 					end
 				})
 				controlRefs.TransparencyToggle = secSurface:AddToggle("SettingsModalTransparency", {
@@ -26727,6 +26791,9 @@ local moduleFunctions = {
 						if syncing then return end
 						Library.Transparency = v == true
 						Library:ToggleTransparency(v)
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("Transparency", v == true)
+						end
 					end
 				})
 
@@ -26758,6 +26825,20 @@ local moduleFunctions = {
 				})
 
 				local secHud = pLayout:AddSection({Title = "HUD Overlays", Icon = "activity"})
+				if type(Library.SetFloatingToggleConfig) == "function" then
+					controlRefs.FloatingToggle = secHud:AddToggle("SettingsModalFloatingBtn", {
+						Title = "Floating Toggle Button",
+						Description = "Draggable on-screen show/hide button",
+						Default = Library.FloatingToggle ~= nil,
+						Callback = function(v)
+							if syncing then return end
+							Library:SetFloatingToggleConfig(v == true and {} or false)
+							if type(Library._NotifyInterfaceSetting) == "function" then
+								Library:_NotifyInterfaceSetting("FloatingToggle", v == true)
+							end
+						end
+					})
+				end
 				controlRefs.AlwaysPill = secHud:AddToggle("SettingsModalAlwaysPill", {
 					Title = "Pin Floating Pill Always",
 					Description = "Keep floating pill visible even while window is open",
@@ -26846,9 +26927,14 @@ local moduleFunctions = {
 					Mode = "Toggle"
 				})
 				controlRefs.MinKeybind:OnChanged(function(val)
+					if syncing then return end
 					local chosen = val or (controlRefs.MinKeybind and controlRefs.MinKeybind.Value)
 					if chosen ~= nil and chosen ~= "" then
-						Library.MinimizeKey = chosen
+						local keyName = typeof(chosen) == "EnumItem" and chosen.Name or tostring(chosen)
+						Library.MinimizeKey = keyName
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("MenuKeybind", keyName)
+						end
 					end
 				end)
 				secControls:AddParagraph({
@@ -26869,7 +26955,14 @@ local moduleFunctions = {
 						Library:SetReducedMotion(false)
 						Library:SetNotifySide("BottomRight")
 						if type(Library.SetPrivacyMode) == "function" then Library:SetPrivacyMode(false, "Anonymous", false) end
+						if type(Library._NotifyInterfaceSetting) == "function" then
+							Library:_NotifyInterfaceSetting("Theme", "Acryven")
+							Library:_NotifyInterfaceSetting("FontProfile", "default")
+						end
 						Modal:SyncValues()
+						if Library.ProfileMenu then
+							Library.ProfileMenu:Refresh()
+						end
 						Library:Notify({Title = "Settings", Content = "Restored default UI settings.", Duration = 3})
 					end
 				})
@@ -27553,6 +27646,31 @@ local moduleFunctions = {
 				return Modal.ConfigContainer
 			end
 
+			function Modal:GetPageContainer(tabId)
+				if Modal.Destroyed then
+					return nil
+				end
+				ensureBuilt()
+				local resolved = resolveTabId(tabId) or "Config"
+				local page = pageHolders[resolved]
+				return page and page.Api or Modal.ConfigContainer
+			end
+
+			function Modal:RefreshLanguageOptions()
+				if not built or Modal.Destroyed or not controlRefs.LangDropdown then
+					return
+				end
+				local prevSync = syncing
+				syncing = true
+				Modal._Syncing = true
+				pcall(function()
+					controlRefs.LangDropdown:SetValues(getLanguageOptions())
+					controlRefs.LangDropdown:SetValue(getLanguageDisplay(Library.CurrentLanguage), true)
+				end)
+				syncing = prevSync
+				Modal._Syncing = prevSync
+			end
+
 			function Modal:SyncValues()
 				if syncing or not built or Modal.Destroyed then
 					return
@@ -27590,10 +27708,22 @@ local moduleFunctions = {
 					if controlRefs.NotifySide and controlRefs.NotifySide.Value ~= (Library.NotifySide or "BottomRight") then
 						controlRefs.NotifySide:SetValue(Library.NotifySide or "BottomRight", true)
 					end
+					if controlRefs.FloatingToggle then
+						local hasFloat = Library.FloatingToggle ~= nil
+						if controlRefs.FloatingToggle.Value ~= hasFloat then
+							controlRefs.FloatingToggle:SetValue(hasFloat, true, true)
+						end
+					end
 					if controlRefs.AlwaysPill and Library.FloatingPill then
 						local targetPill = Library.FloatingPill.AlwaysVisible == true
 						if controlRefs.AlwaysPill.Value ~= targetPill then
 							controlRefs.AlwaysPill:SetValue(targetPill, true, true)
+						end
+					end
+					if controlRefs.MinKeybind then
+						local minKeyName = typeof(Library.MinimizeKey) == "EnumItem" and Library.MinimizeKey.Name or tostring(Library.MinimizeKey or "LeftControl")
+						if controlRefs.MinKeybind.Value ~= minKeyName then
+							controlRefs.MinKeybind:SetValue(minKeyName)
 						end
 					end
 					if type(Library.GetPrivacyMode) == "function" then

@@ -523,85 +523,245 @@ do
         return true
     end
 
+    local function applyCoreSettings(library, settings)
+        if type(library.SetTheme) == "function" and settings.Theme then
+            pcall(function()
+                library:SetTheme(settings.Theme, true)
+            end)
+        end
+        if library.UseAcrylic and type(library.ToggleAcrylic) == "function" then
+            pcall(function()
+                library:ToggleAcrylic(settings.Acrylic == true)
+            end)
+        end
+        if type(library.ToggleTransparency) == "function" then
+            library.Transparency = settings.Transparency == true
+            pcall(function()
+                library:ToggleTransparency(settings.Transparency == true)
+            end)
+        end
+        if settings.MenuKeybind ~= nil and settings.MenuKeybind ~= "" then
+            library.MinimizeKey = settings.MenuKeybind
+        end
+    end
+
     function InterfaceManager:BuildInterfaceSection(tab, options)
         assert(self.Library, "Must set InterfaceManager.Library")
-        if not tab and type(self.Library.SettingsModal) == "table" and type(self.Library.SettingsModal.GetConfigContainer) == "function" then
-            tab = self.Library.SettingsModal:GetConfigContainer()
-        end
-        assert(tab, "BuildInterfaceSection requires a Settings tab or SettingsModal")
-        self:Configure(options)
+        local opts = type(options) == "table" and options or {}
+        self:Configure(opts)
         self:BuildFolderTree()
         self:LoadSettings()
 
         local library = self.Library
         local settings = self.Settings
+        local settingsModal = type(library.SettingsModal) == "table" and library.SettingsModal or nil
+        local hasModalPages = settingsModal ~= nil
+            and type(settingsModal.GetPageContainer) == "function"
+            and not settingsModal.Destroyed
+        local forceTab = opts.UseTab == true or opts.InModal == false
+        local useModal = hasModalPages and not forceTab
+
+        if not useModal and not tab and settingsModal and type(settingsModal.GetConfigContainer) == "function" then
+            tab = settingsModal:GetConfigContainer()
+        end
+        if not useModal then
+            assert(tab, "BuildInterfaceSection requires a Settings tab or SettingsModal")
+        end
+
         local customizationApplied, customizationError = self:ApplyCustomizationSettings()
         if not customizationApplied then
             safeNotify(library, "Customization", "Some saved customization could not be applied", customizationError)
         end
 
-        local section = tab:AddSection("Interface")
-        local theme = section:AddDropdown("InterfaceTheme", {
-            Title = "Theme",
-            Description = "Choose a look.",
-            Values = library.Themes,
-            Default = settings.Theme,
-            Callback = function(value)
-                library:SetTheme(value)
-                settings.Theme = value
-                self:SaveSettings()
+        local generalTarget = tab
+        local configTarget = tab
+        local syncingFontDropdown = false
+        local activeFontDropdownRef = nil
+        local languageDropdown = nil
+
+        local function syncModalUi(refreshLanguages)
+            if not useModal or not settingsModal or settingsModal.Destroyed then
+                return
             end
-        })
-        pcall(function()
-            theme:SetValue(settings.Theme)
-        end)
-
-        local menuKeybind = section:AddKeybind("MenuKeybind", {
-            Title = "Minimize Bind",
-            Description = "Key to hide the window",
-            Default = settings.MenuKeybind
-        })
-        menuKeybind:OnChanged(function()
-            settings.MenuKeybind = menuKeybind.Value
-            self:SaveSettings()
-        end)
-        library.MinimizeKeybind = menuKeybind
-
-        if library.UseAcrylic then
-            section:AddToggle("AcrylicToggle", {
-                Title = "Acrylic",
-                Description = "Blur background.",
-                Default = settings.Acrylic,
-                Callback = function(value)
-                    library:ToggleAcrylic(value)
-                    settings.Acrylic = value
-                    self:SaveSettings()
-                end
-            })
+            if refreshLanguages and type(settingsModal.RefreshLanguageOptions) == "function" then
+                pcall(settingsModal.RefreshLanguageOptions, settingsModal)
+            end
+            if type(settingsModal.SyncValues) == "function" then
+                pcall(settingsModal.SyncValues, settingsModal)
+            end
+            if library.ProfileMenu and type(library.ProfileMenu.Refresh) == "function" then
+                pcall(library.ProfileMenu.Refresh, library.ProfileMenu)
+            end
         end
 
-        section:AddToggle("TransparentToggle", {
-            Title = "Transparency",
-            Description = "See-through background.",
-            Default = settings.Transparency,
-            Callback = function(value)
-                library:ToggleTransparency(value)
-                settings.Transparency = value
-                self:SaveSettings()
+        local function scheduleLegacyTabLauncher()
+            if not useModal or not tab or tab == generalTarget or tab == configTarget or opts.ShowTabLauncher == false or not tab.Container then
+                return
             end
-        })
+            if tab._InterfaceSettingsLauncherScheduled then
+                return
+            end
+            tab._InterfaceSettingsLauncherScheduled = true
+            local legacyTab = tab
+            local forceLauncher = opts.ShowTabLauncher == true
+            task.defer(function()
+                if library.Unloaded or not legacyTab.Container or not legacyTab.Container.Parent then
+                    return
+                end
+                local hasOther = false
+                for _, child in ipairs(legacyTab.Container:GetChildren()) do
+                    if child:IsA("GuiObject") then
+                        hasOther = true
+                        break
+                    end
+                end
+                if hasOther and not forceLauncher then
+                    return
+                end
+                local launcher = legacyTab:AddSection("Interface Settings")
+                launcher:AddButton({
+                    Title = "Open UI Settings",
+                    Description = "Theme, language, fonts, transparency, and shortcuts now live in Settings (Ctrl+,).",
+                    Callback = function()
+                        if type(library.OpenSettings) == "function" then
+                            library:OpenSettings("General")
+                        elseif settingsModal and type(settingsModal.Open) == "function" then
+                            settingsModal:Open("General")
+                        end
+                    end
+                })
+                if not forceLauncher and launcher and launcher.Root then
+                    local conn
+                    conn = legacyTab.Container.ChildAdded:Connect(function(child)
+                        if child ~= launcher.Root and child:IsA("GuiObject") then
+                            if launcher.Root and launcher.Root.Parent then
+                                launcher.Root:Destroy()
+                            end
+                            if conn then
+                                conn:Disconnect()
+                                conn = nil
+                            end
+                        end
+                    end)
+                end
+            end)
+        end
 
-        if type(library.SetFloatingToggleConfig) == "function" then
-            section:AddToggle("InterfaceFloatingToggle", {
-                Title = "Floating button",
-                Description = "Draggable show/hide button",
-                Default = settings.FloatingToggle,
+        if useModal then
+            applyCoreSettings(library, settings)
+            generalTarget = settingsModal:GetPageContainer("General")
+            configTarget = settingsModal:GetPageContainer("Config")
+
+            if settingsModal._Controls and settingsModal._Controls.MinKeybind then
+                library.MinimizeKeybind = settingsModal._Controls.MinKeybind
+            end
+
+            library._InterfaceSettingListener = function(key, value)
+                if key == "Theme" and type(value) == "string" and value ~= "" then
+                    settings.Theme = value
+                    self:SaveSettings()
+                elseif key == "Acrylic" then
+                    settings.Acrylic = value == true
+                    self:SaveSettings()
+                elseif key == "Transparency" then
+                    settings.Transparency = value == true
+                    self:SaveSettings()
+                elseif key == "FloatingToggle" then
+                    settings.FloatingToggle = value == true
+                    self:SaveSettings()
+                elseif key == "MenuKeybind" and value ~= nil and tostring(value) ~= "" then
+                    settings.MenuKeybind = tostring(value)
+                    self:SaveSettings()
+                elseif key == "Language" and type(value) == "string" and value ~= "" then
+                    settings.Language = value
+                    self:SaveSettings()
+                elseif key == "FontProfile" and type(value) == "string" and value ~= "" then
+                    settings.FontProfile = value
+                    if activeFontDropdownRef and type(activeFontDropdownRef.SetValue) == "function" then
+                        local cust = getCustomization(library)
+                        if cust and cust.Fonts then
+                            syncingFontDropdown = true
+                            pcall(function()
+                                activeFontDropdownRef:SetValue(profileDisplay(cust.Fonts, value), true)
+                            end)
+                            syncingFontDropdown = false
+                        end
+                    end
+                    self:SaveSettings()
+                end
+            end
+
+            syncModalUi(true)
+
+            if self._MountedModalLibrary == library then
+                scheduleLegacyTabLauncher()
+                return
+            end
+            self._MountedModalLibrary = library
+        else
+            local section = tab:AddSection("Interface")
+            local theme = section:AddDropdown("InterfaceTheme", {
+                Title = "Theme",
+                Description = "Choose a look.",
+                Values = library.Themes,
+                Default = settings.Theme,
                 Callback = function(value)
-                    settings.FloatingToggle = value
-                    library:SetFloatingToggleConfig(value and {} or false)
+                    library:SetTheme(value)
+                    settings.Theme = value
                     self:SaveSettings()
                 end
             })
+            pcall(function()
+                theme:SetValue(settings.Theme)
+            end)
+
+            local menuKeybind = section:AddKeybind("MenuKeybind", {
+                Title = "Minimize Bind",
+                Description = "Key to hide the window",
+                Default = settings.MenuKeybind
+            })
+            menuKeybind:OnChanged(function()
+                settings.MenuKeybind = menuKeybind.Value
+                self:SaveSettings()
+            end)
+            library.MinimizeKeybind = menuKeybind
+
+            if library.UseAcrylic then
+                section:AddToggle("AcrylicToggle", {
+                    Title = "Acrylic",
+                    Description = "Blur background.",
+                    Default = settings.Acrylic,
+                    Callback = function(value)
+                        library:ToggleAcrylic(value)
+                        settings.Acrylic = value
+                        self:SaveSettings()
+                    end
+                })
+            end
+
+            section:AddToggle("TransparentToggle", {
+                Title = "Transparency",
+                Description = "See-through background.",
+                Default = settings.Transparency,
+                Callback = function(value)
+                    library:ToggleTransparency(value)
+                    settings.Transparency = value
+                    self:SaveSettings()
+                end
+            })
+
+            if type(library.SetFloatingToggleConfig) == "function" then
+                section:AddToggle("InterfaceFloatingToggle", {
+                    Title = "Floating button",
+                    Description = "Draggable show/hide button",
+                    Default = settings.FloatingToggle,
+                    Callback = function(value)
+                        settings.FloatingToggle = value
+                        library:SetFloatingToggleConfig(value and {} or false)
+                        self:SaveSettings()
+                    end
+                })
+            end
         end
 
         local customization = getCustomization(library)
@@ -620,7 +780,7 @@ do
             and type(customization.RemoteAssets.ImportLanguage) == "function"
             and type(customization.RemoteAssets.ImportFont) == "function"
         if not customizationReady then
-            tab:AddSection("Customization"):AddParagraph({
+            generalTarget:AddSection("Customization"):AddParagraph({
                 Title = "Customization core unavailable",
                 Content = "Update MainUI to use language and font tools."
             })
@@ -642,22 +802,26 @@ do
             end)
         end
 
-        local localization = tab:AddSection("Language & Font")
-        local languageDropdown = localization:AddDropdown("InterfaceLanguage", {
-            Title = "UI language",
-            Description = "Choose your language.",
-            Values = i18n:GetLanguageOptions(),
-            Default = getLanguageValue(i18n, settings.Language),
-            Callback = function(value)
-                settings.Language = i18n:GetLanguageCode(value)
-                i18n:SetLanguage(settings.Language)
-                library.CurrentLanguage = settings.Language
-                self:SaveSettings()
-            end
-        })
-        pcall(function()
-            languageDropdown:SetValue(getLanguageValue(i18n, settings.Language))
-        end)
+        local localization = generalTarget:AddSection(
+            useModal and { Title = "Font & Translation", Icon = "languages" } or "Language & Font"
+        )
+        if not useModal then
+            languageDropdown = localization:AddDropdown("InterfaceLanguage", {
+                Title = "UI language",
+                Description = "Choose your language.",
+                Values = i18n:GetLanguageOptions(),
+                Default = getLanguageValue(i18n, settings.Language),
+                Callback = function(value)
+                    settings.Language = i18n:GetLanguageCode(value)
+                    i18n:SetLanguage(settings.Language)
+                    library.CurrentLanguage = settings.Language
+                    self:SaveSettings()
+                end
+            })
+            pcall(function()
+                languageDropdown:SetValue(getLanguageValue(i18n, settings.Language))
+            end)
+        end
 
         -- Keep the common actions visible. Import/update tools are grouped
         -- below so first-time users do not have to scan a long settings page.
@@ -667,8 +831,10 @@ do
             if #values == 0 then
                 values = {"Script default [default]"}
             end
+            syncingFontDropdown = true
             fontProfileDropdown:SetValues(values)
             fontProfileDropdown:SetValue(profileDisplay(fonts, settings.FontProfile) or values[1])
+            syncingFontDropdown = false
         end
 
         fontProfileDropdown = localization:AddDropdown("InterfaceFontProfile", {
@@ -677,6 +843,9 @@ do
             Values = fonts:GetProfileOptions(),
             Default = profileDisplay(fonts, settings.FontProfile),
             Callback = function(value)
+                if syncingFontDropdown then
+                    return
+                end
                 local profileId = fonts:GetProfileId(value)
                 local applied, applyError = fonts:ApplyProfile(profileId)
                 if not applied then
@@ -684,9 +853,11 @@ do
                     return
                 end
                 settings.FontProfile = profileId
+                syncModalUi(false)
                 self:SaveSettings()
             end
         })
+        activeFontDropdownRef = fontProfileDropdown
         pcall(refreshFontProfiles)
 
         -- These controls are deliberately separate from the import tools.
@@ -762,7 +933,9 @@ do
                 end
             })
 
-            fontAppearance = tab:AddSection("Font appearance")
+            fontAppearance = generalTarget:AddSection(
+                useModal and { Title = "Font appearance", Icon = "type" } or "Font appearance"
+            )
             fontAppearance:AddDropdown("InterfaceFontWeight", {
                 Title = "Weight",
                 Description = "How bold the text is.",
@@ -855,7 +1028,9 @@ do
             end
         })
 
-        local languageTools = tab:AddSection("Language tools")
+        local languageTools = generalTarget:AddSection(
+            useModal and { Title = "Language tools", Icon = "globe" } or "Language tools"
+        )
         table.insert(advancedSections, languageTools)
         setAdvancedVisible(settings.AdvancedTools)
 
@@ -969,9 +1144,13 @@ do
                 end
                 settings.LanguagePack = pack.Id
                 settings.Language = pack.Locale
+                library.CurrentLanguage = pack.Locale
                 i18n:SetLanguage(pack.Locale)
-                languageDropdown:SetValues(i18n:GetLanguageOptions())
-                languageDropdown:SetValue(getLanguageValue(i18n, pack.Locale))
+                if languageDropdown then
+                    languageDropdown:SetValues(i18n:GetLanguageOptions())
+                    languageDropdown:SetValue(getLanguageValue(i18n, pack.Locale))
+                end
+                syncModalUi(true)
                 refreshLanguagePacks(installedPackDropdown)
                 self:SaveSettings()
                 safeNotify(library, "Language pack", "Installed " .. pack.Name, "Locale: " .. pack.Locale)
@@ -1019,6 +1198,7 @@ do
                     safeNotify(library, "Language pack", "Update failed", updateError)
                     return
                 end
+                syncModalUi(true)
                 refreshLanguagePacks(installedPackDropdown)
                 safeNotify(library, "Language pack", "Updated " .. pack.Name, "Version: " .. pack.Version)
             end
@@ -1034,13 +1214,16 @@ do
                     return
                 end
                 settings.LanguagePack = ""
+                syncModalUi(true)
                 refreshLanguagePacks(installedPackDropdown)
                 self:SaveSettings()
                 safeNotify(library, "Language pack", "Removed")
             end
         })
 
-        local typography = tab:AddSection("Font tools")
+        local typography = generalTarget:AddSection(
+            useModal and { Title = "Font tools", Icon = "wand-2" } or "Font tools"
+        )
         table.insert(advancedSections, typography)
         setAdvancedVisible(settings.AdvancedTools)
         typography:AddParagraph({
@@ -1085,6 +1268,7 @@ do
                 end
                 settings.FontProfile = profile.Id
                 refreshFontProfiles()
+                syncModalUi(false)
                 self:SaveSettings()
                 safeNotify(library, "Font", "Installed " .. profile.Name, "Applied to the current UI.")
             end
@@ -1097,6 +1281,7 @@ do
                 settings.FontProfile = "default"
                 fonts:ApplyProfile("default")
                 refreshFontProfiles()
+                syncModalUi(false)
                 self:SaveSettings()
                 safeNotify(library, "Font", "Script default font restored")
             end
@@ -1113,6 +1298,7 @@ do
                 end
                 settings.FontProfile = "default"
                 refreshFontProfiles()
+                syncModalUi(false)
                 self:SaveSettings()
                 safeNotify(library, "Font", "Profile removed")
             end
@@ -1120,17 +1306,64 @@ do
 
         setAdvancedVisible(settings.AdvancedTools)
 
+        if useModal and configTarget then
+            local storageSection = configTarget:AddSection({
+                Title = "Interface Storage",
+                Icon = "hard-drive"
+            })
+            storageSection:AddParagraph({
+                Title = "Storage Scope",
+                Content = string.format(
+                    "Folder: %s\nScope: %s\nDisk Save: %s",
+                    tostring(self.Folder or "FluentSettings"),
+                    tostring((self.Configuration and self.Configuration.ScriptId) or "shared"),
+                    capabilities.FileSystem and "Ready" or "Session only"
+                )
+            })
+            storageSection:AddButton({
+                Title = "Save Interface Settings",
+                Description = "Write current theme, language, font, and keybind settings to disk.",
+                Callback = function()
+                    self:SaveSettings()
+                    safeNotify(library, "Interface", "Saved interface settings", tostring(self.Folder or "FluentSettings"))
+                end
+            })
+            storageSection:AddButton({
+                Title = "Reload Saved Settings",
+                Description = "Reload saved interface settings from disk and sync UI controls.",
+                Callback = function()
+                    self:LoadSettings()
+                    settings = self.Settings
+                    applyCoreSettings(library, settings)
+                    self:ApplyCustomizationSettings()
+                    pcall(refreshFontProfiles)
+                    refreshLanguagePacks(installedPackDropdown)
+                    syncModalUi(true)
+                    safeNotify(library, "Interface", "Reloaded saved settings")
+                end
+            })
+        end
+
         -- Public convenience for callers that need to refresh the selector
         -- after installing a pack programmatically.
         self.RefreshLanguagePacks = function()
             refreshLanguagePacks(installedPackDropdown)
         end
+
+        scheduleLegacyTabLauncher()
     end
 
     function InterfaceManager:AttachToSettingsModal(options)
         assert(self.Library, "Must set InterfaceManager.Library")
-        local container = self.Library.SettingsModal and self.Library.SettingsModal:GetConfigContainer()
-        return self:BuildInterfaceSection(container, options)
+        local opts = {}
+        if type(options) == "table" then
+            for k, v in pairs(options) do
+                opts[k] = v
+            end
+        end
+        opts.InModal = true
+        opts.UseTab = false
+        return self:BuildInterfaceSection(nil, opts)
     end
 end
 
